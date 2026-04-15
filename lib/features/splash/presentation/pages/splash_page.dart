@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 
 class SplashPage extends StatefulWidget {
@@ -18,7 +19,7 @@ class _SplashPageState extends State<SplashPage> {
     super.initState();
     Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        Get.offAllNamed(AppRoutes.login);
+        Get.offAllNamed(AppRoutes.onboarding);
       }
     });
   }
@@ -70,7 +71,7 @@ class _SplashPageState extends State<SplashPage> {
                   right: 0,
                   child: Center(
                     child: Image.asset(
-                      'assets/images/appLogo.png.png',
+                      'assets/images/appLogo.png',
                       width: 120,
                       height: 120,
                     ),
@@ -81,23 +82,21 @@ class _SplashPageState extends State<SplashPage> {
                   left: 0,
                   right: 0,
                   child: Column(
-                    children: const [
+                    children: [
                       Text(
                         'पूजा: कर्मणि कौशलम्',
-                        style: TextStyle(
+                        style: GoogleFonts.lora(
                           color: Color(0xFF8D8D8D),
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          fontFamily: 'Lora',
                         ),
                       ),
                       Text(
                         'Pooja is peace in action',
-                        style: TextStyle(
+                        style: GoogleFonts.lora(
                           color: Color(0xFF7A7A7A),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          fontFamily: 'Lora',
                         ),
                       ),
                     ],

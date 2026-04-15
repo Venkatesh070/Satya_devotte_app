@@ -1,0 +1,109 @@
+import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/features/auth/domain/entities/auth_login_result.dart';
+
+class AuthRemoteDataSource {
+  AuthRemoteDataSource(this._apiClient);
+
+  final ApiClient _apiClient;
+
+  Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) async {
+    final response = await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.authLogin,
+      options: Options(
+        headers: {'Authorization': 'Bearer $firebaseIdToken'},
+      ),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Auth login API failed with status ${response.statusCode}.',
+      );
+    }
+
+    final accessToken = _extractAccessToken(response.data);
+    final refreshToken = _extractRefreshToken(response.data);
+    final user = _extractUser(response.data);
+    if (accessToken == null || accessToken.isEmpty) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Access token is missing in auth login response.',
+      );
+    }
+    if (user == null) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'User data is missing in auth login response.',
+      );
+    }
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Refresh token is missing in auth login response.',
+      );
+    }
+    return AuthLoginResult(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: user,
+    );
+  }
+
+  String? _extractAccessToken(dynamic data) {
+    if (data is! Map<String, dynamic>) {
+      return null;
+    }
+
+    if (data['accessToken'] is String) {
+      return data['accessToken'] as String;
+    }
+
+    final inner = data['data'];
+    if (inner is Map<String, dynamic> && inner['accessToken'] is String) {
+      return inner['accessToken'] as String;
+    }
+    return null;
+  }
+
+  String? _extractRefreshToken(dynamic data) {
+    if (data is! Map<String, dynamic>) {
+      return null;
+    }
+
+    if (data['refreshToken'] is String) {
+      return data['refreshToken'] as String;
+    }
+
+    final inner = data['data'];
+    if (inner is Map<String, dynamic> && inner['refreshToken'] is String) {
+      return inner['refreshToken'] as String;
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _extractUser(dynamic data) {
+    if (data is! Map<String, dynamic>) {
+      return null;
+    }
+
+    if (data['user'] is Map<String, dynamic>) {
+      return data['user'] as Map<String, dynamic>;
+    }
+
+    final inner = data['data'];
+    if (inner is Map<String, dynamic> && inner['user'] is Map<String, dynamic>) {
+      return inner['user'] as Map<String, dynamic>;
+    }
+
+    return null;
+  }
+}

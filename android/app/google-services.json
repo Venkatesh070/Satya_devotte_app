@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1053803605697",
+    "project_id": "satya-devotte-app",
+    "storage_bucket": "satya-devotte-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1053803605697:android:d5a06b41628f6c282a6e40",
+        "android_client_info": {
+          "package_name": "com.satya_devotte_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1053803605697-minjpob41bvbunkbjqj447rk1602m0rf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "2436c8d34b61d8606230f73ac0b9ced00dd3afa4"
+          }
+        },
+        {
+          "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNHVrp9X3h6g4qFoOuNFWnyWvnOdcZu6U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

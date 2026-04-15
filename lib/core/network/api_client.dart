@@ -4,7 +4,11 @@ import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/network/interceptors.dart';
 
 class ApiClient {
-  ApiClient() : dio = Dio(_baseOptions()) {
+  ApiClient({Future<String?> Function()? tokenProvider})
+      : dio = Dio(_baseOptions()) {
+    if (tokenProvider != null) {
+      dio.interceptors.add(AuthTokenInterceptor(tokenProvider));
+    }
     dio.interceptors.add(ApiErrorInterceptor());
   }
 
@@ -12,7 +16,7 @@ class ApiClient {
 
   static BaseOptions _baseOptions() {
     return BaseOptions(
-      baseUrl: AppEnv.apiBaseUrl,
+      baseUrl: AppEnv.resolvedApiBaseUrl,
       connectTimeout: AppConstants.apiTimeout,
       receiveTimeout: AppConstants.apiTimeout,
       sendTimeout: AppConstants.apiTimeout,
