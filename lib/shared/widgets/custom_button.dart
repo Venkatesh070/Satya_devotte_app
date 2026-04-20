@@ -8,13 +8,16 @@ class CustomButton extends StatefulWidget {
     required this.onTap,
     this.isLoading = false,
     this.enabled = true,
+    this.textColor = Colors.black,
+    this.gradientColors = const [AppColors.white, AppColors.white],
   });
 
   final String label;
   final VoidCallback onTap;
   final bool isLoading;
   final bool enabled;
-
+  final List<Color> gradientColors;
+  final Color textColor;
   @override
   State<CustomButton> createState() => _CustomButtonState();
 }
@@ -44,7 +47,7 @@ class _CustomButtonState extends State<CustomButton> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
-              colors: [AppColors.gradientStart, AppColors.gradientEnd],
+              colors: widget.gradientColors,
             ),
             boxShadow: const [
               BoxShadow(
@@ -66,8 +69,8 @@ class _CustomButtonState extends State<CustomButton> {
                   )
                 : Text(
                     widget.label,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: widget.textColor,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

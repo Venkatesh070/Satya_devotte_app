@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
@@ -12,10 +13,12 @@ class AuthController extends GetxController {
 
   final _isAuthenticated = false.obs;
   final _isGoogleSignInLoading = false.obs;
+  final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
+  bool get isEmailSignInLoading => _isEmailSignInLoading.value;
   String? get lastAuthError => _lastAuthError.value;
 
   @override
@@ -33,7 +36,6 @@ class AuthController extends GetxController {
       await _firebaseService.signInWithGoogle();
       final firebaseIdToken =
           await _firebaseService.getIdToken(forceRefresh: true);
-      _logTokenInChunks(firebaseIdToken);
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after Google sign in.');
       }
@@ -54,6 +56,78 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isGoogleSignInLoading.value = false;
+    }
+  }
+
+  Future<bool> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseIdToken =
+          await _firebaseService.getIdToken(forceRefresh: true);
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after email sign in.');
+      }
+      final loginResult =
+          await _authRepository.loginWithFirebaseToken(firebaseIdToken);
+      await _authSessionService.setSession(
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+        userData: loginResult.user,
+      );
+      _isAuthenticated.value = true;
+      return true;
+    } catch (error) {
+      await _authSessionService.clear();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapEmailSignInError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
+    }
+  }
+
+  Future<bool> signUpWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseIdToken =
+          await _firebaseService.getIdToken(forceRefresh: true);
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after email sign up.');
+      }
+      final loginResult =
+          await _authRepository.loginWithFirebaseToken(firebaseIdToken);
+      await _authSessionService.setSession(
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+        userData: loginResult.user,
+      );
+      _isAuthenticated.value = true;
+      return true;
+    } catch (error) {
+      await _authSessionService.clear();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapEmailSignUpError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
     }
   }
 
@@ -96,26 +170,65 @@ class AuthController extends GetxController {
     return 'Google sign in failed. Please try again.';
   }
 
-  void _logTokenInChunks(String? idToken) {
-    if (idToken == null || idToken.isEmpty) {
-      print('Final firebase user token to verify: null');
-      return;
+  String _mapEmailSignInError(Object error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Invalid email or password.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+      }
     }
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach login server. Please check server and network.';
+      }
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        return 'Login verification failed by server.';
+      }
+      if (statusCode != null && statusCode >= 500) {
+        return 'Server error during login. Please try again.';
+      }
+    }
+    return 'Email sign in failed. Please try again.';
+  }
 
-    const chunkSize = 250;
-    final totalParts = (idToken.length / chunkSize).ceil();
-    print('Final firebase user token to verify START:$totalParts');
-    for (var i = 0; i < totalParts; i++) {
-      final start = i * chunkSize;
-      final end = ((i + 1) * chunkSize < idToken.length)
-          ? (i + 1) * chunkSize
-          : idToken.length;
-      final part = idToken.substring(start, end);
-      print('Final firebase user token to verify PART ${i + 1}/$totalParts:$part');
+  String _mapEmailSignUpError(Object error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'email-already-in-use':
+          return 'This email is already registered. Please sign in.';
+        case 'weak-password':
+          return 'Password is too weak. Use at least 6 characters.';
+        case 'operation-not-allowed':
+          return 'Email/password sign up is disabled in Firebase.';
+      }
     }
-    // Single-line copy-friendly token.
-    print('FINAL_FIREBASE_USER_TOKEN_TO_VERIFY:$idToken');
-    print('Final firebase user token to verify END');
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach login server. Please check server and network.';
+      }
+      final statusCode = error.response?.statusCode;
+      if (statusCode != null && statusCode >= 500) {
+        return 'Server error during signup. Please try again.';
+      }
+    }
+    return 'Email sign up failed. Please try again.';
   }
 
   Future<void> signInWithApple() async {

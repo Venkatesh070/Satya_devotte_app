@@ -9,6 +9,8 @@ class AuthRemoteDataSource {
   final ApiClient _apiClient;
 
   Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) async {
+    // Explicit log requested for backend auth debugging.
+    print('BACKEND_LOGIN_AUTHORIZATION_TOKEN:Bearer $firebaseIdToken');
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.authLogin,
       options: Options(

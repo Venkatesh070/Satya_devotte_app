@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -33,14 +36,16 @@ class _OnboardingPageState extends State<OnboardingPage>
       title: 'Never Miss a Festival',
       subtitle: 'Get reminded about auspicious days and\nupcoming celebrations',
     ),
+    
   ];
 
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _rotationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 20),
+      duration: const Duration(seconds: 24),
     )..repeat();
   }
 
@@ -59,6 +64,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   void dispose() {
     _pageController.dispose();
     _rotationController.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -68,40 +74,137 @@ class _OnboardingPageState extends State<OnboardingPage>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarDividerColor: Colors.black,
+        statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        backgroundColor: const Color(0xFFF2EBDC),
+        backgroundColor: const Color(0xFF17191E),
         body: Stack(
           children: [
-            Positioned(
-              top: -30,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/appHeaderImg.png.png',
-                fit: BoxFit.fitWidth,
-                width: double.infinity,
-              ),
-            ),
-            Positioned(
-              top: -140,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Opacity(
-                  opacity: 0.92,
-                  child: RotationTransition(
-                    turns: _rotationController,
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  Positioned.fill(
                     child: Image.asset(
-                      'assets/images/flowerImg.png',
-                      width: MediaQuery.sizeOf(context).width * 0.76,
-                      fit: BoxFit.contain,
+                      'assets/images/onBoardBg3.png',
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
+                  Positioned(
+                    top: -200,
+                    left: 0,
+                    right: 0,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: AnimatedBuilder(
+                        animation: _rotationController,
+                        builder: (context, child) {
+                          final spin = _rotationController.value * 2 * math.pi;
+                          return Transform.rotate(
+                            angle: spin,
+                            child: child,
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/images/flowerImg.png',
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Opacity(
+                      opacity:1,
+                      child: ImageFiltered(
+                        imageFilter: ui.ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+                        child: SizedBox(
+                          width: 294.69,
+                          height: 294.69,
+                          child: Image.asset(
+                            'assets/images/onBoardRightCorner.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Transform.translate(
+                      offset: const Offset(0, -55),
+                      child: AnimatedBuilder(
+                        animation: _rotationController,
+                        builder: (context, child) {
+                          final spin = _rotationController.value * 2 * math.pi;
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Transform.rotate(
+                                angle: spin,
+                                child: Image.asset(
+                                  'assets/images/chakra1.png',
+                                  filterQuality: FilterQuality.high,
+                                ),
+                              ),
+                              Transform.rotate(
+                                angle: -spin,
+                                child: Transform.scale(
+                                  scale: 0.90,
+                                  child: Image.asset(
+                                    'assets/images/chakra2.png',
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                ),
+                              ),
+                         Transform.rotate(
+                                angle: spin,
+                                child: Transform.scale(
+                                  scale: 0.80,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/chakra3.png',
+                                        filterQuality: FilterQuality.high,
+                                      ),
+
+                                    ],
+                                  ),
+                                ),
+                              ),
+                             Transform.rotate(
+                                angle: -spin,
+                                child: Transform.scale(
+                                  scale: 0.53,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/chakra4.png',
+                                        filterQuality: FilterQuality.high,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                             Opacity(
+                                          opacity: 0.8,
+                                          child:  Image.asset(
+                                            'assets/images/onBoardBgOverlay.png',
+                                            filterQuality: FilterQuality.high,
+                                          ),
+                                        ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Positioned(
@@ -139,14 +242,26 @@ class _OnboardingPageState extends State<OnboardingPage>
                   'Skip >>',
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
               ),
             ),
             Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.28,
+              top: MediaQuery.sizeOf(context).height * 0.365,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/svgs/whiteLogo.svg',
+                  width: 93,
+                  height: 112,
+                ),
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.sizeOf(context).height * 0.36 + 132,
               left: 0,
               right: 0,
               child: SizedBox(
@@ -163,12 +278,6 @@ class _OnboardingPageState extends State<OnboardingPage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SvgPicture.asset(
-                            'assets/svgs/star.svg',
-                            width: 32,
-                            height: 32,
-                          ),
-                          const SizedBox(height: 20),
                           Text(
                             slide.title,
                             textAlign: TextAlign.center,
@@ -177,7 +286,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   color: Colors.white,
                                   fontSize: 24,
                                   height: 32 / 24,
-                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(
+                                      color: const Color.fromARGB(255, 242, 237, 237).withValues(alpha: 0.25),
+                                      offset: const Offset(0, 1),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                  fontWeight: FontWeight.w600,
                                 ),
                           ),
                           const SizedBox(height: 15),
@@ -199,14 +315,16 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ),
               ),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Opacity(
-                opacity: 0.95,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
                 child: Image.asset(
-                  'assets/images/appFooterImg.png.png',
+                  'assets/images/onBoardFooter.png',
+                  width: MediaQuery.sizeOf(context).width,
                   fit: BoxFit.fitWidth,
-                  width: double.infinity,
+                  alignment: Alignment.bottomCenter,
                 ),
               ),
             ),
@@ -232,8 +350,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(999),
                                 color: isActive
-                                    ? const Color(0xFF2D4EAD)
-                                    : const Color(0xFFEBCFA7),
+                                    ? AppColors.white
+                                    : AppColors.white.withValues(alpha: 0.4),
                               ),
                             );
                           }),
@@ -241,6 +359,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       const SizedBox(height: 18),
                       CustomButton(
+                        gradientColors: [AppColors.white, AppColors.white],
+                        textColor: AppColors.black,
                         label: _currentIndex == _slides.length - 1
                             ? 'Get started'
                             : 'Next',

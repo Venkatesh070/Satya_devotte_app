@@ -16,6 +16,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _rotationController;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   AuthController get controller => Get.find<AuthController>();
 
   @override
@@ -30,7 +32,153 @@ class _LoginPageState extends State<LoginPage>
   @override
   void dispose() {
     _rotationController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showEmailPasswordSheet() async {
+    _emailController.clear();
+    _passwordController.clear();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(context).viewInsets.bottom +
+                  MediaQuery.of(context).padding.bottom +
+                  20,
+            ),
+            child: Obx(() {
+              final isLoading = controller.isEmailSignInLoading;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Continue with Email',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !isLoading,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    enabled: !isLoading,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  CustomButton(
+                    label: 'Sign In',
+                    isLoading: isLoading,
+                    enabled: !isLoading,
+                    gradientColors: const [
+                      AppColors.gradientStart,
+                      AppColors.gradientEnd,
+                    ],
+                    textColor: AppColors.white,
+                    onTap: () async {
+                      final email = _emailController.text.trim();
+                      final password = _passwordController.text;
+                      if (email.isEmpty || password.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter email and password.'),
+                          ),
+                        );
+                        return;
+                      }
+                      final isSuccess = await controller.signInWithEmailPassword(
+                        email: email,
+                        password: password,
+                      );
+                      if (!mounted) return;
+                      if (isSuccess) {
+                        Navigator.of(context).pop();
+                        Get.offAllNamed(AppRoutes.home);
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            controller.lastAuthError ??
+                                'Email sign in failed. Please try again.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final email = _emailController.text.trim();
+                            final password = _passwordController.text;
+                            if (email.isEmpty || password.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter email and password.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            final isSuccess =
+                                await controller.signUpWithEmailPassword(
+                              email: email,
+                              password: password,
+                            );
+                            if (!mounted) return;
+                            if (isSuccess) {
+                              Navigator.of(context).pop();
+                              Get.offAllNamed(AppRoutes.home);
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  controller.lastAuthError ??
+                                      'Email sign up failed. Please try again.',
+                                ),
+                              ),
+                            );
+                          },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: const Text('Create New Account'),
+                  ),
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -121,6 +269,7 @@ class _LoginPageState extends State<LoginPage>
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 child: Obx(() {
                   final isLoading = controller.isGoogleSignInLoading;
+                  final isEmailPasswordLoading = controller.isEmailSignInLoading;
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -197,10 +346,12 @@ class _LoginPageState extends State<LoginPage>
                       ),
                       const SizedBox(height: 10),
                       CustomButton(
-                        label: 'Continue with Phone Number',
-                        isLoading: isLoading,
-                        enabled: !isLoading,
-                        onTap: () => Get.offAllNamed(AppRoutes.home),
+                        label: 'Continue with Email/Password',
+                        gradientColors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        textColor: AppColors.white,
+                        isLoading: isEmailPasswordLoading,
+                        enabled: !isEmailPasswordLoading && !isLoading,
+                        onTap: _showEmailPasswordSheet,
                       ),
                     ],
                   );

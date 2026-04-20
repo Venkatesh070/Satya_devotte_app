@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 
@@ -15,6 +19,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final PageController _pageController;
   int _currentIndex = 0;
+  bool _isAnimatingToTab = false;
+  bool _showBottomNav = true;
+  bool _hideNavContent = false;
+  Timer? _hideNavDebounceTimer;
 
   @override
   void initState() {
@@ -24,49 +32,106 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _hideNavDebounceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _onTabSelected(int index) {
+  Future<void> _onTabSelected(int index) async {
     if (_currentIndex == index) return;
-    _pageController.animateToPage(
+    if (_isAnimatingToTab) return;
+    if (!_showBottomNav) {
+      setState(() {
+        _showBottomNav = true;
+        _hideNavContent = false;
+      });
+    }
+    _isAnimatingToTab = true;
+    await _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );
+    if (!mounted) return;
+    setState(() => _currentIndex = index);
+    _isAnimatingToTab = false;
+  }
+
+  void _onHomeScrollDirectionChanged(ScrollDirection direction) {
+    if (_currentIndex != 0) return;
+
+    if (direction == ScrollDirection.reverse && _showBottomNav) {
+      _hideNavDebounceTimer?.cancel();
+      _hideNavDebounceTimer = Timer(const Duration(milliseconds: 320), () {
+        if (!mounted || !_showBottomNav) return;
+        setState(() => _showBottomNav = false);
+      });
+      return;
+    }
+
+    if (direction == ScrollDirection.forward && !_showBottomNav) {
+      _hideNavDebounceTimer?.cancel();
+      setState(() {
+        _showBottomNav = true;
+        _hideNavContent = false;
+      });
+    }
+  }
+
+  void _onBottomNavSlideEnd() {
+    if (!mounted) return;
+    if (!_showBottomNav && !_hideNavContent) {
+      setState(() => _hideNavContent = true);
+      return;
+    }
+    if (_showBottomNav && _hideNavContent) {
+      setState(() => _hideNavContent = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2EBDC),
+      extendBody: true,
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
-        onPageChanged: (index) => setState(() => _currentIndex = index),
           children: [
-          _HomeTabContent(),
+          _HomeTabContent(
+            onScrollDirectionChanged: _onHomeScrollDirectionChanged,
+          ),
           _SimpleTabPage(
             icon: Icons.local_fire_department_outlined,
             title: 'Poojas',
           ),
-          _SimpleTabPage(
-            icon: Icons.calendar_today_outlined,
-            title: 'Calendar',
-          ),
+        const CalendarPage(),
           const ProfilePage(),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 5),
-          child: _BottomNavBar(
-            currentIndex: _currentIndex,
-            pageController: _pageController,
-            onTap: _onTabSelected,
-          ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeInOutCubicEmphasized,
+        offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
+        onEnd: _onBottomNavSlideEnd,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeInOutCubic,
+          opacity: _showBottomNav ? 1 : 0,
+          child: _hideNavContent
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 0),
+                    child: _BottomNavBar(
+                      currentIndex: _currentIndex,
+                      pageController: _pageController,
+                      onTap: _onTabSelected,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
@@ -74,20 +139,30 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _HomeTabContent extends StatelessWidget {
-  const _HomeTabContent();
+  const _HomeTabContent({
+    required this.onScrollDirectionChanged,
+  });
+
+  final ValueChanged<ScrollDirection> onScrollDirectionChanged;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 0),
-      child: Column(
-        children: [
-          _HomeHeader(),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-            child: _HomeBodySections(),
-          ),
-        ],
+    return NotificationListener<UserScrollNotification>(
+      onNotification: (notification) {
+        onScrollDirectionChanged(notification.direction);
+        return false;
+      },
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 0),
+        child: Column(
+          children: [
+            _HomeHeader(),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
+              child: _HomeBodySections(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -231,7 +306,7 @@ class _DonationBannerCard extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
+              padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -309,7 +384,7 @@ class _SimpleTabPage extends StatelessWidget {
   }
 }
 
-class _BottomNavBar extends StatelessWidget {
+class _BottomNavBar extends StatefulWidget {
   const _BottomNavBar({
     required this.currentIndex,
     required this.pageController,
@@ -318,18 +393,69 @@ class _BottomNavBar extends StatelessWidget {
 
   final int currentIndex;
   final PageController pageController;
-  final ValueChanged<int> onTap;
-  static const int _lastTabIndex = 3;
+  final Future<void> Function(int) onTap;
+  static const int lastTabIndex = 3;
 
-  void _handleSwipe(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -120 && currentIndex < _lastTabIndex) {
-      onTap(currentIndex + 1);
-      return;
+  @override
+  State<_BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<_BottomNavBar> {
+  double _dragPageValue = 0;
+  bool _isDragging = false;
+  bool _isSettling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dragPageValue = widget.currentIndex.toDouble();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BottomNavBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isDragging && !_isSettling) {
+      _dragPageValue = widget.currentIndex.toDouble();
     }
-    if (velocity > 120 && currentIndex > 0) {
-      onTap(currentIndex - 1);
-    }
+  }
+
+  void _handleDragStart(DragStartDetails details) {
+    if (_isSettling) return;
+    _isDragging = true;
+    _dragPageValue = widget.currentIndex.toDouble();
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (_isSettling) return;
+    const tabWidth = 90.0;
+    setState(() {
+      _dragPageValue = (_dragPageValue - (details.delta.dx / tabWidth)).clamp(
+        0.0,
+        _BottomNavBar.lastTabIndex.toDouble(),
+      );
+    });
+  }
+
+  Future<void> _handleDragEnd(DragEndDetails details) async {
+    final targetIndex = _dragPageValue.round().clamp(
+      0,
+      _BottomNavBar.lastTabIndex,
+    );
+    await _settleToIndex(targetIndex);
+  }
+
+  Future<void> _settleToIndex(int targetIndex) async {
+    if (_isSettling) return;
+    setState(() {
+      _isSettling = true;
+      _isDragging = false;
+      _dragPageValue = targetIndex.toDouble();
+    });
+    await widget.onTap(targetIndex);
+    if (!mounted) return;
+    setState(() {
+      _isSettling = false;
+    });
   }
 
   double _tabTopOffset({
@@ -352,25 +478,34 @@ class _BottomNavBar extends StatelessWidget {
           const railWidth = slotWidth * 6;
           final railLeft = (constraints.maxWidth - railWidth) / 2;
           return AnimatedBuilder(
-            animation: pageController,
+            animation: widget.pageController,
             builder: (context, _) {
-              final pageValue = pageController.hasClients
-                  ? (pageController.page ?? currentIndex.toDouble())
-                  : currentIndex.toDouble();
+              final pageValue = _isDragging
+                  ? _dragPageValue
+                  : _isSettling
+                  ? _dragPageValue
+                  : (widget.pageController.hasClients
+                      ? (widget.pageController.page ??
+                          widget.currentIndex.toDouble())
+                      : widget.currentIndex.toDouble());
               // Shift tab slots with page progress for smooth tab swapping.
               final horizontalShift =
-                  pageValue.clamp(0.0, _lastTabIndex.toDouble()) * slotWidth;
-              final homeLeft = (railLeft + (slotWidth * 2)) - horizontalShift;
-              final poojasLeft = (railLeft + (slotWidth * 3)) - horizontalShift;
-              final calendarLeft = (railLeft + (slotWidth * 4)) - horizontalShift;
-              final profileLeft = (railLeft + (slotWidth * 5)) - horizontalShift;
+                  pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
+                      slotWidth;
+              // Offset by half-slot so active tab center aligns with screen center.
+              final homeLeft = (railLeft + (slotWidth * 2.5)) - horizontalShift;
+              final poojasLeft = (railLeft + (slotWidth * 3.5)) - horizontalShift;
+              final calendarLeft = (railLeft + (slotWidth * 4.5)) - horizontalShift;
+              final profileLeft = (railLeft + (slotWidth * 5.5)) - horizontalShift;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onHorizontalDragEnd: _handleSwipe,
+                onHorizontalDragStart: _handleDragStart,
+                onHorizontalDragUpdate: _handleDragUpdate,
+                onHorizontalDragEnd: _handleDragEnd,
                 child: Stack(
                   children: [
                 Positioned(
-                  top: 12,
+                  top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
@@ -395,8 +530,8 @@ class _BottomNavBar extends StatelessWidget {
                   child: _BottomItem(
                     icon: Icons.home_outlined,
                     label: 'Home',
-                    selected: currentIndex == 0,
-                    onTap: () => onTap(0),
+                    selected: widget.currentIndex == 0,
+                    onTap: () => _settleToIndex(0),
                   ),
                 ),
                 Positioned(
@@ -409,8 +544,8 @@ class _BottomNavBar extends StatelessWidget {
                   child: _BottomItem(
                     icon: Icons.local_fire_department_outlined,
                     label: 'Poojas',
-                    selected: currentIndex == 1,
-                    onTap: () => onTap(1),
+                    selected: widget.currentIndex == 1,
+                    onTap: () => _settleToIndex(1),
                   ),
                 ),
                 Positioned(
@@ -423,8 +558,8 @@ class _BottomNavBar extends StatelessWidget {
                   child: _BottomItem(
                     icon: Icons.calendar_today_outlined,
                     label: 'Calendar',
-                    selected: currentIndex == 2,
-                    onTap: () => onTap(2),
+                    selected: widget.currentIndex == 2,
+                    onTap: () => _settleToIndex(2),
                   ),
                 ),
                 Positioned(
@@ -437,8 +572,8 @@ class _BottomNavBar extends StatelessWidget {
                   child: _BottomItem(
                     icon: Icons.person_outline,
                     label: 'Profile',
-                    selected: currentIndex == 3,
-                    onTap: () => onTap(3),
+                    selected: widget.currentIndex == 3,
+                    onTap: () => _settleToIndex(3),
                   ),
                 ),
                   ],
