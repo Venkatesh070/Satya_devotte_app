@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage>
   late final AnimationController _rotationController;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   AuthController get controller => Get.find<AuthController>();
 
   @override
@@ -35,6 +36,15 @@ class _LoginPageState extends State<LoginPage>
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Navigate based on the user's role after successful login.
+  void _navigateByRole() {
+    if (controller.isAdmin) {
+      Get.offAllNamed(AppRoutes.cms);
+    } else {
+      Get.offAllNamed(AppRoutes.home);
+    }
   }
 
   Future<void> _showEmailPasswordSheet() async {
@@ -110,14 +120,15 @@ class _LoginPageState extends State<LoginPage>
                         );
                         return;
                       }
-                      final isSuccess = await controller.signInWithEmailPassword(
-                        email: email,
-                        password: password,
-                      );
+                      final isSuccess = await controller
+                          .signInWithEmailPassword(
+                            email: email,
+                            password: password,
+                          );
                       if (!mounted) return;
                       if (isSuccess) {
                         Navigator.of(context).pop();
-                        Get.offAllNamed(AppRoutes.home);
+                        _navigateByRole();
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -147,15 +158,15 @@ class _LoginPageState extends State<LoginPage>
                               );
                               return;
                             }
-                            final isSuccess =
-                                await controller.signUpWithEmailPassword(
-                              email: email,
-                              password: password,
-                            );
+                            final isSuccess = await controller
+                                .signUpWithEmailPassword(
+                                  email: email,
+                                  password: password,
+                                );
                             if (!mounted) return;
                             if (isSuccess) {
                               Navigator.of(context).pop();
-                              Get.offAllNamed(AppRoutes.home);
+                              _navigateByRole();
                               return;
                             }
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -208,7 +219,7 @@ class _LoginPageState extends State<LoginPage>
                 turns: _rotationController,
                 child: Image.asset(
                   'assets/images/flowerImg.png',
-                      width: MediaQuery.sizeOf(context).width * 0.2,
+                  width: MediaQuery.sizeOf(context).width * 0.2,
                 ),
               ),
             ),
@@ -243,20 +254,20 @@ class _LoginPageState extends State<LoginPage>
                     'Sign In to Continue',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Get reminded about auspicious days and\nupcoming celebrations',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -269,7 +280,7 @@ class _LoginPageState extends State<LoginPage>
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 child: Obx(() {
                   final isLoading = controller.isGoogleSignInLoading;
-                  final isEmailPasswordLoading = controller.isEmailSignInLoading;
+                  final isEmailLoading = controller.isEmailSignInLoading;
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -287,7 +298,7 @@ class _LoginPageState extends State<LoginPage>
                         onTap: () async {
                           final isSuccess = await controller.signInWithGoogle();
                           if (isSuccess) {
-                            Get.offAllNamed(AppRoutes.home);
+                            _navigateByRole();
                             return;
                           }
                           if (!mounted) return;
@@ -314,12 +325,12 @@ class _LoginPageState extends State<LoginPage>
                         isEnabled: !isLoading,
                         onTap: () async {
                           await controller.signInWithApple();
-                          Get.offAllNamed(AppRoutes.home);
+                          _navigateByRole();
                         },
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: const [
+                      const Row(
+                        children: [
                           Expanded(
                             child: Divider(
                               color: Color(0xFFE3D9C4),
@@ -347,10 +358,13 @@ class _LoginPageState extends State<LoginPage>
                       const SizedBox(height: 10),
                       CustomButton(
                         label: 'Continue with Email/Password',
-                        gradientColors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        gradientColors: [
+                          AppColors.gradientStart,
+                          AppColors.gradientEnd,
+                        ],
                         textColor: AppColors.white,
-                        isLoading: isEmailPasswordLoading,
-                        enabled: !isEmailPasswordLoading && !isLoading,
+                        isLoading: isEmailLoading,
+                        enabled: !isEmailLoading && !isLoading,
                         onTap: _showEmailPasswordSheet,
                       ),
                     ],

@@ -10,6 +10,8 @@ import 'package:satya_devotte_app/features/auth/data/datasources/auth_remote_dat
 import 'package:satya_devotte_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
@@ -26,11 +28,14 @@ class InitialBinding extends Bindings {
       ),
       permanent: true,
     );
-    Get.put<AuthRemoteDataSource>(AuthRemoteDataSource(Get.find<ApiClient>()),
-        permanent: true);
+    Get.put<AuthRemoteDataSource>(
+      AuthRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
     Get.put<AuthRepository>(
       AuthRepositoryImpl(Get.find<AuthRemoteDataSource>()),
-        permanent: true);
+      permanent: true,
+    );
     Get.put<NotificationService>(NotificationService(), permanent: true);
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<LocationService>(LocationService(), permanent: true);
@@ -43,8 +48,10 @@ class InitialBinding extends Bindings {
       ),
       permanent: true,
     );
-    Get.put<ProfileRemoteDataSource>(ProfileRemoteDataSource(Get.find<ApiClient>()),
-        permanent: true);
+    Get.put<ProfileRemoteDataSource>(
+      ProfileRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
     Get.put<ProfileRepository>(
       ProfileRepositoryImpl(Get.find<ProfileRemoteDataSource>()),
       permanent: true,
@@ -54,6 +61,14 @@ class InitialBinding extends Bindings {
         Get.find<ProfileRepository>(),
         Get.find<AuthSessionService>(),
       ),
+      permanent: true,
+    );
+    Get.put<PoojaRemoteDataSource>(
+      PoojaRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<PoojaController>(
+      PoojaController(Get.find<PoojaRemoteDataSource>()),
       permanent: true,
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,11 +18,33 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        Get.offAllNamed(AppRoutes.onboarding);
-      }
-    });
+    _navigate();
+  }
+
+  Future<void> _navigate() async {
+    // Wait for splash to show
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final auth = Get.find<AuthController>();
+
+    // Restore saved session from SharedPreferences
+    await auth.loadSavedSession();
+
+    if (!mounted) return;
+
+    if (!auth.isAuthenticated) {
+      // No saved session — go to onboarding
+      Get.offAllNamed(AppRoutes.onboarding);
+      return;
+    }
+
+    // Route based on role
+    if (auth.isAdmin) {
+      Get.offAllNamed(AppRoutes.cms);
+    } else {
+      Get.offAllNamed(AppRoutes.home);
+    }
   }
 
   @override
@@ -86,7 +109,7 @@ class _SplashPageState extends State<SplashPage> {
                       Text(
                         'पूजा: कर्मणि कौशलम्',
                         style: GoogleFonts.lora(
-                          color: Color(0xFF8D8D8D),
+                          color: const Color(0xFF8D8D8D),
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                         ),
@@ -94,7 +117,7 @@ class _SplashPageState extends State<SplashPage> {
                       Text(
                         'Pooja is peace in action',
                         style: GoogleFonts.lora(
-                          color: Color(0xFF7A7A7A),
+                          color: const Color(0xFF7A7A7A),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),

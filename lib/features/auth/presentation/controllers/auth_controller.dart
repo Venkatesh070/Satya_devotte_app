@@ -6,7 +6,12 @@ import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthController extends GetxController {
-  AuthController(this._firebaseService, this._authRepository, this._authSessionService);
+  AuthController(
+    this._firebaseService,
+    this._authRepository,
+    this._authSessionService,
+  );
+
   final FirebaseService _firebaseService;
   final AuthRepository _authRepository;
   final AuthSessionService _authSessionService;
@@ -15,11 +20,18 @@ class AuthController extends GetxController {
   final _isGoogleSignInLoading = false.obs;
   final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
+  final _userRole = RxString('user');
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
   bool get isEmailSignInLoading => _isEmailSignInLoading.value;
   String? get lastAuthError => _lastAuthError.value;
+
+  // ─── Role getters ─────────────────────────────────────────────
+  String get userRole => _userRole.value;
+  bool get isSuperAdmin => _userRole.value == 'superadmin';
+  bool get isAdmin => _userRole.value == 'admin' || isSuperAdmin;
+  bool get isRegularUser => _userRole.value == 'user';
 
   @override
   void onInit() {
@@ -29,23 +41,40 @@ class AuthController extends GetxController {
     });
   }
 
+  /// Call this from SplashPage to restore session on app start.
+  Future<void> loadSavedSession() async {
+    final restored = await _authSessionService.loadPersistedSession();
+    if (restored) {
+      _isAuthenticated.value = true;
+      _userRole.value = _authSessionService.userRole;
+    }
+  }
+
+  void _applyRole(Map<String, dynamic> user) {
+    _userRole.value = user['role'] as String? ?? 'user';
+  }
+
+  // ─── Google Sign-In ──────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
     _isGoogleSignInLoading.value = true;
     _lastAuthError.value = null;
     try {
       await _firebaseService.signInWithGoogle();
-      final firebaseIdToken =
-          await _firebaseService.getIdToken(forceRefresh: true);
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after Google sign in.');
       }
-      final loginResult =
-          await _authRepository.loginWithFirebaseToken(firebaseIdToken);
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+      );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,
         refreshToken: loginResult.refreshToken,
         userData: loginResult.user,
       );
+      _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       return true;
     } catch (error) {
@@ -59,6 +88,7 @@ class AuthController extends GetxController {
     }
   }
 
+  // ─── Email / Password Sign-In ────────────────────────────────
   Future<bool> signInWithEmailPassword({
     required String email,
     required String password,
@@ -70,18 +100,21 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
-      final firebaseIdToken =
-          await _firebaseService.getIdToken(forceRefresh: true);
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after email sign in.');
       }
-      final loginResult =
-          await _authRepository.loginWithFirebaseToken(firebaseIdToken);
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+      );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,
         refreshToken: loginResult.refreshToken,
         userData: loginResult.user,
       );
+      _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       return true;
     } catch (error) {
@@ -95,6 +128,7 @@ class AuthController extends GetxController {
     }
   }
 
+  // ─── Email / Password Sign-Up ────────────────────────────────
   Future<bool> signUpWithEmailPassword({
     required String email,
     required String password,
@@ -106,18 +140,21 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
-      final firebaseIdToken =
-          await _firebaseService.getIdToken(forceRefresh: true);
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after email sign up.');
       }
-      final loginResult =
-          await _authRepository.loginWithFirebaseToken(firebaseIdToken);
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+      );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,
         refreshToken: loginResult.refreshToken,
         userData: loginResult.user,
       );
+      _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       return true;
     } catch (error) {
@@ -131,24 +168,32 @@ class AuthController extends GetxController {
     }
   }
 
+  Future<void> signInWithApple() async {
+    await _firebaseService.signInWithApple();
+    _isAuthenticated.value = true;
+  }
+
+  Future<void> signOut() async {
+    await _authSessionService.clear();
+    await _firebaseService.signOut();
+    _isAuthenticated.value = false;
+    _userRole.value = 'user';
+  }
+
+  // ─── Error mappers ────────────────────────────────────────────
   String _mapGoogleSignInError(Object error) {
     final message = error.toString();
-
     if (message.contains('google-sign-in-cancelled')) {
       return 'Google sign in was cancelled.';
     }
-
-    // ApiException: 10 / DEVELOPER_ERROR is the most common Firebase OAuth setup issue.
     if (message.contains('ApiException: 10') ||
         message.toUpperCase().contains('DEVELOPER_ERROR')) {
       return 'Google sign in is not configured correctly in Firebase. '
           'Please add Android SHA keys and download a new google-services.json.';
     }
-
     if (message.contains('network_error')) {
       return 'Network error during Google sign in. Please check your internet.';
     }
-
     if (error is DioException) {
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
@@ -156,7 +201,6 @@ class AuthController extends GetxController {
           error.type == DioExceptionType.connectionError) {
         return 'Unable to reach login server. Please check server and network.';
       }
-
       final statusCode = error.response?.statusCode;
       if (statusCode == 401 || statusCode == 403) {
         return 'Login verification failed by server.';
@@ -166,7 +210,6 @@ class AuthController extends GetxController {
       }
       return 'Login API failed. Please try again.';
     }
-
     return 'Google sign in failed. Please try again.';
   }
 
@@ -229,16 +272,5 @@ class AuthController extends GetxController {
       }
     }
     return 'Email sign up failed. Please try again.';
-  }
-
-  Future<void> signInWithApple() async {
-    await _firebaseService.signInWithApple();
-    _isAuthenticated.value = true;
-  }
-
-  Future<void> signOut() async {
-    await _authSessionService.clear();
-    await _firebaseService.signOut();
-    _isAuthenticated.value = false;
   }
 }

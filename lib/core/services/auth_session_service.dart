@@ -15,6 +15,12 @@ class AuthSessionService {
   String? get refreshToken => _refreshToken;
   Map<String, dynamic>? get userData => _userData;
 
+  // ─── Role helpers ─────────────────────────────────────────────
+  String get userRole => _userData?['role'] as String? ?? 'user';
+  bool get isSuperAdmin => userRole == 'superadmin';
+  bool get isAdmin => userRole == 'admin' || isSuperAdmin;
+  bool get isRegularUser => userRole == 'user';
+
   Future<void> setSession({
     required String accessToken,
     required String refreshToken,
@@ -40,9 +46,7 @@ class AuthSessionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _accessToken = prefs.getString(_accessTokenKey);
-    } catch (_) {
-      // Return current in-memory value when storage channel fails.
-    }
+    } catch (_) {}
     return _accessToken;
   }
 
@@ -53,9 +57,7 @@ class AuthSessionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _refreshToken = prefs.getString(_refreshTokenKey);
-    } catch (_) {
-      // Return current in-memory value when storage channel fails.
-    }
+    } catch (_) {}
     return _refreshToken;
   }
 
@@ -68,12 +70,9 @@ class AuthSessionService {
       final prefs = await SharedPreferences.getInstance();
       raw = prefs.getString(_userDataKey);
     } catch (_) {
-      // Return current in-memory value when storage channel fails.
       return _userData;
     }
-    if (raw == null || raw.isEmpty) {
-      return null;
-    }
+    if (raw == null || raw.isEmpty) return null;
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
@@ -86,22 +85,24 @@ class AuthSessionService {
     return null;
   }
 
-  @Deprecated('Use setSession to store all auth values together.')
-  Future<void> setAccessToken(String token) async {
-    _accessToken = token;
+  /// Load persisted session into memory — call on app start.
+  Future<bool> loadPersistedSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_accessTokenKey, token);
-    } catch (_) {}
-  }
-
-  @Deprecated('Use setSession to store all auth values together.')
-  Future<void> setUser(Map<String, dynamic> user) async {
-    _userData = user;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userDataKey, jsonEncode(user));
-    } catch (_) {}
+      final token = prefs.getString(_accessTokenKey);
+      final raw = prefs.getString(_userDataKey);
+      if (token == null || token.isEmpty || raw == null || raw.isEmpty) {
+        return false;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return false;
+      _accessToken = token;
+      _refreshToken = prefs.getString(_refreshTokenKey);
+      _userData = decoded;
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> clear() async {
