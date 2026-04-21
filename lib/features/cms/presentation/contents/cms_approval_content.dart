@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -14,16 +16,20 @@ class CmsApprovalContent extends StatefulWidget {
 
 class _CmsApprovalContentState extends State<CmsApprovalContent>
     with SingleTickerProviderStateMixin {
+  // Two top-level tabs: Poojas | Festivals
   late final TabController _tabController;
-  late final PoojaController _ctrl;
+  late final PoojaController _poojaCtrl;
+  late final FestivalController _festivalCtrl;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _ctrl = Get.find<PoojaController>();
-    // Super admin approval view always needs ALL statuses regardless of rituals filter
-    _ctrl.loadAllPoojas();
+    _tabController = TabController(length: 2, vsync: this);
+    _poojaCtrl = Get.find<PoojaController>();
+    _festivalCtrl = Get.find<FestivalController>();
+    // Load all items for super admin
+    _poojaCtrl.loadAllPoojas();
+    _festivalCtrl.loadFestivals();
   }
 
   @override
@@ -75,7 +81,7 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
           ),
         ),
 
-        // ── Tab bar ──────────────────────────────────────────
+        // ── Top tabs: Poojas | Festivals ─────────────────────
         const SizedBox(height: 16),
         Container(
           color: CmsColors.white,
@@ -87,51 +93,31 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
             indicatorWeight: 3,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: 13,
+              fontSize: 14,
             ),
             unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w500,
-              fontSize: 13,
+              fontSize: 14,
             ),
             tabs: [
-              // Pending tab — shows live badge count
+              // Poojas tab with pending badge
               Obx(() {
-                final n = _ctrl.poojas
+                final n = _poojaCtrl.poojas
                     .where((p) => p.status == 'Pending')
                     .length;
                 return Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Pending'),
-                      if (n > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: CmsColors.orange,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '$n',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  child: _TabLabel(label: 'Poojas', count: n),
                 );
               }),
-              const Tab(text: 'Approved'),
-              const Tab(text: 'All'),
+              // Festivals tab with pending badge
+              Obx(() {
+                final n = _festivalCtrl.festivals
+                    .where((f) => f.status == 'Pending')
+                    .length;
+                return Tab(
+                  child: _TabLabel(label: 'Festivals', count: n),
+                );
+              }),
             ],
           ),
         ),
@@ -142,33 +128,10 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
           child: TabBarView(
             controller: _tabController,
             children: [
-              // Tab 1: Pending — approve / reject actions shown
-              _ApprovalList(
-                ctrl: _ctrl,
-                filterStatus: 'Pending',
-                showActions: true,
-                emptyIcon: Icons.check_circle_outline,
-                emptyTitle: 'All Caught Up!',
-                emptySubtitle: 'No poojas waiting for approval',
-              ),
-              // Tab 2: Approved — read-only
-              _ApprovalList(
-                ctrl: _ctrl,
-                filterStatus: 'Published',
-                showActions: false,
-                emptyIcon: Icons.thumb_up_alt_outlined,
-                emptyTitle: 'No Approved Poojas',
-                emptySubtitle: 'Approved poojas will appear here',
-              ),
-              // Tab 3: All — full history
-              _ApprovalList(
-                ctrl: _ctrl,
-                filterStatus: 'All',
-                showActions: false,
-                emptyIcon: Icons.list_alt_outlined,
-                emptyTitle: 'No Poojas Yet',
-                emptySubtitle: 'All submitted poojas will appear here',
-              ),
+              // Tab 1: Poojas approval
+              _PoojaApprovalSection(ctrl: _poojaCtrl),
+              // Tab 2: Festivals approval
+              _FestivalApprovalSection(ctrl: _festivalCtrl),
             ],
           ),
         ),
@@ -177,101 +140,159 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// LIST WIDGET — reused for all 3 tabs
-// ════════════════════════════════════════════════════════════════
-class _ApprovalList extends StatelessWidget {
-  const _ApprovalList({
-    required this.ctrl,
-    required this.filterStatus,
-    required this.showActions,
-    required this.emptyIcon,
-    required this.emptyTitle,
-    required this.emptySubtitle,
-  });
+// ── Tab label with count badge ────────────────────────────────────
+class _TabLabel extends StatelessWidget {
+  const _TabLabel({required this.label, required this.count});
+  final String label;
+  final int count;
 
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label),
+      if (count > 0) ...[
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: CmsColors.orange,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// POOJAS APPROVAL SECTION — 3 sub-tabs: Pending | Approved | All
+// ════════════════════════════════════════════════════════════════
+class _PoojaApprovalSection extends StatefulWidget {
+  const _PoojaApprovalSection({required this.ctrl});
   final PoojaController ctrl;
-  final String filterStatus;
+
+  @override
+  State<_PoojaApprovalSection> createState() => _PoojaApprovalSectionState();
+}
+
+class _PoojaApprovalSectionState extends State<_PoojaApprovalSection>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Sub-tabs
+        Container(
+          color: CmsColors.bg,
+          child: TabBar(
+            controller: _tab,
+            labelColor: CmsColors.orange,
+            unselectedLabelColor: CmsColors.textSecond,
+            indicatorColor: CmsColors.orange,
+            indicatorWeight: 2,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            tabs: const [
+              Tab(text: 'Pending'),
+              Tab(text: 'Approved'),
+              Tab(text: 'All'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tab,
+            children: [
+              _PoojaList(
+                ctrl: widget.ctrl,
+                filter: 'Pending',
+                showActions: true,
+              ),
+              _PoojaList(
+                ctrl: widget.ctrl,
+                filter: 'Published',
+                showActions: false,
+              ),
+              _PoojaList(ctrl: widget.ctrl, filter: 'All', showActions: false),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PoojaList extends StatelessWidget {
+  const _PoojaList({
+    required this.ctrl,
+    required this.filter,
+    required this.showActions,
+  });
+  final PoojaController ctrl;
+  final String filter;
   final bool showActions;
-  final IconData emptyIcon;
-  final String emptyTitle;
-  final String emptySubtitle;
 
   @override
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.of(context).size.width >= 768;
-
     return Obx(() {
-      // ── Loading ───────────────────────────────────────────
       if (ctrl.isLoading) {
         return const Center(
           child: CircularProgressIndicator(color: CmsColors.orange),
         );
       }
-
-      // ── Error ─────────────────────────────────────────────
-      if (ctrl.error != null && ctrl.poojas.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 36,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                ctrl.error!,
-                style: const TextStyle(
-                  color: CmsColors.textPrimary,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 16),
-              CmsPrimaryButton(
-                label: 'Retry',
-                icon: Icons.refresh,
-                onTap: ctrl.loadAllPoojas,
-              ),
-            ],
-          ),
-        );
-      }
-
-      // ── Filter ────────────────────────────────────────────
-      final list = filterStatus == 'All'
+      final list = filter == 'All'
           ? ctrl.poojas
-          : ctrl.poojas.where((p) => p.status == filterStatus).toList();
+          : ctrl.poojas.where((p) => p.status == filter).toList();
 
-      // ── Empty ─────────────────────────────────────────────
       if (list.isEmpty) {
         return CmsEmptyState(
-          icon: emptyIcon,
-          title: emptyTitle,
-          subtitle: emptySubtitle,
+          icon: Icons.self_improvement_outlined,
+          title: filter == 'All' ? 'No Poojas' : 'No $filter Poojas',
+          subtitle: filter == 'Pending'
+              ? 'All caught up! No poojas waiting.'
+              : 'Nothing here yet.',
         );
       }
 
-      // ── List ─────────────────────────────────────────────
       return RefreshIndicator(
         color: CmsColors.orange,
         onRefresh: ctrl.loadAllPoojas,
         child: ListView.separated(
-          padding: EdgeInsets.all(isWeb ? 24 : 16),
+          padding: EdgeInsets.all(isWeb ? 20 : 14),
           itemCount: list.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (ctx, i) => _ApprovalCard(
+          itemBuilder: (ctx, i) => _PoojaApprovalCard(
             pooja: list[i],
             showActions: showActions,
-            onApprove: () => _approveDialog(ctx, list[i], ctrl),
+            onApprove: () => _confirmApprove(ctx, list[i], ctrl),
             onReject: () => _rejectDialog(ctx, list[i], ctrl),
           ),
         ),
@@ -279,30 +300,19 @@ class _ApprovalList extends StatelessWidget {
     });
   }
 
-  // ── Approve confirmation dialog ──────────────────────────────
-  void _approveDialog(
-    BuildContext ctx,
-    PoojaModel pooja,
-    PoojaController ctrl,
-  ) {
+  void _confirmApprove(BuildContext ctx, PoojaModel p, PoojaController ctrl) {
     showDialog<void>(
       context: ctx,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text(
           'Approve Pooja',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: CmsColors.textPrimary,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pooja name highlight
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.green.withOpacity(0.08),
@@ -310,9 +320,9 @@ class _ApprovalList extends StatelessWidget {
                 border: Border.all(color: Colors.green.withOpacity(0.2)),
               ),
               child: Text(
-                pooja.title,
+                p.title,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: CmsColors.textPrimary,
                 ),
@@ -320,7 +330,7 @@ class _ApprovalList extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'This will publish the pooja and make it visible to all devotees in the app.',
+              'This will publish the pooja to all devotees.',
               style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
             ),
           ],
@@ -336,7 +346,7 @@ class _ApprovalList extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ctrl.approvePooja(pooja.id);
+              await ctrl.approvePooja(p.id);
             },
             icon: const Icon(Icons.check, size: 16),
             label: const Text('Approve & Publish'),
@@ -354,151 +364,443 @@ class _ApprovalList extends StatelessWidget {
     );
   }
 
-  // ── Reject with reason dialog ────────────────────────────────
-  void _rejectDialog(BuildContext ctx, PoojaModel pooja, PoojaController ctrl) {
+  void _rejectDialog(BuildContext ctx, PoojaModel p, PoojaController ctrl) {
     final reasonCtrl = TextEditingController();
     showDialog<void>(
       context: ctx,
-      builder: (_) => StatefulBuilder(
-        builder: (dialogCtx, setS) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Reject Pooja',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Pooja name
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.withOpacity(0.2)),
-                ),
-                child: Text(
-                  pooja.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Reject Pooja',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Enter reason — admin will see this and fix before resubmitting.',
-                style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
-              ),
-              const SizedBox(height: 10),
-              // Reason input
-              TextField(
-                controller: reasonCtrl,
-                maxLines: 3,
-                autofocus: true,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText:
-                      'e.g. Missing steps, incorrect deity, incomplete description...',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFFAAAAAA),
-                    fontSize: 12,
-                  ),
-                  filled: true,
-                  fillColor: CmsColors.bg,
-                  contentPadding: const EdgeInsets.all(12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: CmsColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: CmsColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.red),
-                  ),
+              child: Text(
+                p.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: CmsColors.textSecond),
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final reason = reasonCtrl.text.trim();
-                if (reason.isEmpty) {
-                  Get.snackbar(
-                    'Required',
-                    'Please enter a reason',
-                    snackPosition: SnackPosition.TOP,
-                    backgroundColor: CmsColors.orange,
-                    colorText: Colors.white,
-                    margin: const EdgeInsets.all(12),
-                  );
-                  return;
-                }
-                Navigator.pop(dialogCtx);
-                await ctrl.rejectPooja(pooja.id, reason);
-              },
-              icon: const Icon(Icons.close, size: 16),
-              label: const Text('Reject'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
+            const SizedBox(height: 12),
+            const Text(
+              'Reason *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Missing steps, incorrect deity...',
+                hintStyle: const TextStyle(
+                  color: Color(0xFFAAAAAA),
+                  fontSize: 12,
+                ),
+                filled: true,
+                fillColor: CmsColors.bg,
+                contentPadding: const EdgeInsets.all(12),
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: CmsColors.border),
                 ),
-                elevation: 0,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
               ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (reasonCtrl.text.trim().isEmpty) {
+                Get.snackbar(
+                  'Required',
+                  'Please enter a reason',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: CmsColors.orange,
+                  colorText: Colors.white,
+                  margin: const EdgeInsets.all(12),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              await ctrl.rejectPooja(p.id, reasonCtrl.text.trim());
+            },
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Reject'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 // ════════════════════════════════════════════════════════════════
-// APPROVAL CARD
+// FESTIVALS APPROVAL SECTION
 // ════════════════════════════════════════════════════════════════
-class _ApprovalCard extends StatelessWidget {
-  const _ApprovalCard({
+class _FestivalApprovalSection extends StatefulWidget {
+  const _FestivalApprovalSection({required this.ctrl});
+  final FestivalController ctrl;
+
+  @override
+  State<_FestivalApprovalSection> createState() =>
+      _FestivalApprovalSectionState();
+}
+
+class _FestivalApprovalSectionState extends State<_FestivalApprovalSection>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          color: CmsColors.bg,
+          child: TabBar(
+            controller: _tab,
+            labelColor: CmsColors.orange,
+            unselectedLabelColor: CmsColors.textSecond,
+            indicatorColor: CmsColors.orange,
+            indicatorWeight: 2,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            tabs: const [
+              Tab(text: 'Pending'),
+              Tab(text: 'Approved'),
+              Tab(text: 'All'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tab,
+            children: [
+              _FestivalList(
+                ctrl: widget.ctrl,
+                filter: 'Pending',
+                showActions: true,
+              ),
+              _FestivalList(
+                ctrl: widget.ctrl,
+                filter: 'Approved',
+                showActions: false,
+              ),
+              _FestivalList(
+                ctrl: widget.ctrl,
+                filter: 'All',
+                showActions: false,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FestivalList extends StatelessWidget {
+  const _FestivalList({
+    required this.ctrl,
+    required this.filter,
+    required this.showActions,
+  });
+  final FestivalController ctrl;
+  final String filter;
+  final bool showActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    return Obx(() {
+      if (ctrl.isLoading) {
+        return const Center(
+          child: CircularProgressIndicator(color: CmsColors.orange),
+        );
+      }
+      final list = filter == 'All'
+          ? ctrl.festivals
+          : ctrl.festivals.where((f) => f.status == filter).toList();
+
+      if (list.isEmpty) {
+        return CmsEmptyState(
+          icon: Icons.celebration_outlined,
+          title: filter == 'All' ? 'No Festivals' : 'No $filter Festivals',
+          subtitle: filter == 'Pending'
+              ? 'All caught up! No festivals waiting.'
+              : 'Nothing here yet.',
+        );
+      }
+
+      return RefreshIndicator(
+        color: CmsColors.orange,
+        onRefresh: ctrl.loadFestivals,
+        child: ListView.separated(
+          padding: EdgeInsets.all(isWeb ? 20 : 14),
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (ctx, i) => _FestivalApprovalCard(
+            festival: list[i],
+            showActions: showActions,
+            onApprove: () => _confirmApprove(ctx, list[i], ctrl),
+            onReject: () => _rejectDialog(ctx, list[i], ctrl),
+          ),
+        ),
+      );
+    });
+  }
+
+  void _confirmApprove(
+    BuildContext ctx,
+    FestivalModel f,
+    FestivalController ctrl,
+  ) {
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Approve Festival',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
+              ),
+              child: Text(
+                f.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'This will publish the festival to all devotees.',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ctrl.approveFestival(f.id);
+            },
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Approve & Publish'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rejectDialog(
+    BuildContext ctx,
+    FestivalModel f,
+    FestivalController ctrl,
+  ) {
+    final reasonCtrl = TextEditingController();
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Reject Festival',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
+              ),
+              child: Text(
+                f.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Reason *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Wrong date, missing description...',
+                hintStyle: const TextStyle(
+                  color: Color(0xFFAAAAAA),
+                  fontSize: 12,
+                ),
+                filled: true,
+                fillColor: CmsColors.bg,
+                contentPadding: const EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: CmsColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (reasonCtrl.text.trim().isEmpty) {
+                Get.snackbar(
+                  'Required',
+                  'Please enter a reason',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: CmsColors.orange,
+                  colorText: Colors.white,
+                  margin: const EdgeInsets.all(12),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              await ctrl.rejectFestival(f.id, reasonCtrl.text.trim());
+            },
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Reject'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// POOJA APPROVAL CARD
+// ════════════════════════════════════════════════════════════════
+class _PoojaApprovalCard extends StatelessWidget {
+  const _PoojaApprovalCard({
     required this.pooja,
     required this.showActions,
     required this.onApprove,
     required this.onReject,
   });
-
   final PoojaModel pooja;
   final bool showActions;
   final VoidCallback onApprove;
   final VoidCallback onReject;
 
   Color get _statusColor {
-    switch (pooja.status.toLowerCase().trim()) {
-      case 'published':
-      case 'approved':
+    switch (pooja.status) {
+      case 'Published':
         return Colors.green;
-      case 'pending':
+      case 'Pending':
         return CmsColors.orange;
-      case 'rejected':
-        return const Color(0xFFE53935);
       default:
         return Colors.grey;
     }
@@ -506,8 +808,6 @@ class _ApprovalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWeb = MediaQuery.of(context).size.width >= 768;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -521,14 +821,11 @@ class _ApprovalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row ────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Pooja icon
               Container(
-                width: isWeb ? 52 : 44,
-                height: isWeb ? 52 : 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: CmsColors.orange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -540,8 +837,6 @@ class _ApprovalCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Title + meta
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,36 +844,26 @@ class _ApprovalCard extends StatelessWidget {
                     Text(
                       pooja.title,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: CmsColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (pooja.deity.isNotEmpty)
-                          _MetaTag(Icons.person_outline, pooja.deity),
-                        if (pooja.duration.isNotEmpty)
-                          _MetaTag(Icons.timer_outlined, pooja.duration),
-                        if (pooja.difficulty.isNotEmpty)
-                          _MetaTag(Icons.signal_cellular_alt, pooja.difficulty),
-                        if (pooja.category.isNotEmpty)
-                          _MetaTag(Icons.category_outlined, pooja.category),
-                      ],
+                    const SizedBox(height: 3),
+                    Text(
+                      '${pooja.deity}  •  ${pooja.difficulty}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: CmsColors.textSecond,
+                      ),
                     ),
                   ],
                 ),
               ),
-
-              // Status badge
-              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
-                  vertical: 5,
+                  vertical: 4,
                 ),
                 decoration: BoxDecoration(
                   color: _statusColor.withOpacity(0.1),
@@ -596,85 +881,18 @@ class _ApprovalCard extends StatelessWidget {
               ),
             ],
           ),
-
-          // ── Steps + Items summary ───────────────────────────
-          if (pooja.steps.isNotEmpty || pooja.requiredItems.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1, color: CmsColors.border),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(
-                  Icons.format_list_numbered,
-                  size: 13,
-                  color: CmsColors.textSecond,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${pooja.steps.length} steps',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CmsColors.textSecond,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.check_box_outlined,
-                  size: 13,
-                  color: CmsColors.textSecond,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${pooja.requiredItems.length} items needed',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CmsColors.textSecond,
-                  ),
-                ),
-                if (pooja.audioUrl != null) ...[
-                  const SizedBox(width: 16),
-                  const Icon(
-                    Icons.music_note,
-                    size: 13,
-                    color: CmsColors.textSecond,
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Audio',
-                    style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-                  ),
-                ],
-                if (pooja.videoUrl != null) ...[
-                  const SizedBox(width: 16),
-                  const Icon(
-                    Icons.videocam,
-                    size: 13,
-                    color: CmsColors.textSecond,
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Video',
-                    style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-                  ),
-                ],
-              ],
-            ),
-          ],
-
-          // ── Action buttons (Pending tab only) ──────────────
           if (showActions) ...[
-            const SizedBox(height: 14),
-            const Divider(height: 1, color: CmsColors.border),
             const SizedBox(height: 12),
+            const Divider(height: 1, color: CmsColors.border),
+            const SizedBox(height: 10),
             Row(
               children: [
-                // Reject button
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: onReject,
                     icon: const Icon(
                       Icons.cancel_outlined,
-                      size: 16,
+                      size: 15,
                       color: Colors.red,
                     ),
                     label: const Text(
@@ -685,23 +903,22 @@ class _ApprovalCard extends StatelessWidget {
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       side: BorderSide(color: Colors.red.withOpacity(0.4)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Approve button
                 Expanded(
                   flex: 2,
                   child: ElevatedButton.icon(
                     onPressed: onApprove,
                     icon: const Icon(
                       Icons.check_circle_outline,
-                      size: 16,
+                      size: 15,
                       color: Colors.white,
                     ),
                     label: const Text(
@@ -714,9 +931,9 @@ class _ApprovalCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 0,
                     ),
@@ -731,31 +948,187 @@ class _ApprovalCard extends StatelessWidget {
   }
 }
 
-// ── Meta tag chip ─────────────────────────────────────────────────
-class _MetaTag extends StatelessWidget {
-  const _MetaTag(this.icon, this.label);
-  final IconData icon;
-  final String label;
+// ════════════════════════════════════════════════════════════════
+// FESTIVAL APPROVAL CARD
+// ════════════════════════════════════════════════════════════════
+class _FestivalApprovalCard extends StatelessWidget {
+  const _FestivalApprovalCard({
+    required this.festival,
+    required this.showActions,
+    required this.onApprove,
+    required this.onReject,
+  });
+  final FestivalModel festival;
+  final bool showActions;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  Color get _statusColor {
+    switch (festival.status) {
+      case 'Approved':
+        return Colors.green;
+      case 'Pending':
+        return CmsColors.orange;
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (label.isEmpty) return const SizedBox.shrink();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: CmsColors.bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: CmsColors.border),
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _statusColor.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8),
+        ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 11, color: CmsColors.textSecond),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: CmsColors.textSecond),
+          Row(
+            children: [
+              // Date badge
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: CmsColors.orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      festival.displayDay,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: CmsColors.orange,
+                      ),
+                    ),
+                    Text(
+                      festival.displayMonth,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: CmsColors.orange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      festival.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${festival.category}  •  ${festival.locationDisplay}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _statusColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  festival.status,
+                  style: TextStyle(
+                    color: _statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (showActions) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: CmsColors.border),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onReject,
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Reject',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: BorderSide(color: Colors.red.withOpacity(0.4)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: onApprove,
+                    icon: const Icon(
+                      Icons.check_circle_outline,
+                      size: 15,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Approve & Publish',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

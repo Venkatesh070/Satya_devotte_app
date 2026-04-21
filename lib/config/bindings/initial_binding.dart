@@ -11,6 +11,8 @@ import 'package:satya_devotte_app/features/auth/data/repositories/auth_repositor
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
@@ -69,6 +71,15 @@ class InitialBinding extends Bindings {
     );
     Get.put<PoojaController>(
       PoojaController(Get.find<PoojaRemoteDataSource>()),
+      permanent: true,
+    );
+    // ── CMS Festivals ────────────────────────────────────────────
+    Get.put<FestivalRemoteDataSource>(
+      FestivalRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<FestivalController>(
+      FestivalController(Get.find<FestivalRemoteDataSource>()),
       permanent: true,
     );
   }

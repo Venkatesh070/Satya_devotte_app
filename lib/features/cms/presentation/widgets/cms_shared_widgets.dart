@@ -132,7 +132,26 @@ class _CmsDropdownFieldState extends State<CmsDropdownField> {
   @override
   void initState() {
     super.initState();
-    _value = widget.initialValue ?? widget.items.first;
+    // Guard: only use initialValue if it actually exists in items list
+    // Otherwise fall back to first item — prevents DropdownButton assertion error
+    _value = _safeValue(widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(CmsDropdownField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If items list changed (e.g. switching between pooja/festival forms)
+    // reset value to something valid
+    if (!widget.items.contains(_value)) {
+      _value = _safeValue(widget.initialValue);
+    }
+  }
+
+  String _safeValue(String? candidate) {
+    if (candidate != null && widget.items.contains(candidate)) {
+      return candidate;
+    }
+    return widget.items.first;
   }
 
   @override
