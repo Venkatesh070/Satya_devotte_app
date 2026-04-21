@@ -25,7 +25,8 @@ class PoojaModel {
   final String difficulty;
   final String duration;
   final String description;
-  final String status;
+  final String
+  status; // Internal display value: 'Published' | 'Pending' | 'Draft'
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
@@ -35,7 +36,7 @@ class PoojaModel {
   final String? createdAt;
   final String? updatedAt;
 
-  // ── Try multiple field names — handles API field name variations ──
+  // ── Try multiple field names ──────────────────────────────────
   static String _str(
     Map<String, dynamic> json,
     List<String> keys, [
@@ -49,34 +50,50 @@ class PoojaModel {
     return fallback;
   }
 
-  // ── Normalise status to match our filter values ───────────────
-  static String _status(String raw) {
-    final s = raw.toLowerCase();
-    if (s == 'published' || s == 'active') return 'Published';
+  // ── Inbound: API value → internal display value ───────────────
+  // API sends: APPROVED, REJECTED, PENDING, DRAFT, published, active, etc.
+  // We normalise to: 'Published' | 'Pending' | 'Draft' | 'Rejected'
+  // IMPORTANT: REJECTED maps to its own 'Rejected' state — NOT 'Draft'.
+  // Rejected poojas are returned to admin to fix and resubmit.
+  static String _fromApiStatus(String raw) {
+    final s = raw.toLowerCase().trim();
+    if (s == 'published' || s == 'active' || s == 'approved')
+      return 'Published';
     if (s == 'pending' || s == 'pending_approval') return 'Pending';
+    if (s == 'rejected') return 'Rejected';
     if (s == 'draft') return 'Draft';
-    return raw; // keep original if unknown
+    return raw;
+  }
+
+  // ── Outbound: internal display value → API uppercase value ────
+  // API strictly requires: DRAFT | PENDING | APPROVED | REJECTED
+  // We map our display values to the correct API equivalents.
+  static String _toApiStatus(String display) {
+    switch (display.toLowerCase().trim()) {
+      case 'published':
+        return 'APPROVED';
+      case 'pending':
+        return 'PENDING';
+      case 'draft':
+      default:
+        return 'DRAFT';
+    }
   }
 
   factory PoojaModel.fromJson(Map<String, dynamic> json) {
     return PoojaModel(
       id: _str(json, ['_id', 'id']),
-      // API may send: title | pooja_name | poojaName | name
       title: _str(json, ['title', 'pooja_name', 'poojaName', 'name']),
-      // API may send: deity | deityName | deity_name
       deity: _str(json, ['deity', 'deityName', 'deity_name']),
       category: _str(json, ['category']),
-      // API may send: difficulty | level | difficultyLevel
       difficulty: _str(json, [
         'difficulty',
         'level',
         'difficultyLevel',
       ], 'Beginner'),
-      // API may send: duration | duration_mins | durationMins
       duration: _str(json, ['duration', 'duration_mins', 'durationMins']),
       description: _str(json, ['description', 'about']),
-      // Normalise: active → Published, pending_approval → Pending
-      status: _status(_str(json, ['status', 'pooja_status'], 'Draft')),
+      status: _fromApiStatus(_str(json, ['status', 'pooja_status'], 'Draft')),
       imageUrl: json['imageUrl'] as String? ?? json['image'] as String?,
       audioUrl: json['audioUrl'] as String? ?? json['audio'] as String?,
       videoUrl: json['videoUrl'] as String? ?? json['video'] as String?,
@@ -93,6 +110,7 @@ class PoojaModel {
     );
   }
 
+  // ── toJson sends UPPERCASE status values the API accepts ─────
   Map<String, dynamic> toJson() => {
     'title': title,
     'deity': deity,
@@ -100,7 +118,7 @@ class PoojaModel {
     'difficulty': difficulty,
     'duration': duration,
     'description': description,
-    'status': status,
+    'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
     if (imageUrl != null) 'imageUrl': imageUrl,
     if (audioUrl != null) 'audioUrl': audioUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,

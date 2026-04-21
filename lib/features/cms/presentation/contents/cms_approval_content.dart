@@ -491,11 +491,14 @@ class _ApprovalCard extends StatelessWidget {
   final VoidCallback onReject;
 
   Color get _statusColor {
-    switch (pooja.status) {
-      case 'Published':
+    switch (pooja.status.toLowerCase().trim()) {
+      case 'published':
+      case 'approved':
         return Colors.green;
-      case 'Pending':
+      case 'pending':
         return CmsColors.orange;
+      case 'rejected':
+        return const Color(0xFFE53935);
       default:
         return Colors.grey;
     }

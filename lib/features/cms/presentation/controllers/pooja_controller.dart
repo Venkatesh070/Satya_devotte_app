@@ -21,15 +21,18 @@ class PoojaController extends GetxController {
   String get filter => _filter.value;
 
   // Client-side filter applied on top of whatever is in _poojas.
-  // This ensures the UI is always correct whether data came from
-  // loadPoojas() (filtered) or loadAllPoojas() (all statuses).
+  // 'All' shows Published + Pending + Draft but never Rejected.
+  // Rejected poojas only appear if admin explicitly clicks a Rejected tab (future).
   List<PoojaModel> get filteredPoojas {
-    if (_filter.value == 'All') return _poojas;
+    if (_filter.value == 'All') {
+      return _poojas.where((p) => p.status != 'Rejected').toList();
+    }
     return _poojas.where((p) => p.status == _filter.value).toList();
   }
 
   // Pending poojas count — shown on dashboard (best-effort across current list)
   int get pendingCount => _poojas.where((p) => p.status == 'Pending').length;
+  int get rejectedCount => _poojas.where((p) => p.status == 'Rejected').length;
 
   @override
   void onInit() {
@@ -52,12 +55,39 @@ class PoojaController extends GetxController {
   }
 
   // ── Load all poojas (filtered by _filter.value) ──────────────
+  // Display value → API query param converter
+  // Filter tabs use: 'Published' | 'Pending' | 'Draft'
+  // API requires:    'APPROVED'  | 'PENDING'  | 'DRAFT'
+  static String? _toApiStatusParam(String displayFilter) {
+    switch (displayFilter) {
+      case 'Published':
+        return 'APPROVED';
+      case 'Pending':
+        return 'PENDING';
+      case 'Draft':
+        return 'DRAFT';
+      case 'Rejected':
+        return 'REJECTED';
+      default:
+        return null;
+    }
+  }
+
   Future<void> loadPoojas() async {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final status = _filter.value == 'All' ? null : _filter.value;
-      final result = await _dataSource.getAllPoojas(status: status);
+      List<PoojaModel> result;
+      if (_filter.value == 'All') {
+        // Use /poojas/my to get all of this admin's poojas across every status.
+        // The public GET /poojas only returns APPROVED poojas and should not
+        // be used here — it would show published poojas from other admins
+        // and hide this admin's own DRAFT/PENDING/REJECTED ones.
+        result = await _dataSource.getMyPoojas();
+      } else {
+        final status = _toApiStatusParam(_filter.value);
+        result = await _dataSource.getAllPoojas(status: status);
+      }
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
@@ -66,12 +96,13 @@ class PoojaController extends GetxController {
     }
   }
 
-  /// Load ALL poojas regardless of active filter — used by super admin Approvals tab.
+  /// Load ALL poojas across all statuses — used by super admin Approvals tab.
+  /// Uses GET /poojas/all which requires super admin role.
   Future<void> loadAllPoojas() async {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final result = await _dataSource.getAllPoojas(); // no status param
+      final result = await _dataSource.getAllPoojasSuperAdmin();
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
@@ -114,8 +145,11 @@ class PoojaController extends GetxController {
         requiredItems: requiredItems,
       );
       final created = await _dataSource.createPooja(pooja);
-      // Only insert into current list if it matches the active filter
-      if (_filter.value == 'All' || _filter.value == created.status) {
+      // Insert into current list only if it belongs here.
+      // For 'All': include everything except Rejected.
+      final matchesAll = _filter.value == 'All' && created.status != 'Rejected';
+      final matchesFilter = _filter.value == created.status;
+      if (matchesAll || matchesFilter) {
         _poojas.insert(0, created);
       }
       _snackOk('Pooja submitted successfully');

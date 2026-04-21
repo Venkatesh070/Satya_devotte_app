@@ -79,7 +79,7 @@ class _PoojaList extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<PoojaModel> onEdit;
 
-  static const _filters = ['All', 'Published', 'Pending', 'Draft'];
+  static const _filters = ['All', 'Published', 'Pending', 'Draft', 'Rejected'];
 
   @override
   Widget build(BuildContext context) {

@@ -196,32 +196,42 @@ class CmsStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalised = status.toLowerCase().trim();
     Color c;
-    switch (status) {
-      case 'Published':
+    String label;
+    switch (normalised) {
+      case 'published':
+      case 'approved':
         c = const Color(0xFF4CAF50);
+        label = 'Published';
         break;
-      case 'Pending':
+      case 'pending':
+      case 'pending_approval':
         c = CmsColors.orange;
+        label = 'Pending';
         break;
-      case 'Draft':
-        c = Colors.grey;
+      case 'rejected':
+        c = const Color(0xFFE53935);
+        label = 'Rejected';
         break;
+      case 'draft':
       default:
         c = Colors.grey;
+        label = status.isEmpty ? 'Draft' : status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withOpacity(0.3)),
       ),
       child: Text(
-        status,
+        label,
         style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.w600),
       ),
     );
-  }
+  } // ← missing closing brace was here
 }
 
 // ── Icon action button ────────────────────────────────────────────
