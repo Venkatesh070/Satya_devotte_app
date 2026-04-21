@@ -8,15 +8,27 @@ class AuthRemoteDataSource {
 
   final ApiClient _apiClient;
 
+  /// Invalidates the stored refresh token on the server.
+  /// Matches Swagger: POST /auth/logout  { "refreshToken": "string" }
+  Future<void> logout(String refreshToken) async {
+    try {
+      await _apiClient.dio.post<dynamic>(
+        ApiEndpoints.authLogout,
+        data: {'refreshToken': refreshToken},
+      );
+    } catch (_) {
+      // Best-effort: even if the server call fails, local session is cleared.
+    }
+  }
+
   Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) async {
     // Explicit log requested for backend auth debugging.
     print('BACKEND_LOGIN_AUTHORIZATION_TOKEN:Bearer $firebaseIdToken');
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.authLogin,
-      options: Options(
-        headers: {'Authorization': 'Bearer $firebaseIdToken'},
-      ),
+      options: Options(headers: {'Authorization': 'Bearer $firebaseIdToken'}),
     );
+    print('║ Body   : ${response.data}');
     if (response.statusCode == null || response.statusCode! >= 400) {
       throw DioException(
         requestOptions: response.requestOptions,
@@ -102,7 +114,8 @@ class AuthRemoteDataSource {
     }
 
     final inner = data['data'];
-    if (inner is Map<String, dynamic> && inner['user'] is Map<String, dynamic>) {
+    if (inner is Map<String, dynamic> &&
+        inner['user'] is Map<String, dynamic>) {
       return inner['user'] as Map<String, dynamic>;
     }
 

@@ -11,4 +11,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) {
     return _remoteDataSource.loginWithFirebaseToken(firebaseIdToken);
   }
+
+  @override
+  Future<void> logout(String refreshToken) {
+    return _remoteDataSource.logout(refreshToken);
+  }
 }

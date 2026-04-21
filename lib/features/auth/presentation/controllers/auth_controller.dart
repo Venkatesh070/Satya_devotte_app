@@ -51,7 +51,22 @@ class AuthController extends GetxController {
   }
 
   void _applyRole(Map<String, dynamic> user) {
-    _userRole.value = user['role'] as String? ?? 'user';
+    // The API returns role: "admin" for both admin and superadmin.
+    // The real distinction is the separate isSuperAdmin: true boolean field.
+    print(
+      '🔑 RAW ROLE: "${user['role']}" | isSuperAdmin field: ${user['isSuperAdmin']}',
+    );
+    final isSuperAdmin = user['isSuperAdmin'] == true;
+    if (isSuperAdmin) {
+      _userRole.value = 'superadmin';
+    } else {
+      final raw = (user['role'] as String? ?? 'user').trim().toLowerCase();
+      _userRole.value = raw == 'admin' ? 'admin' : 'user';
+    }
+    print(
+      '🔑 FINAL _userRole: "${_userRole.value}" | isSuperAdmin: $isSuperAdmin',
+    );
+    _authSessionService.patchRole(_userRole.value);
   }
 
   // ─── Google Sign-In ──────────────────────────────────────────
@@ -76,6 +91,14 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
+      print('');
+      print('╔══════════════════════════════════════════════════════════╗');
+      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
+      print('╠══════════════════════════════════════════════════════════╣');
+      print('  ' + loginResult.accessToken);
+      print('╚══════════════════════════════════════════════════════════╝');
+      print('');
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -116,6 +139,14 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
+      print('');
+      print('╔══════════════════════════════════════════════════════════╗');
+      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
+      print('╠══════════════════════════════════════════════════════════╣');
+      print('  ' + loginResult.accessToken);
+      print('╚══════════════════════════════════════════════════════════╝');
+      print('');
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -156,6 +187,14 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
+      print('');
+      print('╔══════════════════════════════════════════════════════════╗');
+      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
+      print('╠══════════════════════════════════════════════════════════╣');
+      print('  ' + loginResult.accessToken);
+      print('╚══════════════════════════════════════════════════════════╝');
+      print('');
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -174,10 +213,23 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
-    await _authSessionService.clear();
-    await _firebaseService.signOut();
+    // ── Clear local state FIRST so route guards see unauthenticated immediately ──
     _isAuthenticated.value = false;
     _userRole.value = 'user';
+
+    // ── Clear persisted session ──────────────────────────────────
+    final refreshToken = _authSessionService.refreshToken;
+    await _authSessionService.clear();
+
+    // ── Firebase sign-out ────────────────────────────────────────
+    try {
+      await _firebaseService.signOut();
+    } catch (_) {}
+
+    // ── Invalidate refresh token on server (best-effort, non-blocking) ──
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      _authRepository.logout(refreshToken).catchError((_) {});
+    }
   }
 
   // ─── Error mappers ────────────────────────────────────────────

@@ -16,10 +16,36 @@ class AuthSessionService {
   Map<String, dynamic>? get userData => _userData;
 
   // ─── Role helpers ─────────────────────────────────────────────
-  String get userRole => _userData?['role'] as String? ?? 'user';
+  String get userRole {
+    // API returns role:"admin" + isSuperAdmin:true for super admins.
+    // After login _applyRole normalises and patches the stored value to
+    // 'superadmin', so on session restore we read the patched value directly.
+    final stored = (_userData?['role'] as String? ?? 'user')
+        .trim()
+        .toLowerCase();
+    // Also honour the raw isSuperAdmin boolean if patch hasn't run yet
+    if (_userData?['isSuperAdmin'] == true) return 'superadmin';
+    if (stored == 'superadmin') return 'superadmin';
+    if (stored == 'admin') return 'admin';
+    return 'user';
+  }
+
   bool get isSuperAdmin => userRole == 'superadmin';
   bool get isAdmin => userRole == 'admin' || isSuperAdmin;
   bool get isRegularUser => userRole == 'user';
+
+  /// Patches the stored role in memory and SharedPreferences after normalisation.
+  void patchRole(String normalisedRole) {
+    if (_userData != null) {
+      _userData!['role'] = normalisedRole;
+      // Persist the patched userData so next loadPersistedSession gets it right
+      SharedPreferences.getInstance().then((prefs) {
+        try {
+          prefs.setString(_userDataKey, jsonEncode(_userData));
+        } catch (_) {}
+      });
+    }
+  }
 
   Future<void> setSession({
     required String accessToken,

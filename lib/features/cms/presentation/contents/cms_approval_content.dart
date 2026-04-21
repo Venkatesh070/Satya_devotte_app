@@ -22,8 +22,8 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _ctrl = Get.find<PoojaController>();
-    // Fresh load every time super admin opens approvals
-    _ctrl.loadPoojas();
+    // Super admin approval view always needs ALL statuses regardless of rituals filter
+    _ctrl.loadAllPoojas();
   }
 
   @override
@@ -239,7 +239,7 @@ class _ApprovalList extends StatelessWidget {
               CmsPrimaryButton(
                 label: 'Retry',
                 icon: Icons.refresh,
-                onTap: ctrl.loadPoojas,
+                onTap: ctrl.loadAllPoojas,
               ),
             ],
           ),
@@ -263,7 +263,7 @@ class _ApprovalList extends StatelessWidget {
       // ── List ─────────────────────────────────────────────
       return RefreshIndicator(
         color: CmsColors.orange,
-        onRefresh: ctrl.loadPoojas,
+        onRefresh: ctrl.loadAllPoojas,
         child: ListView.separated(
           padding: EdgeInsets.all(isWeb ? 24 : 16),
           itemCount: list.length,

@@ -2,11 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseService {
-  FirebaseService({
-    FirebaseAuth? firebaseAuth,
-    GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  FirebaseService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
+    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+      _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
@@ -86,6 +84,16 @@ class FirebaseService {
 
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
-    await _googleSignIn.signOut();
+    // On Flutter Web, calling _googleSignIn.signOut() when the user did not
+    // sign in with Google (e.g. email/password login) causes google_sign_in_web
+    // to throw because it tries to re-initialize without a client ID in index.html.
+    // Only call it when a Google account is actually signed in.
+    try {
+      if (_googleSignIn.currentUser != null) {
+        await _googleSignIn.signOut();
+      }
+    } catch (_) {
+      // Best-effort — never block logout over a Google sign-out failure.
+    }
   }
 }

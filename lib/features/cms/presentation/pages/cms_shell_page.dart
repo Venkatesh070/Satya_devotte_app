@@ -159,17 +159,27 @@ class _Sidebar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
             child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: CmsColors.orange,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.self_improvement,
-                    color: Colors.white,
-                    size: 20,
+                // Satya app logo — same image used on mobile
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/appLogo.png',
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: CmsColors.orange,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.self_improvement,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -255,34 +265,41 @@ class _Sidebar extends StatelessWidget {
           // ── Logout ──────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16),
-            child: GestureDetector(
-              onTap: () async {
-                await Get.find<AuthController>().signOut();
-                Get.offAllNamed(AppRoutes.login);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.withOpacity(0.2)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.red, size: 18),
-                    SizedBox(width: 10),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () async {
+                  await Get.find<AuthController>().signOut();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    Get.offAllNamed(AppRoutes.login);
+                  });
+                },
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red, size: 18),
+                      SizedBox(width: 10),
+                      Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -305,41 +322,47 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: isSelected ? CmsColors.orange : Colors.transparent,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: isSelected ? CmsColors.orange : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? item.activeIcon : item.icon,
-              color: isSelected
-                  ? Colors.white
-                  : item.isSpecial
-                  ? CmsColors.orange
-                  : Colors.white54,
-              size: 18,
+          hoverColor: Colors.white.withOpacity(0.08),
+          splashColor: Colors.white.withOpacity(0.12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected ? item.activeIcon : item.icon,
+                  color: isSelected
+                      ? Colors.white
+                      : item.isSpecial
+                      ? CmsColors.orange
+                      : Colors.white54,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  item.label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? Colors.white
+                        : item.isSpecial
+                        ? CmsColors.orange
+                        : Colors.white60,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Text(
-              item.label,
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : item.isSpecial
-                    ? CmsColors.orange
-                    : Colors.white60,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -368,17 +391,27 @@ class _MobileDrawer extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: CmsColors.orange,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.self_improvement,
-                        color: Colors.white,
-                        size: 22,
+                    // Satya app logo — same image used on mobile
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'assets/images/appLogo.png',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: CmsColors.orange,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.self_improvement,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -442,7 +475,9 @@ class _MobileDrawer extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(context);
                 await Get.find<AuthController>().signOut();
-                Get.offAllNamed(AppRoutes.login);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Get.offAllNamed(AppRoutes.login);
+                });
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(

@@ -23,6 +23,16 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
   PoojaModel? _editingPooja;
 
   @override
+  void initState() {
+    super.initState();
+    // Always reload with correct filter when entering Manage Poojas.
+    // This clears any stale data left by loadAllPoojas() from the Approvals tab.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.resetAndLoad();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_showAddForm) {
       return _PoojaForm(

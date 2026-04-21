@@ -20,8 +20,13 @@ class PoojaController extends GetxController {
   String? get error => _error.value;
   String get filter => _filter.value;
 
-  // Server already filters; expose _poojas as filteredPoojas for UI parity.
-  List<PoojaModel> get filteredPoojas => _poojas;
+  // Client-side filter applied on top of whatever is in _poojas.
+  // This ensures the UI is always correct whether data came from
+  // loadPoojas() (filtered) or loadAllPoojas() (all statuses).
+  List<PoojaModel> get filteredPoojas {
+    if (_filter.value == 'All') return _poojas;
+    return _poojas.where((p) => p.status == _filter.value).toList();
+  }
 
   // Pending poojas count — shown on dashboard (best-effort across current list)
   int get pendingCount => _poojas.where((p) => p.status == 'Pending').length;
@@ -34,8 +39,15 @@ class PoojaController extends GetxController {
 
   // ── Set filter → fetch from server with status param ─────────
   void setFilter(String f) {
-    if (_filter.value == f) return;
     _filter.value = f;
+    loadPoojas();
+  }
+
+  /// Called when entering Manage Poojas tab — resets to All and reloads.
+  /// Use this instead of setFilter('All') when navigating back from Approvals
+  /// so stale loadAllPoojas data is replaced with properly filtered data.
+  void resetAndLoad() {
+    _filter.value = 'All';
     loadPoojas();
   }
 
@@ -46,6 +58,20 @@ class PoojaController extends GetxController {
     try {
       final status = _filter.value == 'All' ? null : _filter.value;
       final result = await _dataSource.getAllPoojas(status: status);
+      _poojas.assignAll(result);
+    } catch (e) {
+      _error.value = _parseError(e);
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Load ALL poojas regardless of active filter — used by super admin Approvals tab.
+  Future<void> loadAllPoojas() async {
+    _isLoading.value = true;
+    _error.value = null;
+    try {
+      final result = await _dataSource.getAllPoojas(); // no status param
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
@@ -148,7 +174,12 @@ class PoojaController extends GetxController {
     try {
       final result = await _dataSource.approvePooja(id);
       final index = _poojas.indexWhere((p) => p.id == id);
-      if (index != -1) _poojas[index] = result;
+      if (index != -1) {
+        // Use API result if valid, otherwise patch status locally
+        _poojas[index] = result.status.isNotEmpty
+            ? result
+            : _poojas[index].copyWith(status: 'Published');
+      }
       _snackOk('Pooja approved and published');
       return true;
     } catch (e) {

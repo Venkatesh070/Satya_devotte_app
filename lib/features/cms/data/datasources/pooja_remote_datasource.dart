@@ -65,18 +65,27 @@ class PoojaRemoteDataSource {
   }
 
   // ── APPROVE pooja (superadmin only) ──────────────────────────
+  // No dedicated /approve endpoint — approval is a PATCH status update.
   Future<PoojaModel> approvePooja(String id) async {
-    final response = await _apiClient.dio.patch('/api/v1/poojas/$id/approve');
+    print('✅ APPROVE: PATCH /api/v1/poojas/$id  {status: Published}');
+    final response = await _apiClient.dio.patch(
+      '/api/v1/poojas/$id',
+      data: {'status': 'Published'},
+    );
     return PoojaModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
     );
   }
 
   // ── REJECT pooja (superadmin only) ───────────────────────────
+  // No dedicated /reject endpoint — rejection is a PATCH status update.
   Future<void> rejectPooja(String id, String reason) async {
+    print(
+      '❌ REJECT: PATCH /api/v1/poojas/$id  {status: Rejected, rejectionReason: $reason}',
+    );
     await _apiClient.dio.patch(
-      '/api/v1/poojas/$id/reject',
-      data: {'reason': reason},
+      '/api/v1/poojas/$id',
+      data: {'status': 'Rejected', 'rejectionReason': reason},
     );
   }
 
