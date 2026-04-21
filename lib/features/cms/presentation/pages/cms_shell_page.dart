@@ -702,8 +702,8 @@ Widget _buildContent(int i) {
       return const CmsApprovalContent();
     // case 7:
     //   return const CmsShlokaContent();
-    // case 8:
-    //   return const CmsAdminsContent();
+    case 8:
+      return const CmsAdminsContent();
     default:
       return const CmsDashboardContent();
   }
