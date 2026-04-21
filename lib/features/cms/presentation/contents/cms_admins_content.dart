@@ -23,6 +23,14 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
     super.initState();
     _tab = TabController(length: 2, vsync: this);
     _ctrl = Get.find<AdminController>();
+    // FIX: Always reload data when this screen is opened.
+    // AdminController is now registered with lazyPut(fenix:true) so its
+    // onInit fires here (first open) with a valid auth token. We also call
+    // loadAll() explicitly so data refreshes on every subsequent navigation
+    // back to this screen, not just the very first visit.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _ctrl.loadAll();
+    });
   }
 
   @override

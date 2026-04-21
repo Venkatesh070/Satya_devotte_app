@@ -700,8 +700,8 @@ Widget _buildContent(int i) {
       return const CmsAnalyticsContent();
     case 6:
       return const CmsApprovalContent();
-    // case 7:
-    //   return const CmsShlokaContent();
+    case 7:
+      return const CmsShlokaContent();
     case 8:
       return const CmsAdminsContent();
     default:

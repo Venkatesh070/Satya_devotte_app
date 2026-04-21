@@ -40,9 +40,10 @@ class FestivalController extends GetxController {
   int get pendingCount => _festivals.where((f) => f.status == 'Pending').length;
 
   @override
+  @override
   void onInit() {
     super.onInit();
-    loadFestivals();
+    Future.microtask(loadFestivals);
   }
 
   void setFilter(String f) => _filter.value = f;

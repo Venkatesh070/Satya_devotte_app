@@ -23,25 +23,27 @@ class AdminController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadAll();
+    // FIX: Removed Future.microtask(loadAll) from here.
+    //
+    // Previously this controller was registered with Get.put() in InitialBinding,
+    // which meant onInit fired at app startup — before the user logged in and
+    // before the auth token was available. The microtask ran immediately with a
+    // null token, the API call failed silently, and data never appeared until a
+    // manual refresh triggered loadAll() again.
+    //
+    // Now the controller is registered with Get.lazyPut(fenix: true), so onInit
+    // only runs the first time Get.find<AdminController>() is called, which
+    // happens when CmsAdminsContent is built — at that point the user is already
+    // authenticated. loadAll() is called from CmsAdminsContent.initState() via
+    // WidgetsBinding.addPostFrameCallback, giving full control to the UI layer.
   }
 
-  // ── Load both lists ───────────────────────────────────────────
+  // ── Load both lists independently so one failure doesn't block the other ──
   Future<void> loadAll() async {
     _isLoading.value = true;
     _error.value = null;
-    try {
-      final results = await Future.wait([
-        _dataSource.getAdminUsers(),
-        _dataSource.getRegularUsers(),
-      ]);
-      _admins.assignAll(results[0]);
-      _regularUsers.assignAll(results[1]);
-    } catch (e) {
-      _error.value = _parseError(e);
-    } finally {
-      _isLoading.value = false;
-    }
+    await Future.wait([loadAdmins(), loadRegularUsers()]);
+    _isLoading.value = false;
   }
 
   Future<void> loadAdmins() async {
@@ -50,6 +52,7 @@ class AdminController extends GetxController {
       _admins.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
+      print('loadAdmins error: $e');
     }
   }
 
@@ -59,6 +62,7 @@ class AdminController extends GetxController {
       _regularUsers.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
+      print('loadRegularUsers error: $e');
     }
   }
 
@@ -90,14 +94,10 @@ class AdminController extends GetxController {
   // ── Demote admin → user ───────────────────────────────────────
   Future<bool> removeAdmin(String id) async {
     try {
-      final result = await _dataSource.removeAdmin(id);
-      // Remove from admins list
-      _admins.removeWhere((a) => a.id == id);
-      // Add back to regular users
-      if (!_regularUsers.any((u) => u.id == id)) {
-        _regularUsers.insert(0, result);
-      }
+      await _dataSource.removeAdmin(id);
       _ok('Admin role removed');
+      // Reload both lists fresh from server
+      await loadAll();
       return true;
     } catch (e) {
       _error.value = _parseError(e);
