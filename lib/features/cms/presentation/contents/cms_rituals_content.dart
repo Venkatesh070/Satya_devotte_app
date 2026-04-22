@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 // ════════════════════════════════════════════════════════════════
 // CMS RITUALS CONTENT — main widget
@@ -552,6 +554,13 @@ class _PoojaCard extends StatelessWidget {
   final VoidCallback onApprove;
   final VoidCallback onReject;
 
+  bool get canEdit {
+    final auth = Get.find<AuthController>();
+    return auth.isSuperAdmin ||
+        pooja.status == 'Draft' ||
+        pooja.status == 'Rejected';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -683,24 +692,25 @@ class _PoojaCard extends StatelessWidget {
                   ],
                 ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CmsActionIcon(
-                    icon: Icons.edit_outlined,
-                    color: Colors.blue,
-                    onTap: onEdit,
-                    tooltip: 'Edit',
-                  ),
-                  const SizedBox(width: 6),
-                  CmsActionIcon(
-                    icon: Icons.delete_outline,
-                    color: Colors.red,
-                    onTap: onDelete,
-                    tooltip: 'Delete',
-                  ),
-                ],
-              ),
+              if (canEdit)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CmsActionIcon(
+                      icon: Icons.edit_outlined,
+                      color: Colors.blue,
+                      onTap: onEdit,
+                      tooltip: 'Edit',
+                    ),
+                    const SizedBox(width: 6),
+                    CmsActionIcon(
+                      icon: Icons.delete_outline,
+                      color: Colors.red,
+                      onTap: onDelete,
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
               // Approve/Reject buttons for superadmin on pending poojas
               if (Get.find<AuthController>().isSuperAdmin &&
                   pooja.status == 'Pending') ...[
@@ -770,6 +780,10 @@ class _PoojaFormState extends State<_PoojaForm> {
   late String _category;
   late List<String> _steps;
   late List<String> _items;
+  PickedFile? _pickedImage;
+  PickedFile? _pickedAudio;
+  PickedFile? _pickedVideo;
+  // existing URLs (editing mode)
   String? _imageUrl;
   String? _audioUrl;
   String? _videoUrl;
@@ -849,6 +863,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (_isEdit) {
       ok = await widget.controller.updatePooja(
         widget.pooja!.id,
+        pickedImage: _pickedImage,
+        pickedAudio: _pickedAudio,
+        pickedVideo: _pickedVideo,
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
           deity: _deity,
@@ -866,6 +883,9 @@ class _PoojaFormState extends State<_PoojaForm> {
       );
     } else {
       ok = await widget.controller.createPooja(
+        pickedImage: _pickedImage,
+        pickedAudio: _pickedAudio,
+        pickedVideo: _pickedVideo,
         title: _titleCtrl.text.trim(),
         deity: _deity,
         category: _category,
@@ -1007,28 +1027,43 @@ class _PoojaFormState extends State<_PoojaForm> {
       CmsFormCard(
         title: 'Media',
         children: [
-          CmsMediaUploadBox(
-            label: 'Upload Thumbnail Image',
+          CmsUploadBox(
+            label: 'Thumbnail Image',
             icon: Icons.image_outlined,
             accept: 'JPG, PNG up to 5MB',
-            uploadedUrl: _imageUrl,
-            onTap: () {},
+            mediaType: PickMediaType.image,
+            initialUrl: _imageUrl,
+            onPicked: (f) => setState(() => _pickedImage = f),
+            onRemoved: () => setState(() {
+              _pickedImage = null;
+              _imageUrl = null;
+            }),
           ),
           const SizedBox(height: 10),
-          CmsMediaUploadBox(
-            label: 'Upload Audio Mantra',
+          CmsUploadBox(
+            label: 'Audio Mantra',
             icon: Icons.music_note_outlined,
             accept: 'MP3, AAC up to 20MB',
-            uploadedUrl: _audioUrl,
-            onTap: () {},
+            mediaType: PickMediaType.audio,
+            initialUrl: _audioUrl,
+            onPicked: (f) => setState(() => _pickedAudio = f),
+            onRemoved: () => setState(() {
+              _pickedAudio = null;
+              _audioUrl = null;
+            }),
           ),
           const SizedBox(height: 10),
-          CmsMediaUploadBox(
-            label: 'Upload Ritual Video',
+          CmsUploadBox(
+            label: 'Ritual Video (optional)',
             icon: Icons.videocam_outlined,
             accept: 'MP4, MOV up to 200MB',
-            uploadedUrl: _videoUrl,
-            onTap: () {},
+            mediaType: PickMediaType.video,
+            initialUrl: _videoUrl,
+            onPicked: (f) => setState(() => _pickedVideo = f),
+            onRemoved: () => setState(() {
+              _pickedVideo = null;
+              _videoUrl = null;
+            }),
           ),
         ],
       ),

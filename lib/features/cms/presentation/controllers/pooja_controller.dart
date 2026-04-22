@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 
@@ -106,6 +107,9 @@ class PoojaController extends GetxController {
   // ── Create pooja ─────────────────────────────────────────────
   Future<bool> createPooja({
     required String title,
+    PickedFile? pickedImage,
+    PickedFile? pickedAudio,
+    PickedFile? pickedVideo,
     required String deity,
     required String category,
     required String difficulty,
@@ -136,7 +140,12 @@ class PoojaController extends GetxController {
         steps: steps,
         requiredItems: requiredItems,
       );
-      final created = await _dataSource.createPooja(pooja);
+      final created = await _dataSource.createPooja(
+        pooja,
+        image: pickedImage,
+        audio: pickedAudio,
+        video: pickedVideo,
+      );
       // Insert into current list only if it belongs here.
       // For 'All': include everything except Rejected.
       final matchesAll = _filter.value == 'All' && created.status != 'Rejected';
@@ -156,11 +165,23 @@ class PoojaController extends GetxController {
   }
 
   // ── Update pooja ─────────────────────────────────────────────
-  Future<bool> updatePooja(String id, PoojaModel updated) async {
+  Future<bool> updatePooja(
+    String id,
+    PoojaModel updated, {
+    PickedFile? pickedImage,
+    PickedFile? pickedAudio,
+    PickedFile? pickedVideo,
+  }) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      final result = await _dataSource.updatePooja(id, updated);
+      final result = await _dataSource.updatePooja(
+        id,
+        updated,
+        image: pickedImage,
+        audio: pickedAudio,
+        video: pickedVideo,
+      );
       final index = _poojas.indexWhere((p) => p.id == id);
       if (index != -1) {
         // If status changed and no longer matches filter, drop it

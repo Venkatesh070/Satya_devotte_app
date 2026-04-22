@@ -21,16 +21,14 @@ class DonationModel {
   final String? createdAt;
   final String? updatedAt;
 
-  static String _normaliseStatus(String raw) {
-    switch (raw.toUpperCase()) {
+  static String _normalizeStatus(String? s) {
+    switch ((s ?? '').toUpperCase()) {
       case 'APPROVED':
         return 'Approved';
-      case 'PENDING':
-        return 'Pending';
       case 'REJECTED':
         return 'Rejected';
       default:
-        return raw;
+        return 'Pending';
     }
   }
 
@@ -62,7 +60,7 @@ class DonationModel {
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'name']),
       description: _str(json, ['description']),
-      status: _normaliseStatus(_str(json, ['status'], 'Pending')),
+      status: _normalizeStatus(json['status'] as String?),
       imageUrl: json['image'] as String? ?? json['imageUrl'] as String?,
       createdBy: _extractId(json['createdBy']),
       createdAt: json['createdAt'] as String?,

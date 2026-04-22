@@ -1,3 +1,4 @@
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 // lib/features/cms/data/datasources/festival_remote_datasource.dart
@@ -58,22 +59,28 @@ class FestivalRemoteDataSource {
   }
 
   // ── POST /festivals/create-festival — multipart/form-data ──────
-  Future<FestivalModel> createFestival(Map<String, dynamic> body) async {
-    // Swagger shows multipart/form-data
-    // location is a Map — must be JSON encoded as string for multipart
+  Future<FestivalModel> createFestival(
+    Map<String, dynamic> body, {
+    PickedFile? image,
+  }) async {
     final fields = <String, dynamic>{};
     body.forEach((k, v) {
       if (v == null) return;
       if (v is Map || v is List) {
-        fields[k] = jsonEncode(
-          v,
-        ); // {"city":"Hyderabad","state":"Telangana","country":"India"}
+        fields[k] = jsonEncode(v);
       } else if (v is bool) {
         fields[k] = v.toString();
       } else {
         fields[k] = v.toString();
       }
     });
+    // Add image bytes directly in create request
+    if (image != null) {
+      fields['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+      );
+    }
     final res = await _apiClient.dio.post(
       '/api/v1/festivals/create-festival',
       data: FormData.fromMap(fields),

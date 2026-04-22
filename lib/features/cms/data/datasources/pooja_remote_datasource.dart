@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 
@@ -58,22 +60,71 @@ class PoojaRemoteDataSource {
     );
   }
 
-  // ── CREATE pooja (multipart/form-data, requires admin role) ──
-  Future<PoojaModel> createPooja(PoojaModel pooja) async {
+  // ── CREATE pooja — multipart/form-data with optional media files ──
+  Future<PoojaModel> createPooja(
+    PoojaModel pooja, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
+    final formMap = <String, dynamic>{...pooja.toJson()};
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+      );
+    }
     final response = await _apiClient.dio.post(
       ApiEndpoints.createPooja,
-      data: pooja.toJson(),
+      data: FormData.fromMap(formMap),
     );
     return PoojaModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
     );
   }
 
-  // ── UPDATE pooja — PATCH (requires admin role) ────────────────
-  Future<PoojaModel> updatePooja(String id, PoojaModel pooja) async {
+  // ── UPDATE pooja — PATCH with optional media files ──────────────
+  Future<PoojaModel> updatePooja(
+    String id,
+    PoojaModel pooja, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
+    final formMap = <String, dynamic>{...pooja.toJson()};
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+      );
+    }
     final response = await _apiClient.dio.patch(
       ApiEndpoints.updatePooja(id),
-      data: pooja.toJson(),
+      data: FormData.fromMap(formMap),
     );
     return PoojaModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),

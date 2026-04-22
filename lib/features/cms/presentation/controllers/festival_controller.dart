@@ -1,3 +1,4 @@
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 // lib/features/cms/presentation/controllers/festival_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -73,11 +74,14 @@ class FestivalController extends GetxController {
   }
 
   // ── CREATE ────────────────────────────────────────────────────
-  Future<bool> createFestival(Map<String, dynamic> body) async {
+  Future<bool> createFestival(
+    Map<String, dynamic> body, {
+    PickedFile? image,
+  }) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      await _dataSource.createFestival(body);
+      await _dataSource.createFestival(body, image: image);
       await loadFestivals();
       _ok('Festival submitted for review');
       return true;
@@ -91,7 +95,11 @@ class FestivalController extends GetxController {
   }
 
   // ── UPDATE ────────────────────────────────────────────────────
-  Future<bool> updateFestival(String id, Map<String, dynamic> body) async {
+  Future<bool> updateFestival(
+    String id,
+    Map<String, dynamic> body, {
+    PickedFile? image,
+  }) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {

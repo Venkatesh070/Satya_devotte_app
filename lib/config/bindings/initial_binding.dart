@@ -3,6 +3,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/core/services/location_service.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:satya_devotte_app/core/services/storage_service.dart';
 import 'package:satya_devotte_app/core/services/sync_service.dart';
@@ -115,5 +116,11 @@ class InitialBinding extends Bindings {
       DonationController(Get.find<DonationRemoteDataSource>()),
       permanent: true,
     );
+    Get.put<StorageService>(StorageService(), permanent: true);
+    Get.put<MediaUploadService>(
+      MediaUploadService(),
+      permanent: true,
+    ); // ← add this
+    Get.put<LocationService>(LocationService(), permanent: true);
   }
 }

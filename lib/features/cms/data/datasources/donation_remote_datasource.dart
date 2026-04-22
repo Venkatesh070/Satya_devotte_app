@@ -1,3 +1,4 @@
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 // lib/features/cms/data/datasources/donation_remote_datasource.dart
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -55,17 +56,16 @@ class DonationRemoteDataSource {
   Future<DonationModel> createDonation({
     required String title,
     String description = '',
-    List<int>? imageBytes,
-    String? imageFilename,
+    PickedFile? image, // picked file sent directly as multipart
   }) async {
     final fields = <String, dynamic>{
       'title': title,
       'description': description,
     };
-    if (imageBytes != null && imageFilename != null) {
+    if (image != null) {
       fields['image'] = MultipartFile.fromBytes(
-        imageBytes,
-        filename: imageFilename,
+        image.bytes,
+        filename: image.filename,
       );
     }
     final res = await _apiClient.dio.post(

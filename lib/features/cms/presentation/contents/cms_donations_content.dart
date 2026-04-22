@@ -1,11 +1,13 @@
 // lib/features/cms/presentation/contents/cms_donations_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/donation_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 class CmsDonationsContent extends StatefulWidget {
   const CmsDonationsContent({super.key});
@@ -621,13 +623,24 @@ class _DonationCard extends StatelessWidget {
           // Image header
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            child: donation.imageUrl != null && donation.imageUrl!.isNotEmpty
-                ? Image.network(
-                    donation.imageUrl!,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _PlaceholderImg(),
+            child: // In _DonationCard image section, replace the Image.network with:
+            donation.imageUrl != null && donation.imageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(14),
+                    ),
+                    child: Image.network(
+                      donation.imageUrl!,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, error, __) {
+                        debugPrint(
+                          'Image load error: $error for ${donation.imageUrl}',
+                        );
+                        return _PlaceholderImg();
+                      },
+                    ),
                   )
                 : _PlaceholderImg(),
           ),
@@ -794,6 +807,7 @@ class _DonationForm extends StatefulWidget {
 class _DonationFormState extends State<_DonationForm> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
+  PickedFile? _pickedImage; // newly picked file bytes
   bool get _isEdit => widget.donation != null;
 
   @override
@@ -801,6 +815,7 @@ class _DonationFormState extends State<_DonationForm> {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.donation?.title ?? '');
     _descCtrl = TextEditingController(text: widget.donation?.description ?? '');
+    // _pickedImage starts null; existing imageUrl shown via initialUrl
   }
 
   @override
@@ -833,6 +848,7 @@ class _DonationFormState extends State<_DonationForm> {
       ok = await widget.ctrl.createDonation(
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
+        image: _pickedImage,
       );
     }
     if (ok) widget.onSaved();
@@ -895,66 +911,14 @@ class _DonationFormState extends State<_DonationForm> {
                   maxLines: 4,
                 ),
                 const SizedBox(height: 12),
-                // Image upload placeholder (S3 to be implemented)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  decoration: BoxDecoration(
-                    color: CmsColors.bg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: CmsColors.border,
-                      style: BorderStyle.solid,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.image_outlined,
-                        color: CmsColors.orange,
-                        size: 28,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Donation Image *',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: CmsColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'JPG, PNG up to 5MB',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: CmsColors.textSecond.withOpacity(0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: CmsColors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: CmsColors.orange.withOpacity(0.3),
-                          ),
-                        ),
-                        child: const Text(
-                          'Tap to upload',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: CmsColors.orange,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                CmsUploadBox(
+                  label: 'Donation Image *',
+                  icon: Icons.image_outlined,
+                  accept: 'JPG, PNG up to 5MB',
+                  mediaType: PickMediaType.image,
+                  initialUrl: widget.donation?.imageUrl,
+                  onPicked: (f) => setState(() => _pickedImage = f),
+                  onRemoved: () => setState(() => _pickedImage = null),
                 ),
               ],
             ),

@@ -1,14 +1,14 @@
 // lib/features/cms/presentation/contents/cms_festivals_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
-import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 class CmsFestivalsContent extends StatefulWidget {
   const CmsFestivalsContent({super.key});
@@ -650,6 +650,13 @@ class _FestivalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSuperAdmin = Get.find<AuthController>().isSuperAdmin;
 
+    // FIX: FestivalModel does not have a createdBy field.
+    // All users can edit their own festivals; superadmin can edit all.
+    // To restore owner-only edit, add createdBy to FestivalModel and
+    // replace `true` below with:
+    //   festival.createdBy == Get.find<AuthController>().currentUserId
+    const canEdit = true;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -722,7 +729,6 @@ class _FestivalCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    // Status
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -741,7 +747,6 @@ class _FestivalCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Category
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -760,7 +765,6 @@ class _FestivalCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Global badge
                     if (festival.isGlobal)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -790,22 +794,23 @@ class _FestivalCard extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CmsActionIcon(
-                    icon: Icons.edit_outlined,
-                    color: Colors.blue,
-                    onTap: onEdit,
-                  ),
-                  const SizedBox(width: 6),
-                  CmsActionIcon(
-                    icon: Icons.delete_outline,
-                    color: Colors.red,
-                    onTap: onDelete,
-                  ),
-                ],
-              ),
+              if (canEdit)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CmsActionIcon(
+                      icon: Icons.edit_outlined,
+                      color: Colors.blue,
+                      onTap: onEdit,
+                    ),
+                    const SizedBox(width: 6),
+                    CmsActionIcon(
+                      icon: Icons.delete_outline,
+                      color: Colors.red,
+                      onTap: onDelete,
+                    ),
+                  ],
+                ),
               if (isSuperAdmin && festival.status == 'Pending') ...[
                 const SizedBox(height: 8),
                 Row(
@@ -873,24 +878,29 @@ class _FestivalForm extends StatefulWidget {
 }
 
 class _FestivalFormState extends State<_FestivalForm> {
+  // ── Text controllers ──────────────────────────────────────────
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
-  TextEditingController _locationCityCtrl = TextEditingController();
-  TextEditingController _locationStateCtrl = TextEditingController();
-  TextEditingController _locationCountryCtrl = TextEditingController();
-  // Rituals — list of selected pooja IDs
-  final List<String> _selectedRitualIds = [];
-  final List<String> _selectedRitualNames = [];
+  late final TextEditingController _locationCityCtrl;
+  late final TextEditingController _locationStateCtrl;
+  late final TextEditingController _locationCountryCtrl;
   late final TextEditingController _notifyDaysCtrl;
 
-  // Date stored internally as DD-MM-YYYY — what the API expects
+  // ── FIX: properly declared state fields ───────────────────────
+  PickedFile? _pickedImage;
+  String? _existingImageUrl;
+
+  // ── Rituals ───────────────────────────────────────────────────
+  final List<String> _selectedRitualIds = [];
+  final List<String> _selectedRitualNames = [];
+
+  // ── Form values ───────────────────────────────────────────────
   DateTime? _date;
   DateTime? _endDate;
   late String _category;
   late bool _isGlobal;
   late bool _notifyUsers;
 
-  // API accepts exactly these values
   static const _categories = ['MAJOR', 'MINOR', 'FASTING', 'ECLIPSE'];
 
   bool get _isEdit => widget.festival != null;
@@ -899,6 +909,7 @@ class _FestivalFormState extends State<_FestivalForm> {
   void initState() {
     super.initState();
     final f = widget.festival;
+
     _titleCtrl = TextEditingController(text: f?.title ?? '');
     _descCtrl = TextEditingController(text: f?.description ?? '');
     _locationCityCtrl = TextEditingController(text: f?.locationCity ?? '');
@@ -906,22 +917,24 @@ class _FestivalFormState extends State<_FestivalForm> {
     _locationCountryCtrl = TextEditingController(
       text: f?.locationCountry ?? 'India',
     );
-    // Pre-populate selected rituals if editing
-    if (f?.rituals != null && f!.rituals!.isNotEmpty) {
-      _selectedRitualNames.addAll(f.rituals!.split(', '));
-    }
     _notifyDaysCtrl = TextEditingController(
       text: (f?.notificationDaysBefore ?? 0).toString(),
     );
+
+    _existingImageUrl = f?.imageUrl;
+
     _category = _categories.contains(f?.category) ? f!.category : 'MAJOR';
     _isGlobal = f?.isGlobal ?? false;
     _notifyUsers = f?.notifyUsers ?? false;
-    // Parse existing date
+
     _date = _parseDate(f?.date);
     _endDate = _parseDate(f?.endDate);
+
+    if (f?.rituals != null && f!.rituals!.isNotEmpty) {
+      _selectedRitualNames.addAll(f.rituals!.split(', '));
+    }
   }
 
-  // Parse DD-MM-YYYY → DateTime
   DateTime? _parseDate(String? s) {
     if (s == null || s.isEmpty) return null;
     try {
@@ -935,7 +948,6 @@ class _FestivalFormState extends State<_FestivalForm> {
     }
   }
 
-  // Format DateTime → DD-MM-YYYY (required by API)
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
@@ -959,10 +971,11 @@ class _FestivalFormState extends State<_FestivalForm> {
     );
     if (picked != null) {
       setState(() {
-        if (isEnd)
+        if (isEnd) {
           _endDate = picked;
-        else
+        } else {
           _date = picked;
+        }
       });
     }
   }
@@ -973,13 +986,12 @@ class _FestivalFormState extends State<_FestivalForm> {
     return null;
   }
 
-  // Build the request body — exactly what API expects
   Map<String, dynamic> _buildBody() {
     final body = <String, dynamic>{
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
-      'date': _formatDate(_date!), // DD-MM-YYYY ✅
-      'category': _category, // MAJOR/MINOR/FASTING/ECLIPSE ✅
+      'date': _formatDate(_date!),
+      'category': _category,
       'isGlobal': _isGlobal,
       'location': {
         'city': _locationCityCtrl.text.trim(),
@@ -992,13 +1004,8 @@ class _FestivalFormState extends State<_FestivalForm> {
       'notificationDaysBefore': int.tryParse(_notifyDaysCtrl.text) ?? 0,
     };
 
-    // endDate — only include if set
     if (_endDate != null) body['endDate'] = _formatDate(_endDate!);
-
-    // rituals — list of pooja IDs, omit if empty
-    if (_selectedRitualIds.isNotEmpty) {
-      body['rituals'] = _selectedRitualIds;
-    }
+    if (_selectedRitualIds.isNotEmpty) body['rituals'] = _selectedRitualIds;
 
     return body;
   }
@@ -1021,9 +1028,13 @@ class _FestivalFormState extends State<_FestivalForm> {
     bool ok;
 
     if (_isEdit) {
-      ok = await widget.ctrl.updateFestival(widget.festival!.id, body);
+      ok = await widget.ctrl.updateFestival(
+        widget.festival!.id,
+        body,
+        image: _pickedImage,
+      );
     } else {
-      ok = await widget.ctrl.createFestival(body);
+      ok = await widget.ctrl.createFestival(body, image: _pickedImage);
     }
 
     if (ok) widget.onSaved();
@@ -1036,7 +1047,6 @@ class _FestivalFormState extends State<_FestivalForm> {
     _locationCityCtrl.dispose();
     _locationStateCtrl.dispose();
     _locationCountryCtrl.dispose();
-
     _notifyDaysCtrl.dispose();
     super.dispose();
   }
@@ -1052,7 +1062,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back + title
             Row(
               children: [
                 GestureDetector(
@@ -1113,8 +1122,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         controller: _titleCtrl,
       ),
       const SizedBox(height: 12),
-
-      // ── Date pickers — show formatted DD-MM-YYYY ──────────────
       Row(
         children: [
           Expanded(
@@ -1135,8 +1142,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         ],
       ),
       const SizedBox(height: 12),
-
-      // ── Category — exactly MAJOR/MINOR/FASTING/ECLIPSE ────────
       CmsDropdownField(
         label: 'Category',
         items: _categories,
@@ -1144,8 +1149,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         onChanged: (v) => setState(() => _category = v ?? 'MAJOR'),
       ),
       const SizedBox(height: 12),
-
-      // Location — sent as JSON object {city, state, country}
       Row(
         children: [
           Expanded(
@@ -1172,7 +1175,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         controller: _locationCountryCtrl,
       ),
       const SizedBox(height: 12),
-
       CmsFormField(
         label: 'Description',
         hint: 'Brief description of the festival...',
@@ -1180,9 +1182,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         maxLines: 3,
       ),
       const SizedBox(height: 12),
-
-      // ── Rituals — empty = omit from request ──────────────────
-      // Rituals — multi-select from existing poojas
       _PoojaPickerField(
         selectedIds: _selectedRitualIds,
         selectedNames: _selectedRitualNames,
@@ -1197,7 +1196,6 @@ class _FestivalFormState extends State<_FestivalForm> {
       CmsFormCard(
         title: 'Settings',
         children: [
-          // isGlobal toggle
           Row(
             children: [
               Expanded(
@@ -1231,8 +1229,6 @@ class _FestivalFormState extends State<_FestivalForm> {
             ],
           ),
           const SizedBox(height: 12),
-
-          // notifyUsers toggle
           Row(
             children: [
               Expanded(
@@ -1265,7 +1261,6 @@ class _FestivalFormState extends State<_FestivalForm> {
               ),
             ],
           ),
-
           if (_notifyUsers) ...[
             const SizedBox(height: 12),
             CmsFormField(
@@ -1278,7 +1273,25 @@ class _FestivalFormState extends State<_FestivalForm> {
       ),
       const SizedBox(height: 16),
 
-      // Edit info banner
+      CmsFormCard(
+        title: 'Festival Image',
+        children: [
+          CmsUploadBox(
+            label: 'Festival Image',
+            icon: Icons.image_outlined,
+            accept: 'JPG, PNG up to 5MB',
+            mediaType: PickMediaType.image,
+            initialUrl: _existingImageUrl,
+            onPicked: (f) => setState(() => _pickedImage = f),
+            onRemoved: () => setState(() {
+              _pickedImage = null;
+              _existingImageUrl = null;
+            }),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+
       if (_isEdit) ...[
         Container(
           padding: const EdgeInsets.all(12),
@@ -1303,7 +1316,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         const SizedBox(height: 16),
       ],
 
-      // Buttons
       Row(
         children: [
           Expanded(
@@ -1428,7 +1440,7 @@ class _DatePickerField extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════
-// POOJA PICKER FIELD — multi-select dropdown for rituals
+// POOJA PICKER FIELD
 // ════════════════════════════════════════════════════════════════
 class _PoojaPickerField extends StatelessWidget {
   const _PoojaPickerField({
@@ -1455,7 +1467,6 @@ class _PoojaPickerField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        // Show selected poojas as chips
         if (selectedNames.isNotEmpty) ...[
           Wrap(
             spacing: 6,
@@ -1480,7 +1491,6 @@ class _PoojaPickerField extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        // Add pooja button
         GestureDetector(
           onTap: () => _showPoojaSelector(context),
           child: Container(

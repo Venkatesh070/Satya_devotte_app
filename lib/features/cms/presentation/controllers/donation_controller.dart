@@ -1,3 +1,4 @@
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 // lib/features/cms/presentation/controllers/donation_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -57,8 +58,7 @@ class DonationController extends GetxController {
   Future<bool> createDonation({
     required String title,
     String description = '',
-    List<int>? imageBytes,
-    String? imageFilename,
+    PickedFile? image,
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -66,8 +66,7 @@ class DonationController extends GetxController {
       await _dataSource.createDonation(
         title: title,
         description: description,
-        imageBytes: imageBytes,
-        imageFilename: imageFilename,
+        image: image,
       );
       await loadDonations();
       _ok('Donation submitted for review');
