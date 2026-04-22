@@ -13,7 +13,9 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/donation_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
@@ -87,29 +89,31 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     // ── CMS Admins ───────────────────────────────────────────────
-    // DataSource is permanent (stateless HTTP wrapper, safe at startup)
     Get.put<AdminRemoteDataSource>(
       AdminRemoteDataSource(Get.find<ApiClient>()),
       permanent: true,
     );
-    // FIX: Use lazyPut + fenix so onInit only fires when the CMS page is
-    // first opened — by then the user is logged in and the auth token exists.
-    // With the old Get.put the controller was created at app start (before
-    // login), Future.microtask(loadAll) ran with a null token, and data never
-    // loaded until a manual refresh.
-    Get.lazyPut<AdminController>(
-      () => AdminController(Get.find<AdminRemoteDataSource>()),
-      fenix: true, // recreate automatically if ever disposed & re-navigated to
+    Get.put<AdminController>(
+      AdminController(Get.find<AdminRemoteDataSource>()),
+      permanent: true,
     );
     // ── CMS Daily Slokas ─────────────────────────────────────────
     Get.put<SlokaRemoteDataSource>(
       SlokaRemoteDataSource(Get.find<ApiClient>()),
       permanent: true,
     );
-    // FIX: Same lazy pattern as AdminController above.
-    Get.lazyPut<SlokaController>(
-      () => SlokaController(Get.find<SlokaRemoteDataSource>()),
-      fenix: true,
+    Get.put<SlokaController>(
+      SlokaController(Get.find<SlokaRemoteDataSource>()),
+      permanent: true,
+    );
+    // ── CMS Donations ─────────────────────────────────────────────
+    Get.put<DonationRemoteDataSource>(
+      DonationRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<DonationController>(
+      DonationController(Get.find<DonationRemoteDataSource>()),
+      permanent: true,
     );
   }
 }

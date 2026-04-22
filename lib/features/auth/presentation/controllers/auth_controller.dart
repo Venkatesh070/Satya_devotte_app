@@ -33,6 +33,10 @@ class AuthController extends GetxController {
   bool get isAdmin => _userRole.value == 'admin' || isSuperAdmin;
   bool get isRegularUser => _userRole.value == 'user';
 
+  /// Current logged-in user's backend MongoDB _id
+  String get currentUserId =>
+      (_authSessionService.userData?['_id'] as String? ?? '').trim();
+
   @override
   void onInit() {
     super.onInit();

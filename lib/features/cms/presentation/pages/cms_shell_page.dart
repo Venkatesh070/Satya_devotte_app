@@ -4,6 +4,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_rituals_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_donations_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_festivals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_notifications_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_users_content.dart';
@@ -641,6 +642,11 @@ List<_NavItem> _navItems(bool isSuperAdmin) => [
     Icons.celebration,
   ),
   const _NavItem(
+    'Donations',
+    Icons.volunteer_activism_outlined,
+    Icons.volunteer_activism,
+  ),
+  const _NavItem(
     'Notifications',
     Icons.notifications_outlined,
     Icons.notifications,
@@ -668,6 +674,7 @@ String _pageTitle(int i) {
     'Dashboard',
     'Manage Poojas',
     'Manage Festivals',
+    'Donations',
     'Notifications',
     'Users',
     'Analytics',
@@ -686,14 +693,16 @@ Widget _buildContent(int i) {
     case 2:
       return const CmsFestivalsContent();
     case 3:
-      return const CmsNotificationsContent();
+      return const CmsDonationsContent();
     case 4:
-      return const CmsUsersContent();
+      return const CmsNotificationsContent();
     case 5:
-      return const CmsAnalyticsContent();
+      return const CmsUsersContent();
     case 6:
-      return const CmsShlokaContent();
+      return const CmsAnalyticsContent();
     case 7:
+      return const CmsShlokaContent();
+    case 8:
       return const CmsAdminsContent();
     default:
       return const CmsDashboardContent();

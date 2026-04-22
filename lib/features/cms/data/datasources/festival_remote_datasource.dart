@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 // lib/features/cms/data/datasources/festival_remote_datasource.dart
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -58,10 +59,20 @@ class FestivalRemoteDataSource {
 
   // ── POST /festivals/create-festival — multipart/form-data ──────
   Future<FestivalModel> createFestival(Map<String, dynamic> body) async {
-    // Swagger shows multipart/form-data — convert map to FormData
+    // Swagger shows multipart/form-data
+    // location is a Map — must be JSON encoded as string for multipart
     final fields = <String, dynamic>{};
     body.forEach((k, v) {
-      if (v != null) fields[k] = v is bool ? v.toString() : v.toString();
+      if (v == null) return;
+      if (v is Map || v is List) {
+        fields[k] = jsonEncode(
+          v,
+        ); // {"city":"Hyderabad","state":"Telangana","country":"India"}
+      } else if (v is bool) {
+        fields[k] = v.toString();
+      } else {
+        fields[k] = v.toString();
+      }
     });
     final res = await _apiClient.dio.post(
       '/api/v1/festivals/create-festival',
