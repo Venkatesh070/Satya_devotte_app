@@ -649,12 +649,6 @@ List<_NavItem> _navItems(bool isSuperAdmin) => [
   const _NavItem('Analytics', Icons.bar_chart_outlined, Icons.bar_chart),
   if (isSuperAdmin) ...[
     const _NavItem(
-      'Approvals',
-      Icons.check_circle_outline,
-      Icons.check_circle,
-      isSpecial: true,
-    ),
-    const _NavItem(
       'Shlokas',
       Icons.menu_book_outlined,
       Icons.menu_book,
@@ -677,7 +671,6 @@ String _pageTitle(int i) {
     'Notifications',
     'Users',
     'Analytics',
-    'Approvals',
     'Shlokas',
     'Manage Admins',
   ];
@@ -699,10 +692,8 @@ Widget _buildContent(int i) {
     case 5:
       return const CmsAnalyticsContent();
     case 6:
-      return const CmsApprovalContent();
-    case 7:
       return const CmsShlokaContent();
-    case 8:
+    case 7:
       return const CmsAdminsContent();
     default:
       return const CmsDashboardContent();

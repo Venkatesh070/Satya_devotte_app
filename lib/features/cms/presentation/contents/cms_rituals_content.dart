@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -44,7 +45,7 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
         }),
         onSaved: () {
           _controller.setFilter('All');
-          _controller.loadPoojas();
+          _controller.loadPoojas(); // reload fresh from server
           setState(() {
             _showAddForm = false;
             _editingPooja = null;
@@ -79,7 +80,7 @@ class _PoojaList extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<PoojaModel> onEdit;
 
-  static const _filters = ['All', 'Published', 'Pending', 'Draft', 'Rejected'];
+  static const _filters = ['All', 'Approved', 'Pending', 'Draft', 'Rejected'];
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +88,46 @@ class _PoojaList extends StatelessWidget {
 
     return Column(
       children: [
+        // ── SuperAdmin banner ─────────────────────────────────
+        Obx(() {
+          final isSA = Get.find<AuthController>().isSuperAdmin;
+          if (!isSA) return const SizedBox.shrink();
+          return Container(
+            margin: EdgeInsets.fromLTRB(
+              isWeb ? 24 : 16,
+              12,
+              isWeb ? 24 : 16,
+              0,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFE082)),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: Color(0xFFF9A825),
+                  size: 15,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Super Admin — Pending poojas show Approve & Reject buttons directly on the card.',
+                    style: TextStyle(
+                      color: Color(0xFF5D4037),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+
         // ── Toolbar ──────────────────────────────────────────
         Container(
           padding: EdgeInsets.symmetric(
@@ -307,14 +348,189 @@ class _PoojaList extends StatelessWidget {
                       ctx,
                       itemName: list[i].title,
                     );
-                    if (ok == true) await controller.deletePooja(list[i].id);
+                    if (ok == true) {
+                      await controller.deletePooja(list[i].id);
+                      controller.loadPoojas();
+                    }
                   },
+                  onApprove: () => _approveDialog(ctx, list[i], controller),
+                  onReject: () => _rejectDialog(ctx, list[i], controller),
                 ),
               ),
             );
           }),
         ),
       ],
+    );
+  }
+
+  void _approveDialog(BuildContext ctx, PoojaModel p, PoojaController ctrl) {
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Approve Pooja',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
+              ),
+              child: Text(
+                p.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'This will publish the pooja to all devotees.',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ctrl.approvePooja(p.id);
+            },
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Approve & Publish'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rejectDialog(BuildContext ctx, PoojaModel p, PoojaController ctrl) {
+    final reasonCtrl = TextEditingController();
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Reject Pooja',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
+              ),
+              child: Text(
+                p.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Reason *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'e.g. Missing steps, incorrect deity...',
+                hintStyle: const TextStyle(
+                  color: Color(0xFFAAAAAA),
+                  fontSize: 12,
+                ),
+                filled: true,
+                fillColor: CmsColors.bg,
+                contentPadding: const EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: CmsColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (reasonCtrl.text.trim().isEmpty) {
+                Get.snackbar(
+                  'Required',
+                  'Please enter a reason',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: CmsColors.orange,
+                  colorText: Colors.white,
+                  margin: const EdgeInsets.all(12),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              await ctrl.rejectPooja(p.id, reasonCtrl.text.trim());
+            },
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Reject'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -327,10 +543,14 @@ class _PoojaCard extends StatelessWidget {
     required this.pooja,
     required this.onEdit,
     required this.onDelete,
+    required this.onApprove,
+    required this.onReject,
   });
   final PoojaModel pooja;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -481,6 +701,19 @@ class _PoojaCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Approve/Reject buttons for superadmin on pending poojas
+              if (Get.find<AuthController>().isSuperAdmin &&
+                  pooja.status == 'Pending') ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _SmBtn('Reject', Colors.red, onReject),
+                    const SizedBox(width: 6),
+                    _SmBtn('Approve', Colors.green, onApprove),
+                  ],
+                ),
+              ],
             ],
           ),
         ],
@@ -1091,6 +1324,34 @@ class _StepRow extends StatelessWidget {
           child: const Icon(Icons.close, size: 16, color: Colors.grey),
         ),
       ],
+    ),
+  );
+}
+
+class _SmBtn extends StatelessWidget {
+  const _SmBtn(this.label, this.color, this.onTap);
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     ),
   );
 }

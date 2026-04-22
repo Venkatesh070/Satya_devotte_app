@@ -10,6 +10,7 @@ class FestivalModel {
     this.endDate,
     this.category = 'MAJOR',
     this.isGlobal = false,
+    this.location = '',
     this.locationCity = '',
     this.locationState = '',
     this.locationCountry = 'India',
@@ -23,31 +24,30 @@ class FestivalModel {
   final String id;
   final String title;
   final String description;
-  final String date; // ISO string from API e.g. "2026-10-26T00:00:00.000Z"
+  final String date;
   final String status; // Pending | Approved | Rejected
   final String? endDate;
   final String category; // MAJOR | MINOR | FASTING | ECLIPSE
   final bool isGlobal;
+  final String location; // display string built from {city, state, country}
   final String locationCity;
   final String locationState;
   final String locationCountry;
   final bool notifyUsers;
   final int notificationDaysBefore;
-  final String? rituals; // optional — null means not set
+  final String? rituals;
   final String? imageUrl;
   final String? createdAt;
 
-  // ── Display location as "City, State" ────────────────────────
   String get locationDisplay {
     final parts = [
       locationCity,
       locationState,
       locationCountry,
     ].where((s) => s.isNotEmpty).toList();
-    return parts.join(', ');
+    return parts.isNotEmpty ? parts.join(', ') : location;
   }
 
-  // ── Status normalisation ──────────────────────────────────────
   static String _normaliseStatus(String raw) {
     switch (raw.toUpperCase()) {
       case 'APPROVED':
@@ -61,28 +61,9 @@ class FestivalModel {
     }
   }
 
-  // ── Safe string extractor ─────────────────────────────────────
-  static String _str(
-    Map<String, dynamic> json,
-    List<String> keys, [
-    String fb = '',
-  ]) {
-    for (final k in keys) {
-      final v = json[k];
-      // skip arrays/maps — only want scalar strings
-      if (v != null &&
-          v is! List &&
-          v is! Map &&
-          v.toString().trim().isNotEmpty) {
-        return v.toString().trim();
-      }
-    }
-    return fb;
-  }
-
-  // ── Parse location object from API ───────────────────────────
-  // API returns: { "country": "India", "state": "Telangana", "city": "Hyderabad" }
+  // API returns location as {city, state, country} object
   static Map<String, String> _parseLocation(dynamic raw) {
+    if (raw == null) return {'city': '', 'state': '', 'country': 'India'};
     if (raw is Map) {
       return {
         'city': raw['city']?.toString() ?? '',
@@ -90,10 +71,10 @@ class FestivalModel {
         'country': raw['country']?.toString() ?? 'India',
       };
     }
-    return {'city': '', 'state': '', 'country': 'India'};
+    // plain string fallback
+    return {'city': raw.toString(), 'state': '', 'country': 'India'};
   }
 
-  // Parse rituals — API returns [] or ['id1','id2'] or a string
   static String? _parseRituals(dynamic raw) {
     if (raw == null) return null;
     if (raw is List) {
@@ -104,25 +85,38 @@ class FestivalModel {
     return s.isEmpty ? null : s;
   }
 
-  factory FestivalModel.fromJson(Map<String, dynamic> json) {
-    final loc = _parseLocation(json['location']);
+  static String _str(
+    Map<String, dynamic> json,
+    List<String> keys, [
+    String fb = '',
+  ]) {
+    for (final k in keys) {
+      final v = json[k];
+      if (v != null &&
+          v is! List &&
+          v is! Map &&
+          v.toString().trim().isNotEmpty)
+        return v.toString().trim();
+    }
+    return fb;
+  }
 
+  factory FestivalModel.fromJson(Map<String, dynamic> json) {
     return FestivalModel(
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'name']),
       description: _str(json, ['description']),
-      // API returns ISO date string — displayDay/Month handle both ISO + DD-MM-YYYY
       date: _str(json, ['date', 'startDate']),
       endDate: json['endDate'] as String?,
       category: _str(json, ['category'], 'MAJOR'),
       isGlobal: json['isGlobal'] as bool? ?? false,
-      locationCity: loc['city']!,
-      locationState: loc['state']!,
-      locationCountry: loc['country']!,
+      location: '', // computed from city/state/country
+      locationCity: _parseLocation(json['location'])['city']!,
+      locationState: _parseLocation(json['location'])['state']!,
+      locationCountry: _parseLocation(json['location'])['country']!,
       notifyUsers: json['notifyUsers'] as bool? ?? false,
       notificationDaysBefore:
           (json['notificationDaysBefore'] as num?)?.toInt() ?? 0,
-      // rituals comes back as [] (array) — join to string or keep null
       rituals: _parseRituals(json['rituals']),
       imageUrl: json['image'] as String? ?? json['imageUrl'] as String?,
       status: _normaliseStatus(_str(json, ['status'], 'Pending')),
@@ -130,13 +124,11 @@ class FestivalModel {
     );
   }
 
-  // ── Display helpers — handles ISO and DD-MM-YYYY formats ──────
   DateTime? get _parsedDate {
     try {
       return DateTime.parse(date);
     } catch (_) {}
     try {
-      // DD-MM-YYYY fallback
       final p = date.split('-');
       if (p.length == 3 && p[0].length == 2) {
         return DateTime(int.parse(p[2]), int.parse(p[1]), int.parse(p[0]));
@@ -146,7 +138,6 @@ class FestivalModel {
   }
 
   String get displayDay => _parsedDate?.day.toString().padLeft(2, '0') ?? '--';
-
   String get displayMonth {
     const m = [
       'Jan',
@@ -180,6 +171,7 @@ class FestivalModel {
     String? locationCountry,
     bool? notifyUsers,
     int? notificationDaysBefore,
+    String? rituals,
     String? imageUrl,
     String? status,
   }) => FestivalModel(
@@ -190,9 +182,7 @@ class FestivalModel {
     endDate: endDate ?? this.endDate,
     category: category ?? this.category,
     isGlobal: isGlobal ?? this.isGlobal,
-    locationCity: locationCity ?? this.locationCity,
-    locationState: locationState ?? this.locationState,
-    locationCountry: locationCountry ?? this.locationCountry,
+    location: location ?? this.location,
     notifyUsers: notifyUsers ?? this.notifyUsers,
     notificationDaysBefore:
         notificationDaysBefore ?? this.notificationDaysBefore,

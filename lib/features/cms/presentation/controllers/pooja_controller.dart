@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 
 class PoojaController extends GetxController {
@@ -20,13 +21,9 @@ class PoojaController extends GetxController {
   String? get error => _error.value;
   String get filter => _filter.value;
 
-  // Client-side filter applied on top of whatever is in _poojas.
-  // 'All' shows Published + Pending + Draft but never Rejected.
-  // Rejected poojas only appear if admin explicitly clicks a Rejected tab (future).
+  // Client-side filter — data is already loaded (all statuses), we just filter
   List<PoojaModel> get filteredPoojas {
-    if (_filter.value == 'All') {
-      return _poojas.where((p) => p.status != 'Rejected').toList();
-    }
+    if (_filter.value == 'All') return _poojas.toList();
     return _poojas.where((p) => p.status == _filter.value).toList();
   }
 
@@ -37,14 +34,11 @@ class PoojaController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadPoojas();
+    Future.microtask(loadPoojas);
   }
 
-  // ── Set filter → fetch from server with status param ─────────
-  void setFilter(String f) {
-    _filter.value = f;
-    loadPoojas();
-  }
+  // ── Set filter — pure client-side, no API call needed ───────
+  void setFilter(String f) => _filter.value = f;
 
   /// Called when entering Manage Poojas tab — resets to All and reloads.
   /// Use this instead of setFilter('All') when navigating back from Approvals
@@ -77,16 +71,14 @@ class PoojaController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
+      final auth = Get.find<AuthController>();
       List<PoojaModel> result;
-      if (_filter.value == 'All') {
-        // Use /poojas/my to get all of this admin's poojas across every status.
-        // The public GET /poojas only returns APPROVED poojas and should not
-        // be used here — it would show published poojas from other admins
-        // and hide this admin's own DRAFT/PENDING/REJECTED ones.
-        result = await _dataSource.getMyPoojas();
+      if (auth.isSuperAdmin) {
+        // SuperAdmin: GET /poojas/all — sees every pooja from all admins
+        result = await _dataSource.getAllPoojasSuperAdmin();
       } else {
-        final status = _toApiStatusParam(_filter.value);
-        result = await _dataSource.getAllPoojas(status: status);
+        // Admin: GET /poojas/my — sees only their own poojas
+        result = await _dataSource.getMyPoojas();
       }
       _poojas.assignAll(result);
     } catch (e) {
@@ -206,15 +198,9 @@ class PoojaController extends GetxController {
   // ── Approve pooja (superadmin) ───────────────────────────────
   Future<bool> approvePooja(String id) async {
     try {
-      final result = await _dataSource.approvePooja(id);
-      final index = _poojas.indexWhere((p) => p.id == id);
-      if (index != -1) {
-        // Use API result if valid, otherwise patch status locally
-        _poojas[index] = result.status.isNotEmpty
-            ? result
-            : _poojas[index].copyWith(status: 'Published');
-      }
+      await _dataSource.approvePooja(id);
       _snackOk('Pooja approved and published');
+      await loadPoojas(); // reload fresh from server
       return true;
     } catch (e) {
       _error.value = _parseError(e);
@@ -227,9 +213,8 @@ class PoojaController extends GetxController {
   Future<bool> rejectPooja(String id, String reason) async {
     try {
       await _dataSource.rejectPooja(id, reason);
-      // Remove from list immediately — rejected goes back to admin
-      _poojas.removeWhere((p) => p.id == id);
-      _snackOk('Pooja rejected and sent back to admin');
+      _snackOk('Pooja rejected');
+      await loadPoojas(); // reload fresh from server
       return true;
     } catch (e) {
       _error.value = _parseError(e);

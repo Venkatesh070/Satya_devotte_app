@@ -1,85 +1,635 @@
+// lib/features/cms/presentation/contents/cms_dashboard_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 
-class CmsDashboardContent extends StatelessWidget {
+class CmsDashboardContent extends StatefulWidget {
   const CmsDashboardContent({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final isWeb = w >= 768;
+  State<CmsDashboardContent> createState() => _CmsDashboardContentState();
+}
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(isWeb ? 24 : 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Quick Actions ─────────────────────────────────
-          if (!isWeb) ...[
+class _CmsDashboardContentState extends State<CmsDashboardContent> {
+  Map<String, dynamic>? _data;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_load);
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final res = await Get.find<ApiClient>().dio.get(
+        '/api/v1/admin/dashboard',
+      );
+      final body = res.data as Map<String, dynamic>;
+      setState(() {
+        _data = body['data'] as Map<String, dynamic>?;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load dashboard';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+
+    if (_loading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: CmsColors.orange),
+            SizedBox(height: 14),
+            Text(
+              'Loading dashboard...',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null || _data == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              _error ?? 'No data',
+              style: const TextStyle(
+                fontSize: 14,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CmsColors.orange,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final d = _data!;
+    final usersCount = d['usersCount'] as int? ?? 0;
+    final adminsCount = d['adminsCount'] as int? ?? 0;
+    final festivals = d['festivals'] as Map<String, dynamic>? ?? {};
+    final poojas = d['poojas'] as Map<String, dynamic>? ?? {};
+    final donations = d['donations'] as Map<String, dynamic>? ?? {};
+    final todaySloka = d['todaySloka'] as Map<String, dynamic>?;
+
+    final totalFestivals =
+        (festivals['APPROVED'] as int? ?? 0) +
+        (festivals['PENDING'] as int? ?? 0) +
+        (festivals['REJECTED'] as int? ?? 0);
+    final totalPoojas =
+        (poojas['APPROVED'] as int? ?? 0) +
+        (poojas['PENDING'] as int? ?? 0) +
+        (poojas['REJECTED'] as int? ?? 0);
+
+    return RefreshIndicator(
+      color: CmsColors.orange,
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(isWeb ? 24 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Stats Grid ──────────────────────────────────
+            _StatsGrid(
+              isWeb: isWeb,
+              stats: [
+                _Stat(
+                  'Total Users',
+                  '$usersCount',
+                  Icons.people_outline,
+                  const Color(0xFF4CAF50),
+                ),
+                _Stat(
+                  'Admins',
+                  '$adminsCount',
+                  Icons.admin_panel_settings_outlined,
+                  CmsColors.orange,
+                ),
+                _Stat(
+                  'Total Poojas',
+                  '$totalPoojas',
+                  Icons.self_improvement_outlined,
+                  const Color(0xFF9C27B0),
+                ),
+                _Stat(
+                  'Total Festivals',
+                  '$totalFestivals',
+                  Icons.celebration_outlined,
+                  const Color(0xFF2196F3),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Content Status Row ───────────────────────────
+            if (isWeb)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _StatusCard(
+                      title: 'Poojas',
+                      icon: Icons.self_improvement,
+                      color: const Color(0xFF9C27B0),
+                      approved: poojas['APPROVED'] as int? ?? 0,
+                      pending: poojas['PENDING'] as int? ?? 0,
+                      rejected: poojas['REJECTED'] as int? ?? 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatusCard(
+                      title: 'Festivals',
+                      icon: Icons.celebration,
+                      color: const Color(0xFF2196F3),
+                      approved: festivals['APPROVED'] as int? ?? 0,
+                      pending: festivals['PENDING'] as int? ?? 0,
+                      rejected: festivals['REJECTED'] as int? ?? 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatusCard(
+                      title: 'Donations',
+                      icon: Icons.volunteer_activism,
+                      color: const Color(0xFF4CAF50),
+                      approved: donations['APPROVED'] as int? ?? 0,
+                      pending: donations['PENDING'] as int? ?? 0,
+                      rejected: donations['REJECTED'] as int? ?? 0,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  _StatusCard(
+                    title: 'Poojas',
+                    icon: Icons.self_improvement,
+                    color: const Color(0xFF9C27B0),
+                    approved: poojas['APPROVED'] as int? ?? 0,
+                    pending: poojas['PENDING'] as int? ?? 0,
+                    rejected: poojas['REJECTED'] as int? ?? 0,
+                  ),
+                  const SizedBox(height: 12),
+                  _StatusCard(
+                    title: 'Festivals',
+                    icon: Icons.celebration,
+                    color: const Color(0xFF2196F3),
+                    approved: festivals['APPROVED'] as int? ?? 0,
+                    pending: festivals['PENDING'] as int? ?? 0,
+                    rejected: festivals['REJECTED'] as int? ?? 0,
+                  ),
+                  const SizedBox(height: 12),
+                  _StatusCard(
+                    title: 'Donations',
+                    icon: Icons.volunteer_activism,
+                    color: const Color(0xFF4CAF50),
+                    approved: donations['APPROVED'] as int? ?? 0,
+                    pending: donations['PENDING'] as int? ?? 0,
+                    rejected: donations['REJECTED'] as int? ?? 0,
+                  ),
+                ],
+              ),
+            const SizedBox(height: 20),
+
+            // ── Today's Sloka ────────────────────────────────
+            if (todaySloka != null) _TodaySlokaCard(sloka: todaySloka),
+
+            const SizedBox(height: 20),
+
+            // ── Quick Actions ────────────────────────────────
             const Text(
-              'Quick Actions',
+              "Quick Actions",
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: CmsColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickAction(
-                    label: 'Manage Poojas',
-                    icon: Icons.self_improvement,
-                    color: CmsColors.orange,
-                    onTap: () {},
+            const SizedBox(height: 12),
+            if (isWeb)
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickAction(
+                      label: 'Add Pooja',
+                      icon: Icons.add_circle_outline,
+                      color: const Color(0xFF9C27B0),
+                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAction(
+                      label: 'Add Festival',
+                      icon: Icons.celebration_outlined,
+                      color: const Color(0xFF2196F3),
+                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Obx(
+                    () => Get.find<AuthController>().isSuperAdmin
+                        ? Expanded(
+                            child: _QuickAction(
+                              label: 'Manage Admins',
+                              icon: Icons.admin_panel_settings_outlined,
+                              color: CmsColors.orange,
+                              onTap: () {},
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Pooja',
+                          icon: Icons.add_circle_outline,
+                          color: const Color(0xFF9C27B0),
+                          onTap: () {},
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Festival',
+                          icon: Icons.celebration_outlined,
+                          color: const Color(0xFF2196F3),
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATS GRID
+// ════════════════════════════════════════════════════════════════
+class _Stat {
+  const _Stat(this.label, this.value, this.icon, this.color);
+  final String label, value;
+  final IconData icon;
+  final Color color;
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.isWeb, required this.stats});
+  final bool isWeb;
+  final List<_Stat> stats;
+
+  @override
+  Widget build(BuildContext context) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: isWeb ? 4 : 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: isWeb ? 1.8 : 1.5,
+    ),
+    itemCount: stats.length,
+    itemBuilder: (_, i) => Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: stats[i].color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(stats[i].icon, color: stats[i].color, size: 18),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                stats[i].value,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: stats[i].color,
+                ),
+              ),
+              Text(
+                stats[i].label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: CmsColors.textSecond,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATUS CARD — Approved / Pending / Rejected breakdown
+// ════════════════════════════════════════════════════════════════
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.approved,
+    required this.pending,
+    required this.rejected,
+  });
+  final String title;
+  final IconData icon;
+  final Color color;
+  final int approved, pending, rejected;
+
+  int get total => approved + pending + rejected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: CmsColors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$total total',
+              style: const TextStyle(fontSize: 11, color: CmsColors.textSecond),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(child: _StatusChip('Approved', approved, Colors.green)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatusChip('Pending', pending, CmsColors.orange)),
+            const SizedBox(width: 8),
+            Expanded(child: _StatusChip('Rejected', rejected, Colors.red)),
+          ],
+        ),
+        if (total > 0) ...[
+          const SizedBox(height: 12),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: approved / total,
+              minHeight: 6,
+              backgroundColor: Colors.red.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip(this.label, this.count, this.color);
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      children: [
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            color: color.withOpacity(0.8),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// TODAY'S SLOKA CARD
+// ════════════════════════════════════════════════════════════════
+class _TodaySlokaCard extends StatelessWidget {
+  const _TodaySlokaCard({required this.sloka});
+  final Map<String, dynamic> sloka;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = sloka['sloka'] as String? ?? '';
+    final author = sloka['author'] as String? ?? '';
+    final date = sloka['dateKey'] as String? ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1A2A4E),
+            const Color(0xFF1A2A4E).withOpacity(0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1A2A4E).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: CmsColors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.menu_book,
+                  color: CmsColors.orange,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Today's Sloka",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              if (date.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    date,
+                    style: const TextStyle(fontSize: 10, color: Colors.white70),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickAction(
-                    label: 'Manage Festivals',
-                    icon: Icons.celebration,
-                    color: const Color(0xFF7B61FF),
-                    onTap: () {},
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.white,
+                height: 1.7,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          if (author.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Text(
+                  '— ',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                Text(
+                  author,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CmsColors.orange,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
           ],
-
-          // ── Stats grid ────────────────────────────────────
-          _StatsGrid(isWeb: isWeb),
-          const SizedBox(height: 24),
-
-          // ── Two column on web ─────────────────────────────
-          if (isWeb)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: _TopPoojasList()),
-                const SizedBox(width: 20),
-                Expanded(flex: 2, child: _LeastOptedList()),
-              ],
-            )
-          else ...[
-            _TopPoojasList(),
-            const SizedBox(height: 20),
-            _LeastOptedList(),
-          ],
-
-          const SizedBox(height: 24),
-          _DonationChart(),
         ],
       ),
     );
   }
 }
 
-// ── Quick Action Button ───────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// QUICK ACTION BUTTON
+// ════════════════════════════════════════════════════════════════
 class _QuickAction extends StatelessWidget {
   const _QuickAction({
     required this.label,
@@ -93,459 +643,32 @@ class _QuickAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Stats Grid ────────────────────────────────────────────────────
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.isWeb});
-  final bool isWeb;
-
-  @override
-  Widget build(BuildContext context) {
-    final stats = [
-      _StatData('Total Users', '520', Icons.people, const Color(0xFF4CAF50)),
-      _StatData('Active Today', '24', Icons.person_pin, CmsColors.orange),
-      _StatData(
-        'Total Donations',
-        '₹45,750',
-        Icons.volunteer_activism,
-        const Color(0xFF2196F3),
-      ),
-      _StatData(
-        'Poojas',
-        '12',
-        Icons.self_improvement,
-        const Color(0xFF9C27B0),
-      ),
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: isWeb ? 4 : 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: isWeb ? 1.8 : 1.5,
-      ),
-      itemCount: stats.length,
-      itemBuilder: (_, i) => _StatCard(data: stats[i]),
-    );
-  }
-}
-
-class _StatData {
-  const _StatData(this.label, this.value, this.icon, this.color);
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.data});
-  final _StatData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: data.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(data.icon, color: data.color, size: 18),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                data.value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: data.color,
-                ),
-              ),
-              Text(
-                data.label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: CmsColors.textSecond,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Top Poojas List ───────────────────────────────────────────────
-class _TopPoojasList extends StatelessWidget {
-  final _poojas = const [
-    _PoojaData(
-      'Ganesh Chaturthi Pooja',
-      'Lord Ganesha',
-      4.8,
-      '#1',
-      Color(0xFFF5A623),
-    ),
-    _PoojaData(
-      'Lakshmi Pooja',
-      'Goddess Lakshmi',
-      4.6,
-      '#2',
-      Color(0xFF4CAF50),
-    ),
-    _PoojaData('Shiva Abhishekam', 'Lord Shiva', 4.5, '#3', Color(0xFF2196F3)),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Top Poojas',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._poojas.map((p) => _PoojaRow(data: p)),
-        ],
-      ),
-    );
-  }
-}
-
-class _PoojaData {
-  const _PoojaData(this.name, this.deity, this.rating, this.rank, this.color);
-  final String name;
-  final String deity;
-  final double rating;
-  final String rank;
-  final Color color;
-}
-
-class _PoojaRow extends StatelessWidget {
-  const _PoojaRow({required this.data});
-  final _PoojaData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: data.color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                data.rank,
-                style: TextStyle(
-                  color: data.color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  data.deity,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: CmsColors.textSecond,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.star, size: 13, color: Color(0xFFF5A623)),
-              const SizedBox(width: 3),
-              Text(
-                '${data.rating}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-            ],
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Least Opted Poojas ────────────────────────────────────────────
-class _LeastOptedList extends StatelessWidget {
-  final _poojas = const [
-    _LeastData('Saraswati Vandana', 'Only 8 users opted', Color(0xFFFF7043)),
-    _LeastData(
-      'Hanuman Chalisa Path',
-      'Only 12 users opted',
-      Color(0xFFAB47BC),
     ),
-    _LeastData('Durga Path', 'Only 5 users opted', Color(0xFF26A69A)),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Least Opted Poojas',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._poojas.map((p) => _LeastRow(data: p)),
-        ],
-      ),
-    );
-  }
-}
-
-class _LeastData {
-  const _LeastData(this.name, this.sub, this.color);
-  final String name;
-  final String sub;
-  final Color color;
-}
-
-class _LeastRow extends StatelessWidget {
-  const _LeastRow({required this.data});
-  final _LeastData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 6,
-            height: 36,
-            decoration: BoxDecoration(
-              color: data.color,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  data.sub,
-                  style: TextStyle(fontSize: 11, color: data.color),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey.shade300),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Donation Chart ────────────────────────────────────────────────
-class _DonationChart extends StatelessWidget {
-  final _months = const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  final _values = const [0.4, 0.6, 0.5, 0.8, 0.65, 0.9];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Monthly Donation Trend',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '+14% growth from last month',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF4CAF50),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 100,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_months.length, (i) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    AnimatedContainer(
-                      duration: Duration(milliseconds: 300 + i * 100),
-                      width: 28,
-                      height: _values[i] * 80,
-                      decoration: BoxDecoration(
-                        color: i == _values.length - 1
-                            ? CmsColors.orange
-                            : CmsColors.orange.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _months[i],
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: CmsColors.textSecond,
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  );
 }

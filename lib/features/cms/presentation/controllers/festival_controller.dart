@@ -33,9 +33,15 @@ class FestivalController extends GetxController {
     return list;
   }
 
-  List<FestivalModel> get festivalsByMonth => filteredFestivals
-      .where((f) => f.monthNumber == _selectedMonth.value)
-      .toList();
+  List<FestivalModel> get festivalsByMonth {
+    final auth = Get.find<AuthController>();
+    // SuperAdmin sees ALL months always — month picker is for admin only
+    if (auth.isSuperAdmin) return filteredFestivals;
+    // Admin — filter by selected month
+    return filteredFestivals
+        .where((f) => f.monthNumber == _selectedMonth.value)
+        .toList();
+  }
 
   int get pendingCount => _festivals.where((f) => f.status == 'Pending').length;
 

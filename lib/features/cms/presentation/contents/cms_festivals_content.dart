@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
+import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -94,6 +97,46 @@ class _FestivalList extends StatelessWidget {
 
     return Column(
       children: [
+        // ── SuperAdmin banner ─────────────────────────────────────
+        Obx(() {
+          final isSA = Get.find<AuthController>().isSuperAdmin;
+          if (!isSA) return const SizedBox.shrink();
+          return Container(
+            margin: EdgeInsets.fromLTRB(
+              isWeb ? 24 : 16,
+              12,
+              isWeb ? 24 : 16,
+              0,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFE082)),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: Color(0xFFF9A825),
+                  size: 15,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Super Admin — Seeing all festivals. Pending festivals show Approve & Reject buttons.',
+                    style: TextStyle(
+                      color: Color(0xFF5D4037),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+
         // ── Toolbar ──────────────────────────────────────────────
         Container(
           padding: EdgeInsets.symmetric(
@@ -221,71 +264,72 @@ class _FestivalList extends StatelessWidget {
           ),
         ),
 
-        // ── Month picker ──────────────────────────────────────────
-        Container(
-          color: CmsColors.white,
-          padding: EdgeInsets.only(
-            left: isWeb ? 24 : 16,
-            right: 16,
-            bottom: 14,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Select Month',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Obx(
-                  () => Row(
-                    children: List.generate(12, (i) {
-                      final isSel = ctrl.selectedMonth == i + 1;
-                      return GestureDetector(
-                        onTap: () => ctrl.setMonth(i + 1),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSel ? CmsColors.orange : CmsColors.bg,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSel
-                                  ? CmsColors.orange
-                                  : CmsColors.border,
-                            ),
-                          ),
-                          child: Text(
-                            _months[i],
-                            style: TextStyle(
-                              color: isSel
-                                  ? Colors.white
-                                  : CmsColors.textSecond,
-                              fontSize: 12,
-                              fontWeight: isSel
-                                  ? FontWeight.w700
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+        // ── Month picker — hidden for superadmin ─────────────────
+        if (!Get.find<AuthController>().isSuperAdmin)
+          Container(
+            color: CmsColors.white,
+            padding: EdgeInsets.only(
+              left: isWeb ? 24 : 16,
+              right: 16,
+              bottom: 14,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Month',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Obx(
+                    () => Row(
+                      children: List.generate(12, (i) {
+                        final isSel = ctrl.selectedMonth == i + 1;
+                        return GestureDetector(
+                          onTap: () => ctrl.setMonth(i + 1),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSel ? CmsColors.orange : CmsColors.bg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSel
+                                    ? CmsColors.orange
+                                    : CmsColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              _months[i],
+                              style: TextStyle(
+                                color: isSel
+                                    ? Colors.white
+                                    : CmsColors.textSecond,
+                                fontSize: 12,
+                                fontWeight: isSel
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
 
         const Divider(height: 1, color: CmsColors.border),
 
@@ -831,11 +875,12 @@ class _FestivalForm extends StatefulWidget {
 class _FestivalFormState extends State<_FestivalForm> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
-  // location fields — initialized directly (not late) to avoid LateInitializationError
   TextEditingController _locationCityCtrl = TextEditingController();
   TextEditingController _locationStateCtrl = TextEditingController();
   TextEditingController _locationCountryCtrl = TextEditingController();
-  late final TextEditingController _ritualsCtrl;
+  // Rituals — list of selected pooja IDs
+  final List<String> _selectedRitualIds = [];
+  final List<String> _selectedRitualNames = [];
   late final TextEditingController _notifyDaysCtrl;
 
   // Date stored internally as DD-MM-YYYY — what the API expects
@@ -856,14 +901,15 @@ class _FestivalFormState extends State<_FestivalForm> {
     final f = widget.festival;
     _titleCtrl = TextEditingController(text: f?.title ?? '');
     _descCtrl = TextEditingController(text: f?.description ?? '');
-    // Parse location — API returns object {name, city, state, country}
-    // Read from FestivalModel separate location fields
     _locationCityCtrl = TextEditingController(text: f?.locationCity ?? '');
     _locationStateCtrl = TextEditingController(text: f?.locationState ?? '');
     _locationCountryCtrl = TextEditingController(
       text: f?.locationCountry ?? 'India',
     );
-    _ritualsCtrl = TextEditingController(text: f?.rituals ?? '');
+    // Pre-populate selected rituals if editing
+    if (f?.rituals != null && f!.rituals!.isNotEmpty) {
+      _selectedRitualNames.addAll(f.rituals!.split(', '));
+    }
     _notifyDaysCtrl = TextEditingController(
       text: (f?.notificationDaysBefore ?? 0).toString(),
     );
@@ -935,7 +981,6 @@ class _FestivalFormState extends State<_FestivalForm> {
       'date': _formatDate(_date!), // DD-MM-YYYY ✅
       'category': _category, // MAJOR/MINOR/FASTING/ECLIPSE ✅
       'isGlobal': _isGlobal,
-      // location as JSON object — matches API schema exactly
       'location': {
         'city': _locationCityCtrl.text.trim(),
         'state': _locationStateCtrl.text.trim(),
@@ -950,9 +995,10 @@ class _FestivalFormState extends State<_FestivalForm> {
     // endDate — only include if set
     if (_endDate != null) body['endDate'] = _formatDate(_endDate!);
 
-    // rituals — only include if not empty (API rejects empty string)
-    final rituals = _ritualsCtrl.text.trim();
-    if (rituals.isNotEmpty) body['rituals'] = rituals;
+    // rituals — list of pooja IDs, omit if empty
+    if (_selectedRitualIds.isNotEmpty) {
+      body['rituals'] = _selectedRitualIds;
+    }
 
     return body;
   }
@@ -990,7 +1036,7 @@ class _FestivalFormState extends State<_FestivalForm> {
     _locationCityCtrl.dispose();
     _locationStateCtrl.dispose();
     _locationCountryCtrl.dispose();
-    _ritualsCtrl.dispose();
+
     _notifyDaysCtrl.dispose();
     super.dispose();
   }
@@ -1099,36 +1145,31 @@ class _FestivalFormState extends State<_FestivalForm> {
       ),
       const SizedBox(height: 12),
 
-      // Location — sent as JSON object { city, state, country }
-      CmsFormCard(
-        title: 'Location',
+      // Location — sent as JSON object {city, state, country}
+      Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: CmsFormField(
-                  label: 'City',
-                  hint: 'e.g. Hyderabad',
-                  controller: _locationCityCtrl,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: CmsFormField(
-                  label: 'State',
-                  hint: 'e.g. Telangana',
-                  controller: _locationStateCtrl,
-                ),
-              ),
-            ],
+          Expanded(
+            child: CmsFormField(
+              label: 'City',
+              hint: 'e.g. Hyderabad',
+              controller: _locationCityCtrl,
+            ),
           ),
-          const SizedBox(height: 10),
-          CmsFormField(
-            label: 'Country',
-            hint: 'e.g. India',
-            controller: _locationCountryCtrl,
+          const SizedBox(width: 12),
+          Expanded(
+            child: CmsFormField(
+              label: 'State',
+              hint: 'e.g. Telangana',
+              controller: _locationStateCtrl,
+            ),
           ),
         ],
+      ),
+      const SizedBox(height: 10),
+      CmsFormField(
+        label: 'Country',
+        hint: 'India',
+        controller: _locationCountryCtrl,
       ),
       const SizedBox(height: 12),
 
@@ -1141,10 +1182,11 @@ class _FestivalFormState extends State<_FestivalForm> {
       const SizedBox(height: 12),
 
       // ── Rituals — empty = omit from request ──────────────────
-      CmsFormField(
-        label: 'Associated Rituals (optional)',
-        hint: 'Ritual name or ID — leave blank if none',
-        controller: _ritualsCtrl,
+      // Rituals — multi-select from existing poojas
+      _PoojaPickerField(
+        selectedIds: _selectedRitualIds,
+        selectedNames: _selectedRitualNames,
+        onChanged: () => setState(() {}),
       ),
     ],
   );
@@ -1383,4 +1425,193 @@ class _DatePickerField extends StatelessWidget {
       ),
     ],
   );
+}
+
+// ════════════════════════════════════════════════════════════════
+// POOJA PICKER FIELD — multi-select dropdown for rituals
+// ════════════════════════════════════════════════════════════════
+class _PoojaPickerField extends StatelessWidget {
+  const _PoojaPickerField({
+    required this.selectedIds,
+    required this.selectedNames,
+    required this.onChanged,
+  });
+
+  final List<String> selectedIds;
+  final List<String> selectedNames;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Associated Rituals / Poojas (optional)',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Show selected poojas as chips
+        if (selectedNames.isNotEmpty) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: selectedNames
+                .asMap()
+                .entries
+                .map(
+                  (e) => Chip(
+                    label: Text(e.value, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: CmsColors.orange.withOpacity(0.1),
+                    side: BorderSide(color: CmsColors.orange.withOpacity(0.3)),
+                    deleteIconColor: CmsColors.orange,
+                    onDeleted: () {
+                      selectedIds.removeAt(e.key);
+                      selectedNames.removeAt(e.key);
+                      onChanged();
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Add pooja button
+        GestureDetector(
+          onTap: () => _showPoojaSelector(context),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: CmsColors.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.add_circle_outline,
+                  size: 16,
+                  color: CmsColors.orange,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  selectedIds.isEmpty
+                      ? 'Select poojas for this festival...'
+                      : 'Add another pooja',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: CmsColors.textSecond,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPoojaSelector(BuildContext context) {
+    final poojaCtrl = Get.find<PoojaController>();
+    final poojas = poojaCtrl.poojas
+        .where((p) => !selectedIds.contains(p.id))
+        .toList();
+
+    if (poojas.isEmpty) {
+      Get.snackbar(
+        'No Poojas',
+        'No more poojas to add',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: CmsColors.orange,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: CmsColors.border,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Select Pooja',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: poojas.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final p = poojas[i];
+                return ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: CmsColors.orange.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.self_improvement,
+                      color: CmsColors.orange,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    p.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    p.deity,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                  onTap: () {
+                    selectedIds.add(p.id);
+                    selectedNames.add(p.title);
+                    onChanged();
+                    Navigator.pop(ctx);
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
 }

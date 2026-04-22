@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 // lib/features/cms/data/datasources/festival_remote_datasource.dart
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
@@ -8,15 +9,20 @@ class FestivalRemoteDataSource {
 
   // ── Extract list — handles { data: { festivals: [...] } } ─────
   List<dynamic> _list(Map<String, dynamic> body) {
+    // Response shape: { "data": { "festivals": [...] } }
     final d = body['data'];
     if (d is List) return d;
-    if (d is Map) {
-      for (final k in ['festivals', 'data', 'items', 'results']) {
-        if (d[k] is List) return d[k] as List;
+    if (d is Map<String, dynamic>) {
+      // Check known keys in data object
+      for (final k in ['festivals', 'items', 'results', 'data']) {
+        final v = d[k];
+        if (v is List) return v;
       }
     }
-    for (final k in ['festivals', 'data', 'items', 'results']) {
-      if (body[k] is List) return body[k] as List;
+    // Fallback: check top-level body
+    for (final k in ['festivals', 'items', 'results', 'data']) {
+      final v = body[k];
+      if (v is List) return v;
     }
     return [];
   }
@@ -50,11 +56,16 @@ class FestivalRemoteDataSource {
     ).map((e) => FestivalModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // ── POST /festivals/create-festival ──────────────────────────
+  // ── POST /festivals/create-festival — multipart/form-data ──────
   Future<FestivalModel> createFestival(Map<String, dynamic> body) async {
+    // Swagger shows multipart/form-data — convert map to FormData
+    final fields = <String, dynamic>{};
+    body.forEach((k, v) {
+      if (v != null) fields[k] = v is bool ? v.toString() : v.toString();
+    });
     final res = await _apiClient.dio.post(
       '/api/v1/festivals/create-festival',
-      data: body,
+      data: FormData.fromMap(fields),
     );
     return FestivalModel.fromJson(_single(res.data as Map<String, dynamic>));
   }

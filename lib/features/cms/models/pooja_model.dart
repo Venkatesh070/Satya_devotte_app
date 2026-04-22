@@ -26,7 +26,7 @@ class PoojaModel {
   final String duration;
   final String description;
   final String
-  status; // Internal display value: 'Published' | 'Pending' | 'Draft'
+  status; // Internal display value: 'Approved' | 'Pending' | 'Draft' | 'Rejected'
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
@@ -52,13 +52,10 @@ class PoojaModel {
 
   // ── Inbound: API value → internal display value ───────────────
   // API sends: APPROVED, REJECTED, PENDING, DRAFT, published, active, etc.
-  // We normalise to: 'Published' | 'Pending' | 'Draft' | 'Rejected'
-  // IMPORTANT: REJECTED maps to its own 'Rejected' state — NOT 'Draft'.
-  // Rejected poojas are returned to admin to fix and resubmit.
+  // We normalise to: 'Approved' | 'Pending' | 'Draft' | 'Rejected'
   static String _fromApiStatus(String raw) {
     final s = raw.toLowerCase().trim();
-    if (s == 'published' || s == 'active' || s == 'approved')
-      return 'Published';
+    if (s == 'approved' || s == 'published' || s == 'active') return 'Approved';
     if (s == 'pending' || s == 'pending_approval') return 'Pending';
     if (s == 'rejected') return 'Rejected';
     if (s == 'draft') return 'Draft';
@@ -70,7 +67,7 @@ class PoojaModel {
   // We map our display values to the correct API equivalents.
   static String _toApiStatus(String display) {
     switch (display.toLowerCase().trim()) {
-      case 'published':
+      case 'approved':
         return 'APPROVED';
       case 'pending':
         return 'PENDING';

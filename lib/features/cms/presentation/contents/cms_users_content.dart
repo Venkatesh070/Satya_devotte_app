@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/contents/cms_users_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -177,107 +178,127 @@ class _UsersTable extends StatelessWidget {
     return RefreshIndicator(
       color: CmsColors.orange,
       onRefresh: onRefresh,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Container(
-          decoration: BoxDecoration(
-            color: CmsColors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F7FA)),
-              headingTextStyle: const TextStyle(
-                color: CmsColors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth - 32),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: CmsColors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
-              dataTextStyle: const TextStyle(
-                color: CmsColors.textPrimary,
-                fontSize: 13,
-              ),
-              columnSpacing: 20,
-              horizontalMargin: 20,
-              columns: const [
-                DataColumn(label: Text('Name')),
-                DataColumn(label: Text('Email')),
-                DataColumn(label: Text('Role')),
-                DataColumn(label: Text('Provider')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: users
-                  .map(
-                    (u) => DataRow(
-                      cells: [
-                        // Name + avatar
-                        DataCell(
-                          Row(
-                            children: [
-                              _Avatar(user: u),
-                              const SizedBox(width: 10),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: DataTable(
+                  dataRowMinHeight: 52,
+                  dataRowMaxHeight: 52,
+                  headingRowHeight: 46,
+                  horizontalMargin: 20,
+                  columnSpacing: 0,
+                  headingRowColor: WidgetStateProperty.all(
+                    const Color(0xFFF5F7FA),
+                  ),
+                  headingTextStyle: const TextStyle(
+                    color: CmsColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  dataTextStyle: const TextStyle(
+                    color: CmsColors.textPrimary,
+                    fontSize: 13,
+                  ),
+
+                  columns: const [
+                    DataColumn(label: Text('Name')),
+                    DataColumn(label: Text('Email')),
+                    DataColumn(label: Text('Role')),
+                    DataColumn(label: Text('Provider')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: users
+                      .map(
+                        (u) => DataRow(
+                          cells: [
+                            // Name + avatar
+                            DataCell(
+                              Row(
+                                children: [
+                                  _Avatar(user: u),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    u.displayName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Email
+                            DataCell(
                               Text(
-                                u.displayName,
+                                u.email,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                                  color: CmsColors.textSecond,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        // Email
-                        DataCell(
-                          Text(
-                            u.email,
-                            style: const TextStyle(color: CmsColors.textSecond),
-                          ),
-                        ),
-                        // Role badge
-                        DataCell(_RoleBadge(role: u.role)),
-                        // Provider
-                        DataCell(_ProviderBadge(email: u.email)),
-                        // Actions
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'View Profile',
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.visibility_outlined,
-                                    size: 18,
-                                    color: Colors.blue,
+                            ),
+                            // Role badge
+                            DataCell(_RoleBadge(role: u.role)),
+                            // Provider
+                            DataCell(_ProviderBadge(email: u.email)),
+                            // Actions
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Tooltip(
+                                    message: 'View Profile',
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.visibility_outlined,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: () =>
+                                          _showUserDetail(context, u),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
                                   ),
-                                  onPressed: () => _showUserDetail(context, u),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                ),
+                                  const SizedBox(width: 4),
+                                  if (Get.find<AuthController>().isSuperAdmin)
+                                    Tooltip(
+                                      message: 'Promote to Admin',
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.star_outline,
+                                          size: 18,
+                                          color: CmsColors.orange,
+                                        ),
+                                        onPressed: () =>
+                                            _promoteDialog(context, u),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Tooltip(
-                                message: 'Promote to Admin',
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.star_outline,
-                                    size: 18,
-                                    color: CmsColors.orange,
-                                  ),
-                                  onPressed: () => _promoteDialog(context, u),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  )
-                  .toList(),
+                      )
+                      .toList(),
+                ),
+              ),
             ),
           ),
         ),
@@ -288,48 +309,186 @@ class _UsersTable extends StatelessWidget {
   void _showUserDetail(BuildContext ctx, AdminModel u) {
     showDialog<void>(
       context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'User Profile',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _Avatar(user: u, radius: 30),
-            const SizedBox(height: 12),
-            Text(
-              u.displayName,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: CmsColors.textPrimary,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 360,
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              u.email,
-              style: const TextStyle(color: CmsColors.textSecond, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            _InfoRow('Role', u.roleLabel),
-            if (u.phone != null && u.phone!.isNotEmpty)
-              _InfoRow('Phone', u.phone!),
-            _InfoRow('Provider', _providerFromEmail(u.email)),
-            if (u.createdAt != null)
-              _InfoRow('Joined', _formatDate(u.createdAt!)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: CmsColors.textSecond),
-            ),
+            ],
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header with gradient bg ──────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF1A2A4E),
+                      const Color(0xFF1A2A4E).withOpacity(0.85),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // Close button top-right
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Avatar
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 2,
+                        ),
+                      ),
+                      child: _Avatar(user: u, radius: 32),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      u.displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      u.email,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Role badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        u.roleLabel,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Info rows ────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _DetailTile(
+                      icon: Icons.badge_outlined,
+                      label: 'Username',
+                      value: u.displayName,
+                    ),
+                    _DetailTile(
+                      icon: Icons.email_outlined,
+                      label: 'Email',
+                      value: u.email,
+                    ),
+                    _DetailTile(
+                      icon: Icons.login_outlined,
+                      label: 'Provider',
+                      value: _providerFromEmail(u.email),
+                    ),
+                    if (u.phone != null && u.phone!.isNotEmpty)
+                      _DetailTile(
+                        icon: Icons.phone_outlined,
+                        label: 'Phone',
+                        value: u.phone!,
+                      ),
+                    if (u.createdAt != null)
+                      _DetailTile(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Joined',
+                        value: _formatDate(u.createdAt!),
+                      ),
+
+                    const SizedBox(height: 4),
+                    // Promote button — superadmin only
+                    if (Get.find<AuthController>().isSuperAdmin) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _promoteDialog(ctx, u);
+                          },
+                          icon: const Icon(Icons.star, size: 16),
+                          label: const Text(
+                            'Promote to Admin',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: CmsColors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -614,6 +773,68 @@ class _ProviderBadge extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     _provider,
     style: const TextStyle(color: CmsColors.textSecond, fontSize: 13),
+  );
+}
+
+class _DetailTile extends StatelessWidget {
+  const _DetailTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: CmsColors.bg,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: CmsColors.border),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: CmsColors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 14, color: CmsColors.orange),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: CmsColors.textSecond,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: CmsColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 
