@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1053803605697-08ffqoh0298iim8r0s9j1v8e1jcqdgem.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "a390b044c3513189f3eb69c3f68926bcace041dd"
+          }
+        },
+        {
           "client_id": "1053803605697-minjpob41bvbunkbjqj447rk1602m0rf.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

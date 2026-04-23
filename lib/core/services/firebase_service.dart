@@ -14,12 +14,9 @@ class FirebaseService {
 
   Future<void> signInWithGoogle() async {
     try {
-      // Force account chooser every time by clearing cached Google session first.
       await _googleSignIn.signOut();
       await _googleSignIn.disconnect();
-    } catch (_) {
-      // Ignore cleanup failures and continue sign-in flow.
-    }
+    } catch (_) {}
 
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -32,13 +29,38 @@ class FirebaseService {
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await _firebaseAuth.signInWithCredential(credential);
+
+      final UserCredential userCredential = await _firebaseAuth
+          .signInWithCredential(credential);
+
+      // ======= DEBUG: Print all user data =======
+      final User? user = userCredential.user;
+      if (user != null) {
+        print("======= GOOGLE SIGN IN SUCCESS =======");
+        print("UID:            ${user.uid}");
+        print("Name:           ${user.displayName}");
+        print("Email:          ${user.email}");
+        print("Phone:          ${user.phoneNumber}");
+        print("Photo URL:      ${user.photoURL}");
+        print("Email Verified: ${user.emailVerified}");
+        print(
+          "Is New User:    ${userCredential.additionalUserInfo?.isNewUser}",
+        );
+        print(
+          "Provider ID:    ${userCredential.additionalUserInfo?.providerId}",
+        );
+        print("Profile Data:   ${userCredential.additionalUserInfo?.profile}");
+        print("Access Token:   ${googleAuth.accessToken}");
+        print("ID Token:       ${googleAuth.idToken}");
+        print("======================================");
+      }
+      // ==========================================
     } catch (error) {
-      // Clear possibly broken Google auth state so next tap shows chooser again.
       try {
         await _googleSignIn.signOut();
         await _googleSignIn.disconnect();

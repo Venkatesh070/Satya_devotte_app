@@ -82,8 +82,9 @@ class _HomePageState extends State<HomePage> {
     if (_isFetchingHome) return;
     _isFetchingHome = true;
     try {
-      final response =
-          await Get.find<ApiClient>().dio.get<dynamic>(ApiEndpoints.home);
+      final response = await Get.find<ApiClient>().dio.get<dynamic>(
+        ApiEndpoints.home,
+      );
       final payload = response.data;
       if (payload is! Map<String, dynamic>) return;
       final data = payload['data'];
@@ -148,27 +149,24 @@ class _HomePageState extends State<HomePage> {
     bool useDatePlaceholderWhenImageMissing = false,
   }) {
     if (source is! List) return const [];
-    return source
-        .whereType<Map<String, dynamic>>()
-        .map((item) {
-          final title = item['title']?.toString().trim();
-          final image = item['imageUrl']?.toString().trim().isNotEmpty == true
-              ? item['imageUrl']?.toString().trim()
-              : item['image']?.toString().trim();
-          final resolvedImagePath = (image != null && image.isNotEmpty)
-              ? image
-              : fallbackImage;
-          final placeholderText =
-              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
-                  ? DateFormatters.formatFestivalDate(item['date']?.toString())
-                  : null;
-          return HomeCircleItem(
-            title: (title == null || title.isEmpty) ? 'Untitled' : title,
-            imagePath: resolvedImagePath,
-            placeholderText: placeholderText,
-          );
-        })
-        .toList();
+    return source.whereType<Map<String, dynamic>>().map((item) {
+      final title = item['title']?.toString().trim();
+      final image = item['imageUrl']?.toString().trim().isNotEmpty == true
+          ? item['imageUrl']?.toString().trim()
+          : item['image']?.toString().trim();
+      final resolvedImagePath = (image != null && image.isNotEmpty)
+          ? image
+          : fallbackImage;
+      final placeholderText =
+          useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+          ? DateFormatters.formatFestivalDate(item['date']?.toString())
+          : null;
+      return HomeCircleItem(
+        title: (title == null || title.isEmpty) ? 'Untitled' : title,
+        imagePath: resolvedImagePath,
+        placeholderText: placeholderText,
+      );
+    }).toList();
   }
 
   void _onHomeScrollDirectionChanged(ScrollDirection direction) {
@@ -211,7 +209,7 @@ class _HomePageState extends State<HomePage> {
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
-          children: [
+        children: [
           _HomeTabContent(
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
             dailySloka: _dailySloka,
@@ -222,7 +220,7 @@ class _HomePageState extends State<HomePage> {
             onPoojasViewMore: _openPoojasTabFromViewMore,
           ),
           const RitualListPage(),
-        const CalendarPage(),
+          const CalendarPage(),
           const ProfilePage(),
         ],
       ),
@@ -285,10 +283,7 @@ class _HomeTabContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 0),
         child: Column(
           children: [
-            _HomeHeader(
-              dailySloka: dailySloka,
-              slokaAuthor: slokaAuthor,
-            ),
+            _HomeHeader(dailySloka: dailySloka, slokaAuthor: slokaAuthor),
             Padding(
               padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
               child: _HomeBodySections(
@@ -420,10 +415,7 @@ class _HomeCircleSection extends StatelessWidget {
           _SectionTitle(title: title),
           useWrap
               ? _CircleWrap(items: items)
-              : _CircleRow(
-                  items: items,
-                  onViewMoreTap: onViewMoreTap,
-                ),
+              : _CircleRow(items: items, onViewMoreTap: onViewMoreTap),
         ],
       ),
     );
@@ -510,6 +502,7 @@ class _DonationBannerCard extends StatelessWidget {
     );
   }
 }
+
 class _BottomNavBar extends StatefulWidget {
   const _BottomNavBar({
     required this.currentIndex,
@@ -584,12 +577,10 @@ class _BottomNavBarState extends State<_BottomNavBar> {
     });
   }
 
-  double _tabTopOffset({
-    required double centerX,
-    required double totalWidth,
-  }) {
+  double _tabTopOffset({required double centerX, required double totalWidth}) {
     final t = (centerX / totalWidth).clamp(0.0, 1.0);
-    final curveY = ((1 - t) * (1 - t) * 24) + (2 * (1 - t) * t * -10) + (t * t * 24);
+    final curveY =
+        ((1 - t) * (1 - t) * 24) + (2 * (1 - t) * t * -10) + (t * t * 24);
     // Map each tab center to the same convex arc as the nav shell.
     return 14 + ((curveY + 10) * 0.45);
   }
@@ -611,18 +602,21 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                   : _isSettling
                   ? _dragPageValue
                   : (widget.pageController.hasClients
-                      ? (widget.pageController.page ??
-                          widget.currentIndex.toDouble())
-                      : widget.currentIndex.toDouble());
+                        ? (widget.pageController.page ??
+                              widget.currentIndex.toDouble())
+                        : widget.currentIndex.toDouble());
               // Shift tab slots with page progress for smooth tab swapping.
               final horizontalShift =
                   pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
-                      slotWidth;
+                  slotWidth;
               // Offset by half-slot so active tab center aligns with screen center.
               final homeLeft = (railLeft + (slotWidth * 2.5)) - horizontalShift;
-              final poojasLeft = (railLeft + (slotWidth * 3.5)) - horizontalShift;
-              final calendarLeft = (railLeft + (slotWidth * 4.5)) - horizontalShift;
-              final profileLeft = (railLeft + (slotWidth * 5.5)) - horizontalShift;
+              final poojasLeft =
+                  (railLeft + (slotWidth * 3.5)) - horizontalShift;
+              final calendarLeft =
+                  (railLeft + (slotWidth * 4.5)) - horizontalShift;
+              final profileLeft =
+                  (railLeft + (slotWidth * 5.5)) - horizontalShift;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragStart: _handleDragStart,
@@ -630,78 +624,78 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                 onHorizontalDragEnd: _handleDragEnd,
                 child: Stack(
                   children: [
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: PhysicalShape(
-                    color: const Color(0xFFF8F1E2),
-                    clipper: _ConvexNavClipper(),
-                    elevation: 10,
-                    shadowColor: const Color(0x24000000),
-                    child: CustomPaint(
-                      painter: _TopCurveHighlightPainter(),
-                      child: const SizedBox.expand(),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: PhysicalShape(
+                        color: const Color(0xFFF8F1E2),
+                        clipper: _ConvexNavClipper(),
+                        elevation: 10,
+                        shadowColor: const Color(0x24000000),
+                        child: CustomPaint(
+                          painter: _TopCurveHighlightPainter(),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  top: _tabTopOffset(
-                    centerX: homeLeft + (slotWidth / 2),
-                    totalWidth: constraints.maxWidth,
-                  ),
-                  left: homeLeft,
-                  width: slotWidth,
-                  child: _BottomItem(
-                    icon: Icons.home_outlined,
-                    label: 'Home',
-                    selected: widget.currentIndex == 0,
-                    onTap: () => _settleToIndex(0),
-                  ),
-                ),
-                Positioned(
-                  top: _tabTopOffset(
-                    centerX: poojasLeft + (slotWidth / 2),
-                    totalWidth: constraints.maxWidth,
-                  ),
-                  left: poojasLeft,
-                  width: slotWidth,
-                  child: _BottomItem(
-                    icon: Icons.local_fire_department_outlined,
-                    label: 'Poojas',
-                    selected: widget.currentIndex == 1,
-                    onTap: () => _settleToIndex(1),
-                  ),
-                ),
-                Positioned(
-                  top: _tabTopOffset(
-                    centerX: calendarLeft + (slotWidth / 2),
-                    totalWidth: constraints.maxWidth,
-                  ),
-                  left: calendarLeft,
-                  width: slotWidth,
-                  child: _BottomItem(
-                    icon: Icons.calendar_today_outlined,
-                    label: 'Calendar',
-                    selected: widget.currentIndex == 2,
-                    onTap: () => _settleToIndex(2),
-                  ),
-                ),
-                Positioned(
-                  top: _tabTopOffset(
-                    centerX: profileLeft + (slotWidth / 2),
-                    totalWidth: constraints.maxWidth,
-                  ),
-                  left: profileLeft,
-                  width: slotWidth,
-                  child: _BottomItem(
-                    icon: Icons.person_outline,
-                    label: 'Profile',
-                    selected: widget.currentIndex == 3,
-                    onTap: () => _settleToIndex(3),
-                  ),
-                ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: homeLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: homeLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.home_outlined,
+                        label: 'Home',
+                        selected: widget.currentIndex == 0,
+                        onTap: () => _settleToIndex(0),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: poojasLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: poojasLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.local_fire_department_outlined,
+                        label: 'Poojas',
+                        selected: widget.currentIndex == 1,
+                        onTap: () => _settleToIndex(1),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: calendarLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: calendarLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Calendar',
+                        selected: widget.currentIndex == 2,
+                        onTap: () => _settleToIndex(2),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: profileLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: profileLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.person_outline,
+                        label: 'Profile',
+                        selected: widget.currentIndex == 3,
+                        onTap: () => _settleToIndex(3),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -714,10 +708,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({
-    required this.dailySloka,
-    required this.slokaAuthor,
-  });
+  const _HomeHeader({required this.dailySloka, required this.slokaAuthor});
 
   final String dailySloka;
   final String slokaAuthor;
@@ -732,24 +723,24 @@ class _HomeHeader extends StatelessWidget {
         children: [
           const Positioned.fill(
             child: Image(
-              image: AssetImage('assets/images/home/homeHeaderImg.png'),
-              fit: BoxFit.cover,
+              image: AssetImage('assets/images/appHeaderImg.png'),
+              fit: BoxFit.fill,
               alignment: Alignment.topCenter,
             ),
           ),
-          Positioned(
-            top: 0,
-            right: -2,
-            child: Opacity(
-              opacity: 0.95,
-              child: const Image(
-              image: AssetImage('assets/images/home/homeHeaderFlower.png'),
-                width: 178,
-                height: 120,
-              fit: BoxFit.contain,
-              ),
-            ),
-          ),
+          // Positioned(
+          //   top: 0,
+          //   right: -2,
+          //   child: Opacity(
+          //     opacity: 0.95,
+          //     child: const Image(
+          //       image: AssetImage('assets/images/home/homeHeaderFlower.png'),
+          //       width: 178,
+          //       height: 120,
+          //       fit: BoxFit.contain,
+          //     ),
+          //   ),
+          // ),
           Padding(
             padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 10),
             child: Column(
@@ -775,8 +766,10 @@ class _HomeHeader extends StatelessWidget {
                       'assets/svgs/bell.svg',
                       width: 18,
                       height: 18,
-                      colorFilter:
-                          const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ],
                 ),
@@ -799,13 +792,10 @@ class _HomeHeader extends StatelessWidget {
                     height: 1.15,
                   ),
                 ),
-                const SizedBox(height: 55),
+                const SizedBox(height: 20),
                 const _HeaderDivider(),
                 const SizedBox(height: 12),
-                _QuoteCard(
-                  quote: dailySloka,
-                  author: slokaAuthor,
-                ),
+                _QuoteCard(quote: dailySloka, author: slokaAuthor),
                 const SizedBox(height: 12),
                 const _HeaderDivider(),
               ],
@@ -833,10 +823,7 @@ class _HeaderDivider extends StatelessWidget {
 }
 
 class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({
-    required this.quote,
-    required this.author,
-  });
+  const _QuoteCard({required this.quote, required this.author});
 
   final String quote;
   final String author;
@@ -863,26 +850,12 @@ class _QuoteCard extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.hardEdge,
             children: [
-            // Corner motifs are clipped to the same radius as the quote card.
-            Positioned(
-              top: 0,
-              left: -_horizontalAttach,
-              child: Opacity(
-                opacity: 0.22,
-                child: Image(
-                  image: AssetImage('assets/images/home/cardFlower.png'),
-                  width: _flowerSize,
-                  height: _flowerSize,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: -_horizontalAttach,
-              child: Opacity(
-                opacity: 0.22,
-                child: RotatedBox(
-                  quarterTurns: 2,
+              // Corner motifs are clipped to the same radius as the quote card.
+              Positioned(
+                top: 0,
+                left: -_horizontalAttach,
+                child: Opacity(
+                  opacity: 0.22,
                   child: Image(
                     image: AssetImage('assets/images/home/cardFlower.png'),
                     width: _flowerSize,
@@ -890,45 +863,62 @@ class _QuoteCard extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          quote,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.lora(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                            height: 1.2,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+              Positioned(
+                bottom: 0,
+                right: -_horizontalAttach,
+                child: Opacity(
+                  opacity: 0.22,
+                  child: RotatedBox(
+                    quarterTurns: 2,
+                    child: Image(
+                      image: AssetImage('assets/images/home/cardFlower.png'),
+                      width: _flowerSize,
+                      height: _flowerSize,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.lora(
-                        color: const Color(0xFFF0E5DE),
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            quote,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.lora(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        author,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.lora(
+                          color: const Color(0xFFF0E5DE),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -958,10 +948,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _CircleRow extends StatelessWidget {
-  const _CircleRow({
-    required this.items,
-    this.onViewMoreTap,
-  });
+  const _CircleRow({required this.items, this.onViewMoreTap});
   final List<HomeCircleItem> items;
   final Future<void> Function()? onViewMoreTap;
 
@@ -1019,28 +1006,30 @@ class _CircleWrap extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
       child: Wrap(
-      spacing: 10,
+        spacing: 10,
         runSpacing: 10,
-        children: [...baseItems, staticMoreItem]
-            .map((item) => _CircleItem(item: item))
-            .toList(),
+        children: [
+          ...baseItems,
+          staticMoreItem,
+        ].map((item) => _CircleItem(item: item)).toList(),
       ),
     );
   }
 }
 
 class _CircleItem extends StatelessWidget {
-  const _CircleItem({
-    required this.item,
-    this.onTap,
-  });
+  const _CircleItem({required this.item, this.onTap});
   final HomeCircleItem item;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final normalizedTitle = item.title.trim().toLowerCase().replaceAll('\n', ' ');
-    final isMoreItem = normalizedTitle == 'view more' || normalizedTitle == 'more';
+    final normalizedTitle = item.title.trim().toLowerCase().replaceAll(
+      '\n',
+      ' ',
+    );
+    final isMoreItem =
+        normalizedTitle == 'view more' || normalizedTitle == 'more';
     return SizedBox(
       width: 80,
       child: InkWell(
@@ -1059,38 +1048,38 @@ class _CircleItem extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: ClipOval(
-              child: item.imagePath.isEmpty
-                  ? ColoredBox(
-                      color: const Color(0xFFEADCC3),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            item.placeholderText ?? '',
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.inter(
-                              fontSize: 10,
-                              color: const Color(0xFF4A1C00),
-                              fontWeight: FontWeight.w700,
+                child: item.imagePath.isEmpty
+                    ? ColoredBox(
+                        color: const Color(0xFFEADCC3),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              item.placeholderText ?? '',
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.inter(
+                                fontSize: 10,
+                                color: const Color(0xFF4A1C00),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
+                      )
+                    : item.imagePath.startsWith('http')
+                    ? Image.network(
+                        item.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const ColoredBox(color: Color(0xFFE7D7BC));
+                        },
+                      )
+                    : Image(
+                        image: AssetImage(item.imagePath),
+                        fit: BoxFit.cover,
                       ),
-                    )
-                  : item.imagePath.startsWith('http')
-                      ? Image.network(
-                          item.imagePath,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const ColoredBox(color: Color(0xFFE7D7BC));
-                          },
-                        )
-                      : Image(
-                          image: AssetImage(item.imagePath),
-                          fit: BoxFit.cover,
-                        ),
               ),
             ),
             const SizedBox(height: 6),
@@ -1226,4 +1215,3 @@ class _TopCurveHighlightPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
