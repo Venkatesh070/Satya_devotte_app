@@ -229,6 +229,10 @@ class CmsStatusBadge extends StatelessWidget {
         c = CmsColors.orange;
         label = 'Pending';
         break;
+      case 'queued':
+        c = CmsColors.orangeDark;
+        label = 'Queued';
+        break;
       case 'rejected':
         c = const Color(0xFFE53935);
         label = 'Rejected';

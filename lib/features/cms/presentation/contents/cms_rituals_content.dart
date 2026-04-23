@@ -82,7 +82,14 @@ class _PoojaList extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<PoojaModel> onEdit;
 
-  static const _filters = ['All', 'Approved', 'Pending', 'Draft', 'Rejected'];
+  static const _filters = [
+    'All',
+    'Approved',
+    'Pending',
+    'Queued',
+    'Draft',
+    'Rejected',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -224,8 +231,7 @@ class _PoojaList extends StatelessWidget {
                                   : FontWeight.normal,
                             ),
                           ),
-                          if (f == 'Pending' &&
-                              controller.pendingCount > 0) ...[
+                          if (f == 'Pending' && controller.pendingCount > 0) ...[
                             const SizedBox(width: 5),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -240,6 +246,29 @@ class _PoojaList extends StatelessWidget {
                               ),
                               child: Text(
                                 '${controller.pendingCount}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (f == 'Queued' && controller.queuedCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSel
+                                    ? Colors.white.withOpacity(0.3)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${controller.queuedCount}',
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
@@ -356,6 +385,7 @@ class _PoojaList extends StatelessWidget {
                     }
                   },
                   onApprove: () => _approveDialog(ctx, list[i], controller),
+                  onQueue: () => controller.queuePooja(list[i].id),
                   onReject: () => _rejectDialog(ctx, list[i], controller),
                 ),
               ),
@@ -546,12 +576,14 @@ class _PoojaCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onApprove,
+    required this.onQueue,
     required this.onReject,
   });
   final PoojaModel pooja;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onApprove;
+  final VoidCallback onQueue;
   final VoidCallback onReject;
 
   bool get canEdit {
@@ -563,6 +595,9 @@ class _PoojaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Get.find<AuthController>();
+    final isSuperAdmin = auth.isSuperAdmin;
+    final isCreatorSuperAdmin = isSuperAdmin && pooja.createdBy == auth.currentUserId;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -712,15 +747,23 @@ class _PoojaCard extends StatelessWidget {
                   ],
                 ),
               // Approve/Reject buttons for superadmin on pending poojas
-              if (Get.find<AuthController>().isSuperAdmin &&
-                  pooja.status == 'Pending') ...[
+              if (isSuperAdmin &&
+                  (pooja.status == 'Pending' || pooja.status == 'Queued')) ...[
                 const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _SmBtn('Reject', Colors.red, onReject),
-                    const SizedBox(width: 6),
-                    _SmBtn('Approve', Colors.green, onApprove),
+                    if (isCreatorSuperAdmin) ...[
+                      if (pooja.status == 'Pending')
+                        _SmBtn('Queued', Colors.orange, onQueue),
+                      if (pooja.status == 'Pending')
+                        const SizedBox(width: 6),
+                      _SmBtn('Publish Now', Colors.green, onApprove),
+                    ] else ...[
+                      _SmBtn('Reject', Colors.red, onReject),
+                      const SizedBox(width: 6),
+                      _SmBtn('Approve', Colors.green, onApprove),
+                    ],
                   ],
                 ),
               ],

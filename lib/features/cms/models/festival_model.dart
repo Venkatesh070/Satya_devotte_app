@@ -18,6 +18,7 @@ class FestivalModel {
     this.notificationDaysBefore = 0,
     this.rituals,
     this.imageUrl,
+    this.createdBy,
     this.createdAt,
   });
 
@@ -37,6 +38,7 @@ class FestivalModel {
   final int notificationDaysBefore;
   final String? rituals;
   final String? imageUrl;
+  final String? createdBy;
   final String? createdAt;
 
   String get locationDisplay {
@@ -52,6 +54,8 @@ class FestivalModel {
     switch (raw.toUpperCase()) {
       case 'APPROVED':
         return 'Approved';
+      case 'QUEUED':
+        return 'Queued';
       case 'PENDING':
         return 'Pending';
       case 'REJECTED':
@@ -101,6 +105,13 @@ class FestivalModel {
     return fb;
   }
 
+  static String? _extractId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) return raw;
+    if (raw is Map) return raw['_id']?.toString() ?? raw['id']?.toString();
+    return null;
+  }
+
   factory FestivalModel.fromJson(Map<String, dynamic> json) {
     return FestivalModel(
       id: _str(json, ['_id', 'id']),
@@ -119,6 +130,7 @@ class FestivalModel {
           (json['notificationDaysBefore'] as num?)?.toInt() ?? 0,
       rituals: _parseRituals(json['rituals']),
       imageUrl: json['image'] as String? ?? json['imageUrl'] as String?,
+      createdBy: _extractId(json['createdBy']),
       status: _normaliseStatus(_str(json, ['status'], 'Pending')),
       createdAt: json['createdAt'] as String?,
     );
@@ -174,6 +186,7 @@ class FestivalModel {
     String? rituals,
     String? imageUrl,
     String? status,
+    String? createdBy,
   }) => FestivalModel(
     id: id,
     title: title ?? this.title,
@@ -182,13 +195,14 @@ class FestivalModel {
     endDate: endDate ?? this.endDate,
     category: category ?? this.category,
     isGlobal: isGlobal ?? this.isGlobal,
-    location: location ?? this.location,
+    location: this.location,
     notifyUsers: notifyUsers ?? this.notifyUsers,
     notificationDaysBefore:
         notificationDaysBefore ?? this.notificationDaysBefore,
     rituals: rituals ?? this.rituals,
     imageUrl: imageUrl ?? this.imageUrl,
     status: status ?? this.status,
+    createdBy: createdBy ?? this.createdBy,
     createdAt: createdAt,
   );
 }

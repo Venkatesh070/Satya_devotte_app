@@ -25,6 +25,8 @@ class DonationModel {
     switch ((s ?? '').toUpperCase()) {
       case 'APPROVED':
         return 'Approved';
+      case 'QUEUED':
+        return 'Queued';
       case 'REJECTED':
         return 'Rejected';
       default:

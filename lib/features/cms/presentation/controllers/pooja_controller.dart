@@ -30,6 +30,7 @@ class PoojaController extends GetxController {
 
   // Pending poojas count — shown on dashboard (best-effort across current list)
   int get pendingCount => _poojas.where((p) => p.status == 'Pending').length;
+  int get queuedCount => _poojas.where((p) => p.status == 'Queued').length;
   int get rejectedCount => _poojas.where((p) => p.status == 'Rejected').length;
 
   @override
@@ -47,25 +48,6 @@ class PoojaController extends GetxController {
   void resetAndLoad() {
     _filter.value = 'All';
     loadPoojas();
-  }
-
-  // ── Load all poojas (filtered by _filter.value) ──────────────
-  // Display value → API query param converter
-  // Filter tabs use: 'Published' | 'Pending' | 'Draft'
-  // API requires:    'APPROVED'  | 'PENDING'  | 'DRAFT'
-  static String? _toApiStatusParam(String displayFilter) {
-    switch (displayFilter) {
-      case 'Published':
-        return 'APPROVED';
-      case 'Pending':
-        return 'PENDING';
-      case 'Draft':
-        return 'DRAFT';
-      case 'Rejected':
-        return 'REJECTED';
-      default:
-        return null;
-    }
   }
 
   Future<void> loadPoojas() async {
@@ -222,6 +204,19 @@ class PoojaController extends GetxController {
       await _dataSource.approvePooja(id);
       _snackOk('Pooja approved and published');
       await loadPoojas(); // reload fresh from server
+      return true;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _snackErr(_error.value!);
+      return false;
+    }
+  }
+
+  Future<bool> queuePooja(String id) async {
+    try {
+      await _dataSource.reviewPooja(id, 'QUEUED');
+      _snackOk('Pooja moved to queue');
+      await loadPoojas();
       return true;
     } catch (e) {
       _error.value = _parseError(e);

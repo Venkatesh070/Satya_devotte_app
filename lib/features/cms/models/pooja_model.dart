@@ -14,6 +14,7 @@ class PoojaModel {
     this.steps = const [],
     this.requiredItems = const [],
     this.rating = 0.0,
+    this.createdBy,
     this.createdAt,
     this.updatedAt,
   });
@@ -26,13 +27,14 @@ class PoojaModel {
   final String duration;
   final String description;
   final String
-  status; // Internal display value: 'Approved' | 'Pending' | 'Draft' | 'Rejected'
+  status; // Internal display value: 'Approved' | 'Queued' | 'Pending' | 'Draft' | 'Rejected'
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
   final List<String> steps;
   final List<String> requiredItems;
   final double rating;
+  final String? createdBy;
   final String? createdAt;
   final String? updatedAt;
 
@@ -50,12 +52,20 @@ class PoojaModel {
     return fallback;
   }
 
+  static String? _extractId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) return raw;
+    if (raw is Map) return raw['_id']?.toString() ?? raw['id']?.toString();
+    return null;
+  }
+
   // ── Inbound: API value → internal display value ───────────────
   // API sends: APPROVED, REJECTED, PENDING, DRAFT, published, active, etc.
-  // We normalise to: 'Approved' | 'Pending' | 'Draft' | 'Rejected'
+  // We normalise to: 'Approved' | 'Queued' | 'Pending' | 'Draft' | 'Rejected'
   static String _fromApiStatus(String raw) {
     final s = raw.toLowerCase().trim();
     if (s == 'approved' || s == 'published' || s == 'active') return 'Approved';
+    if (s == 'queued') return 'Queued';
     if (s == 'pending' || s == 'pending_approval') return 'Pending';
     if (s == 'rejected') return 'Rejected';
     if (s == 'draft') return 'Draft';
@@ -71,6 +81,8 @@ class PoojaModel {
         return 'APPROVED';
       case 'pending':
         return 'PENDING';
+      case 'queued':
+        return 'QUEUED';
       case 'draft':
       default:
         return 'DRAFT';
@@ -102,6 +114,7 @@ class PoojaModel {
               .toList() ??
           [],
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      createdBy: _extractId(json['createdBy']),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
     );
@@ -136,6 +149,7 @@ class PoojaModel {
     String? videoUrl,
     List<String>? steps,
     List<String>? requiredItems,
+    String? createdBy,
   }) {
     return PoojaModel(
       id: id,
@@ -152,6 +166,7 @@ class PoojaModel {
       steps: steps ?? this.steps,
       requiredItems: requiredItems ?? this.requiredItems,
       rating: rating,
+      createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

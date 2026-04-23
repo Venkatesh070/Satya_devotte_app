@@ -73,7 +73,7 @@ class _DonationList extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<DonationModel> onEdit;
 
-  static const _filters = ['All', 'Approved', 'Pending', 'Rejected'];
+  static const _filters = ['All', 'Approved', 'Pending', 'Queued', 'Rejected'];
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +239,29 @@ class _DonationList extends StatelessWidget {
                               ),
                             ),
                           ],
+                          if (f == 'Queued' && ctrl.queuedCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSel
+                                    ? Colors.white.withOpacity(0.3)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${ctrl.queuedCount}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -357,6 +380,7 @@ class _WebGrid extends StatelessWidget {
       onEdit: () => onEdit(donations[i]),
       onDelete: () => _deleteConfirm(ctx, donations[i], ctrl),
       onApprove: () => _approveDialog(ctx, donations[i], ctrl),
+      onQueue: () => ctrl.queueDonation(donations[i].id),
       onReject: () => _rejectDialog(ctx, donations[i], ctrl),
     ),
   );
@@ -383,6 +407,7 @@ class _MobileList extends StatelessWidget {
       onEdit: () => onEdit(donations[i]),
       onDelete: () => _deleteConfirm(ctx, donations[i], ctrl),
       onApprove: () => _approveDialog(ctx, donations[i], ctrl),
+      onQueue: () => ctrl.queueDonation(donations[i].id),
       onReject: () => _rejectDialog(ctx, donations[i], ctrl),
     ),
   );
@@ -581,10 +606,11 @@ class _DonationCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onApprove,
+    required this.onQueue,
     required this.onReject,
   });
   final DonationModel donation;
-  final VoidCallback onEdit, onDelete, onApprove, onReject;
+  final VoidCallback onEdit, onDelete, onApprove, onQueue, onReject;
 
   Color get _statusColor {
     switch (donation.status) {
@@ -592,6 +618,8 @@ class _DonationCard extends StatelessWidget {
         return Colors.green;
       case 'Pending':
         return CmsColors.orange;
+      case 'Queued':
+        return CmsColors.orangeDark;
       case 'Rejected':
         return Colors.red;
       default:
@@ -603,6 +631,7 @@ class _DonationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Get.find<AuthController>();
     final isSuperAdmin = auth.isSuperAdmin;
+    final isCreatorSuperAdmin = isSuperAdmin && donation.createdBy == auth.currentUserId;
     final canEdit =
         isSuperAdmin ||
         (donation.createdBy != null &&
@@ -707,10 +736,20 @@ class _DonationCard extends StatelessWidget {
                       _SmBtn(Icons.delete_outline, Colors.red, onDelete),
                     ],
                     const Spacer(),
-                    if (isSuperAdmin && donation.status == 'Pending') ...[
-                      _TextBtn('Reject', Colors.red, onReject),
-                      const SizedBox(width: 6),
-                      _TextBtn('Approve', Colors.green, onApprove),
+                    if (isSuperAdmin &&
+                        (donation.status == 'Pending' ||
+                            donation.status == 'Queued')) ...[
+                      if (isCreatorSuperAdmin) ...[
+                        if (donation.status == 'Pending')
+                          _TextBtn('Queued', Colors.orange, onQueue),
+                        if (donation.status == 'Pending')
+                          const SizedBox(width: 6),
+                        _TextBtn('Publish Now', Colors.green, onApprove),
+                      ] else ...[
+                        _TextBtn('Reject', Colors.red, onReject),
+                        const SizedBox(width: 6),
+                        _TextBtn('Approve', Colors.green, onApprove),
+                      ],
                     ],
                   ],
                 ),

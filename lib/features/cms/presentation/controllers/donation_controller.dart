@@ -28,6 +28,7 @@ class DonationController extends GetxController {
   }
 
   int get pendingCount => _donations.where((d) => d.status == 'Pending').length;
+  int get queuedCount => _donations.where((d) => d.status == 'Queued').length;
 
   @override
   void onInit() {
@@ -129,6 +130,20 @@ class DonationController extends GetxController {
       final idx = _donations.indexWhere((d) => d.id == id);
       if (idx != -1) _donations[idx] = result;
       _ok('Donation approved and published');
+      return true;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return false;
+    }
+  }
+
+  Future<bool> queueDonation(String id) async {
+    try {
+      final result = await _dataSource.reviewDonation(id, 'QUEUED');
+      final idx = _donations.indexWhere((d) => d.id == id);
+      if (idx != -1) _donations[idx] = result;
+      _ok('Donation moved to queue');
       return true;
     } catch (e) {
       _error.value = _parseError(e);

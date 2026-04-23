@@ -45,6 +45,7 @@ class FestivalController extends GetxController {
   }
 
   int get pendingCount => _festivals.where((f) => f.status == 'Pending').length;
+  int get queuedCount => _festivals.where((f) => f.status == 'Queued').length;
 
   @override
   @override
@@ -137,6 +138,20 @@ class FestivalController extends GetxController {
       final idx = _festivals.indexWhere((f) => f.id == id);
       if (idx != -1) _festivals[idx] = result;
       _ok('Festival approved and published');
+      return true;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return false;
+    }
+  }
+
+  Future<bool> queueFestival(String id) async {
+    try {
+      final result = await _dataSource.reviewFestival(id, 'QUEUED');
+      final idx = _festivals.indexWhere((f) => f.id == id);
+      if (idx != -1) _festivals[idx] = result;
+      _ok('Festival moved to queue');
       return true;
     } catch (e) {
       _error.value = _parseError(e);

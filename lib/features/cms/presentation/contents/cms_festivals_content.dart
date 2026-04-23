@@ -89,7 +89,7 @@ class _FestivalList extends StatelessWidget {
     'Nov',
     'Dec',
   ];
-  static const _filters = ['All', 'Approved', 'Pending', 'Rejected'];
+  static const _filters = ['All', 'Approved', 'Pending', 'Queued', 'Rejected'];
 
   @override
   Widget build(BuildContext context) {
@@ -246,6 +246,29 @@ class _FestivalList extends StatelessWidget {
                               ),
                               child: Text(
                                 '${ctrl.pendingCount}',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (f == 'Queued' && ctrl.queuedCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSel
+                                    ? Colors.white.withOpacity(0.3)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${ctrl.queuedCount}',
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
@@ -425,6 +448,7 @@ class _FestivalList extends StatelessWidget {
                     }
                   },
                   onApprove: () => _approveDialog(ctx, list[i], ctrl),
+                  onQueue: () => ctrl.queueFestival(list[i].id),
                   onReject: () => _rejectDialog(ctx, list[i], ctrl),
                 ),
               ),
@@ -624,6 +648,7 @@ class _FestivalCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onApprove,
+    required this.onQueue,
     required this.onReject,
   });
 
@@ -631,6 +656,7 @@ class _FestivalCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onApprove;
+  final VoidCallback onQueue;
   final VoidCallback onReject;
 
   Color get _statusColor {
@@ -639,6 +665,8 @@ class _FestivalCard extends StatelessWidget {
         return Colors.green;
       case 'Pending':
         return CmsColors.orange;
+      case 'Queued':
+        return CmsColors.orangeDark;
       case 'Rejected':
         return Colors.red;
       default:
@@ -649,6 +677,9 @@ class _FestivalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSuperAdmin = Get.find<AuthController>().isSuperAdmin;
+    final isCreatorSuperAdmin =
+        isSuperAdmin &&
+        festival.createdBy == Get.find<AuthController>().currentUserId;
 
     // FIX: FestivalModel does not have a createdBy field.
     // All users can edit their own festivals; superadmin can edit all.
@@ -811,14 +842,24 @@ class _FestivalCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (isSuperAdmin && festival.status == 'Pending') ...[
+              if (isSuperAdmin &&
+                  (festival.status == 'Pending' ||
+                      festival.status == 'Queued')) ...[
                 const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _SmBtn('Reject', Colors.red, onReject),
-                    const SizedBox(width: 6),
-                    _SmBtn('Approve', Colors.green, onApprove),
+                    if (isCreatorSuperAdmin) ...[
+                      if (festival.status == 'Pending')
+                        _SmBtn('Queued', CmsColors.orange, onQueue),
+                      if (festival.status == 'Pending')
+                        const SizedBox(width: 6),
+                      _SmBtn('Publish Now', Colors.green, onApprove),
+                    ] else ...[
+                      _SmBtn('Reject', Colors.red, onReject),
+                      const SizedBox(width: 6),
+                      _SmBtn('Approve', Colors.green, onApprove),
+                    ],
                   ],
                 ),
               ],
