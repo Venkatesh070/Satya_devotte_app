@@ -1,4 +1,6 @@
 // lib/features/cms/data/datasources/sloka_remote_datasource.dart
+import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/cms/models/sloka_model.dart';
 
@@ -8,6 +10,7 @@ class SlokaRemoteDataSource {
 
   static const String _base = '/api/v1/daily-slokas';
   static const String _create = '/api/v1/daily-slokas/create-sloka';
+  static const String bulkUpload = '/api/v1/daily-slokas/import';
 
   Map<String, dynamic> _single(Map<String, dynamic> body) {
     final d = body['data'];
@@ -74,5 +77,18 @@ class SlokaRemoteDataSource {
       data: sloka.toJson(), // sends { sloka, author, date: DD-MM-YYYY }
     );
     return SlokaModel.fromJson(_single(res.data as Map<String, dynamic>));
+  }
+
+  // ── POST /api/v1/daily-slokas/import (multipart with xlsx file) ──
+  Future<void> bulkImportSlokas(PickedFile file) async {
+    await _apiClient.dio.post(
+      bulkUpload,
+      data: FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          file.bytes,
+          filename: file.filename,
+        ),
+      }),
+    );
   }
 }

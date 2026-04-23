@@ -6,6 +6,7 @@ class SlokaModel {
     required this.sloka,
     required this.date, // DD-MM-YYYY (API format)
     required this.author,
+    this.meaning,
     this.createdAt,
     this.updatedAt,
   });
@@ -14,6 +15,7 @@ class SlokaModel {
   final String sloka; // the sloka text
   final String date; // DD-MM-YYYY
   final String author;
+  final String? meaning;
   final String? createdAt;
   final String? updatedAt;
 
@@ -83,6 +85,7 @@ class SlokaModel {
       sloka: _str(json, ['sloka', 'text', 'content']),
       date: _str(json, ['date']),
       author: _str(json, ['author']),
+      meaning: _str(json, ['meaning', 'translation', 'meaningText']),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
     );
@@ -97,6 +100,7 @@ class SlokaModel {
   Map<String, dynamic> toJson() => {
     'sloka': sloka,
     'author': author,
+    if (meaning != null && meaning!.trim().isNotEmpty) 'meaning': meaning,
     'date': date, // DD-MM-YYYY
   };
 }

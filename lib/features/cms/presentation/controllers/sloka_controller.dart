@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/controllers/sloka_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/sloka_model.dart';
 
@@ -76,6 +77,7 @@ class SlokaController extends GetxController {
   Future<bool> saveSloka({
     required String sloka,
     required String author,
+    String? meaning,
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -84,6 +86,7 @@ class SlokaController extends GetxController {
         id: _todaySloka.value?.id ?? '',
         sloka: sloka,
         author: author,
+        meaning: meaning,
         date: selectedDateStr, // DD-MM-YYYY
       );
       final result = await _dataSource.createOrUpdateSloka(model);
@@ -94,6 +97,23 @@ class SlokaController extends GetxController {
       else
         _slokas.insert(0, result);
       _ok(_todaySloka.value != null ? 'Sloka updated' : 'Sloka saved');
+      return true;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return false;
+    } finally {
+      _isSubmitting.value = false;
+    }
+  }
+
+  Future<bool> bulkImportSlokas(PickedFile file) async {
+    _isSubmitting.value = true;
+    _error.value = null;
+    try {
+      await _dataSource.bulkImportSlokas(file);
+      await loadAll();
+      _ok('Slokas imported successfully');
       return true;
     } catch (e) {
       _error.value = _parseError(e);

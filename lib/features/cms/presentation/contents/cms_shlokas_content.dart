@@ -1,6 +1,8 @@
 // lib/features/cms/presentation/contents/cms_shlokas_content.dart
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/sloka_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -83,6 +85,25 @@ class _CmsShlokaContentState extends State<CmsShlokaContent> {
                       ),
               ),
               const SizedBox(width: 10),
+              Obx(
+                () => OutlinedButton.icon(
+                  onPressed: _ctrl.isSubmitting ? null : _onBulkImport,
+                  icon: const Icon(Icons.upload_file, size: 16),
+                  label: Text(isWeb ? 'Bulk Import' : 'Import'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: CmsColors.orange,
+                    side: const BorderSide(color: CmsColors.orange),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               CmsPrimaryButton(
                 label: isWeb ? 'Set Daily Sloka' : 'Set',
                 icon: Icons.edit_note,
@@ -125,6 +146,39 @@ class _CmsShlokaContentState extends State<CmsShlokaContent> {
           }),
         ),
       ],
+    );
+  }
+
+  Future<void> _onBulkImport() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowMultiple: false,
+      allowedExtensions: const ['xlsx'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      Get.snackbar(
+        'Invalid file',
+        'Unable to read selected file',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: CmsColors.orangeDark,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+      );
+      return;
+    }
+
+    await _ctrl.bulkImportSlokas(
+      PickedFile(
+        bytes: bytes,
+        filename: file.name,
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ),
     );
   }
 }
@@ -569,6 +623,7 @@ class _SlokaForm extends StatefulWidget {
 
 class _SlokaFormState extends State<_SlokaForm> {
   late final TextEditingController _slokaCtrl;
+  late final TextEditingController _meaningCtrl;
   late final TextEditingController _authorCtrl;
 
   @override
@@ -576,12 +631,14 @@ class _SlokaFormState extends State<_SlokaForm> {
     super.initState();
     final existing = widget.ctrl.todaySloka;
     _slokaCtrl = TextEditingController(text: existing?.sloka ?? '');
+    _meaningCtrl = TextEditingController(text: existing?.meaning ?? '');
     _authorCtrl = TextEditingController(text: existing?.author ?? '');
   }
 
   @override
   void dispose() {
     _slokaCtrl.dispose();
+    _meaningCtrl.dispose();
     _authorCtrl.dispose();
     super.dispose();
   }
@@ -600,6 +657,7 @@ class _SlokaFormState extends State<_SlokaForm> {
     }
     final ok = await widget.ctrl.saveSloka(
       sloka: _slokaCtrl.text.trim(),
+      meaning: _meaningCtrl.text.trim(),
       author: _authorCtrl.text.trim(),
     );
     if (ok) widget.onSaved();
@@ -691,6 +749,13 @@ class _SlokaFormState extends State<_SlokaForm> {
                   hint: 'e.g. कर्मण्येवाधिकारस्ते मा फलेषु कदाचन...',
                   controller: _slokaCtrl,
                   maxLines: 4,
+                ),
+                const SizedBox(height: 12),
+                CmsFormField(
+                  label: 'Meaning',
+                  hint: 'Enter meaning / translation...',
+                  controller: _meaningCtrl,
+                  maxLines: 3,
                 ),
                 const SizedBox(height: 12),
 
