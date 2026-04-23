@@ -2,10 +2,12 @@ class HomeCircleItem {
   const HomeCircleItem({
     required this.title,
     required this.imagePath,
+    this.placeholderText,
   });
 
   final String title;
   final String imagePath;
+  final String? placeholderText;
 }
 
 class HomeConstants {

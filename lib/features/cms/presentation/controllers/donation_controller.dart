@@ -85,11 +85,17 @@ class DonationController extends GetxController {
     String id,
     String title,
     String description,
+    {PickedFile? image}
   ) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      await _dataSource.updateDonation(id, title, description);
+      await _dataSource.updateDonation(
+        id,
+        title,
+        description,
+        image: image,
+      );
       await loadDonations();
       _ok('Donation updated — sent for re-approval');
       return true;

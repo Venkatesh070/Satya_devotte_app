@@ -80,10 +80,18 @@ class DonationRemoteDataSource {
     String id,
     String title,
     String description,
+    {PickedFile? image}
   ) async {
+    final fields = <String, dynamic>{'title': title, 'description': description};
+    if (image != null) {
+      fields['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+      );
+    }
     final res = await _apiClient.dio.patch(
       '/api/v1/donations/$id',
-      data: FormData.fromMap({'title': title, 'description': description}),
+      data: FormData.fromMap(fields),
     );
     return DonationModel.fromJson(_single(res.data as Map<String, dynamic>));
   }

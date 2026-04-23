@@ -843,6 +843,7 @@ class _DonationFormState extends State<_DonationForm> {
         widget.donation!.id,
         _titleCtrl.text.trim(),
         _descCtrl.text.trim(),
+        image: _pickedImage,
       );
     } else {
       ok = await widget.ctrl.createDonation(

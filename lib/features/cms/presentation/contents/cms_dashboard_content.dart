@@ -96,7 +96,8 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
     }
 
     final d = _data!;
-    final usersCount = d['usersCount'] as int? ?? 0;
+    final todayActiveUsers = d['todayActiveUsers'] as int? ?? 0;
+    final totalUsers = d['usersCount'] as int? ?? 0;
     final adminsCount = d['adminsCount'] as int? ?? 0;
     final festivals = d['festivals'] as Map<String, dynamic>? ?? {};
     final poojas = d['poojas'] as Map<String, dynamic>? ?? {};
@@ -126,8 +127,8 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
               isWeb: isWeb,
               stats: [
                 _Stat(
-                  'Total Users',
-                  '$usersCount',
+                  'Today Active Users',
+                  '$todayActiveUsers/$totalUsers',
                   Icons.people_outline,
                   const Color(0xFF4CAF50),
                 ),

@@ -185,7 +185,7 @@ class _Sidebar extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'Sathya CMS',
+                  'Sathya',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -417,7 +417,7 @@ class _MobileDrawer extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     const Text(
-                      'Sathya CMS',
+                      'Sathya',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,

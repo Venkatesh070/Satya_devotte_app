@@ -15,4 +15,5 @@ class ApiEndpoints {
   static String deletePooja(String id) => '/api/v1/poojas/$id'; // DELETE
   static String reviewPooja(String id) =>
       '/api/v1/poojas/review/$id'; // PUT — approve/reject (super admin)
+  static const String home = '/api/v1/user-home';
 }

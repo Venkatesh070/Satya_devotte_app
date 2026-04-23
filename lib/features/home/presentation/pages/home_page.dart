@@ -1,13 +1,20 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/date_formatters.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,11 +30,18 @@ class _HomePageState extends State<HomePage> {
   bool _showBottomNav = true;
   bool _hideNavContent = false;
   Timer? _hideNavDebounceTimer;
+  bool _isFetchingHome = false;
+  String _dailySloka = HomeConstants.quote;
+  String _slokaAuthor = '- Bhagavad Gita';
+  List<HomeCircleItem> _poojas = HomeConstants.upcomingPooja;
+  List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
+  List<HomeCircleItem> _donations = HomeConstants.donations;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    _fetchHomeDataIfNeeded();
   }
 
   @override
@@ -54,7 +68,107 @@ class _HomePageState extends State<HomePage> {
     );
     if (!mounted) return;
     setState(() => _currentIndex = index);
+    if (index == 0) {
+      _fetchHomeDataIfNeeded();
+    }
     _isAnimatingToTab = false;
+  }
+
+  Future<void> _openPoojasTabFromViewMore() async {
+    await Get.toNamed(AppRoutes.rituals);
+  }
+
+  Future<void> _fetchHomeDataIfNeeded() async {
+    if (_isFetchingHome) return;
+    _isFetchingHome = true;
+    try {
+      final response =
+          await Get.find<ApiClient>().dio.get<dynamic>(ApiEndpoints.home);
+      final payload = response.data;
+      if (payload is! Map<String, dynamic>) return;
+      final data = payload['data'];
+      if (data is! Map<String, dynamic>) return;
+
+      final slokaData = data['dailySloka'];
+      final poojasData = data['poojas'];
+      final festivalsData = data['festivals'];
+      final donationsData = data['donations'];
+
+      final parsedSloka = slokaData is Map<String, dynamic>
+          ? slokaData['sloka']?.toString().trim()
+          : null;
+      final parsedAuthor = slokaData is Map<String, dynamic>
+          ? slokaData['author']?.toString().trim()
+          : null;
+
+      final parsedPoojas = _mapHomeItems(
+        poojasData,
+        fallbackImage: 'assets/images/home/morePoojas.png',
+      );
+      final parsedFestivals = _mapHomeItems(
+        festivalsData,
+        fallbackImage: '',
+        useDatePlaceholderWhenImageMissing: true,
+      );
+      final parsedDonations = _mapHomeItems(
+        donationsData,
+        fallbackImage: 'assets/images/home/moreDonations.png',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        if (parsedSloka != null && parsedSloka.isNotEmpty) {
+          _dailySloka = parsedSloka;
+        }
+        if (parsedAuthor != null && parsedAuthor.isNotEmpty) {
+          _slokaAuthor = '- $parsedAuthor';
+        }
+        if (parsedPoojas.isNotEmpty) {
+          _poojas = parsedPoojas;
+        }
+        if (parsedFestivals.isNotEmpty) {
+          _festivals = parsedFestivals;
+        }
+        if (parsedDonations.isNotEmpty) {
+          _donations = parsedDonations;
+        }
+      });
+    } on DioException catch (error) {
+      debugPrint('Home API failed: ${error.message}');
+    } catch (error) {
+      debugPrint('Home API failed: $error');
+    } finally {
+      _isFetchingHome = false;
+    }
+  }
+
+  List<HomeCircleItem> _mapHomeItems(
+    dynamic source, {
+    required String fallbackImage,
+    bool useDatePlaceholderWhenImageMissing = false,
+  }) {
+    if (source is! List) return const [];
+    return source
+        .whereType<Map<String, dynamic>>()
+        .map((item) {
+          final title = item['title']?.toString().trim();
+          final image = item['imageUrl']?.toString().trim().isNotEmpty == true
+              ? item['imageUrl']?.toString().trim()
+              : item['image']?.toString().trim();
+          final resolvedImagePath = (image != null && image.isNotEmpty)
+              ? image
+              : fallbackImage;
+          final placeholderText =
+              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+                  ? DateFormatters.formatFestivalDate(item['date']?.toString())
+                  : null;
+          return HomeCircleItem(
+            title: (title == null || title.isEmpty) ? 'Untitled' : title,
+            imagePath: resolvedImagePath,
+            placeholderText: placeholderText,
+          );
+        })
+        .toList();
   }
 
   void _onHomeScrollDirectionChanged(ScrollDirection direction) {
@@ -100,11 +214,14 @@ class _HomePageState extends State<HomePage> {
           children: [
           _HomeTabContent(
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
+            dailySloka: _dailySloka,
+            slokaAuthor: _slokaAuthor,
+            poojas: _poojas,
+            festivals: _festivals,
+            donations: _donations,
+            onPoojasViewMore: _openPoojasTabFromViewMore,
           ),
-          _SimpleTabPage(
-            icon: Icons.local_fire_department_outlined,
-            title: 'Poojas',
-          ),
+          const RitualListPage(),
         const CalendarPage(),
           const ProfilePage(),
         ],
@@ -141,9 +258,21 @@ class _HomePageState extends State<HomePage> {
 class _HomeTabContent extends StatelessWidget {
   const _HomeTabContent({
     required this.onScrollDirectionChanged,
+    required this.dailySloka,
+    required this.slokaAuthor,
+    required this.poojas,
+    required this.festivals,
+    required this.donations,
+    required this.onPoojasViewMore,
   });
 
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
+  final String dailySloka;
+  final String slokaAuthor;
+  final List<HomeCircleItem> poojas;
+  final List<HomeCircleItem> festivals;
+  final List<HomeCircleItem> donations;
+  final Future<void> Function() onPoojasViewMore;
 
   @override
   Widget build(BuildContext context) {
@@ -156,10 +285,18 @@ class _HomeTabContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 0),
         child: Column(
           children: [
-            _HomeHeader(),
-            const Padding(
+            _HomeHeader(
+              dailySloka: dailySloka,
+              slokaAuthor: slokaAuthor,
+            ),
+            Padding(
               padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-              child: _HomeBodySections(),
+              child: _HomeBodySections(
+                poojas: poojas,
+                festivals: festivals,
+                donations: donations,
+                onPoojasViewMore: onPoojasViewMore,
+              ),
             ),
           ],
         ),
@@ -169,7 +306,17 @@ class _HomeTabContent extends StatelessWidget {
 }
 
 class _HomeBodySections extends StatelessWidget {
-  const _HomeBodySections();
+  const _HomeBodySections({
+    required this.poojas,
+    required this.festivals,
+    required this.donations,
+    required this.onPoojasViewMore,
+  });
+
+  final List<HomeCircleItem> poojas;
+  final List<HomeCircleItem> festivals;
+  final List<HomeCircleItem> donations;
+  final Future<void> Function() onPoojasViewMore;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +327,8 @@ class _HomeBodySections extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
           child: _HomeCircleSection(
             title: 'Upcoming Pooja',
-            items: HomeConstants.upcomingPooja,
+            items: poojas,
+            onViewMoreTap: onPoojasViewMore,
           ),
         ),
         SizedBox(height: 16),
@@ -188,18 +336,20 @@ class _HomeBodySections extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
           child: _HomeCircleSection(
             title: 'Upcoming Festivals',
-            items: HomeConstants.upcomingFestivals,
+            items: festivals,
           ),
         ),
         SizedBox(height: 10),
-        _DonationsContainer(),
+        _DonationsContainer(items: donations),
       ],
     );
   }
 }
 
 class _DonationsContainer extends StatelessWidget {
-  const _DonationsContainer();
+  const _DonationsContainer({required this.items});
+
+  final List<HomeCircleItem> items;
 
   @override
   Widget build(BuildContext context) {
@@ -211,14 +361,14 @@ class _DonationsContainer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _HomeCircleSection(
                     title: 'Donations',
-                    items: HomeConstants.donations,
+                    items: items,
                     useWrap: true,
                   ),
                 ],
@@ -252,11 +402,13 @@ class _HomeCircleSection extends StatelessWidget {
     required this.title,
     required this.items,
     this.useWrap = false,
+    this.onViewMoreTap,
   });
 
   final String title;
   final List<HomeCircleItem> items;
   final bool useWrap;
+  final Future<void> Function()? onViewMoreTap;
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +418,12 @@ class _HomeCircleSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionTitle(title: title),
-          useWrap ? _CircleWrap(items: items) : _CircleRow(items: items),
+          useWrap
+              ? _CircleWrap(items: items)
+              : _CircleRow(
+                  items: items,
+                  onViewMoreTap: onViewMoreTap,
+                ),
         ],
       ),
     );
@@ -353,37 +510,6 @@ class _DonationBannerCard extends StatelessWidget {
     );
   }
 }
-class _SimpleTabPage extends StatelessWidget {
-  const _SimpleTabPage({
-    required this.icon,
-    required this.title,
-  });
-
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 28, color: const Color(0xFF8C8575)),
-          const SizedBox(height: 10),
-          Text(
-            '$title screen',
-            style: const TextStyle(
-              color: Color(0xFF8C8575),
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BottomNavBar extends StatefulWidget {
   const _BottomNavBar({
     required this.currentIndex,
@@ -588,6 +714,14 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 }
 
 class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.dailySloka,
+    required this.slokaAuthor,
+  });
+
+  final String dailySloka;
+  final String slokaAuthor;
+
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
@@ -668,7 +802,10 @@ class _HomeHeader extends StatelessWidget {
                 const SizedBox(height: 55),
                 const _HeaderDivider(),
                 const SizedBox(height: 12),
-                const _QuoteCard(),
+                _QuoteCard(
+                  quote: dailySloka,
+                  author: slokaAuthor,
+                ),
                 const SizedBox(height: 12),
                 const _HeaderDivider(),
               ],
@@ -696,12 +833,18 @@ class _HeaderDivider extends StatelessWidget {
 }
 
 class _QuoteCard extends StatelessWidget {
-  const _QuoteCard();
+  const _QuoteCard({
+    required this.quote,
+    required this.author,
+  });
+
+  final String quote;
+  final String author;
 
   static const double _cardRadius = 16;
   static const double _flowerSize = 100;
   static const double _horizontalAttach = 22;
-  static const double _cardHeight = 150;
+  static const double _cardHeight = 172;
 
   @override
   Widget build(BuildContext context) {
@@ -750,34 +893,33 @@ class _QuoteCard extends StatelessWidget {
             ),
             Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(
-                      HomeConstants.quote,
-                      style: AppTypography.lora(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w400,
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          quote,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.lora(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w400,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 0),
+                    const SizedBox(height: 8),
                     Text(
-                      HomeConstants.quoteSubtext,
-                      style: AppTypography.inter(
-                        color: Color(0xFFEDE0D9),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      '- Bhagavad Gita',
+                      author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.lora(
-                        color: Color(0xFFF0E5DE),
+                        color: const Color(0xFFF0E5DE),
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
                         fontWeight: FontWeight.w500,
@@ -816,8 +958,12 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _CircleRow extends StatelessWidget {
-  const _CircleRow({required this.items});
+  const _CircleRow({
+    required this.items,
+    this.onViewMoreTap,
+  });
   final List<HomeCircleItem> items;
+  final Future<void> Function()? onViewMoreTap;
 
   bool _isMoreTitle(String title) {
     final normalized = title.trim().toLowerCase().replaceAll('\n', ' ');
@@ -838,7 +984,14 @@ class _CircleRow extends StatelessWidget {
             .map(
               (item) => Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: _CircleItem(item: item),
+                child: _CircleItem(
+                  item: item,
+                  onTap: _isMoreTitle(item.title)
+                      ? () {
+                          onViewMoreTap?.call();
+                        }
+                      : null,
+                ),
               ),
             )
             .toList(),
@@ -877,8 +1030,12 @@ class _CircleWrap extends StatelessWidget {
 }
 
 class _CircleItem extends StatelessWidget {
-  const _CircleItem({required this.item});
+  const _CircleItem({
+    required this.item,
+    this.onTap,
+  });
   final HomeCircleItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -886,44 +1043,76 @@ class _CircleItem extends StatelessWidget {
     final isMoreItem = normalizedTitle == 'view more' || normalizedTitle == 'more';
     return SizedBox(
       width: 80,
-      child: Column(
-        children: [
-          const SizedBox(height: 10),
-          Container(
-            width: 70,
-            height: 70,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: ClipOval(
-              child: Image(
-                image: AssetImage(item.imagePath),
-                fit: BoxFit.cover,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 70,
+              height: 70,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: ClipOval(
+              child: item.imagePath.isEmpty
+                  ? ColoredBox(
+                      color: const Color(0xFFEADCC3),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            item.placeholderText ?? '',
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.inter(
+                              fontSize: 10,
+                              color: const Color(0xFF4A1C00),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : item.imagePath.startsWith('http')
+                      ? Image.network(
+                          item.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const ColoredBox(color: Color(0xFFE7D7BC));
+                          },
+                        )
+                      : Image(
+                          image: AssetImage(item.imagePath),
+                          fit: BoxFit.cover,
+                        ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 36,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Text(
-                item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.inter(
-                  fontSize: 11,
-                  color: AppColors.textColor,
-                  fontWeight: isMoreItem ? FontWeight.w700 : FontWeight.w400,
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 36,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.inter(
+                    fontSize: 11,
+                    color: AppColors.textColor,
+                    fontWeight: isMoreItem ? FontWeight.w700 : FontWeight.w400,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
