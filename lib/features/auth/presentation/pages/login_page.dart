@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class LoginPage extends StatefulWidget {
@@ -365,7 +366,16 @@ class _LoginPageState extends State<LoginPage>
                         textColor: AppColors.white,
                         isLoading: isEmailLoading,
                         enabled: !isEmailLoading && !isLoading,
-                        onTap: _showEmailPasswordSheet,
+                        onTap: () {
+                          final isMobile =
+                              MediaQuery.of(context).size.width < 600;
+
+                          if (isMobile) {
+                            _showEmailPasswordSheet();
+                          } else {
+                            Get.to(() => const EmailLoginPage());
+                          }
+                        },
                       ),
                     ],
                   );
