@@ -204,7 +204,7 @@ class _LoginPageState extends State<LoginPage>
             left: 0,
             right: 0,
             child: Image.asset(
-              'assets/images/appHeaderImg.png.png',
+              'assets/images/appHeaderImg.png',
               fit: BoxFit.fitWidth,
               width: double.infinity,
             ),

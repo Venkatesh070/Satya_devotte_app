@@ -20,17 +20,56 @@ class _RitualListPageState extends State<RitualListPage> {
   bool _isLoading = false;
   String? _error;
   List<PoojaListItem> _items = const [];
-  String _selectedCategory = 'All Poojas';
   String _searchQuery = '';
+  final Map<String, Set<String>> _appliedFilters = <String, Set<String>>{
+    'Deity': <String>{},
+    'Tithis': <String>{},
+    'Dosha': <String>{},
+    'Benefits': <String>{},
+    'Location': <String>{},
+  };
 
-  static const List<String> _categories = <String>[
-    'All Poojas',
-    'Lakshmi Poojas',
-    'Shiva Poojas',
-    'Special Occasion Pooja',
-    'Festival',
-    'Daily Pooja',
-  ];
+  static const Map<String, List<String>> _filterOptions = <String, List<String>>{
+    'Deity': <String>[
+      'Hanumanji',
+      'Ganeshji',
+      'Shivji',
+      'Lakshmi',
+      'Durga',
+      'Vishnu',
+      'Kaal Bhairav',
+      'Shani Dev',
+      'Rahu',
+    ],
+    'Tithis': <String>[
+      'Amavasya',
+      'Pournami',
+      'Ekadashi',
+      'Pradosham',
+      'Ashtami',
+    ],
+    'Dosha': <String>[
+      'Rahu Ketu',
+      'Manglik',
+      'Shani',
+      'Pitra',
+      'Kaal Sarp',
+    ],
+    'Benefits': <String>[
+      'Health',
+      'Wealth',
+      'Career',
+      'Marriage',
+      'Protection',
+    ],
+    'Location': <String>[
+      'Hyderabad',
+      'Bengaluru',
+      'Chennai',
+      'Mumbai',
+      'Delhi',
+    ],
+  };
 
   @override
   void initState() {
@@ -82,17 +121,30 @@ class _RitualListPageState extends State<RitualListPage> {
   List<PoojaListItem> get _filteredItems {
     final q = _searchQuery.trim().toLowerCase();
     return _items.where((item) {
-      final matchesCategory =
-          _selectedCategory == 'All Poojas' ||
-          item.category.toLowerCase() == _selectedCategory.toLowerCase() ||
-          item.deity.toLowerCase().contains(
-            _selectedCategory.toLowerCase().replaceAll(' poojas', ''),
-          );
-      if (!matchesCategory) return false;
       if (q.isEmpty) return true;
-      return item.title.toLowerCase().contains(q) ||
+      final textMatch =
+          item.title.toLowerCase().contains(q) ||
           item.deity.toLowerCase().contains(q) ||
           item.description.toLowerCase().contains(q);
+      if (!textMatch) return false;
+
+      // Deity exact filter from API field.
+      final deitySet = _appliedFilters['Deity']!;
+      if (deitySet.isNotEmpty && !deitySet.contains(item.deity)) return false;
+
+      // Remaining filters are mapped heuristically from item text.
+      bool matchesByText(String key) {
+        final selected = _appliedFilters[key]!;
+        if (selected.isEmpty) return true;
+        final haystack =
+            '${item.title} ${item.description} ${item.category}'.toLowerCase();
+        return selected.any((s) => haystack.contains(s.toLowerCase()));
+      }
+
+      return matchesByText('Tithis') &&
+          matchesByText('Dosha') &&
+          matchesByText('Benefits') &&
+          matchesByText('Location');
     }).toList();
   }
 
@@ -101,6 +153,7 @@ class _RitualListPageState extends State<RitualListPage> {
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: RefreshIndicator(
           color: AppColors.gradientEnd,
@@ -108,7 +161,14 @@ class _RitualListPageState extends State<RitualListPage> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(child: _buildHeader()),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _FixedHeaderDelegate(
+                  minExtentHeight: MediaQuery.paddingOf(context).top + 250,
+                  maxExtentHeight: MediaQuery.paddingOf(context).top + 250,
+                  child: _buildHeader(),
+                ),
+              ),
               if (_isLoading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
@@ -130,59 +190,44 @@ class _RitualListPageState extends State<RitualListPage> {
 
   // ─── Header (gradient + search + chips) ──────────────────
   Widget _buildHeader() {
+    final topInset = MediaQuery.paddingOf(context).top;
     return SizedBox(
-      width: double.infinity,
-      height: 400,
-
+      height: topInset + 250,
       child: Stack(
         children: [
-          const Positioned.fill(
+          const Positioned(
+            top: -280,
+            left: 0,
+            right: 0,
             child: Image(
               image: AssetImage('assets/images/appHeaderImg.png'),
-              fit: BoxFit.fill,
+              fit: BoxFit.fitWidth,
               alignment: Alignment.topCenter,
             ),
           ),
-          Container(
-            padding: EdgeInsets.all(20),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, topInset + 14, 16, 10),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Pooja Rituals',
-                      style: AppTypography.lora(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
-                      ),
-                    ),
-                    _CircleIconButton(
-                      icon: Icons.verified_user_outlined,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
                 _buildSearchField(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (_, i) {
-                      final label = _categories[i];
-                      final selected = label == _selectedCategory;
-                      return _CategoryChip(
-                        label: label,
-                        selected: selected,
-                        onTap: () => setState(() => _selectedCategory = label),
-                      );
-                    },
+                  child: Row(
+                    children: [
+                      _QuickFilterChip(
+                        label: 'Filters',
+                        icon: Icons.tune,
+                        onTap: () => _openFiltersBottomSheet(),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _buildHeaderFilterChips(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -193,32 +238,80 @@ class _RitualListPageState extends State<RitualListPage> {
     );
   }
 
+  List<Widget> _buildHeaderFilterChips() {
+    final selected = <_SelectedFilterEntry>[];
+    for (final entry in _appliedFilters.entries) {
+      for (final value in entry.value) {
+        selected.add(_SelectedFilterEntry(category: entry.key, value: value));
+      }
+    }
+
+    if (selected.isEmpty) {
+      return [
+        _QuickFilterChip(
+          label: 'Deity',
+          onTap: () => _openFiltersBottomSheet(initialCategory: 'Deity'),
+        ),
+        const SizedBox(width: 8),
+        _QuickFilterChip(
+          label: 'Benefits',
+          onTap: () => _openFiltersBottomSheet(initialCategory: 'Benefits'),
+        ),
+        const SizedBox(width: 8),
+        _QuickFilterChip(
+          label: 'Location',
+          onTap: () => _openFiltersBottomSheet(initialCategory: 'Location'),
+        ),
+      ];
+    }
+
+    final chips = <Widget>[];
+    for (var i = 0; i < selected.length; i++) {
+      final item = selected[i];
+      chips.add(
+        _AppliedFilterChip(
+          label: item.value,
+          onTap: () => _openFiltersBottomSheet(initialCategory: item.category),
+          onRemove: () {
+            setState(() {
+              _appliedFilters[item.category]!.remove(item.value);
+            });
+          },
+        ),
+      );
+      if (i != selected.length - 1) {
+        chips.add(const SizedBox(width: 8));
+      }
+    }
+    return chips;
+  }
+
   Widget _buildSearchField() {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Colors.white70, size: 20),
+          const Icon(Icons.search, color: Color(0xFFCF6F2B), size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v),
-              cursorColor: Colors.white,
-              style: AppTypography.inter(fontSize: 14, color: Colors.white),
+              cursorColor: Colors.black,
+              style: AppTypography.inter(fontSize: 14, color: const Color(0xFF232323)),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
-                hintText: 'Search rituals...',
+                hintText: 'Search for Shiv Puja',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,
-                  color: Colors.white70,
+                  color: const Color(0xFF8F8F8F),
                 ),
               ),
             ),
@@ -231,6 +324,8 @@ class _RitualListPageState extends State<RitualListPage> {
   // ─── List body ───────────────────────────────────────────
   Widget _buildList() {
     final items = _filteredItems;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final listBottomPadding = bottomInset + 110;
     if (items.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
@@ -249,7 +344,7 @@ class _RitualListPageState extends State<RitualListPage> {
       );
     }
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, listBottomPadding),
       sliver: SliverList.separated(
         itemCount: items.length + 1,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -310,6 +405,266 @@ class _RitualListPageState extends State<RitualListPage> {
             child: const Text('Retry'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openFiltersBottomSheet({String initialCategory = 'Deity'}) async {
+    String activeCategory = initialCategory;
+    final tempFilters = <String, Set<String>>{
+      for (final e in _appliedFilters.entries) e.key: {...e.value},
+    };
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final options = _filterOptions[activeCategory] ?? const <String>[];
+          final selected = tempFilters[activeCategory]!;
+          return SafeArea(
+            top: false,
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.72,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Puja Filters',
+                          style: AppTypography.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E1E1E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 112,
+                          color: const Color(0xFFF7F7F7),
+                          child: ListView(
+                            children: _filterOptions.keys.map((k) {
+                              final isActive = k == activeCategory;
+                              return InkWell(
+                                onTap: () => setModalState(() => activeCategory = k),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isActive ? Colors.white : const Color(0xFFF7F7F7),
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: isActive ? const Color(0xFF2A6DE6) : Colors.transparent,
+                                        width: 3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    k,
+                                    style: AppTypography.inter(
+                                      fontSize: 14,
+                                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                      color: const Color(0xFF2A2A2A),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    'Select All',
+                                    style: AppTypography.inter(fontSize: 13),
+                                  ),
+                                  value: selected.length == options.length && options.isNotEmpty,
+                                  onChanged: (_) {
+                                    setModalState(() {
+                                      if (selected.length == options.length) {
+                                        selected.clear();
+                                      } else {
+                                        selected
+                                          ..clear()
+                                          ..addAll(options);
+                                      }
+                                    });
+                                  },
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                ),
+                                Text(
+                                  'Select your filters',
+                                  style: AppTypography.inter(
+                                    fontSize: 15,
+                                    color: const Color(0xFF9A9A9A),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Expanded(
+                                  child: GridView.builder(
+                                    itemCount: options.length,
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      childAspectRatio: 0.72,
+                                      mainAxisSpacing: 10,
+                                      crossAxisSpacing: 10,
+                                    ),
+                                    itemBuilder: (_, i) {
+                                      final option = options[i];
+                                      final checked = selected.contains(option);
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setModalState(() {
+                                            if (checked) {
+                                              selected.remove(option);
+                                            } else {
+                                              selected.add(option);
+                                            }
+                                          });
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: checked ? const Color(0xFF2A6DE6) : const Color(0xFFE4E4E4),
+                                              width: checked ? 2 : 1,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Expanded(
+                                                child: Stack(
+                                                  children: [
+                                                    Container(
+                                                      margin: const EdgeInsets.all(5),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        gradient: const LinearGradient(
+                                                          colors: [Color(0xFFECC07A), Color(0xFFB06A20)],
+                                                          begin: Alignment.topCenter,
+                                                          end: Alignment.bottomCenter,
+                                                        ),
+                                                      ),
+                                                      alignment: Alignment.center,
+                                                      child: Text(
+                                                        option.substring(0, 1).toUpperCase(),
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w800,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      right: 4,
+                                                      top: 4,
+                                                      child: Container(
+                                                        width: 18,
+                                                        height: 18,
+                                                        decoration: BoxDecoration(
+                                                          color: checked ? const Color(0xFF2A6DE6) : Colors.white,
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          border: Border.all(color: const Color(0xFFD0D0D0)),
+                                                        ),
+                                                        child: checked
+                                                            ? const Icon(Icons.check, size: 13, color: Colors.white)
+                                                            : null,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                                                child: Text(
+                                                  option,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: AppTypography.inter(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              for (final set in tempFilters.values) {
+                                set.clear();
+                              }
+                              setModalState(() {});
+                            },
+                            child: const Text('Clear Filter'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                for (final e in tempFilters.entries) {
+                                  _appliedFilters[e.key] = {...e.value};
+                                }
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2A6DE6),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Apply Filter'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -402,29 +757,6 @@ class _PoojaCard extends StatelessWidget {
                           : _imageFallback(),
                     ),
                   ),
-
-                  // ❤️ Heart icon
-                  Positioned(
-                    bottom: -2,
-                    right: -10,
-                    child: GestureDetector(
-                      onTap: () {
-                        // TODO: toggle favorite
-                      },
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite_border_rounded,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
 
@@ -500,73 +832,137 @@ class _PoojaCard extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
+class _QuickFilterChip extends StatelessWidget {
+  const _QuickFilterChip({
     required this.label,
-    required this.selected,
     required this.onTap,
+    this.icon,
   });
 
   final String label;
-  final bool selected;
   final VoidCallback onTap;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            if (selected)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-          ],
+          color: const Color(0xFFF2F2F2),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(
-          label,
-          style: AppTypography.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? const Color(0xFF4A1C00) : const Color(0xFF7A7A7A),
-          ),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: const Color(0xFF496182)),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF496182),
+              ),
+            ),
+            if (icon == null) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down, size: 17, color: Color(0xFF496182)),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap});
+class _AppliedFilterChip extends StatelessWidget {
+  const _AppliedFilterChip({
+    required this.label,
+    required this.onTap,
+    required this.onRemove,
+  });
 
-  final IconData icon;
+  final String label;
   final VoidCallback onTap;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.18),
-      shape: const CircleBorder(side: BorderSide(color: Color(0x66FFFFFF))),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: const SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            Icons.verified_user_outlined,
-            color: Colors.white,
-            size: 20,
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F7FF),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF5E8ED6)),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF2F5FA7),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onRemove,
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: Color(0xFF2F5FA7),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+}
+
+class _SelectedFilterEntry {
+  const _SelectedFilterEntry({required this.category, required this.value});
+
+  final String category;
+  final String value;
+}
+
+class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _FixedHeaderDelegate({
+    required this.minExtentHeight,
+    required this.maxExtentHeight,
+    required this.child,
+  });
+
+  final double minExtentHeight;
+  final double maxExtentHeight;
+  final Widget child;
+
+  @override
+  double get minExtent => minExtentHeight;
+
+  @override
+  double get maxExtent => maxExtentHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _FixedHeaderDelegate oldDelegate) {
+    return minExtentHeight != oldDelegate.minExtentHeight ||
+        maxExtentHeight != oldDelegate.maxExtentHeight ||
+        child != oldDelegate.child;
   }
 }
