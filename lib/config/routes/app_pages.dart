@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/config/routes/route_guard.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/login_page.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/web_login_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
@@ -15,7 +17,7 @@ class AppPages {
     // ─── App flow ───────────────────────────────────────────────
     GetPage(name: AppRoutes.splash, page: SplashPage.new),
     GetPage(name: AppRoutes.onboarding, page: OnboardingPage.new),
-    GetPage(name: AppRoutes.login, page: LoginPage.new),
+    GetPage(name: AppRoutes.login, page: () => kIsWeb ? const WebLoginPage() : const LoginPage()),
     GetPage(
       name: AppRoutes.home,
       page: BottomTabPage.new,
