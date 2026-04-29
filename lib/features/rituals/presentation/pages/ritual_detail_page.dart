@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
@@ -6,11 +8,24 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:video_player/video_player.dart';
+import 'package:satya_devotte_app/features/rituals/presentation/widgets/media_player_section.dart';
 
-/// Ritual / Pooja detail page — redesigned to match the
-/// Figma reference. Loads data from `GET /api/v1/poojas/:id`.
-/// Accepts either a pooja id (String) or the full map via
-/// `Get.arguments`.
+/// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
+/// Figma reference (saffron temple header, circular deity portrait,
+/// pill segmented tabs, white section cards, gradient \"Get Started\"
+/// CTA at the bottom).
+///
+/// Loads `GET /api/v1/poojas/:id` and segregates every server field
+/// (`purpose`, `deitySummary`, `preparation`, `steps`, `mantra`,
+/// `spiritualMeaning`, `guidance`, `completion`, `blessings`) under
+/// four scrollable tabs:
+///
+///   • Calender Puja's        – schedule / status / festivals
+///   • About the Deity        – deitySummary + populated `deity` doc
+///   • Rituals and Remedies   – purpose / preparation / steps / mantra /
+///                              spiritualMeaning / guidance / completion
+///   • Stories of Deity       – narrative sections from the deity doc
 class RitualDetailPage extends StatefulWidget {
   const RitualDetailPage({super.key});
 
@@ -18,21 +33,35 @@ class RitualDetailPage extends StatefulWidget {
   State<RitualDetailPage> createState() => _RitualDetailPageState();
 }
 
-class _RitualDetailPageState extends State<RitualDetailPage> {
+class _RitualDetailPageState extends State<RitualDetailPage>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   String? _error;
   Map<String, dynamic>? _pooja;
+  Map<String, String> _festivalNames = const {};
+
+  late final TabController _tabController;
+  static const _tabs = <String>[
+    "Calender Puja's",
+    'About the Deity',
+    'Rituals and Remedies',
+    'Stories of Deity',
+  ];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: 0, // default to \"About the Deity\" per Figma.
+    );
+
     final args = Get.arguments;
     if (args is Map<String, dynamic>) {
       _pooja = args;
       final id = args['_id']?.toString() ?? args['id']?.toString();
-      if (id != null && id.isNotEmpty) {
-        _loadDetail(id);
-      }
+      if (id != null && id.isNotEmpty) _loadDetail(id);
     } else if (args is String && args.isNotEmpty) {
       _loadDetail(args);
     } else {
@@ -40,6 +69,13 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
     }
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // ───────────────────────── networking ──────────────────────────
   Future<void> _loadDetail(String id) async {
     if (_isLoading) return;
     setState(() {
@@ -51,8 +87,8 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
         ApiEndpoints.pooja(id),
       );
       final payload = res.data;
-      final data = payload is Map<String, dynamic> ? payload['data'] : null;
       Map<String, dynamic>? pooja;
+      final data = payload is Map<String, dynamic> ? payload['data'] : null;
       if (data is Map<String, dynamic>) {
         final inner = data['pooja'];
         pooja = inner is Map<String, dynamic> ? inner : data;
@@ -61,6 +97,7 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
       }
       if (!mounted) return;
       setState(() => _pooja = pooja ?? _pooja);
+      await _hydrateDeityIfNeeded();
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message ?? 'Failed to load pooja.');
@@ -68,12 +105,47 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
       if (!mounted) return;
       setState(() => _error = 'Failed to load pooja.');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  /// When the populated `deity` field is just an ObjectId string we hit
+  /// `/api/v1/deities/:id` so the About / Stories tabs can render the
+  /// full set of cards (family, posture, description, weapons, chakra,
+  /// astrology, …) shown in the Figma.
+  Future<void> _hydrateDeityIfNeeded() async {
+    final p = _pooja;
+    if (p == null) return;
+    final d = p['deity'];
+    final id = d is String ? d : (d is Map ? (d['_id'] ?? d['id']) : null);
+    if (id is! String || id.isEmpty) return;
+    final isObjectId =
+        id.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(id);
+    if (!isObjectId) return;
+    try {
+      final res = await Get.find<ApiClient>().dio.get<dynamic>(
+        '${ApiEndpoints.deities}/$id',
+      );
+      final payload = res.data;
+      Map<String, dynamic>? deity;
+      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+      if (data is Map<String, dynamic>) {
+        final inner = data['deity'];
+        deity = inner is Map<String, dynamic> ? inner : data;
+      } else if (payload is Map<String, dynamic>) {
+        deity = payload;
+      }
+      if (!mounted || deity == null) return;
+      setState(() {
+        _pooja = {..._pooja!, 'deity': deity};
+      });
+    } catch (_) {
+      // Silent — About-tab will still render whatever fields exist on
+      // the pooja itself (deitySummary, etc.).
+    }
+  }
+
+  // ───────────────────────── build ───────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _pooja == null) {
@@ -99,100 +171,75 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
       );
     }
 
-    final pooja = _pooja!;
-    final title = pooja['title']?.toString() ?? 'Pooja';
-    final deity = pooja['deity']?.toString() ?? '';
-    final description = pooja['description']?.toString() ?? '';
-    final duration = _durationLabel(pooja['duration']?.toString());
-    final imageUrl = pooja['imageUrl']?.toString();
-    final steps =
-        (pooja['steps'] as List?)
-            ?.map((e) => e.toString())
-            .where((e) => e.trim().isNotEmpty)
-            .toList() ??
-        const <String>[];
-    final requiredItems =
-        (pooja['requiredItems'] as List?)
-            ?.map((e) => e.toString())
-            .where((e) => e.trim().isNotEmpty)
-            .toList() ??
-        const <String>[];
+    final p = PoojaView(_pooja!);
 
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
       body: Stack(
         children: [
-          ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              _HeroSection(
-                title: title,
-                deity: deity,
-                duration: duration,
-                imageUrl: imageUrl,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MantraCard(
-                      mantra: _mantraFor(deity),
-                      subtitle: 'Sacred Mantra',
-                      onPlay: () {},
-                    ),
-                    const SizedBox(height: 24),
-                    if (description.isNotEmpty) ...[
-                      Text(
-                        description,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.inter(
-                          fontSize: 13.5,
-                          height: 1.55,
-                          color: const Color(0xFF4A1C00),
-                          fontStyle: FontStyle.italic,
+          NestedScrollView(
+            headerSliverBuilder: (_, __) => [
+              SliverToBoxAdapter(child: _HeroHeader(pooja: p)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _HeaderDivider(),
+                      const SizedBox(height: 14),
+
+                      if (p.description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            p.description,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.inter(
+                              fontSize: 13.5,
+                              height: 1.55,
+                              color: const Color(0xFF4A1C00),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      const _DiamondDivider(),
-                      const SizedBox(height: 20),
-                    ],
-                    if (steps.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      const _HeaderDivider(),
+                      const SizedBox(height: 14),
                       Text(
-                        'Key Rituals and Steps of $title:',
+                        'More Options',
                         style: AppTypography.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF3B1E08),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      ...steps.map(_buildBullet),
+                      const SizedBox(height: 10),
+                      _SegmentedTabs(controller: _tabController, tabs: _tabs),
                     ],
-                    if (requiredItems.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      Text(
-                        'Required Items:',
-                        style: AppTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF3B1E08),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...requiredItems.map(_buildBullet),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ],
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _CalendarTab(pooja: p, festivalNames: _festivalNames),
+                _AboutDeityTab(pooja: p),
+                _RitualsTab(pooja: p),
+                _StoriesTab(pooja: p),
+              ],
+            ),
           ),
+          // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
             child: Material(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.white,
               shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: Color(0x22000000),
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: Get.back,
@@ -202,21 +249,21 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
                   child: Icon(
                     Icons.arrow_back_ios_new,
                     size: 18,
-                    color: Colors.white,
+                    color: Color(0xFF1F1F1F),
                   ),
                 ),
               ),
             ),
           ),
-          // Bottom \"Start Ritual\" CTA
+          // Get Started CTA
           Positioned(
             left: 20,
             right: 20,
             bottom: MediaQuery.of(context).padding.bottom + 16,
             child: CustomButton(
-              label: 'Start Ritual',
+              label: 'Get Started',
               borderRadius: 14,
-              onTap: () {},
+              onTap: () => Get.to(() => _StartedRitualPage(pooja: p)),
               textColor: AppColors.white,
               gradientColors: const [
                 AppColors.gradientStart,
@@ -228,216 +275,85 @@ class _RitualDetailPageState extends State<RitualDetailPage> {
       ),
     );
   }
+}
 
-  Widget _buildBullet(String text) {
-    // Allow an optional bold lead-in separated by a colon, e.g.
-    // \"Preparation: Homes are cleaned and decorated ...\"
-    final colonIdx = text.indexOf(':');
-    final hasLead = colonIdx > 0 && colonIdx < 40;
-    final lead = hasLead ? text.substring(0, colonIdx + 1) : '';
-    final rest = hasLead ? text.substring(colonIdx + 1).trimLeft() : text;
+// ════════════════════════════════════════════════════════════════
+//  Hero Header  (saffron decorative top + circular deity portrait)
+// ════════════════════════════════════════════════════════════════
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({required this.pooja});
+  final PoojaView pooja;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(bottom: 12),
+      decoration: const BoxDecoration(color: AppColors.appBgColor),
+      child: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 7, right: 10),
-            width: 5,
-            height: 5,
-            decoration: const BoxDecoration(
-              color: Color(0xFFB07A3A),
-              shape: BoxShape.circle,
+          SizedBox(
+            width: double.infinity,
+            height: 200,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/appHeaderImg.png'),
+                        fit: BoxFit.fill,
+                        alignment: Alignment.topCenter,
+                      ),
+                    ),
+                    child:
+                        pooja.heroImage != null && pooja.heroImage!.isNotEmpty
+                        ? Image.network(pooja.heroImage!, fit: BoxFit.cover)
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: AppTypography.inter(
-                  fontSize: 13.5,
-                  height: 1.55,
-                  color: const Color(0xFF4A1C00),
-                ),
-                children: [
-                  if (hasLead)
-                    TextSpan(
-                      text: '$lead ',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  TextSpan(text: rest),
-                ],
-              ),
-            ),
+          Transform.translate(
+            offset: const Offset(0, -32),
+            child: _DeityPortrait(imageUrl: pooja.heroImage),
           ),
         ],
       ),
     );
   }
-
-  String _durationLabel(String? raw) {
-    final v = (raw ?? '').trim();
-    if (v.isEmpty) return '-';
-    final n = int.tryParse(v);
-    return n != null ? '$n min' : v;
-  }
-
-  String _mantraFor(String deity) {
-    final d = deity.toLowerCase();
-    if (d.contains('ganesh')) return 'Om Gam Ganapataye Namah';
-    if (d.contains('lakshmi') || d.contains('laxmi')) {
-      return 'Om Shreem Mahalakshmiyei Namah';
-    }
-    if (d.contains('shiva')) return 'Om Namah Shivaya';
-    if (d.contains('durga')) return 'Om Dum Durgayei Namah';
-    if (d.contains('krishna')) return 'Om Kleem Krishnaya Namah';
-    if (d.contains('ram')) return 'Om Shri Ramaya Namah';
-    if (d.contains('hanuman')) return 'Om Hum Hanumate Namah';
-    if (d.contains('surya')) return 'Om Suryaya Namah';
-    return 'Om Namah Bhagavate';
-  }
 }
 
-// ─────────────────────────────────────────────────────────
-// Hero, Mantra card & Divider widgets
-// ─────────────────────────────────────────────────────────
-
-class _HeroSection extends StatelessWidget {
-  const _HeroSection({
-    required this.title,
-    required this.deity,
-    required this.duration,
-    required this.imageUrl,
-  });
-
-  final String title;
-  final String deity;
-  final String duration;
+class _DeityPortrait extends StatelessWidget {
+  const _DeityPortrait({required this.imageUrl});
   final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 360,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (imageUrl != null && imageUrl!.isNotEmpty)
-            Image.network(
-              imageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallback(),
-            )
-          else
-            _fallback(),
-          // Fade to cream at the bottom for seamless blend.
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.transparent,
-                  Color(0x66000000),
-                  AppColors.appBgColor,
-                ],
-                stops: [0.0, 0.4, 0.75, 1.0],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 28,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.play_arrow,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Online Rituals',
-                        style: AppTypography.inter(
-                          fontSize: 11,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.lora(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    if (deity.isNotEmpty)
-                      Text(
-                        deity,
-                        style: AppTypography.inter(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    if (deity.isNotEmpty && duration != '-')
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(
-                          Icons.circle,
-                          size: 4,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    if (duration != '-') ...[
-                      const Icon(
-                        Icons.access_time,
-                        size: 13,
-                        color: Colors.white70,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        duration,
-                        style: AppTypography.inter(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
+    return Container(
+      width: 116,
+      height: 116,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.appBgColor,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
           ),
         ],
+      ),
+      child: ClipOval(
+        child: imageUrl != null && imageUrl!.isNotEmpty
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _fallback(),
+              )
+            : _fallback(),
       ),
     );
   }
@@ -448,30 +364,863 @@ class _HeroSection extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF6B2A8F), Color(0xFFD14A2A)],
+          colors: [Color(0xFFFFD89A), Color(0xFFE0884A)],
         ),
       ),
       alignment: Alignment.center,
-      child: const Icon(Icons.temple_hindu, size: 80, color: Colors.white70),
+      child: const Icon(Icons.temple_hindu, size: 52, color: Colors.white),
     );
   }
 }
 
-class _MantraCard extends StatelessWidget {
-  const _MantraCard({
-    required this.mantra,
-    required this.subtitle,
-    required this.onPlay,
-  });
-
-  final String mantra;
-  final String subtitle;
-  final VoidCallback onPlay;
+/// Soft curved cream edge for the hero image, matching the Figma header.
+class _HeroCurve extends StatelessWidget {
+  const _HeroCurve({required this.color});
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(double.infinity, 58),
+      painter: _HeroCurvePainter(color),
+    );
+  }
+}
+
+class _HeroCurvePainter extends CustomPainter {
+  const _HeroCurvePainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, size.height * 0.34)
+      ..cubicTo(
+        size.width * 0.24,
+        size.height * 0.64,
+        size.width * 0.74,
+        size.height * 0.64,
+        size.width,
+        size.height * 0.34,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Segmented Pill Tabs
+// ════════════════════════════════════════════════════════════════
+class _SegmentedTabs extends StatelessWidget {
+  const _SegmentedTabs({required this.controller, required this.tabs});
+  final TabController controller;
+  final List<String> tabs;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 38,
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (_, __) {
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: tabs.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final selected = controller.index == i;
+              return GestureDetector(
+                onTap: () => controller.animateTo(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: selected
+                        ? const LinearGradient(
+                            colors: [
+                              AppColors.gradientStart,
+                              AppColors.gradientEnd,
+                            ],
+                          )
+                        : null,
+                    color: selected ? null : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected
+                          ? Colors.transparent
+                          : const Color(0x33B07A3A),
+                    ),
+                    boxShadow: selected
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x33ED5A00),
+                              blurRadius: 10,
+                              offset: Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    tabs[i],
+                    style: AppTypography.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? Colors.white : const Color(0xFF3B1E08),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Tab: About the Deity
+// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+//  Tab: About the Deity
+// ════════════════════════════════════════════════════════════════
+class _AboutDeityTab extends StatelessWidget {
+  const _AboutDeityTab({required this.pooja});
+  final PoojaView pooja;
+
+  String _str(dynamic v) => (v ?? '').toString().trim();
+  List<String> _list(dynamic v) => _RitualsTab._stringList(v);
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = pooja.deitySummary;
+    final purpose = pooja.purpose;
+    final deityDoc = pooja.deityDoc;
+
+    // Field resolution — every label tries multiple possible API paths
+    // so the same widget renders whether the server returns a sparse
+    // deitySummary or a fully populated deity document.
+    final altNames = _list(
+      deityDoc?['alternate_names'] ??
+          deityDoc?['otherNames'] ??
+          deityDoc?['names'] ??
+          deityDoc?['derivation'],
+    );
+    final divineRole = _str(
+      deityDoc?['divine_role'] ??
+          deityDoc?['divineRole'] ??
+          deityDoc?['description'] ??
+          summary['about'],
+    );
+    final family = _str(
+      deityDoc?['family'] ??
+          deityDoc?['family_associations'] ??
+          deityDoc?['lineage'],
+    );
+    final posture = _str(
+      deityDoc?['posture'] ?? deityDoc?['seating'] ?? deityDoc?['iconography'],
+    );
+    final physical = _str(
+      deityDoc?['physical_description'] ??
+          deityDoc?['physicalDescription'] ??
+          deityDoc?['appearance'],
+    );
+    final whyPray = _str(
+      deityDoc?['why_pray'] ?? deityDoc?['whyPray'] ?? purpose['why'],
+    );
+    final keyQualities = _list(
+      deityDoc?['key_qualities'] ??
+          deityDoc?['qualities'] ??
+          deityDoc?['energies'] ??
+          summary['blessings'],
+    );
+    final weapons = _meaningList(
+      deityDoc?['weapons'] ?? deityDoc?['adornments'] ?? deityDoc?['symbols'],
+    );
+    final chakra = _str(deityDoc?['chakra'] ?? deityDoc?['chakras']);
+    final astrology = _str(
+      deityDoc?['vedic_astrology'] ??
+          deityDoc?['astrology'] ??
+          deityDoc?['numerology'],
+    );
+    final blessings = _list(summary['blessings'] ?? deityDoc?['blessings']);
+    final deityNameDisplay = pooja.deityName.isNotEmpty
+        ? pooja.deityName
+        : pooja.title; // Always show *something*.
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+      children: [
+        const _SectionHeader(title: 'Deity Information'),
+        const SizedBox(height: 10),
+        _LabeledField(label: 'Deity Name', value: deityNameDisplay),
+        if (altNames.isNotEmpty)
+          _LabeledChipsField(
+            label: 'Derivation/ Other Names / Forms (if applicable)',
+            items: altNames,
+          ),
+        if (divineRole.isNotEmpty)
+          _LabeledField(
+            label: 'Divine Role (God/ Goddess of)',
+            value: divineRole,
+            multiline: true,
+          ),
+        if (family.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          const _SectionHeader(title: 'Divine Structure & Lineage'),
+          const SizedBox(height: 10),
+          _LabeledField(
+            label: 'Family / Divine Associations',
+            value: family,
+            multiline: true,
+          ),
+        ],
+        if (posture.isNotEmpty)
+          _LabeledField(
+            label: 'Seating / Posture (Iconography)',
+            value: posture,
+            multiline: true,
+          ),
+        if (physical.isNotEmpty)
+          _LabeledField(
+            label: 'Physical Description',
+            value: physical,
+            multiline: true,
+          ),
+        if (weapons.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          const _SectionHeader(title: 'Weapons, Adornments & Their Symbolism'),
+          const SizedBox(height: 10),
+          for (final w in weapons)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _LabeledField(
+                label: w.title,
+                value: w.description,
+                multiline: true,
+              ),
+            ),
+        ],
+        if (whyPray.isNotEmpty ||
+            keyQualities.isNotEmpty ||
+            chakra.isNotEmpty ||
+            astrology.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          const _SectionHeader(title: 'Spiritual Significance'),
+          const SizedBox(height: 10),
+          if (whyPray.isNotEmpty)
+            _LabeledField(
+              label: 'Why Pray to This Deity',
+              value: whyPray,
+              multiline: true,
+            ),
+          if (keyQualities.isNotEmpty)
+            _LabeledChipsField(
+              label: 'Key Qualities / Energies Represented',
+              items: keyQualities,
+              positive: true,
+            ),
+          if (chakra.isNotEmpty)
+            _LabeledField(label: 'Chakra', value: chakra, multiline: true),
+          if (astrology.isNotEmpty)
+            _LabeledField(
+              label: 'Vedic Astrology and Numerology',
+              value: astrology,
+              multiline: true,
+            ),
+        ],
+        if (blessings.isNotEmpty)
+          _LabeledChipsField(
+            label: 'Blessings',
+            items: blessings,
+            positive: true,
+          ),
+        // Render any structured \"sections\" array provided by the deity doc.
+        if (deityDoc != null && deityDoc['sections'] is List) ...[
+          for (final s in (deityDoc['sections'] as List).whereType<Map>())
+            _DeitySectionCard(section: s.cast<String, dynamic>()),
+        ],
+      ],
+    );
+  }
+
+  static List<MeaningItem> _meaningList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((m) {
+      return MeaningItem(
+        title: (m['title'] ?? m['name'] ?? '').toString(),
+        description: (m['description'] ?? m['meaning'] ?? m['symbolism'] ?? '')
+            .toString(),
+      );
+    }).toList();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Tab: Rituals & Remedies
+// ════════════════════════════════════════════════════════════════
+class _RitualsTab extends StatelessWidget {
+  const _RitualsTab({required this.pooja});
+  final PoojaView pooja;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+      children: [
+        if (pooja.purpose.isNotEmpty)
+          _SectionCard(
+            icon: Icons.auto_awesome,
+            title: 'Purpose',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (pooja.purpose['why'] != null)
+                  _Paragraph(text: pooja.purpose['why'].toString()),
+                _BulletList(
+                  heading: 'Benefits',
+                  items: _stringList(pooja.purpose['benefits']),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  static List<String> _stringList(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .map((e) => e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      return raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  static List<MeaningItem> _meaningList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((m) {
+      return MeaningItem(
+        title: (m['title'] ?? '').toString(),
+        description: (m['description'] ?? '').toString(),
+      );
+    }).toList();
+  }
+}
+
+class _StartedRitualPage extends StatelessWidget {
+  const _StartedRitualPage({required this.pooja});
+  final PoojaView pooja;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: AppColors.appBgColor,
+        elevation: 0,
+        foregroundColor: const Color(0xFF3B1E08),
+        title: Text(
+          pooja.title.isNotEmpty ? pooja.title : 'Ritual',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF3B1E08),
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          if (pooja.mantraView.primary.isNotEmpty)
+            _MantraCard(mantra: pooja.mantraView, audioUrl: pooja.audioUrl),
+
+          if (pooja.preparation.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.spa_outlined,
+              title: 'Preparation',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _BulletList(
+                    heading: 'Personal',
+                    items: _RitualsTab._stringList(
+                      pooja.preparation['personal'],
+                    ),
+                  ),
+                  _BulletList(
+                    heading: 'Sacred Space',
+                    items: _RitualsTab._stringList(pooja.preparation['space']),
+                  ),
+                  _BulletList(
+                    heading: 'Items Required',
+                    items: _RitualsTab._stringList(pooja.preparation['items']),
+                    asChips: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (pooja.steps.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.format_list_numbered,
+              title: 'Steps to Perform',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [for (final s in pooja.steps) _StepTile(step: s)],
+              ),
+            ),
+          ],
+
+          if (pooja.spiritualMeaning.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.brightness_7_outlined,
+              title: 'Spiritual Meaning',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _MeaningGroup(
+                    heading: 'Offerings',
+                    items: _RitualsTab._meaningList(
+                      pooja.spiritualMeaning['offeringsMeaning'],
+                    ),
+                  ),
+                  _MeaningGroup(
+                    heading: 'Actions',
+                    items: _RitualsTab._meaningList(
+                      pooja.spiritualMeaning['actionsMeaning'],
+                    ),
+                  ),
+                  _MeaningGroup(
+                    heading: 'Other Symbolism',
+                    items: _RitualsTab._meaningList(
+                      pooja.spiritualMeaning['otherSymbolism'],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (pooja.guidance.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.self_improvement,
+              title: 'Guidance',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _BulletList(
+                    heading: 'Right Mindset',
+                    items: _RitualsTab._stringList(pooja.guidance['mindset']),
+                    asChips: true,
+                    positive: true,
+                  ),
+                  _BulletList(
+                    heading: 'Avoid',
+                    items: _RitualsTab._stringList(pooja.guidance['avoid']),
+                    asChips: true,
+                    positive: false,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (pooja.completion.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.flag_outlined,
+              title: 'Completion',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _BulletList(
+                    heading: 'Closure',
+                    items: _RitualsTab._stringList(pooja.completion['closure']),
+                  ),
+                  _BulletList(
+                    heading: 'Integration',
+                    items: _RitualsTab._stringList(
+                      pooja.completion['integration'],
+                    ),
+                  ),
+                  _BulletList(
+                    heading: 'Benefits',
+                    items: _RitualsTab._stringList(
+                      pooja.completion['benefits'],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (pooja.blessings.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.favorite_border,
+              title: 'Blessings',
+              child: _ChipWrap(items: pooja.blessings, positive: true),
+            ),
+          ],
+
+          if (pooja.videoUrls.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              icon: Icons.play_circle_outline,
+              title: 'Video Guidance',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final url in pooja.videoUrls)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: MediaPlayerSection(mediaUrl: url),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Tab: Stories of Deity
+// ════════════════════════════════════════════════════════════════
+class _StoriesTab extends StatelessWidget {
+  const _StoriesTab({required this.pooja});
+  final PoojaView pooja;
+
+  @override
+  Widget build(BuildContext context) {
+    final deityDoc = pooja.deityDoc;
+    final storySections =
+        (deityDoc?['sections'] as List?)?.whereType<Map>().where((m) {
+          final key = (m['key'] ?? '').toString().toLowerCase();
+          return key.contains('story') ||
+              key.contains('legend') ||
+              key.contains('lineage') ||
+              key.contains('origin');
+        }).toList() ??
+        const [];
+
+    // Fallback narrative – many APIs ship a single string `story`/`legend`.
+    final fallbackStory =
+        (deityDoc?['story'] ?? deityDoc?['legend'] ?? deityDoc?['origin'] ?? '')
+            .toString();
+
+    if (storySections.isEmpty && fallbackStory.isEmpty) {
+      return _EmptyView(
+        icon: Icons.menu_book_outlined,
+        message: 'No stories available for this deity yet.',
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+      children: [
+        if (fallbackStory.isNotEmpty) _QuoteCard(text: fallbackStory),
+        if (fallbackStory.isNotEmpty && storySections.isNotEmpty)
+          const SizedBox(height: 12),
+        for (final s in storySections)
+          _DeitySectionCard(section: s.cast<String, dynamic>()),
+      ],
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Tab: Calender Puja's
+// ════════════════════════════════════════════════════════════════
+class _CalendarTab extends StatelessWidget {
+  const _CalendarTab({required this.pooja, required this.festivalNames});
+
+  final PoojaView pooja;
+  final Map<String, String> festivalNames;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = pooja.festivalIds
+        .map((id) => festivalNames[id] ?? id)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
+      children: [_CalendarPujaCard(pooja: pooja, festivals: resolved)],
+    );
+  }
+}
+
+class _CalendarPujaCard extends StatelessWidget {
+  const _CalendarPujaCard({required this.pooja, required this.festivals});
+
+  final PoojaView pooja;
+  final List<String> festivals;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = pooja.title.isNotEmpty ? pooja.title : pooja.deityName;
+    final subtitle = pooja.deityName.isNotEmpty
+        ? pooja.deityName
+        : pooja.category;
+    final duration = pooja.duration.isNotEmpty ? pooja.duration : '45 min';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _CalendarThumb(imageUrl: pooja.heroImage),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.lora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3B1E08),
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF7A4621),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 15,
+                          color: Color(0xFF3B1E08),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          duration,
+                          style: AppTypography.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF3B1E08),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (festivals.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          Text(
+            'Festivals',
+            style: AppTypography.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF7A4621),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ChipWrap(items: festivals, positive: true),
+        ],
+      ],
+    );
+  }
+}
+
+class _CalendarThumb extends StatelessWidget {
+  const _CalendarThumb({required this.imageUrl});
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 78,
+      height: 78,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _fallback(),
+                    )
+                  : _fallback(),
+            ),
+          ),
+          Positioned(
+            right: -10,
+            bottom: -6,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x22000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: const Color(0xFFEAD9BC), width: 1),
+              ),
+              child: const Icon(
+                Icons.favorite_border,
+                size: 20,
+                color: Color(0xFFCF9B3A),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallback() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 10, 14),
+      color: const Color(0xFFE8C27A),
+      alignment: Alignment.center,
+      child: const Icon(Icons.temple_hindu, size: 34, color: Colors.white),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Reusable building blocks
+// ════════════════════════════════════════════════════════════════
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, top: 4),
+      child: Text(
+        title,
+        style: AppTypography.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF3B1E08),
+        ),
+      ),
+    );
+  }
+}
+
+class _MantraCard extends StatefulWidget {
+  const _MantraCard({required this.mantra, this.audioUrl});
+  final MantraView mantra;
+  final String? audioUrl;
+
+  @override
+  State<_MantraCard> createState() => _MantraCardState();
+}
+
+class _MantraCardState extends State<_MantraCard> {
+  VideoPlayerController? _audio;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final url = widget.audioUrl;
+    if (url != null && url.isNotEmpty) {
+      _audio = VideoPlayerController.networkUrl(Uri.parse(url))
+        ..initialize()
+            .then((_) {
+              if (!mounted) return;
+              setState(() => _ready = true);
+            })
+            .catchError((_) {})
+        ..addListener(_onAudioTick);
+    }
+  }
+
+  void _onAudioTick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _audio?.removeListener(_onAudioTick);
+    _audio?.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    final c = _audio;
+    if (c == null || !_ready) return;
+    if (c.value.isPlaying) {
+      c.pause();
+    } else {
+      if (c.value.position >= c.value.duration) {
+        c.seekTo(Duration.zero);
+      }
+      c.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPlaying = _audio?.value.isPlaying ?? false;
+    final hasAudio = _audio != null;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -483,63 +1232,497 @@ class _MantraCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mantra,
-                  style: AppTypography.lora(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF3B1E08),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.music_note,
-                      size: 12,
-                      color: Color(0xFFB07A3A),
-                    ),
-                    const SizedBox(width: 4),
                     Text(
-                      subtitle,
-                      style: AppTypography.inter(
-                        fontSize: 12,
-                        color: const Color(0xFFB07A3A),
-                        fontWeight: FontWeight.w500,
+                      widget.mantra.primary,
+                      style: AppTypography.lora(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF3B1E08),
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.repeat,
+                          size: 12,
+                          color: Color(0xFFB07A3A),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.mantra.repetitions.isEmpty
+                              ? 'Sacred Mantra'
+                              : widget.mantra.repetitions,
+                          style: AppTypography.inter(
+                            fontSize: 12,
+                            color: const Color(0xFFB07A3A),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: hasAudio ? _toggle : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    ),
+                    boxShadow: hasAudio
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x33ED5A00),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    !hasAudio
+                        ? Icons.volume_off
+                        : (isPlaying ? Icons.pause : Icons.play_arrow),
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (hasAudio && _ready) ...[
+            const SizedBox(height: 12),
+            _AudioProgressBar(controller: _audio!),
+          ],
+          if (widget.mantra.meaning.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              widget.mantra.meaning,
+              style: AppTypography.inter(
+                fontSize: 12.5,
+                height: 1.45,
+                color: const Color(0xFF6A4423),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          if (widget.mantra.additional.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _ChipWrap(items: widget.mantra.additional, positive: true),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AudioProgressBar extends StatelessWidget {
+  const _AudioProgressBar({required this.controller});
+  final VideoPlayerController controller;
+
+  String _fmt(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.inMinutes)}:${two(d.inSeconds.remainder(60))}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = controller.value;
+    final total = v.duration.inMilliseconds == 0
+        ? 1
+        : v.duration.inMilliseconds;
+    final progress = (v.position.inMilliseconds / total).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 4,
+            backgroundColor: const Color(0x22B07A3A),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.gradientEnd,
             ),
           ),
-          const SizedBox(width: 12),
-          Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onPlay,
-              child: Container(
-                width: 44,
-                height: 44,
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _fmt(v.position),
+              style: AppTypography.inter(
+                fontSize: 10.5,
+                color: const Color(0xFF8A6B4A),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              _fmt(v.duration),
+              style: AppTypography.inter(
+                fontSize: 10.5,
+                color: const Color(0xFF8A6B4A),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [AppColors.gradientStart, AppColors.gradientEnd],
                   ),
                 ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  color: Colors.white,
-                  size: 22,
+                child: Icon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.lora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF3B1E08),
+                  ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _Paragraph extends StatelessWidget {
+  const _Paragraph({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text,
+        style: AppTypography.inter(
+          fontSize: 13.5,
+          height: 1.5,
+          color: const Color(0xFF4A1C00),
+        ),
+      ),
+    );
+  }
+}
+
+class _BulletList extends StatelessWidget {
+  const _BulletList({
+    required this.heading,
+    required this.items,
+    this.asChips = false,
+    this.positive = true,
+  });
+  final String heading;
+  final List<String> items;
+  final bool asChips;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            heading,
+            style: AppTypography.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF7A4621),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (asChips)
+            _ChipWrap(items: items, positive: positive)
+          else
+            ...items.map(
+              (t) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 7, right: 10),
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFB07A3A),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        t,
+                        style: AppTypography.inter(
+                          fontSize: 13.5,
+                          height: 1.5,
+                          color: const Color(0xFF4A1C00),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipWrap extends StatelessWidget {
+  const _ChipWrap({required this.items, required this.positive});
+  final List<String> items;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    final bg = positive ? const Color(0xFFFFF1DD) : const Color(0xFFFFE3DC);
+    final fg = positive ? const Color(0xFF7A4621) : const Color(0xFF8E2A12);
+    final border = positive ? const Color(0x44B07A3A) : const Color(0x44B0432A);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items
+          .map(
+            (t) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: border),
+              ),
+              child: Text(
+                t,
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: fg,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _StepTile extends StatelessWidget {
+  const _StepTile({required this.step});
+  final StepView step;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            margin: const EdgeInsets.only(right: 12, top: 2),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [AppColors.gradientStart, AppColors.gradientEnd],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '${step.number}',
+              style: AppTypography.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step.title,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF3B1E08),
+                  ),
+                ),
+                if (step.description.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    step.description,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      height: 1.45,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                ],
+                if (step.subSteps.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ...step.subSteps.map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4, left: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 5, right: 8),
+                            child: Icon(
+                              Icons.check_circle,
+                              size: 12,
+                              color: Color(0xFFB07A3A),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              s,
+                              style: AppTypography.inter(
+                                fontSize: 12.5,
+                                height: 1.45,
+                                color: const Color(0xFF6A4423),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MeaningGroup extends StatelessWidget {
+  const _MeaningGroup({required this.heading, required this.items});
+  final String heading;
+  final List<MeaningItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            heading,
+            style: AppTypography.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF7A4621),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...items.map(
+            (m) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8EC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x22B07A3A)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    m.title,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF3B1E08),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    m.description,
+                    style: AppTypography.inter(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -549,27 +1732,523 @@ class _MantraCard extends StatelessWidget {
   }
 }
 
-class _DiamondDivider extends StatelessWidget {
-  const _DiamondDivider();
+class _HeaderDivider extends StatelessWidget {
+  const _HeaderDivider();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider(color: Color(0x33B07A3A), thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Transform.rotate(
-            angle: 0.785398, // 45 deg
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(color: Color(0xFFB07A3A)),
-            ),
-          ),
-        ),
-        const Expanded(child: Divider(color: Color(0x33B07A3A), thickness: 1)),
-      ],
+    return const Center(
+      child: Image(
+        image: AssetImage('assets/images/home/divider.png'),
+        width: 145,
+        fit: BoxFit.contain,
+      ),
     );
   }
+}
+
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({
+    required this.label,
+    required this.value,
+    this.multiline = false,
+  });
+  final String label;
+  final String value;
+  final bool multiline;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8A6B4A),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: multiline ? null : 2,
+            overflow: multiline ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: AppTypography.inter(
+              fontSize: 13.5,
+              height: 1.5,
+              color: const Color(0xFF3B1E08),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LabeledChipsField extends StatelessWidget {
+  const _LabeledChipsField({
+    required this.label,
+    required this.items,
+    this.positive = true,
+  });
+  final String label;
+  final List<String> items;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8A6B4A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ChipWrap(items: items, positive: positive),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeitySectionCard extends StatelessWidget {
+  const _DeitySectionCard({required this.section});
+  final Map<String, dynamic> section;
+
+  String _title() {
+    final t = section['title'];
+    if (t is Map && t['value'] != null) return t['value'].toString();
+    if (t is String) return t;
+    return (section['key'] ?? 'Section').toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _title();
+    final content = (section['content'] as List?) ?? const [];
+    final summaryText = (section['description'] ?? section['text'] ?? '')
+        .toString();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.lora(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3B1E08),
+            ),
+          ),
+          if (summaryText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              summaryText,
+              style: AppTypography.inter(
+                fontSize: 13,
+                height: 1.55,
+                color: const Color(0xFF4A1C00),
+              ),
+            ),
+          ],
+          if (content.isNotEmpty) const SizedBox(height: 10),
+          for (final item in content.whereType<Map>())
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if ((item['title']?.toString() ?? '').isNotEmpty)
+                    Text(
+                      item['title'].toString(),
+                      style: AppTypography.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7A4621),
+                      ),
+                    ),
+                  const SizedBox(height: 3),
+                  if ((item['description']?.toString() ?? '').isNotEmpty)
+                    Text(
+                      item['description'].toString(),
+                      style: AppTypography.inter(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: const Color(0xFF4A1C00),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuoteCard extends StatelessWidget {
+  const _QuoteCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.format_quote_rounded,
+            size: 28,
+            color: Color(0xFFB07A3A),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            style: AppTypography.inter(
+              fontSize: 13.5,
+              height: 1.6,
+              color: const Color(0xFF4A1C00),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KeyValueRow extends StatelessWidget {
+  const _KeyValueRow({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 12.5,
+                color: const Color(0xFF8A6B4A),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTypography.inter(
+                fontSize: 13.5,
+                color: const Color(0xFF3B1E08),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  const _EmptyView({required this.icon, required this.message});
+  final IconData icon;
+  final String message;
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 42, color: const Color(0xFF8A6B4A)),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                fontSize: 13.5,
+                color: const Color(0xFF7A5A3D),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  View-model normalising the API payload.
+//  (Server Swagger types many fields as JSON-encoded `string`s — we
+//  decode these defensively so the same widget works for both the
+//  multipart create payload and the populated read response.)
+// ════════════════════════════════════════════════════════════════
+
+class PoojaView {
+  PoojaView(this._raw);
+  final Map<String, dynamic> _raw;
+
+  // Top-level scalars
+  String get title => (_raw['title'] ?? '').toString();
+  String get category => (_raw['category'] ?? '').toString();
+  String get difficulty => (_raw['difficulty'] ?? '').toString();
+  String get duration => (_raw['duration'] ?? '').toString();
+  String get description => (_raw['description'] ?? '').toString();
+  String get status => (_raw['status'] ?? '').toString();
+  double? get rating {
+    final r = _raw['rating'];
+    if (r is num) return r.toDouble();
+    if (r is String) return double.tryParse(r);
+    return null;
+  }
+
+  // Deity – may be ObjectId string OR a populated object.
+  Map<String, dynamic>? get deityDoc {
+    final d = _raw['deity'];
+    return d is Map<String, dynamic> ? d : null;
+  }
+
+  String get deityName {
+    final d = deityDoc;
+    if (d != null) return (d['name'] ?? '').toString();
+    final raw = (_raw['deity'] ?? '').toString();
+    // If the raw deity is an ObjectId (24 hex chars), don't display it.
+    if (raw.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(raw)) {
+      return '';
+    }
+    return raw;
+  }
+
+  // Hero image – pulled from media.images[0] / imageUrl / image.
+  String? get heroImage {
+    final media = _decodeMap(_raw['media']);
+    final imgs = media['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      final first = imgs.first.toString();
+      if (first.isNotEmpty) return first;
+    }
+    final direct = (_raw['imageUrl'] ?? _raw['image'] ?? '').toString();
+    return direct.isEmpty ? null : direct;
+  }
+
+  String? get audioUrl {
+    final media = _decodeMap(_raw['media']);
+    final list = media['audio'];
+    if (list is List && list.isNotEmpty) {
+      final first = list.first.toString();
+      if (first.isNotEmpty) return first;
+    }
+    final direct = (_raw['audio'] ?? '').toString();
+    return direct.isEmpty ? null : direct;
+  }
+
+  List<String> get videoUrls {
+    final media = _decodeMap(_raw['media']);
+    final list = media['videos'] ?? media['video'];
+    if (list is List) {
+      return list.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+    }
+    final direct = (_raw['video'] ?? '').toString();
+    return direct.isEmpty ? const [] : [direct];
+  }
+
+  // Object/array fields – decoded if they arrive as JSON strings.
+  Map<String, dynamic> get purpose => _decodeMap(_raw['purpose']);
+  Map<String, dynamic> get deitySummary => _decodeMap(_raw['deitySummary']);
+  Map<String, dynamic> get preparation => _decodeMap(_raw['preparation']);
+  Map<String, dynamic> get mantra => _decodeMap(_raw['mantra']);
+  Map<String, dynamic> get spiritualMeaning =>
+      _decodeMap(_raw['spiritualMeaning']);
+  Map<String, dynamic> get guidance => _decodeMap(_raw['guidance']);
+  Map<String, dynamic> get completion => _decodeMap(_raw['completion']);
+
+  MantraView get mantraView {
+    final m = mantra;
+    return MantraView(
+      primary: (m['primary'] ?? '').toString(),
+      repetitions: (m['repetitions'] ?? '').toString(),
+      meaning: (m['meaning'] ?? '').toString(),
+      additional: (m['additional'] is List)
+          ? (m['additional'] as List).map((e) => e.toString()).toList()
+          : const [],
+    );
+  }
+
+  List<StepView> get steps {
+    final raw = _decodeList(_raw['steps']);
+    return raw.whereType<Map>().map((m) {
+      return StepView(
+        number: (m['stepNumber'] is num)
+            ? (m['stepNumber'] as num).toInt()
+            : int.tryParse(m['stepNumber']?.toString() ?? '') ?? 0,
+        title: (m['title'] ?? '').toString(),
+        description: (m['description'] ?? '').toString(),
+        subSteps: (m['subSteps'] is List)
+            ? (m['subSteps'] as List).map((e) => e.toString()).toList()
+            : const [],
+      );
+    }).toList();
+  }
+
+  List<String> get blessings {
+    final raw = _raw['blessings'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      } catch (_) {}
+      return raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  List<String> get festivalIds {
+    final raw = _raw['festivalIds'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      } catch (_) {}
+      return raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  // — helpers —
+  static Map<String, dynamic> _decodeMap(dynamic raw) {
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return decoded.map((k, v) => MapEntry(k.toString(), v));
+        }
+      } catch (_) {}
+    }
+    return const <String, dynamic>{};
+  }
+
+  static List<dynamic> _decodeList(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) return decoded;
+      } catch (_) {}
+    }
+    return const [];
+  }
+}
+
+class MantraView {
+  const MantraView({
+    required this.primary,
+    required this.repetitions,
+    required this.meaning,
+    required this.additional,
+  });
+  final String primary;
+  final String repetitions;
+  final String meaning;
+  final List<String> additional;
+}
+
+class StepView {
+  const StepView({
+    required this.number,
+    required this.title,
+    required this.description,
+    required this.subSteps,
+  });
+  final int number;
+  final String title;
+  final String description;
+  final List<String> subSteps;
+}
+
+class MeaningItem {
+  const MeaningItem({required this.title, required this.description});
+  final String title;
+  final String description;
 }

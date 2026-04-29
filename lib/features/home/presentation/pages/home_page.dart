@@ -983,18 +983,17 @@ class _QuoteCardState extends State<_QuoteCard> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        _selectedTab == 0 ? 'Meaning' : _selectedTab == 1 ? 'Contemplation' : 'Prayer / Resolve',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.lora(
-                          color: const Color(0xFFF0E5DE),
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      // Text(
+                      //   _selectedTab == 0 ? 'Meaning' : _selectedTab == 1 ? 'Contemplation' : 'Prayer / Resolve',
+                      //   maxLines: 1,
+                      //   overflow: TextOverflow.ellipsis,
+                      //   style: AppTypography.lora(
+                      //     color: const Color(0xFFF0E5DE),
+                      //     fontSize: 12,
+                      //     fontStyle: FontStyle.italic,
+                      //     fontWeight: FontWeight.w500,
+                      //   ),
+                      // ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
