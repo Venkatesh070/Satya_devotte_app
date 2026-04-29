@@ -16,7 +16,7 @@ class AppPages {
   static final pages = <GetPage<dynamic>>[
     // ─── App flow ───────────────────────────────────────────────
     GetPage(name: AppRoutes.splash, page: SplashPage.new),
-    GetPage(name: AppRoutes.onboarding, page: OnboardingPage.new),
+    if (!kIsWeb) GetPage(name: AppRoutes.onboarding, page: OnboardingPage.new),
     GetPage(name: AppRoutes.login, page: () => kIsWeb ? const WebLoginPage() : const LoginPage()),
     GetPage(
       name: AppRoutes.home,

@@ -11,8 +11,10 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_list_page.dart';
 
@@ -754,7 +756,17 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final profileController = Get.find<ProfileController>();
+
+    final sessionUser = profileController.sessionUser;
+    final profile = profileController.profile;
+
+    final userData =
+        sessionUser ?? profile?['user'] as Map<String, dynamic>? ?? profile;
+    debugPrint('HomeHeader userData: $userData');
+    final userName = userData?['name'] ?? userData?['email'] ?? 'User';
     final topInset = MediaQuery.paddingOf(context).top;
+
     return SizedBox(
       width: double.infinity,
       height: 500,
@@ -790,6 +802,7 @@ class _HomeHeader extends StatelessWidget {
                     Image(
                       image: const AssetImage('assets/images/appLogo.png'),
                       height: 52,
+                      color: Colors.white,
                     ),
                     Spacer(),
                     Text(
@@ -823,7 +836,7 @@ class _HomeHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  HomeConstants.userName,
+                  userName.split('@')[0],
                   style: AppTypography.lora(
                     color: Colors.white,
                     fontSize: 28,

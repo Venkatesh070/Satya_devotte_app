@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -34,8 +35,8 @@ class _SplashPageState extends State<SplashPage> {
     if (!mounted) return;
 
     if (!auth.isAuthenticated) {
-      // No saved session — go to onboarding
-      Get.offAllNamed(AppRoutes.onboarding);
+      // Web/CMS skips onboarding and goes straight to login.
+      Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
       return;
     }
 
