@@ -14,12 +14,14 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/donation_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
@@ -87,6 +89,14 @@ class InitialBinding extends Bindings {
     );
     Get.put<FestivalController>(
       FestivalController(Get.find<FestivalRemoteDataSource>()),
+      permanent: true,
+    );
+    Get.put<DeityRemoteDataSource>(
+      DeityRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<DeityController>(
+      DeityController(Get.find<DeityRemoteDataSource>()),
       permanent: true,
     );
     // ── CMS Admins ───────────────────────────────────────────────

@@ -9,6 +9,9 @@ class AppRoutes {
 
   // ─── CMS routes (admin + superadmin) ─────────────────────────
   static const String cms = '/cms';
+  static const String cmsDeities = '/cms/deities';
+  static const String cmsDeityCreate = '/cms/deities/create';
+  static const String cmsDeityEdit = '/cms/deities/edit';
   static const String cmsRituals = '/cms/rituals';
   static const String cmsRitualCreate = '/cms/rituals/create';
   static const String cmsRitualEdit = '/cms/rituals/edit';

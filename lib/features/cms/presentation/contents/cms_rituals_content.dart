@@ -130,7 +130,7 @@ class _PoojaList extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Super Admin — Pending poojas show Approve & Reject buttons directly on the card.',
+                    'Super Admin — Pending pujas show Approve & Reject buttons directly on the card.',
                     style: TextStyle(
                       color: Color(0xFF5D4037),
                       fontSize: 12,
@@ -154,7 +154,7 @@ class _PoojaList extends StatelessWidget {
             children: [
               Expanded(
                 child: CmsSearchBar(
-                  hint: 'Search poojas...',
+                  hint: 'Search pujas...',
                   onChanged: (_) {},
                 ),
               ),
@@ -188,7 +188,7 @@ class _PoojaList extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               CmsPrimaryButton(
-                label: isWeb ? 'Add New Pooja' : 'Add',
+                label: isWeb ? 'Add New Puja' : 'Add',
                 icon: Icons.add,
                 onTap: onAdd,
               ),
@@ -360,12 +360,12 @@ class _PoojaList extends StatelessWidget {
               return CmsEmptyState(
                 icon: Icons.self_improvement,
                 title: controller.filter == 'All'
-                    ? 'No Poojas Yet'
-                    : 'No ${controller.filter} Poojas',
+                    ? 'No Pujas Yet'
+                    : 'No ${controller.filter} Pujas',
                 subtitle: controller.filter == 'All'
                     ? 'Add your first pooja to get started'
                     : 'No poojas with this status',
-                actionLabel: controller.filter == 'All' ? 'Add Pooja' : null,
+                actionLabel: controller.filter == 'All' ? 'Add Puja' : null,
                 onAction: controller.filter == 'All' ? onAdd : null,
               );
             }
@@ -1006,7 +1006,7 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
-    if (_deityCtrl.text.trim().isEmpty) return 'Deity ID is required';
+    if (_deityCtrl.text.trim().isEmpty) return 'Deity is required';
     if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     return null;
@@ -1384,7 +1384,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  _isEdit ? 'Edit Pooja' : 'Add New Pooja',
+                  _isEdit ? 'Edit Puja' : 'Add New Puja',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,

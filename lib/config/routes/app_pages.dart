@@ -43,6 +43,11 @@ class AppPages {
       middlewares: [AdminGuard()],
     ),
     GetPage(
+      name: AppRoutes.cmsDeities,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+    ),
+    GetPage(
       name: AppRoutes.cmsRituals,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],

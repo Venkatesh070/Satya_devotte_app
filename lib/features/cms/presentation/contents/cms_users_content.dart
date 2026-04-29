@@ -542,7 +542,7 @@ class _UsersTable extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'This user will be able to add and manage poojas and festivals.',
+              'This user will be able to add and manage pujas and festivals.',
               style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
             ),
           ],

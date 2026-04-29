@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_rituals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_donations_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_festivals_content.dart';
@@ -660,8 +661,9 @@ class _NavItem {
 
 List<_NavItem> _navItems(bool isSuperAdmin) => [
   const _NavItem('Dashboard', Icons.grid_view_outlined, Icons.grid_view),
+  const _NavItem('Manage Deities', Icons.auto_awesome_outlined, Icons.auto_awesome),
   const _NavItem(
-    'Manage Poojas',
+    'Manage Pujas',
     Icons.self_improvement_outlined,
     Icons.self_improvement,
   ),
@@ -701,7 +703,8 @@ List<_NavItem> _navItems(bool isSuperAdmin) => [
 String _pageTitle(int i) {
   const titles = [
     'Dashboard',
-    'Manage Poojas',
+    'Manage Deities',
+    'Manage Pujas',
     'Manage Festivals',
     'Donations',
     'Notifications',
@@ -718,20 +721,22 @@ Widget _buildContent(int i) {
     case 0:
       return const CmsDashboardContent();
     case 1:
-      return const CmsRitualsContent();
+      return const CmsDeitiesContent();
     case 2:
-      return const CmsFestivalsContent();
+      return const CmsRitualsContent();
     case 3:
-      return const CmsDonationsContent();
+      return const CmsFestivalsContent();
     case 4:
-      return const CmsNotificationsContent();
+      return const CmsDonationsContent();
     case 5:
-      return const CmsUsersContent();
+      return const CmsNotificationsContent();
     case 6:
-      return const CmsAnalyticsContent();
+      return const CmsUsersContent();
     case 7:
-      return const CmsShlokaContent();
+      return const CmsAnalyticsContent();
     case 8:
+      return const CmsShlokaContent();
+    case 9:
       return const CmsAdminsContent();
     default:
       return const CmsDashboardContent();
@@ -740,23 +745,27 @@ Widget _buildContent(int i) {
 
 int _indexFromRoute(String route, bool isSuperAdmin) {
   switch (route) {
+    case AppRoutes.cmsDeities:
+    case AppRoutes.cmsDeityCreate:
+    case AppRoutes.cmsDeityEdit:
+      return 1;
     case AppRoutes.cmsRituals:
     case AppRoutes.cmsRitualCreate:
     case AppRoutes.cmsRitualEdit:
-      return 1;
+      return 2;
     case AppRoutes.cmsFestivals:
     case AppRoutes.cmsFestivalCreate:
-      return 2;
+      return 3;
     case AppRoutes.cmsNotifications:
-      return 4;
-    case AppRoutes.cmsUsers:
       return 5;
-    case AppRoutes.cmsAnalytics:
+    case AppRoutes.cmsUsers:
       return 6;
+    case AppRoutes.cmsAnalytics:
+      return 7;
     case AppRoutes.cmsShlokas:
-      return isSuperAdmin ? 7 : 0;
-    case AppRoutes.cmsAdmins:
       return isSuperAdmin ? 8 : 0;
+    case AppRoutes.cmsAdmins:
+      return isSuperAdmin ? 9 : 0;
     case AppRoutes.cmsApproval:
       return 0;
     case AppRoutes.cms:
@@ -770,18 +779,20 @@ String? _routeForIndex(int index, bool isSuperAdmin) {
     case 0:
       return AppRoutes.cms;
     case 1:
-      return AppRoutes.cmsRituals;
+      return AppRoutes.cmsDeities;
     case 2:
+      return AppRoutes.cmsRituals;
+    case 3:
       return AppRoutes.cmsFestivals;
-    case 4:
-      return AppRoutes.cmsNotifications;
     case 5:
-      return AppRoutes.cmsUsers;
+      return AppRoutes.cmsNotifications;
     case 6:
-      return AppRoutes.cmsAnalytics;
+      return AppRoutes.cmsUsers;
     case 7:
-      return isSuperAdmin ? AppRoutes.cmsShlokas : AppRoutes.cms;
+      return AppRoutes.cmsAnalytics;
     case 8:
+      return isSuperAdmin ? AppRoutes.cmsShlokas : AppRoutes.cms;
+    case 9:
       return isSuperAdmin ? AppRoutes.cmsAdmins : AppRoutes.cms;
     default:
       return null;
