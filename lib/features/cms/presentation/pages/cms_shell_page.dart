@@ -9,7 +9,6 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_festiva
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_notifications_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_users_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_analytics_content.dart';
-import 'package:satya_devotte_app/features/cms/presentation/contents/cms_approval_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_shlokas_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_admins_content.dart';
 
@@ -38,17 +37,47 @@ class _CmsShellPageState extends State<CmsShellPage> {
   int _selectedIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    final auth = Get.find<AuthController>();
+    _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
+  }
+
+  void _onSelect(int index) {
+    final auth = Get.find<AuthController>();
+    setState(() => _selectedIndex = index);
+    final targetRoute = _routeForIndex(index, auth.isSuperAdmin);
+    if (targetRoute != null && targetRoute != Get.currentRoute) {
+      Get.toNamed(targetRoute);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    return w >= 768
-        ? _WebLayout(
-            selectedIndex: _selectedIndex,
-            onSelect: (i) => setState(() => _selectedIndex = i),
-          )
-        : _MobileLayout(
-            selectedIndex: _selectedIndex,
-            onSelect: (i) => setState(() => _selectedIndex = i),
-          );
+    return WillPopScope(
+      onWillPop: () async {
+        final isDashboardRoute = Get.currentRoute == AppRoutes.cms;
+        if (_selectedIndex != 0 || !isDashboardRoute) {
+          setState(() => _selectedIndex = 0);
+          if (!isDashboardRoute) {
+            Get.offNamed(AppRoutes.cms);
+          }
+          return false;
+        }
+        // Already on dashboard: consume browser back and stay on CMS.
+        return false;
+      },
+      child: w >= 768
+          ? _WebLayout(
+              selectedIndex: _selectedIndex,
+              onSelect: _onSelect,
+            )
+          : _MobileLayout(
+              selectedIndex: _selectedIndex,
+              onSelect: _onSelect,
+            ),
+    );
   }
 }
 
@@ -706,5 +735,55 @@ Widget _buildContent(int i) {
       return const CmsAdminsContent();
     default:
       return const CmsDashboardContent();
+  }
+}
+
+int _indexFromRoute(String route, bool isSuperAdmin) {
+  switch (route) {
+    case AppRoutes.cmsRituals:
+    case AppRoutes.cmsRitualCreate:
+    case AppRoutes.cmsRitualEdit:
+      return 1;
+    case AppRoutes.cmsFestivals:
+    case AppRoutes.cmsFestivalCreate:
+      return 2;
+    case AppRoutes.cmsNotifications:
+      return 4;
+    case AppRoutes.cmsUsers:
+      return 5;
+    case AppRoutes.cmsAnalytics:
+      return 6;
+    case AppRoutes.cmsShlokas:
+      return isSuperAdmin ? 7 : 0;
+    case AppRoutes.cmsAdmins:
+      return isSuperAdmin ? 8 : 0;
+    case AppRoutes.cmsApproval:
+      return 0;
+    case AppRoutes.cms:
+    default:
+      return 0;
+  }
+}
+
+String? _routeForIndex(int index, bool isSuperAdmin) {
+  switch (index) {
+    case 0:
+      return AppRoutes.cms;
+    case 1:
+      return AppRoutes.cmsRituals;
+    case 2:
+      return AppRoutes.cmsFestivals;
+    case 4:
+      return AppRoutes.cmsNotifications;
+    case 5:
+      return AppRoutes.cmsUsers;
+    case 6:
+      return AppRoutes.cmsAnalytics;
+    case 7:
+      return isSuperAdmin ? AppRoutes.cmsShlokas : AppRoutes.cms;
+    case 8:
+      return isSuperAdmin ? AppRoutes.cmsAdmins : AppRoutes.cms;
+    default:
+      return null;
   }
 }

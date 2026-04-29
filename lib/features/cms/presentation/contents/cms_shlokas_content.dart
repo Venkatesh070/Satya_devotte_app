@@ -624,6 +624,8 @@ class _SlokaForm extends StatefulWidget {
 class _SlokaFormState extends State<_SlokaForm> {
   late final TextEditingController _slokaCtrl;
   late final TextEditingController _meaningCtrl;
+  late final TextEditingController _contemplationCtrl;
+  late final TextEditingController _prayerCtrl;
   late final TextEditingController _authorCtrl;
 
   @override
@@ -632,6 +634,10 @@ class _SlokaFormState extends State<_SlokaForm> {
     final existing = widget.ctrl.todaySloka;
     _slokaCtrl = TextEditingController(text: existing?.sloka ?? '');
     _meaningCtrl = TextEditingController(text: existing?.meaning ?? '');
+    _contemplationCtrl = TextEditingController(
+      text: existing?.contemplation ?? '',
+    );
+    _prayerCtrl = TextEditingController(text: existing?.prayer ?? '');
     _authorCtrl = TextEditingController(text: existing?.author ?? '');
   }
 
@@ -639,6 +645,8 @@ class _SlokaFormState extends State<_SlokaForm> {
   void dispose() {
     _slokaCtrl.dispose();
     _meaningCtrl.dispose();
+    _contemplationCtrl.dispose();
+    _prayerCtrl.dispose();
     _authorCtrl.dispose();
     super.dispose();
   }
@@ -658,6 +666,8 @@ class _SlokaFormState extends State<_SlokaForm> {
     final ok = await widget.ctrl.saveSloka(
       sloka: _slokaCtrl.text.trim(),
       meaning: _meaningCtrl.text.trim(),
+      contemplation: _contemplationCtrl.text.trim(),
+      prayer: _prayerCtrl.text.trim(),
       author: _authorCtrl.text.trim(),
     );
     if (ok) widget.onSaved();
@@ -755,6 +765,20 @@ class _SlokaFormState extends State<_SlokaForm> {
                   label: 'Meaning',
                   hint: 'Enter meaning / translation...',
                   controller: _meaningCtrl,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                CmsFormField(
+                  label: 'Contemplation',
+                  hint: 'Enter contemplation...',
+                  controller: _contemplationCtrl,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                CmsFormField(
+                  label: 'Prayer',
+                  hint: 'Enter prayer...',
+                  controller: _prayerCtrl,
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),

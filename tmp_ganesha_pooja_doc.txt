@@ -1,0 +1,351 @@
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="13585" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="4675"/><w:gridCol w:w="8910"/></w:tblGrid><w:tr w:rsidR="004B66C7" w:rsidRPr="0014165C" w14:paraId="1AB95B36" w14:textId="77777777" w:rsidTr="00981B0E"><w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="5E2DB659" w14:textId="509E6B1F" w:rsidR="004B66C7" w:rsidRPr="0014165C" w:rsidRDefault="004B66C7" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Ritual Overview
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="42B96265" w14:textId="7367244D" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="006A1F34"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Ritual Name:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="5D00A5BD" w14:textId="7D761F74" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00FA4E72" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00FA4E72"><w:t>Ganesha P
+u
+ja
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="2C66056B" w14:textId="1ADE0809" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="006A1F34"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Associated Deity:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="60EAB3A2" w14:textId="119B59D0" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="006A1F34" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="006A1F34"><w:t>Lord Ganesha
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="45ED37C7" w14:textId="34EE47C7" w:rsidR="00C50498" w:rsidRPr="0014165C" w:rsidRDefault="00C50498" w:rsidP="006A1F34"><w:r><w:t>Alternative name:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="3881AD21" w14:textId="55D7E8D5" w:rsidR="00C50498" w:rsidRPr="006A1F34" w:rsidRDefault="000B1445" w:rsidP="0014165C"><w:r w:rsidRPr="000B1445"><w:t>Ganapati, Vighnahvinayaka, , Pillaiyar, Ekadanta
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="70966869" w14:textId="4FA2E756" w:rsidR="004B66C7" w:rsidRPr="0014165C" w:rsidRDefault="004B66C7" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Purpose of the Ritual
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="3EE25838" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Why is this ritual performed?
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="0C5F2939" w14:textId="1127E7D3" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="008A15D9" w:rsidP="00651E55"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00011D62"><w:t>The prayer ritual to Lord Ganesh is celebrated as the birth of Lord Ganesha
+ or Ganesha 
+Chaturthi
+.
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="2A123BB1" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>What outcomes can be expected?
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="1888CF71" w14:textId="545C767D" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00D864E1" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00011D62"><w:t xml:space="preserve">Peace 
+of mind, smoother life path, 
+assistance to remove 
+challenges, spiritual grounding
+ and elevation
+, and success
+.
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="24604491" w14:textId="4EB90A4D" w:rsidR="004B66C7" w:rsidRPr="00011D62" w:rsidRDefault="004B66C7" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr><w:r w:rsidRPr="004B66C7"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Deity Summary
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="73838360" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Who is the Deity?
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="68C5FB5B" w14:textId="71D49FE8" w:rsidR="00306401" w:rsidRDefault="002B2CA3" w:rsidP="00192C8A"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00011D62"><w:t>Lord Ganesha is the son of Lord Shiva and Goddess Parvati
+He represents the power of the Supreme Being that removes obstacles and ensures success in human 
+endeavors
+According to the scriptures, Lord Ganesha is the God of wisdom and prosperity. 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="38E40B28" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Core Blessings of this Deity:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="029DEC9F" w14:textId="77777777" w:rsidR="00F568C7" w:rsidRDefault="0084401C" w:rsidP="00011D62"><w:r w:rsidRPr="00011D62"><w:t xml:space="preserve">Lord Ganesha assists one to 
+r
+emov
+e
+ obstacles
+; is the giver of 
+intellect, protection, prosperity, and spiritual strength
+.
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="3BCE84EB" w14:textId="14627C94" w:rsidR="00686E7E" w:rsidRPr="0014165C" w:rsidRDefault="00686E7E" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Preparation (Before You Begin)
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="05ED02D4" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Personal Preparation:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="5AC71E92" w14:textId="304465D6" w:rsidR="0014165C" w:rsidRDefault="004219BC" w:rsidP="00011D62"><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="004219BC"><w:t xml:space="preserve">Take a 
+bath 
+or wash yourself
+ 
+and wear clean clothing
+.
+Approach the 
+buildup
+ of the 
+prayer with a calm and focused mind
+.
+Avoid arguments, harsh words and unnecessary disputes.
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="04E7C395" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:lastRenderedPageBreak/><w:t>Space Preparation:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="575E0C8F" w14:textId="625BEBAA" w:rsidR="0014165C" w:rsidRDefault="004219BC" w:rsidP="00011D62"><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="004219BC"><w:t>Clean your home, especially entrances (front and back doorways)
+.
+Ensure the prayer area is neat, peaceful, and clutter-free
+.
+Sp
+rinkle turmeric (Hurdhee) water to clean
+se
+ additionally
+.
+ 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="18005052" w14:textId="5528B083" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="004A41BC" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t>Prayer i
+tems / Ingredients Required:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="3127331C" w14:textId="77777777" w:rsidR="00434C82" w:rsidRDefault="00434C82" w:rsidP="00011D62"><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:t>Idol (Murthi) of Lord Ganesha
+Matches/ fire lighters
+Incense sticks (Agrabathi)
+2 x 
+Tray for setup
+1 x 
+Water in a brass vessel (lortha or chumbu)
+1 x Clay lamp (Diya) with oil and a 
+wick
+1 x 
+Bell 
+9 x 
+Betel leaves
+ (or 
+large leaves from your garden)
+ 
+9 x B
+etel nut
+ (
+whole or cut)
+Sugar candy
+ (
+o
+r
+ sugar
+)
+Durva grass
+ 
+(
+running grass)
+1 x 
+Coconut
+ (with water) 
+(Cleaned with the crown tuft intact- with 2 eyes exposed)
+Laddoos
+, Modaks
+ or sweetmeats
+3 x 
+Bananas
+ or 3 
+kinds of 
+f
+r
+uit
+ (
+e.g. 
+apple, orange and banana)
+1 x small m
+ilk
+ (250ml)
+Flowers (petals for offering)
+Camphor
+Tumeric powder (yellow)
+Kungum powder (purple)
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="3BDD1923" w14:textId="69CFFEE5" w:rsidR="00DF59DF" w:rsidRPr="0014165C" w:rsidRDefault="00DF59DF" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:lastRenderedPageBreak/><w:t>Step-by-Step Prayer Process
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="036C5119" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 1: Setup
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="6A8B67F9" w14:textId="77777777" w:rsidR="00825E7F" w:rsidRPr="00011D62" w:rsidRDefault="00825E7F" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr><w:r w:rsidRPr="00011D62"><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Tray 1: 
+Arrange betel leaf, betel nut, sugar candy, durva grass, fruits, sweets, coconut, and flowers in front of the deity
+ on a tray.
+- as follows:
+Place 9 betel leaves around the tray 
+in a circular placement 
+with the
+ tips facing 
+outwards
+.
+Place the Ganesha Murthi 
+in the center of a 
+tray
+.
+Offer turmeric powder and kungum powder on the center of each of the 9 leaves. 
+Place a betel nut on top of the powders.
+Place 
+a few sugar candy (or sugar) blocks on each leaf.
+Place 
+the 
+D
+ur
+v
+a grass around Lord Ganesha.
+Tray 2
+On the 2
+nd
+ tray offer the fruit, milk
+, water
+ and coconut. 
+Place 3 
+camphor blocks on the ground preferably on a brick/tile. 
+Get 
+the prepared 
+Diya in readiness
+ for performing the aarthi
+Ring bell to ward off outside unwanted vibrations 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="7B2BA391" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:lastRenderedPageBreak/><w:t>Step 2: Invocation
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="0CA664B2" w14:textId="7E4148DD" w:rsidR="00E50EC0" w:rsidRPr="00011D62" w:rsidRDefault="00403A29" w:rsidP="00EC06FB"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00011D62"><w:t xml:space="preserve">Light the 
+Incense
+ stick to cleans
+e
+ the air and 
+purify the atmosphere; and to welcome the divine trinity into the 
+sacral place of worship
+.
+Say the 
+Opening prayer
+ in an upright standing position with hands together and eyes closed
+. 
+Om, Om, Om
+“Guru Brahma Guru Vishnu
+Guru Devo Maheshwara
+Guru Sakshat Parabrahma
+Tasmai Shri Gurave Namah”
+Light camphor to begin the ritual
+.
+Chant Lord Ganesha’s 
+mantra
+ 3 times whilst turning the coconut in a clockwise direction
+- 
+Ganapati Bappa Morayaa; Mangal Moorti Morayaa
+ x
+ 3
+ 
+(This means the inseparable relationship between God 
+and devotee
+)
+ 
+Offer water onto the coconut 3 times using a teaspoon 
+(or fingers)
+ to purify it.
+Hold the coconut in 2 hands 
+and welcome Lord Gan
+esha
+ into your space
+.
+The primary person offering the prayer will now break the coconut into 2 pieces
+- collect the coconut water for drinking later on. 
+The crown (tuft) must be 
+removed to expose the 3
+rd
+ eye of Shiva.
+The 2 
+(equal) parts of the coconut will be placed 
+in the offering tray with the fruit.
+Observe the Aarthi with the li
+t
+ Diya and turn this 3 times in a clockwise direction to offer your mind, body and soul to the ritual.  
+You will thereafter offer water to the ground symbolizing 
+cleansing and 
+the cooling effect of Mother Shakti
+.
+You would bow down and surrender to the divine deity and take your blessings
+- this is to remove all your negative energies ahead of the offering process. 
+Center yourself and mentally invite Lord Ganesha into your space
+ at the tray set up
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="7F36E831" w14:textId="4B323AEA" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="00EE4B10"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:lastRenderedPageBreak/><w:t>Step 3: Offerings
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="4EEEE6FF" w14:textId="05FA68FD" w:rsidR="000D23FD" w:rsidRDefault="0017730C" w:rsidP="00EC06FB"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0017730C"><w:t>Offer flowers
+ petals onto Lord Ganesha and Chant the following mantra
+ 108 standard times (or your own age number)
+“Om Shree Ganeshaya Namaha”
+ – as you say Namaha offer the flower petals.
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="4573A0BA" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 4: Sacred Actions
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="4A93D3D0" w14:textId="30B3065E" w:rsidR="0067049E" w:rsidRPr="0014165C" w:rsidRDefault="0067049E" w:rsidP="00EE4B10"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0067049E"><w:t xml:space="preserve"> 
+N/A
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="23BD99EA" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 5: Chanting & Prayer
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="1C845428" w14:textId="24D8123E" w:rsidR="00F13EF4" w:rsidRPr="0014165C" w:rsidRDefault="0017655D" w:rsidP="005C44E4"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t>**
+The reason for chanting any of the above times indicates the vibrational sounds responsible 
+for changing
+ the devotees' path, from burdens, obstacles, and obstructions to peace, calmness, and prosperity. 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="7C4FB850" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:lastRenderedPageBreak/><w:t>Step 6: Personal Prayer
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="2E9A288C" w14:textId="77777777" w:rsidR="00427D7B" w:rsidRPr="00427D7B" w:rsidRDefault="00427D7B" w:rsidP="00427D7B"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00427D7B"><w:t>Pray sincerely for removal of obstacles, protection, health, and success
+Pray that your body remains healthy while protecting you against all evil forces that plague you. 
+Pray with devotion and ask for what you truly desire. 
+Don't pray for other's demise. Instead, pray for your victory. 
+Ask with a pure heart and positive intention. You will now be able make a wish or request a boon (
+A divine godly gift
+) from Lord Ganesha
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="005F57C2" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 7: Atmosphere Enhancement
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="074BC4F8" w14:textId="77777777" w:rsidR="00D629C1" w:rsidRDefault="00EF1C6F" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00EF1C6F"><w:t>Play devotional music to create a great atmosphere and ambiance
+.
+Sing or play bhajans (devotional songs)
+Create a peaceful and uplifting spiritual environment
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="5757C360" w14:textId="3EC0E81E" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="00C741AF"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 8: Closure
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="02F2BB01" w14:textId="77777777" w:rsidR="0014165C" w:rsidRDefault="00C741AF" w:rsidP="00C741AF"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00C741AF"><w:t xml:space="preserve">Once you are done, take your blessings 
+-
+Bow down fully in surrender and gratitude
+This surrender is for the purpose of achievement of whatever you have requested in your prayer. 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="4B02DD8C" w14:textId="34D8A05D" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="00C741AF"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Step 9: Prasad Distribution
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="47FA29FD" w14:textId="21F4AD01" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00C51A84" w:rsidP="00C741AF"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00C51A84"><w:t>Distribute the blessed offerings (prasadam) among family and devotees
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="20B0095A" w14:textId="5E518F8C" w:rsidR="00DA0159" w:rsidRPr="0014165C" w:rsidRDefault="00DA0159" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Mantras & Chanting
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="56AB780E" w14:textId="205E1C93" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="00C741AF"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Primary Mantra:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="0B29A17B" w14:textId="7135AC57" w:rsidR="0014165C" w:rsidRPr="00011D62" w:rsidRDefault="009F2004" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr></w:pPr><w:r w:rsidRPr="00011D62"><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr><w:t>Om Shree Ganeshaya Namaha
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="35A11B0C" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Repetition Count:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="00976744" w14:textId="77C6FD8D" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="009F2004" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t>9
+ or mult
+iples of 9 up to 108
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="44492359" w14:textId="762022BE" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="008B1CE3"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Additional Chants (Optional):
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="44DDD3FD" w14:textId="21F90C12" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="009F2004" w:rsidP="008B1CE3"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00011D62"><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr><w:t>Ganapati Bappa Morya, Mangal Murti Morya (3 times)
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="4B24A669" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t xml:space="preserve">Meaning of Chant 
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="5810EB8D" w14:textId="0541CF56" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00C952F0" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00C952F0"><w:t>These chants elevate vibration, remove obstacles, and align the devotee with peace, prosperity, and divine guidance
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="466E3400" w14:textId="68CBCC6C" w:rsidR="002A0BBC" w:rsidRPr="0014165C" w:rsidRDefault="002A0BBC" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:lastRenderedPageBreak/><w:t>Spiritual Significance of Key Actions
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/><w:vMerge w:val="restart"/></w:tcPr><w:p w14:paraId="7AEA46DB" w14:textId="77777777" w:rsidR="00897506" w:rsidRPr="0014165C" w:rsidRDefault="00897506" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Meaning of offerings (e.g., coconut, flowers):
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="0FBA18A2" w14:textId="592D33BB" w:rsidR="00A85798" w:rsidRPr="00A85798" w:rsidRDefault="00A85798" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr></w:pPr><w:r w:rsidRPr="00A85798"><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/></w:rPr><w:t>Coconut
+Represents surrender of ego and awakening of divine consciousness
+ that represents the 3
+rd
+ eye of Lord Shiva
+The coconut represents the outer body of a human being.
+The coconut crown represents the top of the human being.
+Inside the coconut represents the Athma of the human being.
+In order to get to the Athma the coconut needs to be broken- signifying the removal of one’s ego
+ which will elevate the devotee to Paramathma (Shiva
+; Vishnu
+)
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/><w:vMerge/></w:tcPr><w:p w14:paraId="57F506E9" w14:textId="77777777" w:rsidR="00897506" w:rsidRPr="0014165C" w:rsidRDefault="00897506" w:rsidP="0014165C"/></w:tc><w:tc><w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="119CEEE8" w14:textId="13F0365D" w:rsidR="00897506" w:rsidRPr="00897506" w:rsidRDefault="00897506" w:rsidP="00897506"><w:r w:rsidRPr="00897506"><w:t xml:space="preserve">The offering of the flower represents the joy that you bring to the deity that you have invited. When you offer someone flowers they instantly light up, when you offer God flowers 
+they become
+ one with you. 
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="4FDA872F" w14:textId="03CD92D8" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="000066E2"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>Symbolism behind actions (e.g., aarti, circling flame):
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="274F69D1" w14:textId="77777777" w:rsidR="0014165C" w:rsidRDefault="00EB72DB" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t>Removal of darkness and ignorance
+Creating a 
+circling
+ flame that is 3 times in a clockwise direction indicating that our mind, body and soul light up 
+as we are about to start the Aarthi process. 
+The Aarthi 
+(Diya, Camphor or 
+A
+grabathi) 
+also signifies an exchange of 
+energy
+:
+ firstly- surrender ; secondly- elevation
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="7CB43CA6" w14:textId="52FC64E2" w:rsidR="00E516FB" w:rsidRPr="0014165C" w:rsidRDefault="00E516FB" w:rsidP="0014165C"><w:r><w:t>Others
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="4C342FFC" w14:textId="75575335" w:rsidR="00E516FB" w:rsidRDefault="000A43BE" w:rsidP="0014165C"><w:r w:rsidRPr="000A43BE"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Chanting repetitions:
+ Create vibrational
+ sound that 
+echoes
+ into the universe 
+that transform obstacles into opportunities
+Durva grass
+ 
+:
+ Symbol of simplicity and devotion
+- representing as a devotee reaches material status they should always remember their grass roots 
+and remain grounded
+ and never forget where they have come from.
+Cleaning the home:
+ 
+Signifies
+ cleanliness next to godliness
+- 
+Invites purity and divine presence
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="1066BD3F" w14:textId="24A16AE8" w:rsidR="005104AF" w:rsidRPr="0014165C" w:rsidRDefault="005104AF" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:lastRenderedPageBreak/><w:t>Devotional Guidance
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="78525EB9" w14:textId="77777777" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>What mindset to maintain:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="0B08CD81" w14:textId="61A1F187" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00B86216" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00B86216"><w:t>Devotion, humility, gratitude, and sincerity
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="55569F72" w14:textId="11214817" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>What to avoid:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="15B194F2" w14:textId="3FEF6D18" w:rsidR="0014165C" w:rsidRDefault="00B86216" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00B86216"><w:t xml:space="preserve">Negative intentions, praying for harm to 
+come to 
+others, distractions during prayer
+Avoid non-vegetarian meals and 
+addictive pleasures
+ (smoking, vaping, alcohol
+, sexual pleasure, overindulgence and laziness)
+Avoid fighting, swear words
+, 
+cursing
+ and 
+disharmony at home.
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="510224CE" w14:textId="5B8F51D6" w:rsidR="005104AF" w:rsidRPr="0014165C" w:rsidRDefault="005104AF" w:rsidP="00011D62"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r w:rsidRPr="0014165C"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Completion & Integration
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="194C3677" w14:textId="23B58BB5" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="0014165C" w:rsidP="00180A27"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="0014165C"><w:t>How to close the ritual properly:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="1BD23C96" w14:textId="3F093D2B" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00D349A9" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="00D349A9"><w:t>Offer gratitude, bow down, and sit in silence for a few moments
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="0B731E8F" w14:textId="7C8FE9ED" w:rsidR="00615729" w:rsidRPr="00615729" w:rsidRDefault="00615729" w:rsidP="00180A27"><w:r w:rsidRPr="00615729"><w:t>How to carry the energy forward into daily life:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="5A67FF42" w14:textId="2BED7583" w:rsidR="00615729" w:rsidRPr="0014165C" w:rsidRDefault="00FC15ED" w:rsidP="0014165C"><w:r w:rsidRPr="00FC15ED"><w:t>Maintain faith, act with clarity, and trust that obstacles are being removed
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="35BFE06B" w14:textId="17506520" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="00925840" w:rsidP="00180A27"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t xml:space="preserve">Divine boons and gifts: 
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="1D114316" w14:textId="051C484E" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="009E7E48" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="009E7E48"><w:t>Reduced obstacles, mental clarity, improved flow in life, inner peace
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="78214A2A" w14:textId="012E2196" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="000514EB" w:rsidP="00180A27"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r><w:t xml:space="preserve">Ways in which to carry 
+the energy forward into daily life:
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="30273421" w14:textId="11659DDC" w:rsidR="0014165C" w:rsidRPr="0014165C" w:rsidRDefault="009E7E48" w:rsidP="0014165C"><w:pPr><w:spacing w:after="160" w:line="278" w:lineRule="auto"/></w:pPr><w:r w:rsidRPr="009E7E48"><w:t>Devotees may feel protected, guided, and spiritually uplifted after the ritual
+- enhancing and uplifting the law of Dharma
+<w:tc><w:tcPr><w:tcW w:w="13585" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="DAE9F7" w:themeFill="text2" w:themeFillTint="1A"/></w:tcPr><w:p w14:paraId="658C16E3" w14:textId="77777777" w:rsidR="005104AF" w:rsidRDefault="005104AF" w:rsidP="00011D62"><w:pPr><w:jc w:val="center"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr><w:r w:rsidRPr="00C23383"><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Blessing f
+rom
+ us to you
+<w:tc><w:tcPr><w:tcW w:w="4675" w:type="dxa"/></w:tcPr><w:p w14:paraId="67697E1F" w14:textId="6D23A113" w:rsidR="00C23383" w:rsidRPr="0014165C" w:rsidRDefault="00C23383" w:rsidP="00180A27"><w:r><w:t>Blessings
+<w:tcPr><w:tcW w:w="8910" w:type="dxa"/></w:tcPr><w:p w14:paraId="37610874" w14:textId="6788F6B9" w:rsidR="00C23383" w:rsidRPr="00754C54" w:rsidRDefault="00754C54" w:rsidP="003D64F4"><w:r w:rsidRPr="00754C54"><w:t xml:space="preserve">We 
+wish everyone a blessed 
+Ganesha Chaturthi
+, may you be blessed with good health, growing wealth, and a prosperous family life. 
+Wishing you clarity of mind, smoother life path, removal of challenges, spiritual grounding, and success
+.

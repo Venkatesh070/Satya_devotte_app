@@ -21,6 +21,7 @@ class AuthController extends GetxController {
   final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
   final _userRole = RxString('user');
+  bool _authApiInFlight = false;
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
@@ -40,6 +41,8 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Web skips splash, so restore persisted session/role here as well.
+    Future.microtask(loadSavedSession);
     _firebaseService.authStateChanges.listen((state) {
       _isAuthenticated.value = state;
     });
@@ -75,6 +78,11 @@ class AuthController extends GetxController {
 
   // ─── Google Sign-In ──────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
+    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
     _isGoogleSignInLoading.value = true;
     _lastAuthError.value = null;
     try {
@@ -112,6 +120,7 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isGoogleSignInLoading.value = false;
+      _authApiInFlight = false;
     }
   }
 
@@ -120,6 +129,11 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
+    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
     _isEmailSignInLoading.value = true;
     _lastAuthError.value = null;
     try {
@@ -160,6 +174,7 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
     }
   }
 
@@ -168,6 +183,11 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
+    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
     _isEmailSignInLoading.value = true;
     _lastAuthError.value = null;
     try {
@@ -208,6 +228,7 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
     }
   }
 
@@ -258,6 +279,9 @@ class AuthController extends GetxController {
         return 'Unable to reach login server. Please check server and network.';
       }
       final statusCode = error.response?.statusCode;
+      if (statusCode == 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
       if (statusCode == 401 || statusCode == 403) {
         return 'Login verification failed by server.';
       }
@@ -292,6 +316,9 @@ class AuthController extends GetxController {
         return 'Unable to reach login server. Please check server and network.';
       }
       final statusCode = error.response?.statusCode;
+      if (statusCode == 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
       if (statusCode == 401 || statusCode == 403) {
         return 'Login verification failed by server.';
       }
@@ -323,6 +350,9 @@ class AuthController extends GetxController {
         return 'Unable to reach login server. Please check server and network.';
       }
       final statusCode = error.response?.statusCode;
+      if (statusCode == 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
       if (statusCode != null && statusCode >= 500) {
         return 'Server error during signup. Please try again.';
       }

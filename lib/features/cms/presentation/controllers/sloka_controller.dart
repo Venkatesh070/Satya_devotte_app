@@ -78,6 +78,8 @@ class SlokaController extends GetxController {
     required String sloka,
     required String author,
     String? meaning,
+    String? contemplation,
+    String? prayer,
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -87,6 +89,8 @@ class SlokaController extends GetxController {
         sloka: sloka,
         author: author,
         meaning: meaning,
+        contemplation: contemplation,
+        prayer: prayer,
         date: selectedDateStr, // DD-MM-YYYY
       );
       final result = await _dataSource.createOrUpdateSloka(model);

@@ -33,6 +33,9 @@ class _HomePageState extends State<HomePage> {
   bool _isFetchingHome = false;
   String _dailySloka = HomeConstants.quote;
   String _slokaAuthor = '- Bhagavad Gita';
+  String _slokaMeaning = '';
+  String _slokaContemplation = '';
+  String _slokaPrayer = '';
   List<HomeCircleItem> _poojas = HomeConstants.upcomingPooja;
   List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
   List<HomeCircleItem> _donations = HomeConstants.donations;
@@ -101,6 +104,15 @@ class _HomePageState extends State<HomePage> {
       final parsedAuthor = slokaData is Map<String, dynamic>
           ? slokaData['author']?.toString().trim()
           : null;
+      final parsedMeaning = slokaData is Map<String, dynamic>
+          ? slokaData['meaning']?.toString().trim()
+          : null;
+      final parsedContemplation = slokaData is Map<String, dynamic>
+          ? slokaData['contemplation']?.toString().trim()
+          : null;
+      final parsedPrayer = slokaData is Map<String, dynamic>
+          ? slokaData['prayer']?.toString().trim()
+          : null;
 
       final parsedPoojas = _mapHomeItems(
         poojasData,
@@ -124,6 +136,9 @@ class _HomePageState extends State<HomePage> {
         if (parsedAuthor != null && parsedAuthor.isNotEmpty) {
           _slokaAuthor = '- $parsedAuthor';
         }
+        _slokaMeaning = parsedMeaning ?? '';
+        _slokaContemplation = parsedContemplation ?? '';
+        _slokaPrayer = parsedPrayer ?? '';
         if (parsedPoojas.isNotEmpty) {
           _poojas = parsedPoojas;
         }
@@ -214,6 +229,9 @@ class _HomePageState extends State<HomePage> {
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
             dailySloka: _dailySloka,
             slokaAuthor: _slokaAuthor,
+            slokaMeaning: _slokaMeaning,
+            slokaContemplation: _slokaContemplation,
+            slokaPrayer: _slokaPrayer,
             poojas: _poojas,
             festivals: _festivals,
             donations: _donations,
@@ -258,6 +276,9 @@ class _HomeTabContent extends StatelessWidget {
     required this.onScrollDirectionChanged,
     required this.dailySloka,
     required this.slokaAuthor,
+    required this.slokaMeaning,
+    required this.slokaContemplation,
+    required this.slokaPrayer,
     required this.poojas,
     required this.festivals,
     required this.donations,
@@ -267,6 +288,9 @@ class _HomeTabContent extends StatelessWidget {
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
   final String dailySloka;
   final String slokaAuthor;
+  final String slokaMeaning;
+  final String slokaContemplation;
+  final String slokaPrayer;
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
   final List<HomeCircleItem> donations;
@@ -283,7 +307,13 @@ class _HomeTabContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 0),
         child: Column(
           children: [
-            _HomeHeader(dailySloka: dailySloka, slokaAuthor: slokaAuthor),
+            _HomeHeader(
+              dailySloka: dailySloka,
+              slokaAuthor: slokaAuthor,
+              slokaMeaning: slokaMeaning,
+              slokaContemplation: slokaContemplation,
+              slokaPrayer: slokaPrayer,
+            ),
             Padding(
               padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
               child: _HomeBodySections(
@@ -708,10 +738,19 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.dailySloka, required this.slokaAuthor});
+  const _HomeHeader({
+    required this.dailySloka,
+    required this.slokaAuthor,
+    required this.slokaMeaning,
+    required this.slokaContemplation,
+    required this.slokaPrayer,
+  });
 
   final String dailySloka;
   final String slokaAuthor;
+  final String slokaMeaning;
+  final String slokaContemplation;
+  final String slokaPrayer;
 
   @override
   Widget build(BuildContext context) {
@@ -795,7 +834,13 @@ class _HomeHeader extends StatelessWidget {
                 const SizedBox(height: 20),
                 const _HeaderDivider(),
                 const SizedBox(height: 12),
-                _QuoteCard(quote: dailySloka, author: slokaAuthor),
+                _QuoteCard(
+                  quote: dailySloka,
+                  author: slokaAuthor,
+                  meaning: slokaMeaning,
+                  contemplation: slokaContemplation,
+                  prayer: slokaPrayer,
+                ),
                 const SizedBox(height: 12),
                 const _HeaderDivider(),
               ],
@@ -822,16 +867,50 @@ class _HeaderDivider extends StatelessWidget {
   }
 }
 
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.quote, required this.author});
+class _QuoteCard extends StatefulWidget {
+  const _QuoteCard({
+    required this.quote,
+    required this.author,
+    required this.meaning,
+    required this.contemplation,
+    required this.prayer,
+  });
 
   final String quote;
   final String author;
+  final String meaning;
+  final String contemplation;
+  final String prayer;
+
+  @override
+  State<_QuoteCard> createState() => _QuoteCardState();
+}
+
+class _QuoteCardState extends State<_QuoteCard> {
+  int _selectedTab = 0;
 
   static const double _cardRadius = 16;
   static const double _flowerSize = 100;
   static const double _horizontalAttach = 22;
   static const double _cardHeight = 172;
+
+  String get _tabText {
+    switch (_selectedTab) {
+      case 1:
+        return widget.contemplation.trim().isNotEmpty
+            ? widget.contemplation.trim()
+            : 'No contemplation available.';
+      case 2:
+        return widget.prayer.trim().isNotEmpty
+            ? widget.prayer.trim()
+            : 'No prayer available.';
+      case 0:
+      default:
+        return widget.meaning.trim().isNotEmpty
+            ? widget.meaning.trim()
+            : widget.quote;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -890,7 +969,7 @@ class _QuoteCard extends StatelessWidget {
                       Expanded(
                         child: Center(
                           child: Text(
-                            quote,
+                            _tabText,
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.lora(
@@ -905,7 +984,7 @@ class _QuoteCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        author,
+                        _selectedTab == 0 ? 'Meaning' : _selectedTab == 1 ? 'Contemplation' : 'Prayer / Resolve',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.lora(
@@ -914,6 +993,27 @@ class _QuoteCard extends StatelessWidget {
                           fontStyle: FontStyle.italic,
                           fontWeight: FontWeight.w500,
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _SlokaTabBtn(
+                            label: 'Meaning',
+                            selected: _selectedTab == 0,
+                            onTap: () => setState(() => _selectedTab = 0),
+                          ),
+                          _SlokaTabBtn(
+                            label: 'Contemplation',
+                            selected: _selectedTab == 1,
+                            onTap: () => setState(() => _selectedTab = 1),
+                          ),
+                          _SlokaTabBtn(
+                            label: 'Prayer / Resolve',
+                            selected: _selectedTab == 2,
+                            onTap: () => setState(() => _selectedTab = 2),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -925,6 +1025,41 @@ class _QuoteCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SlokaTabBtn extends StatelessWidget {
+  const _SlokaTabBtn({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: selected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: selected ? Colors.white.withOpacity(0.5) : Colors.transparent,
+        ),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.inter(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    ),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {

@@ -7,6 +7,8 @@ class SlokaModel {
     required this.date, // DD-MM-YYYY (API format)
     required this.author,
     this.meaning,
+    this.contemplation,
+    this.prayer,
     this.createdAt,
     this.updatedAt,
   });
@@ -16,6 +18,8 @@ class SlokaModel {
   final String date; // DD-MM-YYYY
   final String author;
   final String? meaning;
+  final String? contemplation;
+  final String? prayer;
   final String? createdAt;
   final String? updatedAt;
 
@@ -86,6 +90,8 @@ class SlokaModel {
       date: _str(json, ['date']),
       author: _str(json, ['author']),
       meaning: _str(json, ['meaning', 'translation', 'meaningText']),
+      contemplation: _str(json, ['contemplation']),
+      prayer: _str(json, ['prayer']),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
     );
@@ -101,6 +107,9 @@ class SlokaModel {
     'sloka': sloka,
     'author': author,
     if (meaning != null && meaning!.trim().isNotEmpty) 'meaning': meaning,
+    if (contemplation != null && contemplation!.trim().isNotEmpty)
+      'contemplation': contemplation,
+    if (prayer != null && prayer!.trim().isNotEmpty) 'prayer': prayer,
     'date': date, // DD-MM-YYYY
   };
 }

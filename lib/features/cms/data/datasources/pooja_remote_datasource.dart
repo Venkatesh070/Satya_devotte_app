@@ -60,6 +60,31 @@ class PoojaRemoteDataSource {
     );
   }
 
+  // ── GET /deities — for Add Pooja dropdown ───────────────────
+  Future<List<Map<String, String>>> getDeities() async {
+    final response = await _apiClient.dio.get(ApiEndpoints.deities);
+    final raw = response.data;
+    List<dynamic> list = const [];
+    if (raw is Map<String, dynamic>) {
+      final d = raw['data'];
+      if (d is List) list = d;
+      if (d is Map && d['deities'] is List) list = d['deities'] as List;
+      if (list.isEmpty && raw['deities'] is List) list = raw['deities'] as List;
+    } else if (raw is List) {
+      list = raw;
+    }
+
+    return list.whereType<Map>().map((e) {
+      final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+      final name =
+          e['name']?.toString() ??
+          e['title']?.toString() ??
+          e['deityName']?.toString() ??
+          '';
+      return {'id': id.trim(), 'name': name.trim()};
+    }).where((e) => e['id']!.isNotEmpty).toList();
+  }
+
   // ── CREATE pooja — multipart/form-data with optional media files ──
   Future<PoojaModel> createPooja(
     PoojaModel pooja, {
@@ -67,7 +92,18 @@ class PoojaRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
   }) async {
-    final formMap = <String, dynamic>{...pooja.toJson()};
+    final hasMedia = image != null || audio != null || video != null;
+    if (!hasMedia) {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.createPooja,
+        data: pooja.toJson(),
+      );
+      return PoojaModel.fromJson(
+        _extractSingle(response.data as Map<String, dynamic>),
+      );
+    }
+
+    final formMap = _toMultipartFields(pooja.toJson());
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
@@ -103,7 +139,18 @@ class PoojaRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
   }) async {
-    final formMap = <String, dynamic>{...pooja.toJson()};
+    final hasMedia = image != null || audio != null || video != null;
+    if (!hasMedia) {
+      final response = await _apiClient.dio.patch(
+        ApiEndpoints.updatePooja(id),
+        data: pooja.toJson(),
+      );
+      return PoojaModel.fromJson(
+        _extractSingle(response.data as Map<String, dynamic>),
+      );
+    }
+
+    final formMap = _toMultipartFields(pooja.toJson());
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
@@ -179,5 +226,29 @@ class PoojaRemoteDataSource {
     final d = body['data'];
     if (d is Map<String, dynamic>) return d;
     return body;
+  }
+
+  Map<String, dynamic> _toMultipartFields(Map<String, dynamic> source) {
+    final out = <String, dynamic>{};
+
+    void append(String key, dynamic value) {
+      if (value == null) return;
+      if (value is Map) {
+        value.forEach((k, v) {
+          append('$key[$k]', v);
+        });
+        return;
+      }
+      if (value is List) {
+        for (var i = 0; i < value.length; i++) {
+          append('$key[$i]', value[i]);
+        }
+        return;
+      }
+      out[key] = value;
+    }
+
+    source.forEach((k, v) => append(k, v));
+    return out;
   }
 }

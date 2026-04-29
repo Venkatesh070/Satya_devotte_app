@@ -508,15 +508,37 @@ class _StatusChip extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 // TODAY'S SLOKA CARD
 // ════════════════════════════════════════════════════════════════
-class _TodaySlokaCard extends StatelessWidget {
+class _TodaySlokaCard extends StatefulWidget {
   const _TodaySlokaCard({required this.sloka});
   final Map<String, dynamic> sloka;
 
   @override
+  State<_TodaySlokaCard> createState() => _TodaySlokaCardState();
+}
+
+class _TodaySlokaCardState extends State<_TodaySlokaCard> {
+  int _selectedTab = -1; // -1 Sloka, 0 Meaning, 1 Contemplation, 2 Prayer
+
+  String _tabText() {
+    switch (_selectedTab) {
+      case 1:
+        return (widget.sloka['contemplation'] as String? ?? '').trim();
+      case 2:
+        return (widget.sloka['prayer'] as String? ?? '').trim();
+      case 0:
+      default:
+        return (widget.sloka['meaning'] as String? ?? '').trim();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final text = sloka['sloka'] as String? ?? '';
-    final author = sloka['author'] as String? ?? '';
-    final date = sloka['dateKey'] as String? ?? '';
+    final fallback = (widget.sloka['sloka'] as String? ?? '').trim();
+    final text = _selectedTab == -1
+        ? fallback
+        : (_tabText().isNotEmpty ? _tabText() : fallback);
+    final author = widget.sloka['author'] as String? ?? '';
+    final date = widget.sloka['dateKey'] as String? ?? '';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -622,10 +644,91 @@ class _TodaySlokaCard extends StatelessWidget {
               ],
             ),
           ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _SlokaActionBtn(
+                  label: 'Meaning',
+                  icon: Icons.search_outlined,
+                  selected: _selectedTab == 0,
+                  onTap: () => setState(() => _selectedTab = 0),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SlokaActionBtn(
+                  label: 'Contemplation',
+                  icon: Icons.self_improvement_outlined,
+                  selected: _selectedTab == 1,
+                  onTap: () => setState(() => _selectedTab = 1),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SlokaActionBtn(
+                  label: 'Prayer / Resolve',
+                  icon: Icons.spa_outlined,
+                  selected: _selectedTab == 2,
+                  onTap: () => setState(() => _selectedTab = 2),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+}
+
+class _SlokaActionBtn extends StatelessWidget {
+  const _SlokaActionBtn({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: selected ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: selected ? Colors.white.withOpacity(0.35) : Colors.white.withOpacity(0.12),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: selected ? CmsColors.orange : Colors.white70,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              color: selected ? Colors.white : Colors.white70,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // ════════════════════════════════════════════════════════════════

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -22,6 +24,7 @@ class CmsRitualsContent extends StatefulWidget {
 
 class _CmsRitualsContentState extends State<CmsRitualsContent> {
   final PoojaController _controller = Get.find<PoojaController>();
+  final FestivalController _festivalController = Get.find<FestivalController>();
   bool _showAddForm = false;
   PoojaModel? _editingPooja;
 
@@ -57,10 +60,13 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
     }
     return _PoojaList(
       controller: _controller,
-      onAdd: () => setState(() {
-        _editingPooja = null;
-        _showAddForm = true;
-      }),
+      onAdd: () {
+        _festivalController.loadFestivals();
+        setState(() {
+          _editingPooja = null;
+          _showAddForm = true;
+        });
+      },
       onEdit: (p) => setState(() {
         _editingPooja = p;
         _showAddForm = true;
@@ -813,16 +819,69 @@ class _PoojaForm extends StatefulWidget {
 
 class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _titleCtrl;
+  late final TextEditingController _deityCtrl;
   late final TextEditingController _durationCtrl;
   late final TextEditingController _descCtrl;
-  final _stepCtrl = TextEditingController();
+  late final TextEditingController _purposeWhyCtrl;
+  late final TextEditingController _purposeBenefitsCtrl;
+  late final TextEditingController _deitySummaryAboutCtrl;
+  late final TextEditingController _deitySummaryBlessingsCtrl;
+  late final TextEditingController _prepPersonalCtrl;
+  late final TextEditingController _prepSpaceCtrl;
+  late final TextEditingController _prepItemsCtrl;
+  late final TextEditingController _mantraPrimaryCtrl;
+  late final TextEditingController _mantraRepetitionsCtrl;
+  late final TextEditingController _mantraAdditionalCtrl;
+  late final TextEditingController _mantraMeaningCtrl;
+  late final TextEditingController _guidanceMindsetCtrl;
+  late final TextEditingController _guidanceAvoidCtrl;
+  late final TextEditingController _completionClosureCtrl;
+  late final TextEditingController _completionIntegrationCtrl;
+  late final TextEditingController _completionBenefitsCtrl;
+  late final TextEditingController _completionBlessingsCtrl;
+  late final TextEditingController _offeringsTitleCtrl;
+  late final TextEditingController _offeringsDescCtrl;
+  late final TextEditingController _actionsTitleCtrl;
+  late final TextEditingController _actionsDescCtrl;
+  late final TextEditingController _symbolismTitleCtrl;
+  late final TextEditingController _symbolismDescCtrl;
+  final _stepTitleCtrl = TextEditingController();
+  final _stepDescCtrl = TextEditingController();
   final _itemCtrl = TextEditingController();
 
-  late String _deity;
   late String _difficulty;
   late String _category;
-  late List<String> _steps;
+  late List<_StepDraft> _stepEntries;
   late List<String> _items;
+  late List<String> _purposeBenefits;
+  late List<String> _deitySummaryBlessings;
+  late List<String> _mantraAdditional;
+  late List<String> _preparationPersonal;
+  late List<String> _preparationSpace;
+  late List<String> _guidanceMindset;
+  late List<String> _guidanceAvoid;
+  late List<String> _completionClosure;
+  late List<String> _completionIntegration;
+  late List<String> _completionBenefits;
+  late List<String> _completionBlessings;
+  late List<String> _selectedFestivalIds;
+  late List<Map<String, String>> _offeringsMeaningEntries;
+  late List<Map<String, String>> _actionsMeaningEntries;
+  late List<Map<String, String>> _otherSymbolismEntries;
+  bool _showStepEditor = false;
+  bool _showOfferingsEditor = false;
+  bool _showActionsEditor = false;
+  bool _showOtherSymbolismEditor = false;
+
+  FestivalController get _festivalCtrl => Get.find<FestivalController>();
+
+  List<FestivalModel> get _approvedFestivals => _festivalCtrl.festivals
+      .where(
+        (f) =>
+            f.status.toLowerCase() == 'approved' ||
+            f.status.toLowerCase() == 'published',
+      )
+      .toList();
   PickedFile? _pickedImage;
   PickedFile? _pickedAudio;
   PickedFile? _pickedVideo;
@@ -831,17 +890,6 @@ class _PoojaFormState extends State<_PoojaForm> {
   String? _audioUrl;
   String? _videoUrl;
 
-  static const _deities = [
-    'Lord Ganesha',
-    'Goddess Lakshmi',
-    'Lord Shiva',
-    'Lord Hanuman',
-    'Lord Vishnu',
-    'Goddess Durga',
-    'Lord Krishna',
-    'Lord Rama',
-    'Goddess Saraswati',
-  ];
   static const _diffs = ['Beginner', 'Intermediate', 'Advanced'];
   static const _cats = [
     'Daily Pooja',
@@ -859,36 +907,352 @@ class _PoojaFormState extends State<_PoojaForm> {
     super.initState();
     final p = widget.pooja;
     _titleCtrl = TextEditingController(text: p?.title ?? '');
+    _deityCtrl = TextEditingController(text: p?.deity ?? '');
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
-    _deity = _deities.contains(p?.deity) ? p!.deity : _deities.first;
+    _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
+    _purposeBenefitsCtrl = TextEditingController();
+    _deitySummaryAboutCtrl = TextEditingController(
+      text: p?.deitySummaryAbout ?? '',
+    );
+    _deitySummaryBlessingsCtrl = TextEditingController();
+    _prepPersonalCtrl = TextEditingController();
+    _prepSpaceCtrl = TextEditingController();
+    _prepItemsCtrl = TextEditingController(
+      text: p?.preparationItems.join('\n') ?? p?.requiredItems.join('\n') ?? '',
+    );
+    _mantraPrimaryCtrl = TextEditingController(text: p?.mantraPrimary ?? '');
+    _mantraRepetitionsCtrl = TextEditingController(
+      text: p?.mantraRepetitions ?? '',
+    );
+    _mantraAdditionalCtrl = TextEditingController();
+    _mantraMeaningCtrl = TextEditingController(text: p?.mantraMeaning ?? '');
+    _guidanceMindsetCtrl = TextEditingController();
+    _guidanceAvoidCtrl = TextEditingController();
+    _completionClosureCtrl = TextEditingController();
+    _completionIntegrationCtrl = TextEditingController();
+    _completionBenefitsCtrl = TextEditingController();
+    _completionBlessingsCtrl = TextEditingController();
+    _offeringsTitleCtrl = TextEditingController();
+    _offeringsDescCtrl = TextEditingController();
+    _actionsTitleCtrl = TextEditingController();
+    _actionsDescCtrl = TextEditingController();
+    _symbolismTitleCtrl = TextEditingController();
+    _symbolismDescCtrl = TextEditingController();
     _difficulty = _diffs.contains(p?.difficulty) ? p!.difficulty : _diffs.first;
     _category = _cats.contains(p?.category) ? p!.category : _cats.first;
-    _steps = List.from(p?.steps ?? []);
+    _stepEntries = (p?.steps ?? <String>[]).map(_decodeStoredStep).toList();
     _items = List.from(p?.requiredItems ?? []);
+    _purposeBenefits = List.from(p?.purposeBenefits ?? const []);
+    _deitySummaryBlessings = List.from(p?.deitySummaryBlessings ?? const []);
+    _mantraAdditional = List.from(p?.mantraAdditional ?? const []);
+    _preparationPersonal = List.from(p?.preparationPersonal ?? const []);
+    _preparationSpace = List.from(p?.preparationSpace ?? const []);
+    _guidanceMindset = List.from(p?.guidanceMindset ?? const []);
+    _guidanceAvoid = List.from(p?.guidanceAvoid ?? const []);
+    _completionClosure = List.from(p?.completionClosure ?? const []);
+    _completionIntegration = List.from(p?.completionIntegration ?? const []);
+    _completionBenefits = List.from(p?.completionBenefits ?? const []);
+    _completionBlessings = List.from(p?.blessings ?? const []);
+    _selectedFestivalIds = List.from(p?.festivalIds ?? const []);
+    _offeringsMeaningEntries = List.from(p?.spiritualOfferingsMeaning ?? const []);
+    _actionsMeaningEntries = List.from(p?.spiritualActionsMeaning ?? const []);
+    _otherSymbolismEntries = List.from(p?.spiritualOtherSymbolism ?? const []);
     _imageUrl = p?.imageUrl;
     _audioUrl = p?.audioUrl;
     _videoUrl = p?.videoUrl;
+    if (_festivalCtrl.festivals.isEmpty) {
+      Future.microtask(_festivalCtrl.loadFestivals);
+    }
+    if (widget.controller.deities.isEmpty) {
+      Future.microtask(widget.controller.loadDeities);
+    }
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _deityCtrl.dispose();
     _durationCtrl.dispose();
     _descCtrl.dispose();
-    _stepCtrl.dispose();
+    _purposeWhyCtrl.dispose();
+    _purposeBenefitsCtrl.dispose();
+    _deitySummaryAboutCtrl.dispose();
+    _deitySummaryBlessingsCtrl.dispose();
+    _prepPersonalCtrl.dispose();
+    _prepSpaceCtrl.dispose();
+    _prepItemsCtrl.dispose();
+    _mantraPrimaryCtrl.dispose();
+    _mantraRepetitionsCtrl.dispose();
+    _mantraAdditionalCtrl.dispose();
+    _mantraMeaningCtrl.dispose();
+    _guidanceMindsetCtrl.dispose();
+    _guidanceAvoidCtrl.dispose();
+    _completionClosureCtrl.dispose();
+    _completionIntegrationCtrl.dispose();
+    _completionBenefitsCtrl.dispose();
+    _completionBlessingsCtrl.dispose();
+    _offeringsTitleCtrl.dispose();
+    _offeringsDescCtrl.dispose();
+    _actionsTitleCtrl.dispose();
+    _actionsDescCtrl.dispose();
+    _symbolismTitleCtrl.dispose();
+    _symbolismDescCtrl.dispose();
+    _stepTitleCtrl.dispose();
+    _stepDescCtrl.dispose();
     _itemCtrl.dispose();
     super.dispose();
   }
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
+    if (_deityCtrl.text.trim().isEmpty) return 'Deity ID is required';
     if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     return null;
   }
 
+  List<String> _toList(String value) => value
+      .split(RegExp(r'[\n,]'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+
+  _StepDraft _decodeStoredStep(String raw) {
+    final parts = raw.split('||');
+    if (parts.length < 2) {
+      return _StepDraft(title: raw.trim(), description: '');
+    }
+    return _StepDraft(
+      title: parts.first.trim(),
+      description: parts.sublist(1).join('||').trim(),
+    );
+  }
+
+  String _encodeStoredStep(_StepDraft step) {
+    final title = step.title.trim();
+    final description = step.description.trim();
+    if (description.isEmpty) return title;
+    return '$title||$description';
+  }
+
+  List<String> _serializedSteps() =>
+      _stepEntries.map(_encodeStoredStep).where((e) => e.isNotEmpty).toList();
+
+  void _addStepEntry() {
+    final title = _stepTitleCtrl.text.trim();
+    final description = _stepDescCtrl.text.trim();
+    if (title.isEmpty && description.isEmpty) return;
+    setState(() {
+      _stepEntries.add(
+        _StepDraft(
+          title: title.isEmpty ? 'Untitled Step' : title,
+          description: description,
+        ),
+      );
+      _stepTitleCtrl.clear();
+      _stepDescCtrl.clear();
+      _showStepEditor = false;
+    });
+  }
+
+  void _addChipValue(TextEditingController ctrl, List<String> target) {
+    final value = ctrl.text.trim();
+    if (value.isEmpty) return;
+    if (!target.contains(value)) {
+      target.add(value);
+    }
+    ctrl.clear();
+  }
+
+  void _addKeyValueEntry({
+    required TextEditingController titleCtrl,
+    required TextEditingController descCtrl,
+    required List<Map<String, String>> target,
+    required void Function() onAdded,
+  }) {
+    final title = titleCtrl.text.trim();
+    final description = descCtrl.text.trim();
+    if (title.isEmpty && description.isEmpty) return;
+    target.add({
+      'title': title.isEmpty ? 'Untitled' : title,
+      'description': description,
+    });
+    titleCtrl.clear();
+    descCtrl.clear();
+    onAdded();
+  }
+
+  void _applyGaneshaTemplate() {
+    _titleCtrl.text = 'Ganesha Pooja';
+    _durationCtrl.text = '45-60 min';
+    _category = 'Festival';
+    _difficulty = 'Beginner';
+    _descCtrl.text =
+        'A devotional Ganesha ritual performed for obstacle removal, clarity, prosperity, and spiritual grounding.';
+    _purposeWhyCtrl.text =
+        'This ritual honors Lord Ganesha and is performed for blessings, obstacle removal, and auspicious beginnings.';
+    _purposeBenefits = [
+      'Peace of mind',
+      'smoother life path',
+      'removal of challenges',
+      'spiritual grounding',
+      'success',
+    ];
+    _deitySummaryAboutCtrl.text =
+        'Lord Ganesha is the son of Shiva and Parvati, worshipped as remover of obstacles and giver of wisdom and prosperity.';
+    _deitySummaryBlessings = [
+      'Obstacle removal',
+      'intellect',
+      'protection',
+      'prosperity',
+      'spiritual strength',
+    ];
+    _prepPersonalCtrl.text =
+        'Take a bath and wear clean clothes\nApproach with a calm, focused mind\nAvoid arguments and harsh words';
+    _prepSpaceCtrl.text =
+        'Clean home entrances and prayer space\nKeep the altar neat and peaceful\nSprinkle turmeric water for purification';
+    _items = [
+      'Ganesha idol (murthi)',
+      'Incense sticks',
+      'Clay lamp (diya), oil, wick',
+      'Bell',
+      'Betel leaves and betel nuts',
+      'Sugar/sugar candy',
+      'Durva grass',
+      'Coconut',
+      'Flowers',
+      'Camphor',
+      'Turmeric and kumkum',
+      'Fruits, milk, and water',
+    ];
+    _prepItemsCtrl.text = _items.join('\n');
+    _stepEntries = const [
+      _StepDraft(
+        title: 'Setup',
+        description: 'Arrange offerings, tray, diya, and bell.',
+      ),
+      _StepDraft(
+        title: 'Invocation',
+        description: 'Light incense and chant opening prayers.',
+      ),
+      _StepDraft(
+        title: 'Offerings',
+        description: 'Offer flowers with mantra repetition.',
+      ),
+      _StepDraft(
+        title: 'Sacred actions',
+        description: 'Perform aarti and clockwise circling of flame.',
+      ),
+      _StepDraft(
+        title: 'Chanting and prayer',
+        description: 'Continue mantra and devotional focus.',
+      ),
+      _StepDraft(
+        title: 'Personal prayer',
+        description: 'Pray sincerely for blessings.',
+      ),
+      _StepDraft(
+        title: 'Atmosphere enhancement',
+        description: 'Bhajans and peaceful ambience.',
+      ),
+      _StepDraft(title: 'Closure', description: 'Bow in gratitude and surrender.'),
+      _StepDraft(
+        title: 'Prasad distribution',
+        description: 'Share blessed offerings.',
+      ),
+    ];
+    _mantraPrimaryCtrl.text = 'Om Shree Ganeshaya Namaha';
+    _mantraRepetitionsCtrl.text = '9 or multiples of 9 up to 108';
+    _mantraAdditional = ['Ganapati Bappa Morya, Mangal Murti Morya (3 times)'];
+    _mantraMeaningCtrl.text =
+        'Chanting raises vibration, removes obstacles, and aligns the devotee with peace and divine guidance.';
+    _offeringsMeaningEntries = [
+      {
+        'title': 'Coconut',
+        'description': 'Surrender of ego and awakening of divine consciousness',
+      },
+      {
+        'title': 'Flowers',
+        'description': 'Offering joy, devotion, and spiritual connection',
+      },
+    ];
+    _actionsMeaningEntries = [
+      {
+        'title': 'Aarti (circling flame)',
+        'description':
+            'Removal of darkness and ignorance, offering mind-body-soul',
+      },
+    ];
+    _otherSymbolismEntries = [
+      {'title': 'Durva grass', 'description': 'Simplicity and grounded devotion'},
+      {
+        'title': 'Cleaning home',
+        'description': 'Invites purity and divine presence',
+      },
+      {
+        'title': 'Chant repetitions',
+        'description': 'Transform obstacles into opportunities',
+      },
+    ];
+    _preparationPersonal = [
+      'Take a bath and wear clean clothes',
+      'Approach with a calm, focused mind',
+      'Avoid arguments and harsh words',
+    ];
+    _preparationSpace = [
+      'Clean home entrances and prayer space',
+      'Keep the altar neat and peaceful',
+      'Sprinkle turmeric water for purification',
+    ];
+    _guidanceMindset = ['Devotion', 'Humility', 'Gratitude', 'Sincerity'];
+    _guidanceAvoid = [
+      'Negative intention',
+      'Praying for harm',
+      'Distractions',
+      'Fighting, harsh words, disharmony',
+    ];
+    _completionClosure = [
+      'Offer gratitude',
+      'Bow down in surrender',
+      'Sit in silence for a few moments',
+    ];
+    _completionIntegration = [
+      'Maintain faith',
+      'Act with clarity',
+      'Trust obstacles are being removed',
+    ];
+    _completionBenefits = [
+      'Reduced obstacles',
+      'Mental clarity',
+      'Improved flow in life',
+      'Inner peace',
+      'Spiritual upliftment',
+    ];
+    _completionBlessings = [
+      'May you be blessed with good health, growing wealth, and a prosperous family life.',
+    ];
+    final approved = _approvedFestivals;
+    if (approved.isNotEmpty) {
+      _selectedFestivalIds = [approved.first.id];
+    }
+  }
+
+  String _festivalLabelById(String id) {
+    final found = _festivalCtrl.festivals.firstWhereOrNull((f) => f.id == id);
+    return found?.title ?? id;
+  }
+
   Future<void> _submit({required bool isDraft}) async {
+    // Build blessings payload directly from both chips + current input text.
+    // This avoids losing values when user doesn't tap "+" before submit.
+    final blessingsPayload = <String>{
+      ..._completionBlessings
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty),
+      ..._toList(_completionBlessingsCtrl.text),
+    }.toList();
+
     final err = _validate();
     if (err != null) {
       Get.snackbar(
@@ -911,7 +1275,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         pickedVideo: _pickedVideo,
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
-          deity: _deity,
+          deity: _deityCtrl.text.trim(),
           category: _category,
           difficulty: _difficulty,
           duration: _durationCtrl.text.trim(),
@@ -920,8 +1284,29 @@ class _PoojaFormState extends State<_PoojaForm> {
           imageUrl: _imageUrl,
           audioUrl: _audioUrl,
           videoUrl: _videoUrl,
-          steps: _steps,
+          steps: _serializedSteps(),
           requiredItems: _items,
+          purposeWhy: _purposeWhyCtrl.text.trim(),
+          purposeBenefits: _purposeBenefits,
+          deitySummaryAbout: _deitySummaryAboutCtrl.text.trim(),
+          deitySummaryBlessings: _deitySummaryBlessings,
+          preparationPersonal: _preparationPersonal,
+          preparationSpace: _preparationSpace,
+          preparationItems: _toList(_prepItemsCtrl.text),
+          mantraPrimary: _mantraPrimaryCtrl.text.trim(),
+          mantraRepetitions: _mantraRepetitionsCtrl.text.trim(),
+          mantraAdditional: _mantraAdditional,
+          mantraMeaning: _mantraMeaningCtrl.text.trim(),
+          spiritualOfferingsMeaning: _offeringsMeaningEntries,
+          spiritualActionsMeaning: _actionsMeaningEntries,
+          spiritualOtherSymbolism: _otherSymbolismEntries,
+          guidanceMindset: _guidanceMindset,
+          guidanceAvoid: _guidanceAvoid,
+          completionClosure: _completionClosure,
+          completionIntegration: _completionIntegration,
+          completionBenefits: _completionBenefits,
+          blessings: blessingsPayload,
+          festivalIds: _selectedFestivalIds,
         ),
       );
     } else {
@@ -930,7 +1315,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         pickedAudio: _pickedAudio,
         pickedVideo: _pickedVideo,
         title: _titleCtrl.text.trim(),
-        deity: _deity,
+        deity: _deityCtrl.text.trim(),
         category: _category,
         difficulty: _difficulty,
         duration: _durationCtrl.text.trim(),
@@ -939,8 +1324,29 @@ class _PoojaFormState extends State<_PoojaForm> {
         imageUrl: _imageUrl,
         audioUrl: _audioUrl,
         videoUrl: _videoUrl,
-        steps: _steps,
+        steps: _serializedSteps(),
         requiredItems: _items,
+        purposeWhy: _purposeWhyCtrl.text.trim(),
+        purposeBenefits: _purposeBenefits,
+        deitySummaryAbout: _deitySummaryAboutCtrl.text.trim(),
+        deitySummaryBlessings: _deitySummaryBlessings,
+        preparationPersonal: _preparationPersonal,
+        preparationSpace: _preparationSpace,
+        preparationItems: _toList(_prepItemsCtrl.text),
+        mantraPrimary: _mantraPrimaryCtrl.text.trim(),
+        mantraRepetitions: _mantraRepetitionsCtrl.text.trim(),
+        mantraAdditional: _mantraAdditional,
+        mantraMeaning: _mantraMeaningCtrl.text.trim(),
+        spiritualOfferingsMeaning: _offeringsMeaningEntries,
+        spiritualActionsMeaning: _actionsMeaningEntries,
+        spiritualOtherSymbolism: _otherSymbolismEntries,
+        guidanceMindset: _guidanceMindset,
+        guidanceAvoid: _guidanceAvoid,
+        completionClosure: _completionClosure,
+        completionIntegration: _completionIntegration,
+        completionBenefits: _completionBenefits,
+        blessings: blessingsPayload,
+        festivalIds: _selectedFestivalIds,
       );
     }
     if (ok) widget.onSaved();
@@ -985,6 +1391,18 @@ class _PoojaFormState extends State<_PoojaForm> {
                     color: CmsColors.textPrimary,
                   ),
                 ),
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: loading
+                      ? null
+                      : () => setState(() => _applyGaneshaTemplate()),
+                  icon: const Icon(Icons.auto_fix_high, size: 16),
+                  label: const Text('Use Ganesha Template'),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: CmsColors.orange.withOpacity(0.45)),
+                    foregroundColor: CmsColors.orangeDark,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -1013,7 +1431,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       CmsFormCard(
-        title: 'Basic Information',
+        title: 'Ritual Overview',
         children: [
           CmsFormField(
             label: 'Pooja Name *',
@@ -1030,13 +1448,83 @@ class _PoojaFormState extends State<_PoojaForm> {
           Row(
             children: [
               Expanded(
-                child: CmsDropdownField(
-                  label: 'Deity',
-                  items: _deities,
-                  initialValue: _deity,
-                  onChanged: (v) =>
-                      setState(() => _deity = v ?? _deities.first),
-                ),
+                child: Obx(() {
+                  final deities = widget.controller.deities;
+                  final current = _deityCtrl.text.trim();
+                  final value = deities.any((d) => d['id'] == current)
+                      ? current
+                      : null;
+
+                  if (deities.isEmpty) {
+                    return CmsFormField(
+                      label: 'Deity *',
+                      hint: 'Mongo ObjectId of deity',
+                      controller: _deityCtrl,
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Deity *',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: CmsColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: value,
+                        hint: const Text(
+                          'Select deity',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                        items: deities
+                            .map(
+                              (d) => DropdownMenuItem<String>(
+                                value: d['id'],
+                                child: Text(
+                                  (d['name']?.isNotEmpty ?? false)
+                                      ? d['name']!
+                                      : d['id']!,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => _deityCtrl.text = v ?? ''),
+                        decoration: InputDecoration(
+                          hintText: 'Select deity',
+                          filled: true,
+                          fillColor: CmsColors.bg,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: CmsColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: CmsColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: CmsColors.orange),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1064,6 +1552,189 @@ class _PoojaFormState extends State<_PoojaForm> {
             controller: _descCtrl,
             maxLines: 3,
           ),
+          const SizedBox(height: 12),
+          Obx(() {
+            final festivals = _approvedFestivals;
+            final dropdownValue = null;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Associate Festivals',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 40,
+                        child: DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            'festival-dd-${_selectedFestivalIds.join('|')}',
+                          ),
+                          isDense: true,
+                          value: dropdownValue,
+                          items: festivals
+                              .map(
+                                (f) => DropdownMenuItem<String>(
+                                  value: f.id,
+                                  child: Text(
+                                    f.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: festivals.isEmpty
+                              ? null
+                              : (v) => setState(() {
+                                  if (v != null && !_selectedFestivalIds.contains(v)) {
+                                    _selectedFestivalIds.add(v);
+                                  }
+                                }),
+                          decoration: InputDecoration(
+                            hintText: festivals.isEmpty
+                                ? 'No approved festivals available'
+                                : 'Select festival',
+                                hintStyle: const TextStyle(fontSize: 13),
+                            filled: true,
+                            fillColor: CmsColors.bg,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: CmsColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: CmsColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: CmsColors.orange),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_selectedFestivalIds.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _selectedFestivalIds
+                        .map(
+                          (id) => _Chip(
+                            label: _festivalLabelById(id),
+                            onRemove: () =>
+                                setState(() => _selectedFestivalIds.remove(id)),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ],
+            );
+          }),
+        ],
+      ),
+      const SizedBox(height: 16),
+      CmsFormCard(
+        title: 'Purpose of the Ritual',
+        children: [
+          CmsFormField(
+            label: 'Purpose: Why',
+            hint: 'Why this pooja is performed',
+            controller: _purposeWhyCtrl,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Purpose Benefits',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _purposeBenefitsCtrl,
+            hint: 'Add purpose benefit',
+            onAdd: () => setState(
+              () => _addChipValue(_purposeBenefitsCtrl, _purposeBenefits),
+            ),
+          ),
+          if (_purposeBenefits.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _purposeBenefits
+                  .map(
+                    (i) => _Chip(
+                      label: i,
+                      onRemove: () => setState(() => _purposeBenefits.remove(i)),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          CmsFormField(
+            label: 'Deity Summary: About',
+            hint: 'Short description of deity',
+            controller: _deitySummaryAboutCtrl,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Deity Summary: Blessings',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _deitySummaryBlessingsCtrl,
+            hint: 'Add blessing',
+            onAdd: () => setState(
+              () => _addChipValue(
+                _deitySummaryBlessingsCtrl,
+                _deitySummaryBlessings,
+              ),
+            ),
+          ),
+          if (_deitySummaryBlessings.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _deitySummaryBlessings
+                  .map(
+                    (i) => _Chip(
+                      label: i,
+                      onRemove: () =>
+                          setState(() => _deitySummaryBlessings.remove(i)),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
       const SizedBox(height: 16),
@@ -1118,7 +1789,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     children: [
       // Required items
       CmsFormCard(
-        title: 'Required Items',
+        title: 'Preparation Items (Before You Begin)',
         children: [
           _InputRow(
             ctrl: _itemCtrl,
@@ -1155,28 +1826,147 @@ class _PoojaFormState extends State<_PoojaForm> {
         ],
       ),
       const SizedBox(height: 16),
+      CmsFormCard(
+        title: 'Personal & Space Preparation',
+        children: [
+          const Text(
+            'Personal Preparation',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _prepPersonalCtrl,
+            hint: 'Add personal preparation',
+            onAdd: () => setState(
+              () => _addChipValue(_prepPersonalCtrl, _preparationPersonal),
+            ),
+          ),
+          if (_preparationPersonal.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _preparationPersonal
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _preparationPersonal.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Text(
+            'Space Preparation',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _prepSpaceCtrl,
+            hint: 'Add space preparation',
+            onAdd: () => setState(
+              () => _addChipValue(_prepSpaceCtrl, _preparationSpace),
+            ),
+          ),
+          if (_preparationSpace.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _preparationSpace
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _preparationSpace.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+      const SizedBox(height: 16),
 
       // Steps
       CmsFormCard(
-        title: 'Steps',
+        title: 'Step-by-Step Prayer Process',
         children: [
-          _InputRow(
-            ctrl: _stepCtrl,
-            hint: 'Describe this step...',
-            onAdd: () {
-              if (_stepCtrl.text.trim().isNotEmpty) {
-                setState(() => _steps.add(_stepCtrl.text.trim()));
-                _stepCtrl.clear();
-              }
-            },
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Add step',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textSecond,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _showStepEditor = !_showStepEditor),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: CmsColors.orange,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _showStepEditor ? Icons.remove : Icons.add,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
           ),
-          if (_steps.isNotEmpty) ...[
+          if (_showStepEditor) ...[
+            const SizedBox(height: 10),
+            CmsFormField(
+              label: 'Step Title',
+              hint: 'e.g. Invocation',
+              controller: _stepTitleCtrl,
+            ),
+            const SizedBox(height: 10),
+            CmsFormField(
+              label: 'Step Description',
+              hint: 'Describe this step...',
+              controller: _stepDescCtrl,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: _addStepEntry,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Step'),
+              ),
+            ),
+          ],
+          if (_stepEntries.isNotEmpty) ...[
             const SizedBox(height: 12),
-            ..._steps.asMap().entries.map(
+            ..._stepEntries.asMap().entries.map(
               (e) => _StepRow(
                 index: e.key + 1,
-                text: e.value,
-                onRemove: () => setState(() => _steps.removeAt(e.key)),
+                text: e.value.description.trim().isEmpty
+                    ? e.value.title
+                    : '${e.value.title}\n${e.value.description}',
+                onRemove: () => setState(() => _stepEntries.removeAt(e.key)),
               ),
             ),
           ] else
@@ -1187,6 +1977,337 @@ class _PoojaFormState extends State<_PoojaForm> {
                 style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
               ),
             ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      CmsFormCard(
+        title: 'Mantras & Chanting',
+        children: [
+          CmsFormField(
+            label: 'Mantra: Primary',
+            hint: 'Primary mantra text',
+            controller: _mantraPrimaryCtrl,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          CmsFormField(
+            label: 'Mantra: Repetitions',
+            hint: 'e.g. 11 times',
+            controller: _mantraRepetitionsCtrl,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Mantra: Additional',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _mantraAdditionalCtrl,
+            hint: 'Add additional mantra',
+            onAdd: () => setState(
+              () => _addChipValue(_mantraAdditionalCtrl, _mantraAdditional),
+            ),
+          ),
+          if (_mantraAdditional.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _mantraAdditional
+                  .map(
+                    (i) => _Chip(
+                      label: i,
+                      onRemove: () => setState(() => _mantraAdditional.remove(i)),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          CmsFormField(
+            label: 'Mantra: Meaning',
+            hint: 'Meaning or significance',
+            controller: _mantraMeaningCtrl,
+            maxLines: 2,
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      CmsFormCard(
+        title: 'Spiritual Significance of Key Actions',
+        children: [
+          _KeyValueEditor(
+            heading: 'Offerings Meaning',
+            showEditor: _showOfferingsEditor,
+            onToggle: () =>
+                setState(() => _showOfferingsEditor = !_showOfferingsEditor),
+            titleCtrl: _offeringsTitleCtrl,
+            descCtrl: _offeringsDescCtrl,
+            onAdd: () => setState(
+              () => _addKeyValueEntry(
+                titleCtrl: _offeringsTitleCtrl,
+                descCtrl: _offeringsDescCtrl,
+                target: _offeringsMeaningEntries,
+                onAdded: () => _showOfferingsEditor = false,
+              ),
+            ),
+            entries: _offeringsMeaningEntries,
+            onRemove: (i) => setState(() => _offeringsMeaningEntries.removeAt(i)),
+          ),
+          const SizedBox(height: 12),
+          _KeyValueEditor(
+            heading: 'Actions Meaning',
+            showEditor: _showActionsEditor,
+            onToggle: () => setState(() => _showActionsEditor = !_showActionsEditor),
+            titleCtrl: _actionsTitleCtrl,
+            descCtrl: _actionsDescCtrl,
+            onAdd: () => setState(
+              () => _addKeyValueEntry(
+                titleCtrl: _actionsTitleCtrl,
+                descCtrl: _actionsDescCtrl,
+                target: _actionsMeaningEntries,
+                onAdded: () => _showActionsEditor = false,
+              ),
+            ),
+            entries: _actionsMeaningEntries,
+            onRemove: (i) => setState(() => _actionsMeaningEntries.removeAt(i)),
+          ),
+          const SizedBox(height: 12),
+          _KeyValueEditor(
+            heading: 'Other Symbolism',
+            showEditor: _showOtherSymbolismEditor,
+            onToggle: () => setState(
+              () => _showOtherSymbolismEditor = !_showOtherSymbolismEditor,
+            ),
+            titleCtrl: _symbolismTitleCtrl,
+            descCtrl: _symbolismDescCtrl,
+            onAdd: () => setState(
+              () => _addKeyValueEntry(
+                titleCtrl: _symbolismTitleCtrl,
+                descCtrl: _symbolismDescCtrl,
+                target: _otherSymbolismEntries,
+                onAdded: () => _showOtherSymbolismEditor = false,
+              ),
+            ),
+            entries: _otherSymbolismEntries,
+            onRemove: (i) => setState(() => _otherSymbolismEntries.removeAt(i)),
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      CmsFormCard(
+        title: 'Devotional Guidance',
+        children: [
+          const Text(
+            'What mindset to maintain',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _guidanceMindsetCtrl,
+            hint: 'Add mindset',
+            onAdd: () =>
+                setState(() => _addChipValue(_guidanceMindsetCtrl, _guidanceMindset)),
+          ),
+          if (_guidanceMindset.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _guidanceMindset
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _guidanceMindset.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Text(
+            'What to avoid',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _guidanceAvoidCtrl,
+            hint: 'Add avoid point',
+            onAdd: () =>
+                setState(() => _addChipValue(_guidanceAvoidCtrl, _guidanceAvoid)),
+          ),
+          if (_guidanceAvoid.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _guidanceAvoid
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _guidanceAvoid.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+      const SizedBox(height: 16),
+      CmsFormCard(
+        title: 'Completion & Integration',
+        children: [
+          const Text(
+            'How to close the ritual',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _completionClosureCtrl,
+            hint: 'Add closure point',
+            onAdd: () => setState(
+              () => _addChipValue(_completionClosureCtrl, _completionClosure),
+            ),
+          ),
+          if (_completionClosure.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _completionClosure
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _completionClosure.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Text(
+            'How to carry energy forward',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _completionIntegrationCtrl,
+            hint: 'Add integration point',
+            onAdd: () => setState(
+              () => _addChipValue(
+                _completionIntegrationCtrl,
+                _completionIntegration,
+              ),
+            ),
+          ),
+          if (_completionIntegration.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _completionIntegration
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () =>
+                            setState(() => _completionIntegration.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Text(
+            'Divine boons and gifts',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _completionBenefitsCtrl,
+            hint: 'Add boon / gift',
+            onAdd: () => setState(
+              () => _addChipValue(_completionBenefitsCtrl, _completionBenefits),
+            ),
+          ),
+          if (_completionBenefits.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _completionBenefits
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _completionBenefits.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+      const SizedBox(height: 16),
+      CmsFormCard(
+        title: 'Blessings from Satya',
+        children: [
+          _InputRow(
+            ctrl: _completionBlessingsCtrl,
+            hint: 'Add blessing',
+            onAdd: () => setState(
+              () => _addChipValue(_completionBlessingsCtrl, _completionBlessings),
+            ),
+          ),
+          if (_completionBlessings.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _completionBlessings
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _LineChip(
+                        label: i,
+                        onRemove: () => setState(() => _completionBlessings.remove(i)),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
       const SizedBox(height: 24),
@@ -1268,6 +2389,114 @@ class _PoojaFormState extends State<_PoojaForm> {
 // ════════════════════════════════════════════════════════════════
 // SMALL HELPER WIDGETS
 // ════════════════════════════════════════════════════════════════
+class _StepDraft {
+  const _StepDraft({required this.title, required this.description});
+  final String title;
+  final String description;
+}
+
+class _KeyValueEditor extends StatelessWidget {
+  const _KeyValueEditor({
+    required this.heading,
+    required this.showEditor,
+    required this.onToggle,
+    required this.titleCtrl,
+    required this.descCtrl,
+    required this.onAdd,
+    required this.entries,
+    required this.onRemove,
+  });
+
+  final String heading;
+  final bool showEditor;
+  final VoidCallback onToggle;
+  final TextEditingController titleCtrl;
+  final TextEditingController descCtrl;
+  final VoidCallback onAdd;
+  final List<Map<String, String>> entries;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              heading,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textSecond,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onToggle,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: CmsColors.orange,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                showEditor ? Icons.remove : Icons.add,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+      if (showEditor) ...[
+        const SizedBox(height: 10),
+        CmsFormField(
+          label: '$heading Title',
+          hint: 'Enter title',
+          controller: titleCtrl,
+        ),
+        const SizedBox(height: 10),
+        CmsFormField(
+          label: '$heading Description',
+          hint: 'Enter description',
+          controller: descCtrl,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add'),
+          ),
+        ),
+      ],
+      if (entries.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        ...entries.asMap().entries.map(
+          (e) => _StepRow(
+            index: e.key + 1,
+            text: (e.value['description'] ?? '').trim().isEmpty
+                ? (e.value['title'] ?? '')
+                : '${e.value['title'] ?? ''}\n${e.value['description'] ?? ''}',
+            onRemove: () => onRemove(e.key),
+          ),
+        ),
+      ] else
+        const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: Text(
+            'No entries added yet',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          ),
+        ),
+    ],
+  );
+}
+
 class _InputRow extends StatelessWidget {
   const _InputRow({
     required this.ctrl,
@@ -1331,26 +2560,78 @@ class _Chip extends StatelessWidget {
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: CmsColors.orange.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: CmsColors.orange.withOpacity(0.3)),
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width * 0.78,
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: CmsColors.orangeDark),
-        ),
-        const SizedBox(width: 5),
-        GestureDetector(
-          onTap: onRemove,
-          child: const Icon(Icons.close, size: 12, color: CmsColors.orangeDark),
-        ),
-      ],
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: CmsColors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: CmsColors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: CmsColors.orangeDark),
+            ),
+          ),
+          const SizedBox(width: 5),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 12, color: CmsColors.orangeDark),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _LineChip extends StatelessWidget {
+  const _LineChip({required this.label, required this.onRemove});
+  final String label;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width * 0.78,
+    ),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8EEE2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: CmsColors.orange.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 13, color: CmsColors.textSecond),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1366,44 +2647,65 @@ class _StepRow extends StatelessWidget {
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          margin: const EdgeInsets.only(top: 1),
-          decoration: const BoxDecoration(
-            color: CmsColors.orange,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$index',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final parts = text.split('\n');
+    final title = parts.first.trim();
+    final description = parts.length > 1 ? parts.sublist(1).join('\n').trim() : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.only(top: 1),
+            decoration: const BoxDecoration(
+              color: CmsColors.orange,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '$index',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 13, color: CmsColors.textPrimary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: CmsColors.textPrimary,
+                ),
+                children: [
+                  TextSpan(
+                    text: title,
+                    style: const TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                  ),
+                  if (description.isNotEmpty) ...[
+                    const TextSpan(text: '\n'),
+                    TextSpan(text: description),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-        GestureDetector(
-          onTap: onRemove,
-          child: const Icon(Icons.close, size: 16, color: Colors.grey),
-        ),
-      ],
-    ),
-  );
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SmBtn extends StatelessWidget {

@@ -10,6 +10,7 @@ class ApiEndpoints {
   static const String allPoojas =
       '/api/v1/poojas/all'; // GET — all poojas all statuses (super admin)
   static const String createPooja = '/api/v1/poojas/create-pooja'; // POST
+  static const String deities = '/api/v1/deities'; // GET
   static String pooja(String id) => '/api/v1/poojas/$id'; // GET by id
   static String updatePooja(String id) => '/api/v1/poojas/$id'; // PATCH
   static String deletePooja(String id) => '/api/v1/poojas/$id'; // DELETE

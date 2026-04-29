@@ -15,12 +15,14 @@ class PoojaController extends GetxController {
   final _isSubmitting = false.obs;
   final _error = RxnString();
   final _filter = 'All'.obs;
+  final _deities = <Map<String, String>>[].obs;
 
   List<PoojaModel> get poojas => _poojas;
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
   String get filter => _filter.value;
+  List<Map<String, String>> get deities => _deities;
 
   // Client-side filter — data is already loaded (all statuses), we just filter
   List<PoojaModel> get filteredPoojas {
@@ -36,7 +38,10 @@ class PoojaController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    Future.microtask(loadPoojas);
+    Future.microtask(() async {
+      await loadPoojas();
+      await loadDeities();
+    });
   }
 
   // ── Set filter — pure client-side, no API call needed ───────
@@ -86,6 +91,15 @@ class PoojaController extends GetxController {
     }
   }
 
+  Future<void> loadDeities() async {
+    try {
+      final result = await _dataSource.getDeities();
+      _deities.assignAll(result);
+    } catch (_) {
+      // Keep UI usable with manual id entry fallback.
+    }
+  }
+
   // ── Create pooja ─────────────────────────────────────────────
   Future<bool> createPooja({
     required String title,
@@ -99,6 +113,27 @@ class PoojaController extends GetxController {
     required String description,
     required List<String> steps,
     required List<String> requiredItems,
+    String? purposeWhy,
+    List<String> purposeBenefits = const [],
+    String? deitySummaryAbout,
+    List<String> deitySummaryBlessings = const [],
+    List<String> preparationPersonal = const [],
+    List<String> preparationSpace = const [],
+    List<String> preparationItems = const [],
+    String? mantraPrimary,
+    String? mantraRepetitions,
+    List<String> mantraAdditional = const [],
+    String? mantraMeaning,
+    List<Map<String, String>> spiritualOfferingsMeaning = const [],
+    List<Map<String, String>> spiritualActionsMeaning = const [],
+    List<Map<String, String>> spiritualOtherSymbolism = const [],
+    List<String> guidanceMindset = const [],
+    List<String> guidanceAvoid = const [],
+    List<String> completionClosure = const [],
+    List<String> completionIntegration = const [],
+    List<String> completionBenefits = const [],
+    List<String> blessings = const [],
+    List<String> festivalIds = const [],
     String? imageUrl,
     String? audioUrl,
     String? videoUrl,
@@ -121,6 +156,27 @@ class PoojaController extends GetxController {
         videoUrl: videoUrl,
         steps: steps,
         requiredItems: requiredItems,
+        purposeWhy: purposeWhy,
+        purposeBenefits: purposeBenefits,
+        deitySummaryAbout: deitySummaryAbout,
+        deitySummaryBlessings: deitySummaryBlessings,
+        preparationPersonal: preparationPersonal,
+        preparationSpace: preparationSpace,
+        preparationItems: preparationItems,
+        mantraPrimary: mantraPrimary,
+        mantraRepetitions: mantraRepetitions,
+        mantraAdditional: mantraAdditional,
+        mantraMeaning: mantraMeaning,
+        spiritualOfferingsMeaning: spiritualOfferingsMeaning,
+        spiritualActionsMeaning: spiritualActionsMeaning,
+        spiritualOtherSymbolism: spiritualOtherSymbolism,
+        guidanceMindset: guidanceMindset,
+        guidanceAvoid: guidanceAvoid,
+        completionClosure: completionClosure,
+        completionIntegration: completionIntegration,
+        completionBenefits: completionBenefits,
+        blessings: blessings,
+        festivalIds: festivalIds,
       );
       final created = await _dataSource.createPooja(
         pooja,
