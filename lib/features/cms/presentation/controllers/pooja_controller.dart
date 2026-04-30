@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 class PoojaController extends GetxController {
   PoojaController(this._dataSource);
@@ -71,6 +73,11 @@ class PoojaController extends GetxController {
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to load pujas: ${_error.value}',
+        isError: true,
+      );
     } finally {
       _isLoading.value = false;
     }
@@ -86,6 +93,11 @@ class PoojaController extends GetxController {
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to load pujas: ${_error.value}',
+        isError: true,
+      );
     } finally {
       _isLoading.value = false;
     }
@@ -195,7 +207,11 @@ class PoojaController extends GetxController {
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to create puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     } finally {
       _isSubmitting.value = false;
@@ -233,7 +249,11 @@ class PoojaController extends GetxController {
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to update puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     } finally {
       _isSubmitting.value = false;
@@ -249,7 +269,11 @@ class PoojaController extends GetxController {
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to delete puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     }
   }
@@ -263,7 +287,11 @@ class PoojaController extends GetxController {
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to approve puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     }
   }
@@ -276,7 +304,11 @@ class PoojaController extends GetxController {
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to queue puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     }
   }
@@ -285,38 +317,37 @@ class PoojaController extends GetxController {
   Future<bool> rejectPooja(String id, String reason) async {
     try {
       await _dataSource.rejectPooja(id, reason);
-      _snackOk('Pooja rejected');
+      showCmsSnackbar(title: 'Rejected', message: 'Pooja has been rejected');
       await loadPoojas(); // reload fresh from server
       return true;
     } catch (e) {
       _error.value = _parseError(e);
-      _snackErr(_error.value!);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to reject puja: ${_error.value}',
+        isError: true,
+      );
       return false;
     }
   }
 
   // ── Helpers ──────────────────────────────────────────────────
-  void _snackOk(String msg) => Get.snackbar(
-    'Success',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFF4CAF50),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _snackOk(String msg) => showCmsSnackbar(title: 'Success', message: msg);
 
-  void _snackErr(String msg) => Get.snackbar(
-    'Error',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFFE53935),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _snackErr(String msg) =>
+      showCmsSnackbar(title: 'Error', message: msg, isError: true);
 
   String _parseError(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      if (e.type == DioExceptionType.connectionTimeout)
+        return 'Connection timeout';
+      if (e.response?.statusCode == 400) return 'Invalid data (400)';
+    }
+
     final msg = e.toString();
     if (msg.contains('404')) return 'Pooja not found.';
     if (msg.contains('401') || msg.contains('403')) return 'Not authorised.';

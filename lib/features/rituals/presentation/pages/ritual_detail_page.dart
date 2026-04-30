@@ -42,10 +42,10 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
   late final TabController _tabController;
   static const _tabs = <String>[
-    "Calender Puja's",
-    'About the Deity',
+    'About the Ritual',
     'Rituals and Remedies',
-    'Stories of Deity',
+    'About the Deity',
+    'Stories',
   ];
 
   @override
@@ -54,7 +54,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     _tabController = TabController(
       length: _tabs.length,
       vsync: this,
-      initialIndex: 0, // default to \"About the Deity\" per Figma.
+      initialIndex: 0,
     );
 
     final args = Get.arguments;
@@ -117,31 +117,86 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final p = _pooja;
     if (p == null) return;
     final d = p['deity'];
+
+    // If it's already a map, check if it already has the "stories" or "sections" we need.
+    // If it does, we can skip the extra network call.
+    if (d is Map) {
+      final stories = d['stories'];
+      debugPrint(
+        'Deity doc already has stories: ${stories is List ? stories.length : 'no'}',
+      );
+      final sections = d['sections'];
+      final hasDetailedInfo =
+          (stories is List && stories.isNotEmpty) ||
+          (sections is List && sections.isNotEmpty);
+      if (hasDetailedInfo) return;
+    }
+
     final id = d is String ? d : (d is Map ? (d['_id'] ?? d['id']) : null);
     if (id is! String || id.isEmpty) return;
+
     final isObjectId =
         id.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(id);
     if (!isObjectId) return;
+
     try {
       final res = await Get.find<ApiClient>().dio.get<dynamic>(
-        '${ApiEndpoints.deities}/$id',
+        ApiEndpoints.deity(id),
       );
       final payload = res.data;
+      if (payload is! Map<String, dynamic>) return;
+
       Map<String, dynamic>? deity;
-      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+      final data = payload['data'];
       if (data is Map<String, dynamic>) {
-        final inner = data['deity'];
-        deity = inner is Map<String, dynamic> ? inner : data;
-      } else if (payload is Map<String, dynamic>) {
+        if (data['deity'] is Map) {
+          deity = Map<String, dynamic>.from(data['deity'] as Map);
+        } else if (data['deities'] is List &&
+            (data['deities'] as List).isNotEmpty) {
+          final first = (data['deities'] as List).first;
+          if (first is Map) deity = Map<String, dynamic>.from(first);
+        } else {
+          deity = data;
+        }
+      } else if (payload['deity'] is Map) {
+        deity = Map<String, dynamic>.from(payload['deity'] as Map);
+      } else {
         deity = payload;
       }
+
       if (!mounted || deity == null) return;
-      setState(() {
-        _pooja = {..._pooja!, 'deity': deity};
-      });
-    } catch (_) {
-      // Silent — About-tab will still render whatever fields exist on
-      // the pooja itself (deitySummary, etc.).
+
+      debugPrint('SUCCESS: Fetched detailed deity doc for ${deity['name']}');
+      debugPrint(
+        'Stories count: ${deity['stories'] is List ? (deity['stories'] as List).length : 0}',
+      );
+
+      final hasName = deity['name'] != null || deity['title'] != null;
+      final hasStories =
+          deity['stories'] != null ||
+          deity['sections'] != null ||
+          deity['description'] != null;
+
+      if (hasName || hasStories) {
+        setState(() {
+          final Map<String, dynamic> current = Map<String, dynamic>.from(
+            _pooja!,
+          );
+          final Map existingDeity = (current['deity'] is Map)
+              ? (current['deity'] as Map)
+              : {};
+
+          // Strictly merge into a Map<String, dynamic> to avoid type mismatches
+          final Map<String, dynamic> mergedDeity = {};
+          existingDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
+          deity!.forEach((k, v) => mergedDeity[k.toString()] = v);
+
+          current['deity'] = mergedDeity;
+          _pooja = current;
+        });
+      }
+    } catch (e) {
+      debugPrint('Hydration via deity endpoint failed: $e');
     }
   }
 
@@ -224,10 +279,19 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             body: TabBarView(
               controller: _tabController,
               children: [
-                _CalendarTab(pooja: p, festivalNames: _festivalNames),
-                _AboutDeityTab(pooja: p),
-                _RitualsTab(pooja: p),
-                _StoriesTab(pooja: p),
+                _CalendarTab(
+                  key: ValueKey('cal_${p.title}'),
+                  pooja: p,
+                  festivalNames: _festivalNames,
+                ),
+                _RitualsTab(key: ValueKey('rit_${p.title}'), pooja: p),
+                _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
+                _StoriesTab(
+                  key: ValueKey(
+                    'story_${p.deityName}_${p.deityStories.length}',
+                  ),
+                  pooja: p,
+                ),
               ],
             ),
           ),
@@ -288,37 +352,55 @@ class _HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(bottom: 12),
       decoration: const BoxDecoration(color: AppColors.appBgColor),
       child: Column(
         children: [
-          SizedBox(
-            width: double.infinity,
-            height: 200,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/appHeaderImg.png'),
-                        fit: BoxFit.fill,
-                        alignment: Alignment.topCenter,
-                      ),
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: [
+              // 1. Background image (Temple header with dynamic hero image overlay)
+              SizedBox(
+                width: double.infinity,
+                height: 200,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Background Image (Asset)
+                    Image.asset(
+                      'assets/images/appHeaderImg.png',
+                      fit: BoxFit.fill,
                     ),
-                    child:
-                        pooja.heroImage != null && pooja.heroImage!.isNotEmpty
-                        ? Image.network(pooja.heroImage!, fit: BoxFit.cover)
-                        : const SizedBox.shrink(),
-                  ),
+
+                    // Network Image (stretched over background)
+                    Image.network(
+                      pooja.heroImage!,
+                      fit: BoxFit.fill, // IMPORTANT
+                      alignment: Alignment.center,
+                      color: Colors.black.withOpacity(0.2), // optional overlay
+                      colorBlendMode: BlendMode.darken,
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              // 3. Circular Deity Portrait
+              Positioned(
+                bottom: -50,
+                child: _DeityPortrait(imageUrl: pooja.heroImage),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 64), // Space for the overlapping portrait
+          Text(
+            pooja.deityName,
+            style: AppTypography.lora(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3B1E08),
             ),
           ),
-          Transform.translate(
-            offset: const Offset(0, -32),
-            child: _DeityPortrait(imageUrl: pooja.heroImage),
-          ),
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -395,14 +477,12 @@ class _HeroCurvePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
     final path = Path()
-      ..moveTo(0, size.height * 0.34)
-      ..cubicTo(
-        size.width * 0.24,
-        size.height * 0.64,
-        size.width * 0.74,
-        size.height * 0.64,
+      ..moveTo(0, size.height * 0.3)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 1.0,
         size.width,
-        size.height * 0.34,
+        size.height * 0.3,
       )
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
@@ -412,6 +492,32 @@ class _HeroCurvePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height * 0.7);
+    path.quadraticBezierTo(
+      size.width * 0.2,
+      size.height * 0.7,
+      size.width * 0.5,
+      size.height * 0.95,
+    );
+    path.quadraticBezierTo(
+      size.width * 0.8,
+      size.height * 0.7,
+      size.width,
+      size.height * 0.7,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -495,7 +601,7 @@ class _SegmentedTabs extends StatelessWidget {
 //  Tab: About the Deity
 // ════════════════════════════════════════════════════════════════
 class _AboutDeityTab extends StatelessWidget {
-  const _AboutDeityTab({required this.pooja});
+  const _AboutDeityTab({super.key, required this.pooja});
   final PoojaView pooja;
 
   String _str(dynamic v) => (v ?? '').toString().trim();
@@ -516,12 +622,21 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['names'] ??
           deityDoc?['derivation'],
     );
-    final divineRole = _str(
-      deityDoc?['divine_role'] ??
-          deityDoc?['divineRole'] ??
-          deityDoc?['description'] ??
-          summary['about'],
-    );
+    final divineRole =
+        _str(
+          deityDoc?['divine_role'] ??
+              deityDoc?['divineRole'] ??
+              deityDoc?['description'] ??
+              summary['about'],
+        ).isEmpty
+        ? _list(deityDoc?['roles']).join(', ')
+        : _str(
+            deityDoc?['divine_role'] ??
+                deityDoc?['divineRole'] ??
+                deityDoc?['description'] ??
+                summary['about'],
+          );
+
     final family = _str(
       deityDoc?['family'] ??
           deityDoc?['family_associations'] ??
@@ -530,11 +645,18 @@ class _AboutDeityTab extends StatelessWidget {
     final posture = _str(
       deityDoc?['posture'] ?? deityDoc?['seating'] ?? deityDoc?['iconography'],
     );
-    final physical = _str(
-      deityDoc?['physical_description'] ??
-          deityDoc?['physicalDescription'] ??
-          deityDoc?['appearance'],
-    );
+    final physical =
+        _str(
+          deityDoc?['physical_description'] ??
+              deityDoc?['physicalDescription'] ??
+              deityDoc?['appearance'],
+        ).isEmpty
+        ? _list(deityDoc?['appearance']).join(', ')
+        : _str(
+            deityDoc?['physical_description'] ??
+                deityDoc?['physicalDescription'] ??
+                deityDoc?['appearance'],
+          );
     final whyPray = _str(
       deityDoc?['why_pray'] ?? deityDoc?['whyPray'] ?? purpose['why'],
     );
@@ -599,7 +721,7 @@ class _AboutDeityTab extends StatelessWidget {
           ),
         if (weapons.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const _SectionHeader(title: 'Weapons, Adornments & Their Symbolism'),
+          const _SectionHeader(title: 'Symbols & Weapons'),
           const SizedBox(height: 10),
           for (final w in weapons)
             Padding(
@@ -611,13 +733,20 @@ class _AboutDeityTab extends StatelessWidget {
               ),
             ),
         ],
-        if (whyPray.isNotEmpty ||
+        if (divineRole.isNotEmpty ||
+            whyPray.isNotEmpty ||
             keyQualities.isNotEmpty ||
             chakra.isNotEmpty ||
             astrology.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const _SectionHeader(title: 'Spiritual Significance'),
+          const _SectionHeader(title: 'Purpose of the Ritual'),
           const SizedBox(height: 10),
+          if (divineRole.isNotEmpty)
+            _LabeledField(
+              label: 'Who is the Deity?',
+              value: divineRole,
+              multiline: true,
+            ),
           if (whyPray.isNotEmpty)
             _LabeledField(
               label: 'Why Pray to This Deity',
@@ -631,20 +760,24 @@ class _AboutDeityTab extends StatelessWidget {
               positive: true,
             ),
           if (chakra.isNotEmpty)
-            _LabeledField(label: 'Chakra', value: chakra, multiline: true),
+            _LabeledField(
+              label: 'Associated Chakras',
+              value: chakra,
+              multiline: true,
+            ),
           if (astrology.isNotEmpty)
             _LabeledField(
-              label: 'Vedic Astrology and Numerology',
+              label: 'Astrological Connection',
               value: astrology,
               multiline: true,
             ),
+          if (blessings.isNotEmpty)
+            _LabeledChipsField(
+              label: 'Blessings',
+              items: blessings,
+              positive: true,
+            ),
         ],
-        if (blessings.isNotEmpty)
-          _LabeledChipsField(
-            label: 'Blessings',
-            items: blessings,
-            positive: true,
-          ),
         // Render any structured \"sections\" array provided by the deity doc.
         if (deityDoc != null && deityDoc['sections'] is List) ...[
           for (final s in (deityDoc['sections'] as List).whereType<Map>())
@@ -670,11 +803,44 @@ class _AboutDeityTab extends StatelessWidget {
 //  Tab: Rituals & Remedies
 // ════════════════════════════════════════════════════════════════
 class _RitualsTab extends StatelessWidget {
-  const _RitualsTab({required this.pooja});
+  const _RitualsTab({super.key, required this.pooja});
   final PoojaView pooja;
 
   @override
   Widget build(BuildContext context) {
+    final deityDoc = pooja.deityDoc;
+    final sections = pooja.deitySections;
+    final stories = pooja.deityStories;
+
+    final storySections = sections.where((m) {
+      final key = (m['key'] ?? '').toString().toLowerCase();
+      final title = (m['title'] is Map)
+          ? (m['title']['value'] ?? '').toString().toLowerCase()
+          : (m['title'] ?? '').toString().toLowerCase();
+      return key.contains('story') ||
+          key.contains('legend') ||
+          key.contains('lineage') ||
+          key.contains('origin') ||
+          title.contains('story') ||
+          title.contains('legend') ||
+          title.contains('lineage') ||
+          title.contains('origin');
+    }).toList();
+
+    final fallbackStory =
+        (deityDoc?['story'] ??
+                deityDoc?['legend'] ??
+                deityDoc?['origin'] ??
+                deityDoc?['description'] ??
+                pooja.deitySummary['about'] ??
+                '')
+            .toString();
+
+    final hasAnyStory =
+        fallbackStory.isNotEmpty ||
+        storySections.isNotEmpty ||
+        stories.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
@@ -694,6 +860,32 @@ class _RitualsTab extends StatelessWidget {
               ],
             ),
           ),
+        if (hasAnyStory) ...[
+          const SizedBox(height: 12),
+          _SectionCard(
+            icon: Icons.menu_book_outlined,
+            title: 'Deity Story',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (fallbackStory.isNotEmpty) ...[
+                  Text(
+                    fallbackStory,
+                    style: AppTypography.inter(
+                      fontSize: 13.5,
+                      height: 1.55,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                  if (stories.isNotEmpty || storySections.isNotEmpty)
+                    const SizedBox(height: 12),
+                ],
+                for (final s in stories) _DeitySectionCard(section: s),
+                for (final s in storySections) _DeitySectionCard(section: s),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -917,28 +1109,61 @@ class _StartedRitualPage extends StatelessWidget {
 //  Tab: Stories of Deity
 // ════════════════════════════════════════════════════════════════
 class _StoriesTab extends StatelessWidget {
-  const _StoriesTab({required this.pooja});
+  const _StoriesTab({super.key, required this.pooja});
   final PoojaView pooja;
 
   @override
   Widget build(BuildContext context) {
     final deityDoc = pooja.deityDoc;
-    final storySections =
-        (deityDoc?['sections'] as List?)?.whereType<Map>().where((m) {
-          final key = (m['key'] ?? '').toString().toLowerCase();
-          return key.contains('story') ||
-              key.contains('legend') ||
-              key.contains('lineage') ||
-              key.contains('origin');
-        }).toList() ??
-        const [];
+    final stories = pooja.deityStories;
+    final sections = pooja.deitySections;
 
-    // Fallback narrative – many APIs ship a single string `story`/`legend`.
-    final fallbackStory =
-        (deityDoc?['story'] ?? deityDoc?['legend'] ?? deityDoc?['origin'] ?? '')
+    debugPrint('StoriesTab build: Found ${stories.length} stories in array');
+
+    final storySections = sections.where((m) {
+      final key = (m['key'] ?? '').toString().toLowerCase();
+      final title = (m['title'] is Map)
+          ? (m['title']['value'] ?? '').toString().toLowerCase()
+          : (m['title'] ?? '').toString().toLowerCase();
+
+      final keywords = [
+        'story',
+        'legend',
+        'lineage',
+        'origin',
+        'history',
+        'narrative',
+        'background',
+        'creation',
+        'structure',
+      ];
+
+      return keywords.any((k) => key.contains(k) || title.contains(k));
+    }).toList();
+
+    // Primary narrative from the deity object itself
+    final deityNarrative =
+        (deityDoc?['story'] ??
+                deityDoc?['legend'] ??
+                deityDoc?['origin'] ??
+                deityDoc?['description'] ??
+                deityDoc?['about'] ??
+                '')
             .toString();
 
-    if (storySections.isEmpty && fallbackStory.isEmpty) {
+    // If we have actual deity stories or sections, we DON'T want to show the
+    // generic pooja summary "old story" at the top.
+    final hasRealDeityContent = stories.isNotEmpty || storySections.isNotEmpty;
+
+    // The fallback is only used if we have absolutely no other narrative.
+    final fallbackSummary = (!hasRealDeityContent && deityNarrative.isEmpty)
+        ? pooja.deitySummary['about']?.toString() ?? ''
+        : '';
+
+    if (stories.isEmpty &&
+        storySections.isEmpty &&
+        deityNarrative.isEmpty &&
+        fallbackSummary.isEmpty) {
       return _EmptyView(
         icon: Icons.menu_book_outlined,
         message: 'No stories available for this deity yet.',
@@ -948,12 +1173,94 @@ class _StoriesTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
-        if (fallbackStory.isNotEmpty) _QuoteCard(text: fallbackStory),
-        if (fallbackStory.isNotEmpty && storySections.isNotEmpty)
+        // 1. Render actual stories from the 'stories' array (this is the long story you provided)
+        for (final s in stories) ...[
+          _StoryCard(
+            title: (s['title'] ?? s['name'] ?? '').toString(),
+            description: (s['description'] ?? s['content'] ?? s['text'] ?? '')
+                .toString(),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // 2. If no 'stories' array, fallback to deity description/narrative
+        if (stories.isEmpty && deityNarrative.isNotEmpty) ...[
+          _QuoteCard(text: deityNarrative),
+          if (storySections.isNotEmpty) const SizedBox(height: 16),
+        ],
+
+        // 3. Last resort fallback (Pooja summary)
+        if (stories.isEmpty &&
+            deityNarrative.isEmpty &&
+            fallbackSummary.isNotEmpty) ...[
+          _QuoteCard(text: fallbackSummary),
+        ],
+
+        // 4. Render other story-related sections (lineage, origin, etc.)
+        for (final s in storySections) ...[
+          _DeitySectionCard(section: s),
           const SizedBox(height: 12),
-        for (final s in storySections)
-          _DeitySectionCard(section: s.cast<String, dynamic>()),
+        ],
       ],
+    );
+  }
+}
+
+class _StoryCard extends StatelessWidget {
+  const _StoryCard({required this.title, required this.description});
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    if (description.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title.isNotEmpty) ...[
+            Text(
+              title,
+              style: AppTypography.lora(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF3B1E08),
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 2,
+              width: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE69138).withOpacity(0.3),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            description,
+            style: AppTypography.inter(
+              fontSize: 14,
+              height: 1.6,
+              color: const Color(0xFF4A1C00),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -962,7 +1269,11 @@ class _StoriesTab extends StatelessWidget {
 //  Tab: Calender Puja's
 // ════════════════════════════════════════════════════════════════
 class _CalendarTab extends StatelessWidget {
-  const _CalendarTab({required this.pooja, required this.festivalNames});
+  const _CalendarTab({
+    super.key,
+    required this.pooja,
+    required this.festivalNames,
+  });
 
   final PoojaView pooja;
   final Map<String, String> festivalNames;
@@ -2075,12 +2386,32 @@ class PoojaView {
   // Deity – may be ObjectId string OR a populated object.
   Map<String, dynamic>? get deityDoc {
     final d = _raw['deity'];
-    return d is Map<String, dynamic> ? d : null;
+    if (d is Map<String, dynamic>) return d;
+    if (d is Map) return d.map((k, v) => MapEntry(k.toString(), v));
+    return null;
+  }
+
+  List<Map<String, dynamic>> get deitySections {
+    final d = deityDoc;
+    if (d == null) return const [];
+    final raw = _decodeList(d['sections']);
+    return raw.map((e) => _decodeMap(e)).toList();
+  }
+
+  List<Map<String, dynamic>> get deityStories {
+    final d = deityDoc;
+    debugPrint('PoojaView.deityDoc: $d');
+    if (d == null) return const [];
+    final raw = _decodeList(d['stories']);
+    debugPrint('PoojaView.deityStories decoded list: $raw');
+    return raw.map((e) => _decodeMap(e)).toList();
   }
 
   String get deityName {
     final d = deityDoc;
-    if (d != null) return (d['name'] ?? '').toString();
+    if (d != null) {
+      return (d['name'] ?? d['title'] ?? '').toString();
+    }
     final raw = (_raw['deity'] ?? '').toString();
     // If the raw deity is an ObjectId (24 hex chars), don't display it.
     if (raw.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(raw)) {
@@ -2094,10 +2425,28 @@ class PoojaView {
     final media = _decodeMap(_raw['media']);
     final imgs = media['images'];
     if (imgs is List && imgs.isNotEmpty) {
-      final first = imgs.first.toString();
+      final first = _cleanUrl(imgs.first.toString());
       if (first.isNotEmpty) return first;
     }
-    final direct = (_raw['imageUrl'] ?? _raw['image'] ?? '').toString();
+
+    // Check deity doc for image if pooja doesn't have one
+    final dDoc = deityDoc;
+    if (dDoc != null) {
+      final dMedia = _decodeMap(dDoc['media']);
+      final dImgs = dMedia['images'];
+      if (dImgs is List && dImgs.isNotEmpty) {
+        final first = _cleanUrl(dImgs.first.toString());
+        if (first.isNotEmpty) return first;
+      }
+      final dDirect = _cleanUrl(
+        (dDoc['imageUrl'] ?? dDoc['image'] ?? '').toString(),
+      );
+      if (dDirect.isNotEmpty) return dDirect;
+    }
+
+    final direct = _cleanUrl(
+      (_raw['imageUrl'] ?? _raw['image'] ?? '').toString(),
+    );
     return direct.isEmpty ? null : direct;
   }
 
@@ -2105,10 +2454,10 @@ class PoojaView {
     final media = _decodeMap(_raw['media']);
     final list = media['audio'];
     if (list is List && list.isNotEmpty) {
-      final first = list.first.toString();
+      final first = _cleanUrl(list.first.toString());
       if (first.isNotEmpty) return first;
     }
-    final direct = (_raw['audio'] ?? '').toString();
+    final direct = _cleanUrl((_raw['audio'] ?? '').toString());
     return direct.isEmpty ? null : direct;
   }
 
@@ -2116,9 +2465,12 @@ class PoojaView {
     final media = _decodeMap(_raw['media']);
     final list = media['videos'] ?? media['video'];
     if (list is List) {
-      return list.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+      return list
+          .map((e) => _cleanUrl(e.toString()))
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
-    final direct = (_raw['video'] ?? '').toString();
+    final direct = _cleanUrl((_raw['video'] ?? '').toString());
     return direct.isEmpty ? const [] : [direct];
   }
 
@@ -2195,6 +2547,10 @@ class PoojaView {
   }
 
   // — helpers —
+  static String _cleanUrl(String url) {
+    return url.replaceAll('`', '').trim();
+  }
+
   static Map<String, dynamic> _decodeMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;
     if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));

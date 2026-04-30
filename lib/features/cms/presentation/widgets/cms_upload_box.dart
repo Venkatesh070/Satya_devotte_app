@@ -63,6 +63,23 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
       final service = Get.find<MediaUploadService>();
       final file = await service.pickFile(type: widget.mediaType);
       if (file != null) {
+        // Client-side file size check (e.g., 20MB limit)
+        const maxBytes = 20 * 1024 * 1024; // 20MB
+        if (file.bytes.length > maxBytes) {
+          if (mounted) {
+            Get.snackbar(
+              'File Too Large',
+              'The selected ${widget.mediaType.name} is too large (${(file.bytes.length / (1024 * 1024)).toStringAsFixed(1)}MB). Please select a file smaller than 20MB.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.redAccent,
+              colorText: Colors.white,
+            );
+          }
+          // IMPORTANT: Reset picking state and return WITHOUT calling onPicked
+          setState(() => _picking = false);
+          return;
+        }
+
         setState(() {
           _picked = file;
           _existingUrl = null;
@@ -70,7 +87,7 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
         widget.onPicked(file);
       }
     } catch (e) {
-      debugPrint('CmsUploadBox._pick error: $e'); // ← add this
+      debugPrint('CmsUploadBox._pick error: $e');
     } finally {
       if (mounted) setState(() => _picking = false);
     }

@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
 class DeityController extends GetxController {
   DeityController(this._dataSource);
   final DeityRemoteDataSource _dataSource;
@@ -25,12 +27,14 @@ class DeityController extends GetxController {
     int page = 1,
     int limit = 10,
     String? status,
+    bool force = false,
   }) async {
     if (_loadInFlight) return;
     final now = DateTime.now();
     final sameQuery =
         _lastStatus == status && _lastPage == page && _lastLimit == limit;
-    if (sameQuery &&
+    if (!force &&
+        sameQuery &&
         _lastLoadedAt != null &&
         now.difference(_lastLoadedAt!).inSeconds < 15) {
       return;
@@ -51,6 +55,11 @@ class DeityController extends GetxController {
       _lastLimit = limit;
     } catch (_) {
       _error.value = 'Failed to load deities';
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to load deities',
+        isError: true,
+      );
     } finally {
       _isLoading.value = false;
       _loadInFlight = false;
@@ -62,22 +71,57 @@ class DeityController extends GetxController {
     _error.value = null;
     try {
       await _dataSource.createDeity(payload);
+      await loadDeities(force: true);
+      _ok('Deity created successfully');
       return true;
     } catch (_) {
       _error.value = 'Failed to create deity';
+      _err(_error.value!);
       return false;
     } finally {
       _isSubmitting.value = false;
     }
   }
 
+  Future<bool> updateDeity(String id, Map<String, dynamic> payload) async {
+    _isSubmitting.value = true;
+    _error.value = null;
+    try {
+      await _dataSource.updateDeity(id, payload);
+      await loadDeities(force: true);
+      _ok('Deity updated successfully');
+      return true;
+    } catch (_) {
+      _error.value = 'Failed to update deity';
+      _err(_error.value!);
+      return false;
+    } finally {
+      _isSubmitting.value = false;
+    }
+  }
+
+  Future<bool> deleteDeity(String id) async {
+    try {
+      await _dataSource.deleteDeity(id);
+      await loadDeities(force: true);
+      _ok('Deity deleted successfully');
+      return true;
+    } catch (_) {
+      _error.value = 'Failed to delete deity';
+      _err(_error.value!);
+      return false;
+    }
+  }
+
   Future<bool> approveDeity(String id) async {
     try {
       await _dataSource.approveDeity(id);
-      await loadDeities();
+      await loadDeities(force: true);
+      _ok('Deity approved and published');
       return true;
     } catch (_) {
       _error.value = 'Failed to approve deity';
+      _err(_error.value!);
       return false;
     }
   }
@@ -85,10 +129,12 @@ class DeityController extends GetxController {
   Future<bool> queueDeity(String id) async {
     try {
       await _dataSource.reviewDeity(id, 'QUEUED');
-      await loadDeities();
+      await loadDeities(force: true);
+      _ok('Deity moved to queue');
       return true;
     } catch (_) {
       _error.value = 'Failed to queue deity';
+      _err(_error.value!);
       return false;
     }
   }
@@ -96,11 +142,17 @@ class DeityController extends GetxController {
   Future<bool> rejectDeity(String id) async {
     try {
       await _dataSource.rejectDeity(id);
-      await loadDeities();
+      await loadDeities(force: true);
+      _ok('Deity has been rejected');
       return true;
     } catch (_) {
       _error.value = 'Failed to reject deity';
+      _err(_error.value!);
       return false;
     }
   }
+
+  void _ok(String msg) => showCmsSnackbar(title: 'Success', message: msg);
+  void _err(String msg) =>
+      showCmsSnackbar(title: 'Error', message: msg, isError: true);
 }

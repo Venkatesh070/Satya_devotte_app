@@ -13,7 +13,10 @@ class ApiEndpoints {
   static const String deities = '/api/v1/deities'; // GET
   static const String allDeities = '/api/v1/deities/all'; // GET
   static const String createDeity = '/api/v1/deities/create-deity'; // POST
+  static String deity(String id) => '/api/v1/deities/$id'; // GET by id
   static String reviewDeity(String id) => '/api/v1/deities/review/$id'; // PUT
+  static String updateDeity(String id) => '/api/v1/deities/$id'; // PATCH
+  static String deleteDeity(String id) => '/api/v1/deities/$id'; // DELETE
   static String pooja(String id) => '/api/v1/poojas/$id'; // GET by id
   static String updatePooja(String id) => '/api/v1/poojas/$id'; // PATCH
   static String deletePooja(String id) => '/api/v1/poojas/$id'; // DELETE

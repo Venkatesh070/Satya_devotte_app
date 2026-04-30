@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 class FestivalController extends GetxController {
   FestivalController(this._dataSource);
@@ -48,7 +49,6 @@ class FestivalController extends GetxController {
   int get queuedCount => _festivals.where((f) => f.status == 'Queued').length;
 
   @override
-  @override
   void onInit() {
     super.onInit();
     Future.microtask(loadFestivals);
@@ -69,6 +69,11 @@ class FestivalController extends GetxController {
       _festivals.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
+      showCmsSnackbar(
+        title: 'Error',
+        message: 'Failed to load festivals: ${_error.value}',
+        isError: true,
+      );
     } finally {
       _isLoading.value = false;
     }
@@ -174,25 +179,10 @@ class FestivalController extends GetxController {
     }
   }
 
-  void _ok(String msg) => Get.snackbar(
-    'Success',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFF4CAF50),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _ok(String msg) => showCmsSnackbar(title: 'Success', message: msg);
 
-  void _err(String msg) => Get.snackbar(
-    'Error',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFFE53935),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _err(String msg) =>
+      showCmsSnackbar(title: 'Error', message: msg, isError: true);
 
   String _parseError(Object e) {
     final m = e.toString();

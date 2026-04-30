@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 
 // ════════════════════════════════════════════════════════════════
@@ -254,7 +255,38 @@ class CmsStatusBadge extends StatelessWidget {
         style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.w600),
       ),
     );
-  } // ← missing closing brace was here
+  }
+}
+
+// ── Standardized Snackbar ───────────────────────────────────────────
+void showCmsSnackbar({
+  required String title,
+  required String message,
+  bool isError = false,
+}) {
+  Get.snackbar(
+    title,
+    message,
+    snackPosition: SnackPosition.TOP,
+    backgroundColor: isError
+        ? const Color(0xFFF44336)
+        : const Color(0xFF4CAF50),
+    colorText: Colors.white,
+    margin: const EdgeInsets.all(12),
+    borderRadius: 10,
+    icon: Icon(
+      isError ? Icons.error_outline : Icons.check_circle_outline,
+      color: Colors.white,
+    ),
+    duration: const Duration(seconds: 3),
+    boxShadows: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.2),
+        blurRadius: 8,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  );
 }
 
 // ── Icon action button ────────────────────────────────────────────

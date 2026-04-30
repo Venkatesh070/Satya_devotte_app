@@ -5,6 +5,8 @@ import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 class CmsApprovalContent extends StatefulWidget {
@@ -16,20 +18,23 @@ class CmsApprovalContent extends StatefulWidget {
 
 class _CmsApprovalContentState extends State<CmsApprovalContent>
     with SingleTickerProviderStateMixin {
-  // Two top-level tabs: Poojas | Festivals
+  // Top-level tabs: Poojas | Festivals | Deities
   late final TabController _tabController;
   late final PoojaController _poojaCtrl;
   late final FestivalController _festivalCtrl;
+  late final DeityController _deityCtrl;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _poojaCtrl = Get.find<PoojaController>();
     _festivalCtrl = Get.find<FestivalController>();
+    _deityCtrl = Get.find<DeityController>();
     // Load all items for super admin
     _poojaCtrl.loadAllPoojas();
     _festivalCtrl.loadFestivals();
+    _deityCtrl.loadDeities();
   }
 
   @override
@@ -42,100 +47,114 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.of(context).size.width >= 768;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Info banner ──────────────────────────────────────
-        Container(
-          margin: EdgeInsets.fromLTRB(
-            isWeb ? 24 : 16,
-            isWeb ? 20 : 14,
-            isWeb ? 24 : 16,
-            0,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF8E1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFE082)),
-          ),
-          child: const Row(
-            children: [
-              Icon(
-                Icons.verified_user_outlined,
-                color: Color(0xFFF9A825),
-                size: 18,
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Super Admin only — Approve or Reject content before it goes live to devotees.',
-                  style: TextStyle(
-                    color: Color(0xFF5D4037),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+    return Container(
+      color: CmsColors.bg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Info banner ──────────────────────────────────────
+          Container(
+            margin: EdgeInsets.fromLTRB(
+              isWeb ? 24 : 16,
+              isWeb ? 20 : 14,
+              isWeb ? 24 : 16,
+              0,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFE082)),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: Color(0xFFF9A825),
+                  size: 18,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Super Admin only — Approve or Reject content before it goes live to devotees.',
+                    style: TextStyle(
+                      color: Color(0xFF5D4037),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // ── Top tabs: Poojas | Festivals | Deities ───────────
+          const SizedBox(height: 16),
+          Container(
+            color: CmsColors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: CmsColors.orange,
+              unselectedLabelColor: CmsColors.textSecond,
+              indicatorColor: CmsColors.orange,
+              indicatorWeight: 3,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
               ),
-            ],
-          ),
-        ),
-
-        // ── Top tabs: Poojas | Festivals ─────────────────────
-        const SizedBox(height: 16),
-        Container(
-          color: CmsColors.white,
-          child: TabBar(
-            controller: _tabController,
-            labelColor: CmsColors.orange,
-            unselectedLabelColor: CmsColors.textSecond,
-            indicatorColor: CmsColors.orange,
-            indicatorWeight: 3,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              tabs: [
+                // Poojas tab with pending badge
+                Obx(() {
+                  final n = _poojaCtrl.poojas
+                      .where((p) => p.status == 'Pending')
+                      .length;
+                  return Tab(
+                    child: _TabLabel(label: 'Poojas', count: n),
+                  );
+                }),
+                // Festivals tab with pending badge
+                Obx(() {
+                  final n = _festivalCtrl.festivals
+                      .where((f) => f.status == 'Pending')
+                      .length;
+                  return Tab(
+                    child: _TabLabel(label: 'Festivals', count: n),
+                  );
+                }),
+                // Deities tab with pending badge
+                Obx(() {
+                  final n = _deityCtrl.deities
+                      .where((d) => d.status == 'Pending')
+                      .length;
+                  return Tab(
+                    child: _TabLabel(label: 'Deities', count: n),
+                  );
+                }),
+              ],
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-            ),
-            tabs: [
-              // Poojas tab with pending badge
-              Obx(() {
-                final n = _poojaCtrl.poojas
-                    .where((p) => p.status == 'Pending')
-                    .length;
-                return Tab(
-                  child: _TabLabel(label: 'Poojas', count: n),
-                );
-              }),
-              // Festivals tab with pending badge
-              Obx(() {
-                final n = _festivalCtrl.festivals
-                    .where((f) => f.status == 'Pending')
-                    .length;
-                return Tab(
-                  child: _TabLabel(label: 'Festivals', count: n),
-                );
-              }),
-            ],
           ),
-        ),
-        const Divider(height: 1, color: CmsColors.border),
+          const Divider(height: 1, color: CmsColors.border),
 
-        // ── Tab views ────────────────────────────────────────
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              // Tab 1: Poojas approval
-              _PoojaApprovalSection(ctrl: _poojaCtrl),
-              // Tab 2: Festivals approval
-              _FestivalApprovalSection(ctrl: _festivalCtrl),
-            ],
+          // ── Tab views ────────────────────────────────────────
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Poojas approval
+                _PoojaApprovalSection(ctrl: _poojaCtrl),
+                // Tab 2: Festivals approval
+                _FestivalApprovalSection(ctrl: _festivalCtrl),
+                // Tab 3: Deities approval
+                _DeityApprovalSection(ctrl: _deityCtrl),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -441,13 +460,10 @@ class _PoojaList extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () async {
               if (reasonCtrl.text.trim().isEmpty) {
-                Get.snackbar(
-                  'Required',
-                  'Please enter a reason',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: CmsColors.orange,
-                  colorText: Colors.white,
-                  margin: const EdgeInsets.all(12),
+                showCmsSnackbar(
+                  title: 'Required',
+                  message: 'Please enter a reason',
+                  isError: true,
                 );
                 return;
               }
@@ -750,13 +766,10 @@ class _FestivalList extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () async {
               if (reasonCtrl.text.trim().isEmpty) {
-                Get.snackbar(
-                  'Required',
-                  'Please enter a reason',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: CmsColors.orange,
-                  colorText: Colors.white,
-                  margin: const EdgeInsets.all(12),
+                showCmsSnackbar(
+                  title: 'Required',
+                  message: 'Please enter a reason',
+                  isError: true,
                 );
                 return;
               }
@@ -1059,6 +1072,427 @@ class _FestivalApprovalCard extends StatelessWidget {
                 ),
                 child: Text(
                   festival.status,
+                  style: TextStyle(
+                    color: _statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (showActions) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: CmsColors.border),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onReject,
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Reject',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: BorderSide(color: Colors.red.withOpacity(0.4)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: onApprove,
+                    icon: const Icon(
+                      Icons.check_circle_outline,
+                      size: 15,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Approve & Publish',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// DEITIES APPROVAL SECTION
+// ════════════════════════════════════════════════════════════════
+class _DeityApprovalSection extends StatefulWidget {
+  const _DeityApprovalSection({required this.ctrl});
+  final DeityController ctrl;
+
+  @override
+  State<_DeityApprovalSection> createState() => _DeityApprovalSectionState();
+}
+
+class _DeityApprovalSectionState extends State<_DeityApprovalSection>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          color: CmsColors.bg,
+          child: TabBar(
+            controller: _tab,
+            labelColor: CmsColors.orange,
+            unselectedLabelColor: CmsColors.textSecond,
+            indicatorColor: CmsColors.orange,
+            indicatorWeight: 2,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            tabs: const [
+              Tab(text: 'Pending'),
+              Tab(text: 'Approved'),
+              Tab(text: 'All'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tab,
+            children: [
+              _DeityList(
+                ctrl: widget.ctrl,
+                filter: 'Pending',
+                showActions: true,
+              ),
+              _DeityList(
+                ctrl: widget.ctrl,
+                filter: 'Approved',
+                showActions: false,
+              ),
+              _DeityList(ctrl: widget.ctrl, filter: 'All', showActions: false),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeityList extends StatelessWidget {
+  const _DeityList({
+    required this.ctrl,
+    required this.filter,
+    required this.showActions,
+  });
+  final DeityController ctrl;
+  final String filter;
+  final bool showActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    return Obx(() {
+      if (ctrl.isLoading) {
+        return const Center(
+          child: CircularProgressIndicator(color: CmsColors.orange),
+        );
+      }
+      final list = filter == 'All'
+          ? ctrl.deities
+          : ctrl.deities.where((d) => d.status == filter).toList();
+
+      if (list.isEmpty) {
+        return CmsEmptyState(
+          icon: Icons.auto_awesome_outlined,
+          title: filter == 'All' ? 'No Deities' : 'No $filter Deities',
+          subtitle: filter == 'Pending'
+              ? 'All caught up! No deities waiting.'
+              : 'Nothing here yet.',
+        );
+      }
+
+      return RefreshIndicator(
+        color: CmsColors.orange,
+        onRefresh: () => ctrl.loadDeities(),
+        child: ListView.separated(
+          padding: EdgeInsets.all(isWeb ? 20 : 14),
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (ctx, i) => _DeityApprovalCard(
+            deity: list[i],
+            showActions: showActions,
+            onApprove: () => _confirmApprove(ctx, list[i], ctrl),
+            onReject: () => _confirmReject(ctx, list[i], ctrl),
+          ),
+        ),
+      );
+    });
+  }
+
+  void _confirmApprove(BuildContext ctx, DeityModel d, DeityController ctrl) {
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Approve Deity',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
+              ),
+              child: Text(
+                d.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'This will publish the deity profile to all devotees.',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ctrl.approveDeity(d.id);
+            },
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text('Approve & Publish'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmReject(BuildContext ctx, DeityModel d, DeityController ctrl) {
+    showDialog<void>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Reject Deity',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
+              ),
+              child: Text(
+                d.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Are you sure you want to reject this deity profile?',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ctrl.rejectDeity(d.id);
+            },
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Reject'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeityApprovalCard extends StatelessWidget {
+  const _DeityApprovalCard({
+    required this.deity,
+    required this.showActions,
+    required this.onApprove,
+    required this.onReject,
+  });
+  final DeityModel deity;
+  final bool showActions;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  Color get _statusColor {
+    switch (deity.status) {
+      case 'Approved':
+        return Colors.green;
+      case 'Pending':
+        return CmsColors.orange;
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _statusColor.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: CmsColors.orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: CmsColors.orange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      deity.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      deity.title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _statusColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  deity.status,
                   style: TextStyle(
                     color: _statusColor,
                     fontSize: 11,

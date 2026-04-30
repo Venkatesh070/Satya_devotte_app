@@ -35,13 +35,18 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
     Future.microtask(_loadDeities);
   }
 
-  Future<void> _loadDeities() async {
+  Future<void> _loadDeities({bool force = false}) async {
     setState(() {
       _loading = true;
       _error = null;
     });
     final status = _filter == 'All' ? null : _filter.toUpperCase();
-    await _controller.loadDeities(page: 1, limit: 10, status: status);
+    await _controller.loadDeities(
+      page: 1,
+      limit: 10,
+      status: status,
+      force: force,
+    );
     if (!mounted) return;
     setState(() {
       _all
@@ -65,141 +70,184 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   }
 
   Future<void> _save(Map<String, dynamic> payload) async {
-    final ok = await _controller.createDeity(payload);
-    if (!ok) {
-      Get.snackbar('Error', _controller.error ?? 'Failed to create deity');
-      return;
-    }
-    await _loadDeities();
+    final ok = _editing != null
+        ? await _controller.updateDeity(_editing!.id, payload)
+        : await _controller.createDeity(payload);
+
+    if (!ok) return;
+
+    await _loadDeities(force: true);
     if (!mounted) return;
     setState(() {
       _showForm = false;
       _editing = null;
     });
-    Get.snackbar('Success', 'Deity saved successfully');
   }
 
   @override
   Widget build(BuildContext context) {
     if (_showForm) {
-      return _DeityForm(
-        initial: _editing,
-        onCancel: () => setState(() {
-          _showForm = false;
-          _editing = null;
-        }),
-        onSave: _save,
+      return Container(
+        color: CmsColors.bg,
+        child: _DeityForm(
+          initial: _editing,
+          onCancel: () => setState(() {
+            _showForm = false;
+            _editing = null;
+          }),
+          onSave: _save,
+        ),
       );
     }
 
     final isWeb = MediaQuery.of(context).size.width >= 768;
-    const filters = ['All', 'Approved', 'Pending', 'Queued', 'Draft', 'Rejected'];
+    const filters = [
+      'All',
+      'Approved',
+      'Pending',
+      'Queued',
+      'Draft',
+      'Rejected',
+    ];
     final list = _filtered;
 
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: 14),
-          color: CmsColors.white,
-          child: Row(
-            children: [
-              Expanded(
-                child: CmsSearchBar(
-                  hint: 'Search deities...',
-                  onChanged: (v) => setState(() => _query = v),
-                ),
-              ),
-              const SizedBox(width: 10),
-              CmsPrimaryButton(
-                label: isWeb ? 'Add New Deity' : 'Add',
-                icon: Icons.add,
-                onTap: () => setState(() {
-                  _editing = null;
-                  _showForm = true;
-                }),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          color: CmsColors.white,
-          padding: EdgeInsets.only(left: isWeb ? 24 : 16, bottom: 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+    return Container(
+      color: CmsColors.bg,
+      child: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isWeb ? 24 : 16,
+              vertical: 14,
+            ),
+            color: CmsColors.white,
             child: Row(
-              children: filters.map((f) {
-                final sel = _filter == f;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _filter = f);
-                    _loadDeities();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: sel ? CmsColors.orange : CmsColors.bg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: sel ? CmsColors.orange : CmsColors.border),
-                    ),
-                    child: Text(
-                      f,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: sel ? Colors.white : CmsColors.textSecond,
-                      ),
-                    ),
+              children: [
+                Expanded(
+                  child: CmsSearchBar(
+                    hint: 'Search deities...',
+                    onChanged: (v) => setState(() => _query = v),
                   ),
-                );
-              }).toList(),
+                ),
+                const SizedBox(width: 10),
+                CmsPrimaryButton(
+                  label: isWeb ? 'Add New Deity' : 'Add',
+                  icon: Icons.add,
+                  onTap: () => setState(() {
+                    _editing = null;
+                    _showForm = true;
+                  }),
+                ),
+              ],
             ),
           ),
-        ),
-        Expanded(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: CmsColors.orange),
-                )
-              : (_error != null)
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: CmsColors.textSecond)),
-                      const SizedBox(height: 8),
-                      TextButton(onPressed: _loadDeities, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : list.isEmpty
-              ? const Center(child: Text('No deities found.', style: TextStyle(color: CmsColors.textSecond)))
-              : ListView.builder(
-                  padding: EdgeInsets.all(isWeb ? 24 : 16),
-                  itemCount: list.length,
-                  itemBuilder: (_, i) {
-                    final d = list[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: CmsColors.border),
+          Container(
+            color: CmsColors.white,
+            padding: EdgeInsets.only(left: isWeb ? 24 : 16, bottom: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: filters.map((f) {
+                  final sel = _filter == f;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _filter = f);
+                      _loadDeities(force: true);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: d.imageUrl != null && d.imageUrl!.trim().isNotEmpty
-                                ? Image.network(
-                                    d.imageUrl!,
-                                    width: 52,
-                                    height: 52,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                      decoration: BoxDecoration(
+                        color: sel ? CmsColors.orange : CmsColors.bg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: sel ? CmsColors.orange : CmsColors.border,
+                        ),
+                      ),
+                      child: Text(
+                        f,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: sel ? Colors.white : CmsColors.textSecond,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: CmsColors.orange),
+                  )
+                : (_error != null)
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: CmsColors.textSecond),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => _loadDeities(force: true),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : list.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No deities found.',
+                      style: TextStyle(color: CmsColors.textSecond),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.all(isWeb ? 24 : 16),
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final d = list[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: CmsColors.border),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child:
+                                  d.imageUrl != null &&
+                                      d.imageUrl!.trim().isNotEmpty
+                                  ? Image.network(
+                                      d.imageUrl!,
+                                      width: 52,
+                                      height: 52,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 52,
+                                        height: 52,
+                                        color: CmsColors.bg,
+                                        child: const Icon(
+                                          Icons.auto_awesome,
+                                          color: CmsColors.orange,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
                                       width: 52,
                                       height: 52,
                                       color: CmsColors.bg,
@@ -208,134 +256,146 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                         color: CmsColors.orange,
                                       ),
                                     ),
-                                  )
-                                : Container(
-                                    width: 52,
-                                    height: 52,
-                                    color: CmsColors.bg,
-                                    child: const Icon(
-                                      Icons.auto_awesome,
-                                      color: CmsColors.orange,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    d.name,
+                                    style: const TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w600,
+                                      color: CmsColors.textPrimary,
                                     ),
                                   ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  d.name,
-                                  style: const TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w600,
-                                    color: CmsColors.textPrimary,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    d.id,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: CmsColors.textSecond,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  d.id,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: CmsColors.textSecond,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    CmsStatusBadge(status: d.status),
-                                    if (d.title.trim().isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: CmsColors.bg,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          d.title,
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: CmsColors.textSecond,
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      CmsStatusBadge(status: d.status),
+                                      if (d.title.trim().isNotEmpty) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: CmsColors.bg,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            d.title,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: CmsColors.textSecond,
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CmsActionIcon(
-                                    icon: Icons.edit_outlined,
-                                    color: Colors.blue,
-                                    onTap: () => setState(() {
-                                      _editing = d;
-                                      _showForm = true;
-                                    }),
-                                    tooltip: 'Edit',
-                                  ),
-                                  const SizedBox(width: 6),
-                                  CmsActionIcon(
-                                    icon: Icons.delete_outline,
-                                    color: Colors.red,
-                                    onTap: () => setState(
-                                      () => _all.removeWhere((e) => e.id == d.id),
-                                    ),
-                                    tooltip: 'Delete',
                                   ),
                                 ],
                               ),
-                              if (_auth.isSuperAdmin &&
-                                  (d.status == 'Pending' || d.status == 'Queued')) ...[
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _SmBtn(
-                                      'Queued',
-                                      Colors.orange,
-                                      () async {
-                                        await _controller.queueDeity(d.id);
-                                      },
+                                    CmsActionIcon(
+                                      icon: Icons.edit_outlined,
+                                      color: Colors.blue,
+                                      onTap: () => setState(() {
+                                        _editing = d;
+                                        _showForm = true;
+                                      }),
+                                      tooltip: 'Edit',
                                     ),
-                                    _SmBtn(
-                                      d.status == 'Queued' ? 'Publish Now' : 'Approve',
-                                      Colors.green,
-                                      () async {
-                                        await _controller.approveDeity(d.id);
+                                    const SizedBox(width: 6),
+                                    CmsActionIcon(
+                                      icon: Icons.delete_outline,
+                                      color: Colors.red,
+                                      onTap: () async {
+                                        final confirm =
+                                            await showCmsDeleteDialog(
+                                              context,
+                                              itemName: d.name,
+                                            );
+                                        if (confirm == true) {
+                                          final ok = await _controller
+                                              .deleteDeity(d.id);
+                                          if (ok) {
+                                            _loadDeities(force: true);
+                                          }
+                                        }
                                       },
-                                    ),
-                                    _SmBtn(
-                                      'Reject',
-                                      Colors.red,
-                                      () async {
-                                        await _controller.rejectDeity(d.id);
-                                      },
+                                      tooltip: 'Delete',
                                     ),
                                   ],
                                 ),
+                                if (_auth.isSuperAdmin &&
+                                    (d.status == 'Pending' ||
+                                        d.status == 'Queued')) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      _SmBtn('Queued', Colors.orange, () async {
+                                        final ok = await _controller.queueDeity(
+                                          d.id,
+                                        );
+                                        if (ok) {
+                                          _loadDeities(force: true);
+                                        }
+                                      }),
+                                      _SmBtn(
+                                        d.status == 'Queued'
+                                            ? 'Publish Now'
+                                            : 'Approve',
+                                        Colors.green,
+                                        () async {
+                                          final ok = await _controller
+                                              .approveDeity(d.id);
+                                          if (ok) {
+                                            _loadDeities(force: true);
+                                          }
+                                        },
+                                      ),
+                                      _SmBtn('Reject', Colors.red, () async {
+                                        final ok = await _controller
+                                            .rejectDeity(d.id);
+                                        if (ok) {
+                                          _loadDeities(force: true);
+                                        }
+                                      }),
+                                    ],
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -419,7 +479,8 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _imageUrlsCtrl;
   late final TextEditingController _audioUrlsCtrl;
   late final TextEditingController _videoUrlsCtrl;
-  final List<Map<String, String>> _lineageFormsEntries = <Map<String, String>>[];
+  final List<Map<String, String>> _lineageFormsEntries =
+      <Map<String, String>>[];
   final List<Map<String, String>> _appearanceEntries = <Map<String, String>>[];
   final List<Map<String, String>> _spiritualEntries = <Map<String, String>>[];
   final List<Map<String, String>> _storiesEntries = <Map<String, String>>[];
@@ -463,12 +524,18 @@ class _DeityFormState extends State<_DeityForm> {
     _lineageParentsCtrl = TextEditingController(
       text: initial == null ? '' : initial.lineageParents.join(', '),
     );
-    _lineageConsortCtrl = TextEditingController(text: initial?.lineageConsort ?? '');
+    _lineageConsortCtrl = TextEditingController(
+      text: initial?.lineageConsort ?? '',
+    );
     _lineageChildrenCtrl = TextEditingController(
       text: initial == null ? '' : initial.lineageChildren.join(', '),
     );
-    _lineageVehicleCtrl = TextEditingController(text: initial?.lineageVehicle ?? '');
-    _lineageAbodeCtrl = TextEditingController(text: initial?.lineageAbode ?? '');
+    _lineageVehicleCtrl = TextEditingController(
+      text: initial?.lineageVehicle ?? '',
+    );
+    _lineageAbodeCtrl = TextEditingController(
+      text: initial?.lineageAbode ?? '',
+    );
     _appearanceTitleCtrl = TextEditingController();
     _appearanceDescCtrl = TextEditingController();
     _spiritualTitleCtrl = TextEditingController();
@@ -481,20 +548,26 @@ class _DeityFormState extends State<_DeityForm> {
     _connectingIdealTimeCtrl = TextEditingController(
       text: initial?.connectingIdealTime ?? '',
     );
-    _chantingMantraCtrl = TextEditingController(text: initial?.chantingMantra ?? '');
+    _chantingMantraCtrl = TextEditingController(
+      text: initial?.chantingMantra ?? '',
+    );
     _chantingRepetitionsCtrl = TextEditingController(
       text: initial?.chantingRepetitions ?? '',
     );
     _chantingBenefitsCtrl = TextEditingController();
     _chantingAssociatedColorsCtrl = TextEditingController();
-    _homePlacementCtrl = TextEditingController(text: initial?.homePlacement ?? '');
+    _homePlacementCtrl = TextEditingController(
+      text: initial?.homePlacement ?? '',
+    );
     _homeOfferingsCtrl = TextEditingController();
     _homeDoCtrl = TextEditingController();
     _homeDontCtrl = TextEditingController();
     _devotionalSignCtrl = TextEditingController(
       text: initial?.devotionalSignOfConnection ?? '',
     );
-    _devotionalNotesCtrl = TextEditingController(text: initial?.devotionalNotes ?? '');
+    _devotionalNotesCtrl = TextEditingController(
+      text: initial?.devotionalNotes ?? '',
+    );
     _storiesTitleCtrl = TextEditingController();
     _storiesDescCtrl = TextEditingController();
     _imageUrlsCtrl = TextEditingController(text: initial?.imageUrl ?? '');
@@ -565,11 +638,8 @@ class _DeityFormState extends State<_DeityForm> {
     super.dispose();
   }
 
-  List<String> _csv(String value) => value
-      .split(',')
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
+  List<String> _csv(String value) =>
+      value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
   void _addChipValue(TextEditingController ctrl, List<String> target) {
     final value = ctrl.text.trim();
@@ -580,7 +650,10 @@ class _DeityFormState extends State<_DeityForm> {
     });
   }
 
-  List<String> _valuesWithPending(TextEditingController ctrl, List<String> values) {
+  List<String> _valuesWithPending(
+    TextEditingController ctrl,
+    List<String> values,
+  ) {
     final pending = ctrl.text.trim();
     if (pending.isEmpty) return List<String>.from(values);
     if (values.contains(pending)) return List<String>.from(values);
@@ -630,7 +703,11 @@ class _DeityFormState extends State<_DeityForm> {
     final description = descCtrl.text.trim();
     if (title.isEmpty && description.isEmpty) return;
     if (title.isEmpty) {
-      Get.snackbar('Validation', 'Title is required');
+      showCmsSnackbar(
+        title: 'Validation',
+        message: 'Title is required',
+        isError: true,
+      );
       return;
     }
     setState(() {
@@ -700,12 +777,17 @@ class _DeityFormState extends State<_DeityForm> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _ritualIds.asMap().entries.map(
-              (entry) => _CompactChip(
-                label: _ritualTitleForId(entry.value),
-                onRemove: () => setState(() => _ritualIds.removeAt(entry.key)),
-              ),
-            ).toList(),
+            children: _ritualIds
+                .asMap()
+                .entries
+                .map(
+                  (entry) => _CompactChip(
+                    label: _ritualTitleForId(entry.value),
+                    onRemove: () =>
+                        setState(() => _ritualIds.removeAt(entry.key)),
+                  ),
+                )
+                .toList(),
           ),
       ],
     );
@@ -715,7 +797,9 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Family / Divine Associations / Seating / Iconography',
           showEditor: _showLineageFormsEditor,
-          onToggle: () => setState(() => _showLineageFormsEditor = !_showLineageFormsEditor),
+          onToggle: () => setState(
+            () => _showLineageFormsEditor = !_showLineageFormsEditor,
+          ),
           titleCtrl: _lineageFormsTitleCtrl,
           descCtrl: _lineageFormsDescCtrl,
           onAdd: () => _addKeyValueEntry(
@@ -724,7 +808,8 @@ class _DeityFormState extends State<_DeityForm> {
             target: _lineageFormsEntries,
           ),
           entries: _lineageFormsEntries,
-          onRemove: (index) => setState(() => _lineageFormsEntries.removeAt(index)),
+          onRemove: (index) =>
+              setState(() => _lineageFormsEntries.removeAt(index)),
         ),
       ],
     );
@@ -734,7 +819,8 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Appearance & Symbolism',
           showEditor: _showAppearanceEditor,
-          onToggle: () => setState(() => _showAppearanceEditor = !_showAppearanceEditor),
+          onToggle: () =>
+              setState(() => _showAppearanceEditor = !_showAppearanceEditor),
           titleCtrl: _appearanceTitleCtrl,
           descCtrl: _appearanceDescCtrl,
           onAdd: () => _addKeyValueEntry(
@@ -743,7 +829,8 @@ class _DeityFormState extends State<_DeityForm> {
             target: _appearanceEntries,
           ),
           entries: _appearanceEntries,
-          onRemove: (index) => setState(() => _appearanceEntries.removeAt(index)),
+          onRemove: (index) =>
+              setState(() => _appearanceEntries.removeAt(index)),
         ),
       ],
     );
@@ -753,7 +840,8 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Spiritual Significance',
           showEditor: _showSpiritualEditor,
-          onToggle: () => setState(() => _showSpiritualEditor = !_showSpiritualEditor),
+          onToggle: () =>
+              setState(() => _showSpiritualEditor = !_showSpiritualEditor),
           titleCtrl: _spiritualTitleCtrl,
           descCtrl: _spiritualDescCtrl,
           onAdd: () => _addKeyValueEntry(
@@ -762,7 +850,8 @@ class _DeityFormState extends State<_DeityForm> {
             target: _spiritualEntries,
           ),
           entries: _spiritualEntries,
-          onRemove: (index) => setState(() => _spiritualEntries.removeAt(index)),
+          onRemove: (index) =>
+              setState(() => _spiritualEntries.removeAt(index)),
         ),
       ],
     );
@@ -849,12 +938,17 @@ class _DeityFormState extends State<_DeityForm> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _preferredDays.asMap().entries.map(
-              (entry) => _CompactChip(
-                label: entry.value,
-                onRemove: () => setState(() => _preferredDays.removeAt(entry.key)),
-              ),
-            ).toList(),
+            children: _preferredDays
+                .asMap()
+                .entries
+                .map(
+                  (entry) => _CompactChip(
+                    label: entry.value,
+                    onRemove: () =>
+                        setState(() => _preferredDays.removeAt(entry.key)),
+                  ),
+                )
+                .toList(),
           ),
         const SizedBox(height: 12),
         _ChipListEditor(
@@ -862,8 +956,10 @@ class _DeityFormState extends State<_DeityForm> {
           hint: 'e.g. Green, Yellow',
           controller: _chantingAssociatedColorsCtrl,
           values: _associatedColors,
-          onAdd: () => _addChipValue(_chantingAssociatedColorsCtrl, _associatedColors),
-          onRemove: (index) => setState(() => _associatedColors.removeAt(index)),
+          onAdd: () =>
+              _addChipValue(_chantingAssociatedColorsCtrl, _associatedColors),
+          onRemove: (index) =>
+              setState(() => _associatedColors.removeAt(index)),
         ),
       ],
     );
@@ -928,7 +1024,8 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Stories',
           showEditor: _showStoriesEditor,
-          onToggle: () => setState(() => _showStoriesEditor = !_showStoriesEditor),
+          onToggle: () =>
+              setState(() => _showStoriesEditor = !_showStoriesEditor),
           titleCtrl: _storiesTitleCtrl,
           descCtrl: _storiesDescCtrl,
           onAdd: () => _addKeyValueEntry(
@@ -991,7 +1088,10 @@ class _DeityFormState extends State<_DeityForm> {
               const SizedBox(width: 10),
               Text(
                 widget.initial == null ? 'Add New Deity' : 'Edit Deity',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -1057,61 +1157,77 @@ class _DeityFormState extends State<_DeityForm> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: OutlinedButton(onPressed: widget.onCancel, child: const Text('Cancel'))),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: widget.onCancel,
+                  child: const Text('Cancel'),
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
                     if (_nameCtrl.text.trim().isEmpty) {
-                      Get.snackbar('Validation', 'Deity name is required');
+                      showCmsSnackbar(
+                        title: 'Validation',
+                        message: 'Deity name is required',
+                        isError: true,
+                      );
                       return;
                     }
-                    widget.onSave(
-                      {
-                        'name': _nameCtrl.text.trim(),
-                        'alternate_names': _valuesWithPending(_alternateNamesCtrl, _alternateNames),
-                        'description': _descCtrl.text.trim(),
-                        'roles': _valuesWithPending(_rolesCtrl, _roles),
-                        'lineage': {
-                          'parents': _csv(_lineageParentsCtrl.text),
-                          'consort': _lineageConsortCtrl.text.trim(),
-                          'children': _csv(_lineageChildrenCtrl.text),
-                          'vehicle': _lineageVehicleCtrl.text.trim(),
-                          'abode': _lineageAbodeCtrl.text.trim(),
-                        },
-                        'appearance': _appearanceEntries,
-                        'spiritual_significance': _spiritualEntries,
-                        'connecting': {
-                          'how_to_pray': _connectingHowToPrayCtrl.text.trim(),
-                          'what_pleases': _valuesWithPending(
-                            _connectingWhatPleasesCtrl,
-                            _whatPleases,
-                          ),
-                          'ideal_time': _connectingIdealTimeCtrl.text.trim(),
-                        },
-                        'chanting': {
-                          'mantra': _chantingMantraCtrl.text.trim(),
-                          'repetitions': _chantingRepetitionsCtrl.text.trim(),
-                          'benefits': _valuesWithPending(_chantingBenefitsCtrl, _chantBenefits),
-                        },
-                        'home_practice': {
-                          'placement': _homePlacementCtrl.text.trim(),
-                          'offerings': _valuesWithPending(_homeOfferingsCtrl, _homeOfferings),
-                          'do_and_dont': {
-                            'do': _valuesWithPending(_homeDoCtrl, _homeDos),
-                            'dont': _valuesWithPending(_homeDontCtrl, _homeDonts),
-                          },
-                        },
-                        'stories': _storiesEntries,
-                        'rituals': List<String>.from(_ritualIds),
-                        'media': {
-                          'images': _csv(_imageUrlsCtrl.text),
-                          'audio': _csv(_audioUrlsCtrl.text),
-                          'videos': _csv(_videoUrlsCtrl.text),
-                        },
-                        'status': _status,
+                    widget.onSave({
+                      'name': _nameCtrl.text.trim(),
+                      'alternate_names': _valuesWithPending(
+                        _alternateNamesCtrl,
+                        _alternateNames,
+                      ),
+                      'description': _descCtrl.text.trim(),
+                      'roles': _valuesWithPending(_rolesCtrl, _roles),
+                      'lineage': {
+                        'parents': _csv(_lineageParentsCtrl.text),
+                        'consort': _lineageConsortCtrl.text.trim(),
+                        'children': _csv(_lineageChildrenCtrl.text),
+                        'vehicle': _lineageVehicleCtrl.text.trim(),
+                        'abode': _lineageAbodeCtrl.text.trim(),
                       },
-                    );
+                      'appearance': _appearanceEntries,
+                      'spiritual_significance': _spiritualEntries,
+                      'connecting': {
+                        'how_to_pray': _connectingHowToPrayCtrl.text.trim(),
+                        'what_pleases': _valuesWithPending(
+                          _connectingWhatPleasesCtrl,
+                          _whatPleases,
+                        ),
+                        'ideal_time': _connectingIdealTimeCtrl.text.trim(),
+                      },
+                      'chanting': {
+                        'mantra': _chantingMantraCtrl.text.trim(),
+                        'repetitions': _chantingRepetitionsCtrl.text.trim(),
+                        'benefits': _valuesWithPending(
+                          _chantingBenefitsCtrl,
+                          _chantBenefits,
+                        ),
+                      },
+                      'home_practice': {
+                        'placement': _homePlacementCtrl.text.trim(),
+                        'offerings': _valuesWithPending(
+                          _homeOfferingsCtrl,
+                          _homeOfferings,
+                        ),
+                        'do_and_dont': {
+                          'do': _valuesWithPending(_homeDoCtrl, _homeDos),
+                          'dont': _valuesWithPending(_homeDontCtrl, _homeDonts),
+                        },
+                      },
+                      'stories': _storiesEntries,
+                      'rituals': List<String>.from(_ritualIds),
+                      'media': {
+                        'images': _csv(_imageUrlsCtrl.text),
+                        'audio': _csv(_audioUrlsCtrl.text),
+                        'videos': _csv(_videoUrlsCtrl.text),
+                      },
+                      'status': _status,
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CmsColors.orange,
@@ -1246,7 +1362,11 @@ class _KeyValueEditor extends StatelessWidget {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => onRemove(entry.key),
-                    child: const Icon(Icons.close, size: 16, color: CmsColors.textSecond),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: CmsColors.textSecond,
+                    ),
                   ),
                 ],
               ),
@@ -1342,8 +1462,14 @@ class _InputRow extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hint,
                 border: InputBorder.none,
-                hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                hintStyle: const TextStyle(
+                  color: Color(0xFFAAAAAA),
+                  fontSize: 13,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
             ),
           ),
@@ -1390,13 +1516,21 @@ class _LineChip extends StatelessWidget {
               label,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary, height: 1.4),
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textPrimary,
+                height: 1.4,
+              ),
             ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close, size: 16, color: CmsColors.textSecond),
+            child: const Icon(
+              Icons.close,
+              size: 16,
+              color: CmsColors.textSecond,
+            ),
           ),
         ],
       ),
@@ -1463,7 +1597,10 @@ class _MultiSelectPickerField extends StatelessWidget {
                                 const Expanded(
                                   child: Text(
                                     'Select options',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                                 TextButton(
@@ -1485,7 +1622,8 @@ class _MultiSelectPickerField extends StatelessWidget {
                                     onChanged: (v) {
                                       setInnerState(() {
                                         if (v == true) {
-                                          if (!temp.contains(o.value)) temp.add(o.value);
+                                          if (!temp.contains(o.value))
+                                            temp.add(o.value);
                                         } else {
                                           temp.remove(o.value);
                                         }
@@ -1519,12 +1657,17 @@ class _MultiSelectPickerField extends StatelessWidget {
                   child: Text(
                     text,
                     style: TextStyle(
-                      color: selectedValues.isEmpty ? const Color(0xFF888888) : CmsColors.textPrimary,
+                      color: selectedValues.isEmpty
+                          ? const Color(0xFF888888)
+                          : CmsColors.textPrimary,
                       fontSize: 13,
                     ),
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: CmsColors.textSecond),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: CmsColors.textSecond,
+                ),
               ],
             ),
           ),
@@ -1557,13 +1700,20 @@ class _CompactChip extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textPrimary,
+              ),
             ),
           ),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close, size: 14, color: CmsColors.textSecond),
+            child: const Icon(
+              Icons.close,
+              size: 14,
+              color: CmsColors.textSecond,
+            ),
           ),
         ],
       ),

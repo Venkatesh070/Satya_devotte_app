@@ -41,36 +41,42 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
   @override
   Widget build(BuildContext context) {
     if (_showAddForm) {
-      return _PoojaForm(
-        pooja: _editingPooja,
-        controller: _controller,
-        onCancel: () => setState(() {
-          _showAddForm = false;
-          _editingPooja = null;
-        }),
-        onSaved: () {
-          _controller.setFilter('All');
-          _controller.loadPoojas(); // reload fresh from server
-          setState(() {
+      return Container(
+        color: CmsColors.bg,
+        child: _PoojaForm(
+          pooja: _editingPooja,
+          controller: _controller,
+          onCancel: () => setState(() {
             _showAddForm = false;
             _editingPooja = null;
-          });
-        },
+          }),
+          onSaved: () {
+            _controller.setFilter('All');
+            _controller.loadPoojas(); // reload fresh from server
+            setState(() {
+              _showAddForm = false;
+              _editingPooja = null;
+            });
+          },
+        ),
       );
     }
-    return _PoojaList(
-      controller: _controller,
-      onAdd: () {
-        _festivalController.loadFestivals();
-        setState(() {
-          _editingPooja = null;
+    return Container(
+      color: CmsColors.bg,
+      child: _PoojaList(
+        controller: _controller,
+        onAdd: () {
+          _festivalController.loadFestivals();
+          setState(() {
+            _editingPooja = null;
+            _showAddForm = true;
+          });
+        },
+        onEdit: (p) => setState(() {
+          _editingPooja = p;
           _showAddForm = true;
-        });
-      },
-      onEdit: (p) => setState(() {
-        _editingPooja = p;
-        _showAddForm = true;
-      }),
+        }),
+      ),
     );
   }
 }
@@ -153,10 +159,7 @@ class _PoojaList extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: CmsSearchBar(
-                  hint: 'Search pujas...',
-                  onChanged: (_) {},
-                ),
+                child: CmsSearchBar(hint: 'Search pujas...', onChanged: (_) {}),
               ),
               const SizedBox(width: 12),
               Obx(
@@ -237,7 +240,8 @@ class _PoojaList extends StatelessWidget {
                                   : FontWeight.normal,
                             ),
                           ),
-                          if (f == 'Pending' && controller.pendingCount > 0) ...[
+                          if (f == 'Pending' &&
+                              controller.pendingCount > 0) ...[
                             const SizedBox(width: 5),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -603,7 +607,8 @@ class _PoojaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Get.find<AuthController>();
     final isSuperAdmin = auth.isSuperAdmin;
-    final isCreatorSuperAdmin = isSuperAdmin && pooja.createdBy == auth.currentUserId;
+    final isCreatorSuperAdmin =
+        isSuperAdmin && pooja.createdBy == auth.currentUserId;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -762,8 +767,7 @@ class _PoojaCard extends StatelessWidget {
                     if (isCreatorSuperAdmin) ...[
                       if (pooja.status == 'Pending')
                         _SmBtn('Queued', Colors.orange, onQueue),
-                      if (pooja.status == 'Pending')
-                        const SizedBox(width: 6),
+                      if (pooja.status == 'Pending') const SizedBox(width: 6),
                       _SmBtn('Publish Now', Colors.green, onApprove),
                     ] else ...[
                       _SmBtn('Reject', Colors.red, onReject),
@@ -819,7 +823,7 @@ class _PoojaForm extends StatefulWidget {
 
 class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _titleCtrl;
-  late final TextEditingController _deityCtrl;
+  String? _selectedDeityId;
   late final TextEditingController _durationCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _purposeWhyCtrl;
@@ -907,7 +911,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     super.initState();
     final p = widget.pooja;
     _titleCtrl = TextEditingController(text: p?.title ?? '');
-    _deityCtrl = TextEditingController(text: p?.deity ?? '');
+    _selectedDeityId = p?.deity;
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
     _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
@@ -955,7 +959,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     _completionBenefits = List.from(p?.completionBenefits ?? const []);
     _completionBlessings = List.from(p?.blessings ?? const []);
     _selectedFestivalIds = List.from(p?.festivalIds ?? const []);
-    _offeringsMeaningEntries = List.from(p?.spiritualOfferingsMeaning ?? const []);
+    _offeringsMeaningEntries = List.from(
+      p?.spiritualOfferingsMeaning ?? const [],
+    );
     _actionsMeaningEntries = List.from(p?.spiritualActionsMeaning ?? const []);
     _otherSymbolismEntries = List.from(p?.spiritualOtherSymbolism ?? const []);
     _imageUrl = p?.imageUrl;
@@ -964,15 +970,12 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (_festivalCtrl.festivals.isEmpty) {
       Future.microtask(_festivalCtrl.loadFestivals);
     }
-    if (widget.controller.deities.isEmpty) {
-      Future.microtask(widget.controller.loadDeities);
-    }
+    Future.microtask(widget.controller.loadDeities);
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _deityCtrl.dispose();
     _durationCtrl.dispose();
     _descCtrl.dispose();
     _purposeWhyCtrl.dispose();
@@ -1006,7 +1009,9 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
-    if (_deityCtrl.text.trim().isEmpty) return 'Deity is required';
+    if (_selectedDeityId == null || _selectedDeityId!.isEmpty) {
+      return 'Deity is required';
+    }
     if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     return null;
@@ -1156,7 +1161,10 @@ class _PoojaFormState extends State<_PoojaForm> {
         title: 'Atmosphere enhancement',
         description: 'Bhajans and peaceful ambience.',
       ),
-      _StepDraft(title: 'Closure', description: 'Bow in gratitude and surrender.'),
+      _StepDraft(
+        title: 'Closure',
+        description: 'Bow in gratitude and surrender.',
+      ),
       _StepDraft(
         title: 'Prasad distribution',
         description: 'Share blessed offerings.',
@@ -1185,7 +1193,10 @@ class _PoojaFormState extends State<_PoojaForm> {
       },
     ];
     _otherSymbolismEntries = [
-      {'title': 'Durva grass', 'description': 'Simplicity and grounded devotion'},
+      {
+        'title': 'Durva grass',
+        'description': 'Simplicity and grounded devotion',
+      },
       {
         'title': 'Cleaning home',
         'description': 'Invites purity and divine presence',
@@ -1247,9 +1258,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     // Build blessings payload directly from both chips + current input text.
     // This avoids losing values when user doesn't tap "+" before submit.
     final blessingsPayload = <String>{
-      ..._completionBlessings
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty),
+      ..._completionBlessings.map((e) => e.trim()).where((e) => e.isNotEmpty),
       ..._toList(_completionBlessingsCtrl.text),
     }.toList();
 
@@ -1275,7 +1284,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         pickedVideo: _pickedVideo,
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
-          deity: _deityCtrl.text.trim(),
+          deity: _selectedDeityId ?? '',
           category: _category,
           difficulty: _difficulty,
           duration: _durationCtrl.text.trim(),
@@ -1315,7 +1324,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         pickedAudio: _pickedAudio,
         pickedVideo: _pickedVideo,
         title: _titleCtrl.text.trim(),
-        deity: _deityCtrl.text.trim(),
+        deity: _selectedDeityId ?? '',
         category: _category,
         difficulty: _difficulty,
         duration: _durationCtrl.text.trim(),
@@ -1450,16 +1459,35 @@ class _PoojaFormState extends State<_PoojaForm> {
               Expanded(
                 child: Obx(() {
                   final deities = widget.controller.deities;
-                  final current = _deityCtrl.text.trim();
-                  final value = deities.any((d) => d['id'] == current)
-                      ? current
+                  final value = deities.any((d) => d['id'] == _selectedDeityId)
+                      ? _selectedDeityId
                       : null;
 
                   if (deities.isEmpty) {
-                    return CmsFormField(
-                      label: 'Deity *',
-                      hint: 'Mongo ObjectId of deity',
-                      controller: _deityCtrl,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Deity *',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: CmsColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Loading deities...',
+                            filled: true,
+                            fillColor: CmsColors.bg,
+                            enabled: false,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
                     );
                   }
 
@@ -1499,7 +1527,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                               ),
                             )
                             .toList(),
-                        onChanged: (v) => setState(() => _deityCtrl.text = v ?? ''),
+                        onChanged: (v) => setState(() => _selectedDeityId = v),
                         decoration: InputDecoration(
                           hintText: 'Select deity',
                           filled: true,
@@ -1510,15 +1538,21 @@ class _PoojaFormState extends State<_PoojaForm> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: CmsColors.border),
+                            borderSide: const BorderSide(
+                              color: CmsColors.border,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: CmsColors.border),
+                            borderSide: const BorderSide(
+                              color: CmsColors.border,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: CmsColors.orange),
+                            borderSide: const BorderSide(
+                              color: CmsColors.orange,
+                            ),
                           ),
                         ),
                       ),
@@ -1596,7 +1630,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                           onChanged: festivals.isEmpty
                               ? null
                               : (v) => setState(() {
-                                  if (v != null && !_selectedFestivalIds.contains(v)) {
+                                  if (v != null &&
+                                      !_selectedFestivalIds.contains(v)) {
                                     _selectedFestivalIds.add(v);
                                   }
                                 }),
@@ -1604,7 +1639,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                             hintText: festivals.isEmpty
                                 ? 'No approved festivals available'
                                 : 'Select festival',
-                                hintStyle: const TextStyle(fontSize: 13),
+                            hintStyle: const TextStyle(fontSize: 13),
                             filled: true,
                             fillColor: CmsColors.bg,
                             contentPadding: const EdgeInsets.symmetric(
@@ -1613,15 +1648,21 @@ class _PoojaFormState extends State<_PoojaForm> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: CmsColors.border),
+                              borderSide: const BorderSide(
+                                color: CmsColors.border,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: CmsColors.border),
+                              borderSide: const BorderSide(
+                                color: CmsColors.border,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: CmsColors.orange),
+                              borderSide: const BorderSide(
+                                color: CmsColors.orange,
+                              ),
                             ),
                           ),
                         ),
@@ -1686,7 +1727,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                   .map(
                     (i) => _Chip(
                       label: i,
-                      onRemove: () => setState(() => _purposeBenefits.remove(i)),
+                      onRemove: () =>
+                          setState(() => _purposeBenefits.remove(i)),
                     ),
                   )
                   .toList(),
@@ -1855,7 +1897,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _preparationPersonal.remove(i)),
+                        onRemove: () =>
+                            setState(() => _preparationPersonal.remove(i)),
                       ),
                     ),
                   )
@@ -1889,7 +1932,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _preparationSpace.remove(i)),
+                        onRemove: () =>
+                            setState(() => _preparationSpace.remove(i)),
                       ),
                     ),
                   )
@@ -2021,7 +2065,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                   .map(
                     (i) => _Chip(
                       label: i,
-                      onRemove: () => setState(() => _mantraAdditional.remove(i)),
+                      onRemove: () =>
+                          setState(() => _mantraAdditional.remove(i)),
                     ),
                   )
                   .toList(),
@@ -2056,13 +2101,15 @@ class _PoojaFormState extends State<_PoojaForm> {
               ),
             ),
             entries: _offeringsMeaningEntries,
-            onRemove: (i) => setState(() => _offeringsMeaningEntries.removeAt(i)),
+            onRemove: (i) =>
+                setState(() => _offeringsMeaningEntries.removeAt(i)),
           ),
           const SizedBox(height: 12),
           _KeyValueEditor(
             heading: 'Actions Meaning',
             showEditor: _showActionsEditor,
-            onToggle: () => setState(() => _showActionsEditor = !_showActionsEditor),
+            onToggle: () =>
+                setState(() => _showActionsEditor = !_showActionsEditor),
             titleCtrl: _actionsTitleCtrl,
             descCtrl: _actionsDescCtrl,
             onAdd: () => setState(
@@ -2114,8 +2161,9 @@ class _PoojaFormState extends State<_PoojaForm> {
           _InputRow(
             ctrl: _guidanceMindsetCtrl,
             hint: 'Add mindset',
-            onAdd: () =>
-                setState(() => _addChipValue(_guidanceMindsetCtrl, _guidanceMindset)),
+            onAdd: () => setState(
+              () => _addChipValue(_guidanceMindsetCtrl, _guidanceMindset),
+            ),
           ),
           if (_guidanceMindset.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -2127,7 +2175,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _guidanceMindset.remove(i)),
+                        onRemove: () =>
+                            setState(() => _guidanceMindset.remove(i)),
                       ),
                     ),
                   )
@@ -2147,8 +2196,9 @@ class _PoojaFormState extends State<_PoojaForm> {
           _InputRow(
             ctrl: _guidanceAvoidCtrl,
             hint: 'Add avoid point',
-            onAdd: () =>
-                setState(() => _addChipValue(_guidanceAvoidCtrl, _guidanceAvoid)),
+            onAdd: () => setState(
+              () => _addChipValue(_guidanceAvoidCtrl, _guidanceAvoid),
+            ),
           ),
           if (_guidanceAvoid.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -2160,7 +2210,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _guidanceAvoid.remove(i)),
+                        onRemove: () =>
+                            setState(() => _guidanceAvoid.remove(i)),
                       ),
                     ),
                   )
@@ -2199,7 +2250,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _completionClosure.remove(i)),
+                        onRemove: () =>
+                            setState(() => _completionClosure.remove(i)),
                       ),
                     ),
                   )
@@ -2271,7 +2323,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _completionBenefits.remove(i)),
+                        onRemove: () =>
+                            setState(() => _completionBenefits.remove(i)),
                       ),
                     ),
                   )
@@ -2288,7 +2341,8 @@ class _PoojaFormState extends State<_PoojaForm> {
             ctrl: _completionBlessingsCtrl,
             hint: 'Add blessing',
             onAdd: () => setState(
-              () => _addChipValue(_completionBlessingsCtrl, _completionBlessings),
+              () =>
+                  _addChipValue(_completionBlessingsCtrl, _completionBlessings),
             ),
           ),
           if (_completionBlessings.isNotEmpty) ...[
@@ -2301,7 +2355,8 @@ class _PoojaFormState extends State<_PoojaForm> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
                         label: i,
-                        onRemove: () => setState(() => _completionBlessings.remove(i)),
+                        onRemove: () =>
+                            setState(() => _completionBlessings.remove(i)),
                       ),
                     ),
                   )
@@ -2585,7 +2640,11 @@ class _Chip extends StatelessWidget {
           const SizedBox(width: 5),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close, size: 12, color: CmsColors.orangeDark),
+            child: const Icon(
+              Icons.close,
+              size: 12,
+              color: CmsColors.orangeDark,
+            ),
           ),
         ],
       ),
@@ -2628,7 +2687,11 @@ class _LineChip extends StatelessWidget {
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close, size: 13, color: CmsColors.textSecond),
+            child: const Icon(
+              Icons.close,
+              size: 13,
+              color: CmsColors.textSecond,
+            ),
           ),
         ],
       ),
@@ -2650,7 +2713,9 @@ class _StepRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final parts = text.split('\n');
     final title = parts.first.trim();
-    final description = parts.length > 1 ? parts.sublist(1).join('\n').trim() : '';
+    final description = parts.length > 1
+        ? parts.sublist(1).join('\n').trim()
+        : '';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -2688,7 +2753,10 @@ class _StepRow extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: title,
-                    style: const TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
                   ),
                   if (description.isNotEmpty) ...[
                     const TextSpan(text: '\n'),

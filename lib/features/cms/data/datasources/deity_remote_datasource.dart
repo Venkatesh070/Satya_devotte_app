@@ -40,6 +40,14 @@ class DeityRemoteDataSource {
     await _apiClient.dio.post(ApiEndpoints.createDeity, data: payload);
   }
 
+  Future<void> updateDeity(String id, Map<String, dynamic> payload) async {
+    await _apiClient.dio.patch(ApiEndpoints.updateDeity(id), data: payload);
+  }
+
+  Future<void> deleteDeity(String id) async {
+    await _apiClient.dio.delete(ApiEndpoints.deleteDeity(id));
+  }
+
   Future<void> reviewDeity(String id, String status) async {
     await _apiClient.dio.put(
       ApiEndpoints.reviewDeity(id),

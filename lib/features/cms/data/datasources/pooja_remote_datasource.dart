@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -62,7 +65,7 @@ class PoojaRemoteDataSource {
 
   // ── GET /deities — for Add Pooja dropdown ───────────────────
   Future<List<Map<String, String>>> getDeities() async {
-    final response = await _apiClient.dio.get(ApiEndpoints.deities);
+    final response = await _apiClient.dio.get(ApiEndpoints.allDeities);
     final raw = response.data;
     List<dynamic> list = const [];
     if (raw is Map<String, dynamic>) {
@@ -74,15 +77,19 @@ class PoojaRemoteDataSource {
       list = raw;
     }
 
-    return list.whereType<Map>().map((e) {
-      final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
-      final name =
-          e['name']?.toString() ??
-          e['title']?.toString() ??
-          e['deityName']?.toString() ??
-          '';
-      return {'id': id.trim(), 'name': name.trim()};
-    }).where((e) => e['id']!.isNotEmpty).toList();
+    return list
+        .whereType<Map>()
+        .map((e) {
+          final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+          final name =
+              e['name']?.toString() ??
+              e['title']?.toString() ??
+              e['deityName']?.toString() ??
+              '';
+          return {'id': id.trim(), 'name': name.trim()};
+        })
+        .where((e) => e['id']!.isNotEmpty)
+        .toList();
   }
 
   // ── CREATE pooja — multipart/form-data with optional media files ──
@@ -108,18 +115,21 @@ class PoojaRemoteDataSource {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
         filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
       );
     }
     if (audio != null) {
       formMap['audio'] = MultipartFile.fromBytes(
         audio.bytes,
         filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
       );
     }
     if (video != null) {
       formMap['video'] = MultipartFile.fromBytes(
         video.bytes,
         filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
       );
     }
     final response = await _apiClient.dio.post(
@@ -155,27 +165,38 @@ class PoojaRemoteDataSource {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
         filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
       );
     }
     if (audio != null) {
       formMap['audio'] = MultipartFile.fromBytes(
         audio.bytes,
         filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
       );
     }
     if (video != null) {
       formMap['video'] = MultipartFile.fromBytes(
         video.bytes,
         filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
       );
     }
-    final response = await _apiClient.dio.patch(
-      ApiEndpoints.updatePooja(id),
-      data: FormData.fromMap(formMap),
-    );
-    return PoojaModel.fromJson(
-      _extractSingle(response.data as Map<String, dynamic>),
-    );
+    try {
+      final response = await _apiClient.dio.patch(
+        ApiEndpoints.updatePooja(id),
+        data: FormData.fromMap(formMap),
+      );
+      return PoojaModel.fromJson(
+        _extractSingle(response.data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      debugPrint('DioException in updatePooja:');
+      debugPrint('Status: ${e.response?.statusCode}');
+      debugPrint('Data: ${e.response?.data}');
+      debugPrint('Fields sent: ${formMap.keys}');
+      rethrow;
+    }
   }
 
   // ── DELETE pooja (requires admin role) ───────────────────────
@@ -231,24 +252,19 @@ class PoojaRemoteDataSource {
   Map<String, dynamic> _toMultipartFields(Map<String, dynamic> source) {
     final out = <String, dynamic>{};
 
-    void append(String key, dynamic value) {
-      if (value == null) return;
-      if (value is Map) {
-        value.forEach((k, v) {
-          append('$key[$k]', v);
-        });
-        return;
-      }
-      if (value is List) {
-        for (var i = 0; i < value.length; i++) {
-          append('$key[$i]', value[i]);
-        }
-        return;
-      }
-      out[key] = value;
-    }
+    source.forEach((k, v) {
+      if (v == null) return;
 
-    source.forEach((k, v) => append(k, v));
+      // Many backends expect complex objects (Maps and Lists) to be sent
+      // as JSON strings in multipart/form-data requests to avoid
+      // parsing issues with bracket notation.
+      if (v is Map || v is List) {
+        out[k] = jsonEncode(v);
+      } else {
+        out[k] = v.toString();
+      }
+    });
+
     return out;
   }
 }

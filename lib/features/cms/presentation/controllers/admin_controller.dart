@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
 
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
 class AdminController extends GetxController {
   AdminController(this._dataSource);
   final AdminRemoteDataSource _dataSource;
@@ -106,25 +108,10 @@ class AdminController extends GetxController {
     }
   }
 
-  void _ok(String msg) => Get.snackbar(
-    'Success',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFF4CAF50),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _ok(String msg) => showCmsSnackbar(title: 'Success', message: msg);
 
-  void _err(String msg) => Get.snackbar(
-    'Error',
-    msg,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: const Color(0xFFE53935),
-    colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-  );
+  void _err(String msg) =>
+      showCmsSnackbar(title: 'Error', message: msg, isError: true);
 
   String _parseError(Object e) {
     final m = e.toString();
