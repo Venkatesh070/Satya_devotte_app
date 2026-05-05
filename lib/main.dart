@@ -5,6 +5,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
+import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:get/get.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +28,11 @@ Future<void> main() async {
   await Hive.initFlutter();
   await Hive.openBox(AppConstants.ritualsBox);
   await Hive.openBox(AppConstants.cacheBox);
+
   InitialBinding().dependencies();
+
+  // Initialize notifications
+  await Get.find<NotificationService>().initialize();
+
   runApp(const SathyaApp());
 }

@@ -149,6 +149,7 @@ class PoojaController extends GetxController {
     String? imageUrl,
     String? audioUrl,
     String? videoUrl,
+    String? date,
     String status = 'Pending',
   }) async {
     _isSubmitting.value = true;
@@ -163,6 +164,7 @@ class PoojaController extends GetxController {
         duration: duration,
         description: description,
         status: status,
+        date: date,
         imageUrl: imageUrl,
         audioUrl: audioUrl,
         videoUrl: videoUrl,

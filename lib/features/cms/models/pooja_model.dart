@@ -8,6 +8,7 @@ class PoojaModel {
     required this.duration,
     required this.description,
     required this.status,
+    this.date,
     this.imageUrl,
     this.audioUrl,
     this.videoUrl,
@@ -49,6 +50,7 @@ class PoojaModel {
   final String description;
   final String
   status; // Internal display value: 'Approved' | 'Queued' | 'Pending' | 'Draft' | 'Rejected'
+  final String? date;
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
@@ -167,6 +169,7 @@ class PoojaModel {
       duration: _str(json, ['duration', 'duration_mins', 'durationMins']),
       description: _str(json, ['description', 'about']),
       status: _fromApiStatus(_str(json, ['status', 'pooja_status'], 'Draft')),
+      date: json['date'] as String?,
       imageUrl:
           json['imageUrl'] as String? ??
           json['image'] as String? ??
@@ -191,7 +194,8 @@ class PoojaModel {
                     ? json['media']['videos'][0]?.toString()
                     : null)
               : null),
-      steps: (json['steps'] as List?)
+      steps:
+          (json['steps'] as List?)
               ?.map((e) {
                 if (e is Map) {
                   return e['title']?.toString().trim() ??
@@ -235,16 +239,17 @@ class PoojaModel {
       ),
       guidanceMindset: _listOfStrings((json['guidance'] as Map?)?['mindset']),
       guidanceAvoid: _listOfStrings((json['guidance'] as Map?)?['avoid']),
-      completionClosure: _listOfStrings((json['completion'] as Map?)?['closure']),
+      completionClosure: _listOfStrings(
+        (json['completion'] as Map?)?['closure'],
+      ),
       completionIntegration: _listOfStrings(
         (json['completion'] as Map?)?['integration'],
       ),
       completionBenefits: _listOfStrings(
         (json['completion'] as Map?)?['benefits'],
       ),
-      blessings: _listOfStrings(
-        (json['completion'] as Map?)?['blessings'],
-      ).isNotEmpty
+      blessings:
+          _listOfStrings((json['completion'] as Map?)?['blessings']).isNotEmpty
           ? _listOfStrings((json['completion'] as Map?)?['blessings'])
           : _listOfStrings(json['blessings']),
       festivalIds:
@@ -269,6 +274,7 @@ class PoojaModel {
     'duration': duration,
     'description': description,
     'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
+    if (date != null) 'date': date,
     if (imageUrl != null) 'imageUrl': imageUrl,
     if (audioUrl != null) 'audioUrl': audioUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
@@ -282,24 +288,20 @@ class PoojaModel {
       'space': preparationSpace,
       'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
     },
-    'steps': steps
-        .asMap()
-        .entries
-        .map((e) {
-          final raw = e.value.trim();
-          final parts = raw.split('||');
-          final title = parts.first.trim();
-          final description = parts.length > 1
-              ? parts.sublist(1).join('||').trim()
-              : title;
-          return {
-            'stepNumber': e.key + 1,
-            'title': title,
-            'description': description,
-            'subSteps': <String>[],
-          };
-        })
-        .toList(),
+    'steps': steps.asMap().entries.map((e) {
+      final raw = e.value.trim();
+      final parts = raw.split('||');
+      final title = parts.first.trim();
+      final description = parts.length > 1
+          ? parts.sublist(1).join('||').trim()
+          : title;
+      return {
+        'stepNumber': e.key + 1,
+        'title': title,
+        'description': description,
+        'subSteps': <String>[],
+      };
+    }).toList(),
     'mantra': {
       'primary': mantraPrimary ?? '',
       'repetitions': mantraRepetitions ?? '',
@@ -320,9 +322,15 @@ class PoojaModel {
     },
     'blessings': blessings,
     'media': {
-      'images': imageUrl != null && imageUrl!.trim().isNotEmpty ? [imageUrl] : [],
-      'audio': audioUrl != null && audioUrl!.trim().isNotEmpty ? [audioUrl] : [],
-      'videos': videoUrl != null && videoUrl!.trim().isNotEmpty ? [videoUrl] : [],
+      'images': imageUrl != null && imageUrl!.trim().isNotEmpty
+          ? [imageUrl]
+          : [],
+      'audio': audioUrl != null && audioUrl!.trim().isNotEmpty
+          ? [audioUrl]
+          : [],
+      'videos': videoUrl != null && videoUrl!.trim().isNotEmpty
+          ? [videoUrl]
+          : [],
     },
     'festivalIds': festivalIds,
   };
@@ -335,6 +343,7 @@ class PoojaModel {
     String? duration,
     String? description,
     String? status,
+    String? date,
     String? imageUrl,
     String? audioUrl,
     String? videoUrl,
@@ -372,6 +381,7 @@ class PoojaModel {
       duration: duration ?? this.duration,
       description: description ?? this.description,
       status: status ?? this.status,
+      date: date ?? this.date,
       imageUrl: imageUrl ?? this.imageUrl,
       audioUrl: audioUrl ?? this.audioUrl,
       videoUrl: videoUrl ?? this.videoUrl,
@@ -398,7 +408,8 @@ class PoojaModel {
       guidanceMindset: guidanceMindset ?? this.guidanceMindset,
       guidanceAvoid: guidanceAvoid ?? this.guidanceAvoid,
       completionClosure: completionClosure ?? this.completionClosure,
-      completionIntegration: completionIntegration ?? this.completionIntegration,
+      completionIntegration:
+          completionIntegration ?? this.completionIntegration,
       completionBenefits: completionBenefits ?? this.completionBenefits,
       blessings: blessings ?? this.blessings,
       festivalIds: festivalIds ?? this.festivalIds,

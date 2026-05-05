@@ -1315,6 +1315,7 @@ class _CalendarPujaCard extends StatelessWidget {
         ? pooja.deityName
         : pooja.category;
     final duration = pooja.duration.isNotEmpty ? pooja.duration : '45 min';
+    final date = pooja.date.isNotEmpty ? pooja.date : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1354,6 +1355,27 @@ class _CalendarPujaCard extends StatelessWidget {
                         ),
                       ),
                     const SizedBox(height: 10),
+                    if (date != null) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            size: 15,
+                            color: Color(0xFF3B1E08),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            date,
+                            style: AppTypography.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF3B1E08),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       children: [
                         const Icon(

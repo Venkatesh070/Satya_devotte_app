@@ -377,6 +377,21 @@ class LabeledChipsField extends StatelessWidget {
   }
 }
 
+class HeaderDivider extends StatelessWidget {
+  const HeaderDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Image(
+        image: AssetImage('assets/images/home/divider.png'),
+        width: 145,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+}
+
 class SectionHeader extends StatelessWidget {
   const SectionHeader({super.key, required this.title});
   final String title;
@@ -392,21 +407,6 @@ class SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: const Color(0xFF3B1E08),
         ),
-      ),
-    );
-  }
-}
-
-class HeaderDivider extends StatelessWidget {
-  const HeaderDivider({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Image(
-        image: AssetImage('assets/images/home/divider.png'),
-        width: 145,
-        fit: BoxFit.contain,
       ),
     );
   }

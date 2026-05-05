@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MoonPhaseModel {
   final String date;
@@ -21,6 +25,8 @@ class MoonPhaseModel {
 
 class CalendarController extends GetxController {
   final ApiClient _apiClient = Get.find<ApiClient>();
+  final NotificationService _notificationService =
+      Get.find<NotificationService>();
 
   final RxList<FestivalModel> festivals = <FestivalModel>[].obs;
   final RxList<PoojaView> poojas = <PoojaView>[].obs;
@@ -29,13 +35,141 @@ class CalendarController extends GetxController {
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final Rx<DateTime> focusedDate = DateTime.now().obs;
 
+  final RxSet<String> remindedEventIds = <String>{}.obs;
+  final RxSet<String> addedToCalendarIds = <String>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
+    _loadReminders();
+    _loadCalendarStatus();
     fetchData();
 
     // Re-fetch data whenever the focused month/year changes
     ever(focusedDate, (_) => fetchData());
+  }
+
+  Future<void> _loadReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('reminded_events') ?? [];
+    remindedEventIds.assignAll(list);
+  }
+
+  Future<void> _loadCalendarStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('added_to_calendar') ?? [];
+    addedToCalendarIds.assignAll(list);
+  }
+
+  Future<void> _saveReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('reminded_events', remindedEventIds.toList());
+  }
+
+  Future<void> _saveCalendarStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('added_to_calendar', addedToCalendarIds.toList());
+  }
+
+  bool isReminded(String id) => remindedEventIds.contains(id);
+  bool isAddedToCalendar(String id) => addedToCalendarIds.contains(id);
+
+  Future<void> toggleReminder(dynamic event) async {
+    String id = '';
+    String title = '';
+    String type = '';
+    DateTime? date;
+
+    if (event is FestivalModel) {
+      id = event.id;
+      title = event.title;
+      type = 'festival';
+      date = _parseDate(event.date);
+    } else if (event is PoojaView) {
+      id = event.title; // Using title as ID if no ID
+      title = event.title;
+      type = 'pooja';
+      date = _parseDate(event.date);
+    }
+
+    if (id.isEmpty || date == null) return;
+
+    debugPrint(
+      'CalendarController: Toggling reminder for $title, id: $id, date: $date',
+    );
+
+    if (remindedEventIds.contains(id)) {
+      remindedEventIds.remove(id);
+      await _notificationService.unsubscribeFromEventNotification(id);
+      Get.snackbar(
+        'Reminder Removed',
+        'You will no longer receive notifications for $title',
+      );
+    } else {
+      remindedEventIds.add(id);
+      try {
+        debugPrint(
+          'CalendarController: Requesting notification subscription for $title',
+        );
+        await _notificationService.subscribeToEventNotification(
+          id,
+          title,
+          type,
+          date,
+        );
+      } catch (e) {
+        debugPrint('CalendarController: Failed to subscribe: $e');
+        remindedEventIds.remove(id);
+        Get.snackbar('Error', 'Failed to set reminder. Please try again.');
+      }
+    }
+    await _saveReminders();
+  }
+
+  Future<void> addToDeviceCalendar(dynamic event) async {
+    String id = '';
+    String title = '';
+    String desc = '';
+    DateTime? date;
+
+    if (event is FestivalModel) {
+      id = event.id;
+      title = event.title;
+      desc = event.description;
+      date = _parseDate(event.date);
+    } else if (event is PoojaView) {
+      id = event.title;
+      title = event.title;
+      desc = event.description;
+      date = _parseDate(event.date);
+    }
+
+    if (date == null || id.isEmpty) return;
+
+    if (addedToCalendarIds.contains(id)) {
+      addedToCalendarIds.remove(id);
+      await _saveCalendarStatus();
+      Get.snackbar(
+        'Calendar Status',
+        'Event marked as removed from your plans',
+      );
+      return;
+    }
+
+    final ev = Event(
+      title: title,
+      description: desc,
+      location: 'Sathya App',
+      startDate: date,
+      endDate: date.add(const Duration(hours: 1)),
+      allDay: true,
+    );
+
+    final success = await Add2Calendar.addEvent2Cal(ev);
+    if (success) {
+      addedToCalendarIds.add(id);
+      await _saveCalendarStatus();
+    }
   }
 
   Future<void> fetchData() async {
@@ -50,6 +184,7 @@ class CalendarController extends GetxController {
       final response = await _apiClient.dio.get(
         ApiEndpoints.calendar,
         queryParameters: queryParams,
+        options: Options(headers: {'timezone': DateTime.now().timeZoneName}),
       );
 
       final payload = response.data;

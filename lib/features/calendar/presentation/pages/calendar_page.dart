@@ -332,6 +332,7 @@ class _EventBottomSheet extends StatelessWidget {
           ...events.map((e) {
             if (e is FestivalModel) {
               return _buildEventItem(
+                event: e,
                 title: e.title,
                 description: e.description,
                 icon: Icons.celebration,
@@ -340,6 +341,7 @@ class _EventBottomSheet extends StatelessWidget {
               );
             } else if (e is PoojaView) {
               return _buildEventItem(
+                event: e,
                 title: e.title,
                 description: e.description,
                 icon: Icons.temple_hindu,
@@ -348,6 +350,7 @@ class _EventBottomSheet extends StatelessWidget {
               );
             } else if (e is MoonPhaseModel) {
               return _buildEventItem(
+                event: e,
                 title: e.type.replaceAll('_', ' '),
                 description: e.type == 'FULL_MOON' ? 'Purnima' : 'Amavasya',
                 icon: e.type == 'FULL_MOON'
@@ -366,52 +369,141 @@ class _EventBottomSheet extends StatelessWidget {
   }
 
   Widget _buildEventItem({
+    required dynamic event,
     required String title,
     required String description,
     required IconData icon,
     required Color color,
     required Color bgColor,
   }) {
+    final controller = Get.find<CalendarController>();
+    final String id = event is FestivalModel
+        ? event.id
+        : event is PoojaView
+        ? event.title
+        : '';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF3B1E08),
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.inter(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3B1E08),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (event is! MoonPhaseModel) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() {
+                    final isAdded = controller.isAddedToCalendar(id);
+                    return OutlinedButton.icon(
+                      onPressed: () => controller.addToDeviceCalendar(event),
+                      icon: Icon(
+                        isAdded
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.calendar_today,
+                        size: 16,
+                      ),
+                      label: Text(
+                        isAdded ? 'Remove from Cal' : 'Add to Calendar',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        foregroundColor: isAdded
+                            ? const Color(0xFF8E2A12)
+                            : const Color(0xFF3B1E08),
+                        side: BorderSide(
+                          color: isAdded
+                              ? const Color(0xFF8E2A12)
+                              : const Color(0xFFEAD9BC),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Obx(() {
+                    final isReminded = controller.isReminded(id);
+                    return ElevatedButton.icon(
+                      onPressed: () => controller.toggleReminder(event),
+                      icon: Icon(
+                        isReminded
+                            ? Icons.notifications_active
+                            : Icons.notifications_none,
+                        size: 16,
+                      ),
+                      label: Text(
+                        isReminded ? 'Reminded' : 'Notify Me',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: isReminded
+                            ? const Color(0xFFE0884A)
+                            : Colors.white,
+                        foregroundColor: isReminded
+                            ? Colors.white
+                            : const Color(0xFF3B1E08),
+                        elevation: 0,
+                        side: BorderSide(
+                          color: isReminded
+                              ? Colors.transparent
+                              : const Color(0xFFEAD9BC),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    );
+                  }),
                 ),
               ],
             ),
-          ),
+          ],
+          const Divider(height: 32, color: Color(0xFFF2EBDC)),
         ],
       ),
     );

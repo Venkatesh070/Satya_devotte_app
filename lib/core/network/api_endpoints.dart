@@ -26,4 +26,5 @@ class ApiEndpoints {
       '/api/v1/poojas/review/$id'; // PUT — approve/reject (super admin)
   static const String home = '/api/v1/user-home';
   static const String calendar = '/api/v1/calendar';
+  static const String subscribeNotification = '/api/v1/notifications/subscribe';
 }

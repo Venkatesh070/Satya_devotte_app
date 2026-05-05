@@ -603,6 +603,21 @@ class _PoojaCard extends StatelessWidget {
         pooja.status == 'Rejected';
   }
 
+  String _formatDate(String s) {
+    try {
+      // Handle DD-MM-YYYY
+      final parts = s.split('-');
+      if (parts.length == 3 && parts[0].length <= 2) {
+        return s.replaceAll('-', '/'); // Convert DD-MM-YYYY to DD/MM/YYYY
+      }
+      // Handle ISO
+      final d = DateTime.parse(s);
+      return '${d.day}/${d.month}/${d.year}';
+    } catch (_) {
+      return s;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Get.find<AuthController>();
@@ -672,6 +687,26 @@ class _PoojaCard extends StatelessWidget {
                     ],
                   ],
                 ),
+                if (pooja.date != null && pooja.date!.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 11,
+                        color: CmsColors.textSecond,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(pooja.date!),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: CmsColors.textSecond,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -849,6 +884,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _actionsDescCtrl;
   late final TextEditingController _symbolismTitleCtrl;
   late final TextEditingController _symbolismDescCtrl;
+  DateTime? _selectedDate;
   final _stepTitleCtrl = TextEditingController();
   final _stepDescCtrl = TextEditingController();
   final _itemCtrl = TextEditingController();
@@ -945,6 +981,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     _symbolismDescCtrl = TextEditingController();
     _difficulty = _diffs.contains(p?.difficulty) ? p!.difficulty : _diffs.first;
     _category = _cats.contains(p?.category) ? p!.category : _cats.first;
+    if (p?.date != null) {
+      _selectedDate = _parseDate(p!.date!);
+    }
     _stepEntries = (p?.steps ?? <String>[]).map(_decodeStoredStep).toList();
     _items = List.from(p?.requiredItems ?? []);
     _purposeBenefits = List.from(p?.purposeBenefits ?? const []);
@@ -1014,6 +1053,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     }
     if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
+    if (_selectedDate == null) return 'Schedule Date is required';
     return null;
   }
 
@@ -1254,6 +1294,33 @@ class _PoojaFormState extends State<_PoojaForm> {
     return found?.title ?? id;
   }
 
+  String? _formatToApiDate(DateTime? d) {
+    if (d == null) return null;
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yyyy = d.year.toString();
+    return '$dd-$mm-$yyyy';
+  }
+
+  DateTime? _parseDate(String s) {
+    if (s.isEmpty) return null;
+    try {
+      // Try DD-MM-YYYY
+      final parts = s.split('-');
+      if (parts.length == 3 && parts[0].length <= 2) {
+        return DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      }
+      // Fallback to ISO
+      return DateTime.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _submit({required bool isDraft}) async {
     // Build blessings payload directly from both chips + current input text.
     // This avoids losing values when user doesn't tap "+" before submit.
@@ -1316,6 +1383,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           completionBenefits: _completionBenefits,
           blessings: blessingsPayload,
           festivalIds: _selectedFestivalIds,
+          date: _formatToApiDate(_selectedDate),
         ),
       );
     } else {
@@ -1356,6 +1424,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         completionBenefits: _completionBenefits,
         blessings: blessingsPayload,
         festivalIds: _selectedFestivalIds,
+        date: _formatToApiDate(_selectedDate),
       );
     }
     if (ok) widget.onSaved();
@@ -1585,6 +1654,90 @@ class _PoojaFormState extends State<_PoojaForm> {
             hint: 'Enter a brief description...',
             controller: _descCtrl,
             maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Schedule Date *',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.light(
+                            primary: CmsColors.orange,
+                            onPrimary: Colors.white,
+                            onSurface: CmsColors.textPrimary,
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: CmsColors.bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CmsColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: _selectedDate != null
+                            ? CmsColors.orange
+                            : CmsColors.textSecond,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _selectedDate != null
+                            ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                            : 'Select a date',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _selectedDate != null
+                              ? CmsColors.textPrimary
+                              : CmsColors.textSecond,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_selectedDate != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedDate = null),
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Obx(() {
