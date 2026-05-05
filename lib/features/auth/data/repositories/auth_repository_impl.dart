@@ -8,8 +8,14 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
 
   @override
-  Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) {
-    return _remoteDataSource.loginWithFirebaseToken(firebaseIdToken);
+  Future<AuthLoginResult> loginWithFirebaseToken(
+    String firebaseIdToken, {
+    Map<String, dynamic>? userProfile,
+  }) {
+    return _remoteDataSource.loginWithFirebaseToken(
+      firebaseIdToken,
+      userProfile: userProfile,
+    );
   }
 
   @override

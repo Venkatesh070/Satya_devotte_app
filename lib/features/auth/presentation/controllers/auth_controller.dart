@@ -93,8 +93,10 @@ class AuthController extends GetxController {
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after Google sign in.');
       }
+      final googleProfile = _firebaseService.getCurrentUserProfileDetails();
       final loginResult = await _authRepository.loginWithFirebaseToken(
         firebaseIdToken,
+        userProfile: googleProfile,
       );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,
@@ -147,8 +149,10 @@ class AuthController extends GetxController {
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after email sign in.');
       }
+      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
       final loginResult = await _authRepository.loginWithFirebaseToken(
         firebaseIdToken,
+        userProfile: emailProfile,
       );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,
@@ -201,8 +205,10 @@ class AuthController extends GetxController {
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw Exception('Firebase ID token is missing after email sign up.');
       }
+      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
       final loginResult = await _authRepository.loginWithFirebaseToken(
         firebaseIdToken,
+        userProfile: emailProfile,
       );
       await _authSessionService.setSession(
         accessToken: loginResult.accessToken,

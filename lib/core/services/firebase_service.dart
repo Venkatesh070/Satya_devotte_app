@@ -77,6 +77,35 @@ class FirebaseService {
     return user.getIdToken(forceRefresh);
   }
 
+  Map<String, dynamic>? getCurrentUserProfileDetails() {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return null;
+
+    final fullName = (user.displayName ?? '').trim();
+    final nameParts = fullName.isEmpty
+        ? const <String>[]
+        : fullName.split(RegExp(r'\s+'));
+    final firstName = nameParts.isEmpty ? '' : nameParts.first;
+    final lastName = nameParts.length <= 1 ? '' : nameParts.sublist(1).join(' ');
+    final providerIds = user.providerData
+        .map((p) => p.providerId)
+        .where((p) => p.trim().isNotEmpty)
+        .toList();
+
+    return <String, dynamic>{
+      'firebaseUid': user.uid,
+      'email': user.email ?? '',
+      'fullName': fullName,
+      'firstName': firstName,
+      'lastName': lastName,
+      'gender': null, // Not reliably available from Firebase auth profile.
+      'photoUrl': user.photoURL ?? '',
+      'phoneNumber': user.phoneNumber ?? '',
+      'emailVerified': user.emailVerified,
+      'providers': providerIds,
+    };
+  }
+
   Future<void> signInWithApple() async {}
 
   Future<void> signInWithEmailAndPassword({

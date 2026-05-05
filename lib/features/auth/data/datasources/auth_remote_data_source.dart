@@ -21,11 +21,19 @@ class AuthRemoteDataSource {
     }
   }
 
-  Future<AuthLoginResult> loginWithFirebaseToken(String firebaseIdToken) async {
+  Future<AuthLoginResult> loginWithFirebaseToken(
+    String firebaseIdToken, {
+    Map<String, dynamic>? userProfile,
+  }) async {
     // Explicit log requested for backend auth debugging.
     print('BACKEND_LOGIN_AUTHORIZATION_TOKEN:Bearer $firebaseIdToken');
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.authLogin,
+      data: userProfile == null
+          ? null
+          : <String, dynamic>{
+              'user': userProfile,
+            },
       options: Options(headers: {'Authorization': 'Bearer $firebaseIdToken'}),
     );
     print('║ Body   : ${response.data}');
