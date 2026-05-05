@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 // lib/features/cms/data/datasources/festival_remote_datasource.dart
 import 'package:satya_devotte_app/core/network/api_client.dart';
-import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
 
 class FestivalRemoteDataSource {
   FestivalRemoteDataSource(this._apiClient);

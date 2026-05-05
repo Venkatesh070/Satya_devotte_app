@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';

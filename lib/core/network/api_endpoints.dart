@@ -5,6 +5,8 @@ class ApiEndpoints {
   static const String profile = '/api/v1/auth/profile';
   // ── Poojas ────────────────────────────────────────────────
   static const String poojas = '/api/v1/poojas'; // GET — all poojas (public)
+  static const String festivals =
+      '/api/v1/festivals'; // GET — all festivals (public)
   static const String myPoojas =
       '/api/v1/poojas/my'; // GET — admin's own poojas (admin role)
   static const String allPoojas =
@@ -23,4 +25,5 @@ class ApiEndpoints {
   static String reviewPooja(String id) =>
       '/api/v1/poojas/review/$id'; // PUT — approve/reject (super admin)
   static const String home = '/api/v1/user-home';
+  static const String calendar = '/api/v1/calendar';
 }

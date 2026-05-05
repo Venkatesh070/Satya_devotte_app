@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
@@ -10,6 +8,8 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:video_player/video_player.dart';
 import 'package:satya_devotte_app/features/rituals/presentation/widgets/media_player_section.dart';
+import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/features/rituals/presentation/widgets/ritual_shared_widgets.dart';
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
 /// Figma reference (saffron temple header, circular deity portrait,
@@ -241,7 +241,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _HeaderDivider(),
+                      const HeaderDivider(),
                       const SizedBox(height: 14),
 
                       if (p.description.isNotEmpty)
@@ -259,7 +259,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                           ),
                         ),
                       const SizedBox(height: 14),
-                      const _HeaderDivider(),
+                      const HeaderDivider(),
                       const SizedBox(height: 14),
                       Text(
                         'More Options',
@@ -683,50 +683,50 @@ class _AboutDeityTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
-        const _SectionHeader(title: 'Deity Information'),
+        const SectionHeader(title: 'Deity Information'),
         const SizedBox(height: 10),
-        _LabeledField(label: 'Deity Name', value: deityNameDisplay),
+        LabeledField(label: 'Deity Name', value: deityNameDisplay),
         if (altNames.isNotEmpty)
-          _LabeledChipsField(
+          LabeledChipsField(
             label: 'Derivation/ Other Names / Forms (if applicable)',
             items: altNames,
           ),
         if (divineRole.isNotEmpty)
-          _LabeledField(
+          LabeledField(
             label: 'Divine Role (God/ Goddess of)',
             value: divineRole,
             multiline: true,
           ),
         if (family.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const _SectionHeader(title: 'Divine Structure & Lineage'),
+          const SectionHeader(title: 'Divine Structure & Lineage'),
           const SizedBox(height: 10),
-          _LabeledField(
+          LabeledField(
             label: 'Family / Divine Associations',
             value: family,
             multiline: true,
           ),
         ],
         if (posture.isNotEmpty)
-          _LabeledField(
+          LabeledField(
             label: 'Seating / Posture (Iconography)',
             value: posture,
             multiline: true,
           ),
         if (physical.isNotEmpty)
-          _LabeledField(
+          LabeledField(
             label: 'Physical Description',
             value: physical,
             multiline: true,
           ),
         if (weapons.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const _SectionHeader(title: 'Symbols & Weapons'),
+          const SectionHeader(title: 'Symbols & Weapons'),
           const SizedBox(height: 10),
           for (final w in weapons)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _LabeledField(
+              child: LabeledField(
                 label: w.title,
                 value: w.description,
                 multiline: true,
@@ -739,40 +739,40 @@ class _AboutDeityTab extends StatelessWidget {
             chakra.isNotEmpty ||
             astrology.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const _SectionHeader(title: 'Purpose of the Ritual'),
+          const SectionHeader(title: 'Purpose of the Ritual'),
           const SizedBox(height: 10),
           if (divineRole.isNotEmpty)
-            _LabeledField(
+            LabeledField(
               label: 'Who is the Deity?',
               value: divineRole,
               multiline: true,
             ),
           if (whyPray.isNotEmpty)
-            _LabeledField(
+            LabeledField(
               label: 'Why Pray to This Deity',
               value: whyPray,
               multiline: true,
             ),
           if (keyQualities.isNotEmpty)
-            _LabeledChipsField(
+            LabeledChipsField(
               label: 'Key Qualities / Energies Represented',
               items: keyQualities,
               positive: true,
             ),
           if (chakra.isNotEmpty)
-            _LabeledField(
+            LabeledField(
               label: 'Associated Chakras',
               value: chakra,
               multiline: true,
             ),
           if (astrology.isNotEmpty)
-            _LabeledField(
+            LabeledField(
               label: 'Astrological Connection',
               value: astrology,
               multiline: true,
             ),
           if (blessings.isNotEmpty)
-            _LabeledChipsField(
+            LabeledChipsField(
               label: 'Blessings',
               items: blessings,
               positive: true,
@@ -781,7 +781,7 @@ class _AboutDeityTab extends StatelessWidget {
         // Render any structured \"sections\" array provided by the deity doc.
         if (deityDoc != null && deityDoc['sections'] is List) ...[
           for (final s in (deityDoc['sections'] as List).whereType<Map>())
-            _DeitySectionCard(section: s.cast<String, dynamic>()),
+            DeitySectionCard(section: s.cast<String, dynamic>()),
         ],
       ],
     );
@@ -852,8 +852,18 @@ class _RitualsTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (pooja.purpose['why'] != null)
-                  _Paragraph(text: pooja.purpose['why'].toString()),
-                _BulletList(
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      pooja.purpose['why'].toString(),
+                      style: AppTypography.inter(
+                        fontSize: 13.5,
+                        height: 1.5,
+                        color: const Color(0xFF4A1C00),
+                      ),
+                    ),
+                  ),
+                BulletList(
                   heading: 'Benefits',
                   items: _stringList(pooja.purpose['benefits']),
                 ),
@@ -880,8 +890,8 @@ class _RitualsTab extends StatelessWidget {
                   if (stories.isNotEmpty || storySections.isNotEmpty)
                     const SizedBox(height: 12),
                 ],
-                for (final s in stories) _DeitySectionCard(section: s),
-                for (final s in storySections) _DeitySectionCard(section: s),
+                for (final s in stories) DeitySectionCard(section: s),
+                for (final s in storySections) DeitySectionCard(section: s),
               ],
             ),
           ),
@@ -1175,7 +1185,7 @@ class _StoriesTab extends StatelessWidget {
       children: [
         // 1. Render actual stories from the 'stories' array (this is the long story you provided)
         for (final s in stories) ...[
-          _StoryCard(
+          StoryCard(
             title: (s['title'] ?? s['name'] ?? '').toString(),
             description: (s['description'] ?? s['content'] ?? s['text'] ?? '')
                 .toString(),
@@ -1185,7 +1195,7 @@ class _StoriesTab extends StatelessWidget {
 
         // 2. If no 'stories' array, fallback to deity description/narrative
         if (stories.isEmpty && deityNarrative.isNotEmpty) ...[
-          _QuoteCard(text: deityNarrative),
+          QuoteCard(text: deityNarrative),
           if (storySections.isNotEmpty) const SizedBox(height: 16),
         ],
 
@@ -1193,12 +1203,12 @@ class _StoriesTab extends StatelessWidget {
         if (stories.isEmpty &&
             deityNarrative.isEmpty &&
             fallbackSummary.isNotEmpty) ...[
-          _QuoteCard(text: fallbackSummary),
+          QuoteCard(text: fallbackSummary),
         ],
 
         // 4. Render other story-related sections (lineage, origin, etc.)
         for (final s in storySections) ...[
-          _DeitySectionCard(section: s),
+          DeitySectionCard(section: s),
           const SizedBox(height: 12),
         ],
       ],
@@ -2043,292 +2053,6 @@ class _MeaningGroup extends StatelessWidget {
   }
 }
 
-class _HeaderDivider extends StatelessWidget {
-  const _HeaderDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Image(
-        image: AssetImage('assets/images/home/divider.png'),
-        width: 145,
-        fit: BoxFit.contain,
-      ),
-    );
-  }
-}
-
-class _LabeledField extends StatelessWidget {
-  const _LabeledField({
-    required this.label,
-    required this.value,
-    this.multiline = false,
-  });
-  final String label;
-  final String value;
-  final bool multiline;
-
-  @override
-  Widget build(BuildContext context) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTypography.inter(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF8A6B4A),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: multiline ? null : 2,
-            overflow: multiline ? TextOverflow.visible : TextOverflow.ellipsis,
-            style: AppTypography.inter(
-              fontSize: 13.5,
-              height: 1.5,
-              color: const Color(0xFF3B1E08),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LabeledChipsField extends StatelessWidget {
-  const _LabeledChipsField({
-    required this.label,
-    required this.items,
-    this.positive = true,
-  });
-  final String label;
-  final List<String> items;
-  final bool positive;
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTypography.inter(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF8A6B4A),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _ChipWrap(items: items, positive: positive),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeitySectionCard extends StatelessWidget {
-  const _DeitySectionCard({required this.section});
-  final Map<String, dynamic> section;
-
-  String _title() {
-    final t = section['title'];
-    if (t is Map && t['value'] != null) return t['value'].toString();
-    if (t is String) return t;
-    return (section['key'] ?? 'Section').toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final title = _title();
-    final content = (section['content'] as List?) ?? const [];
-    final summaryText = (section['description'] ?? section['text'] ?? '')
-        .toString();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 12,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.lora(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
-            ),
-          ),
-          if (summaryText.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              summaryText,
-              style: AppTypography.inter(
-                fontSize: 13,
-                height: 1.55,
-                color: const Color(0xFF4A1C00),
-              ),
-            ),
-          ],
-          if (content.isNotEmpty) const SizedBox(height: 10),
-          for (final item in content.whereType<Map>())
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if ((item['title']?.toString() ?? '').isNotEmpty)
-                    Text(
-                      item['title'].toString(),
-                      style: AppTypography.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7A4621),
-                      ),
-                    ),
-                  const SizedBox(height: 3),
-                  if ((item['description']?.toString() ?? '').isNotEmpty)
-                    Text(
-                      item['description'].toString(),
-                      style: AppTypography.inter(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 12,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.format_quote_rounded,
-            size: 28,
-            color: Color(0xFFB07A3A),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            text,
-            style: AppTypography.inter(
-              fontSize: 13.5,
-              height: 1.6,
-              color: const Color(0xFF4A1C00),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KeyValueRow extends StatelessWidget {
-  const _KeyValueRow({required this.label, required this.value});
-  final String label;
-  final String value;
-  @override
-  Widget build(BuildContext context) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: AppTypography.inter(
-                fontSize: 12.5,
-                color: const Color(0xFF8A6B4A),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTypography.inter(
-                fontSize: 13.5,
-                color: const Color(0xFF3B1E08),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyView extends StatelessWidget {
   const _EmptyView({required this.icon, required this.message});
   final IconData icon;
@@ -2356,255 +2080,4 @@ class _EmptyView extends StatelessWidget {
       ),
     );
   }
-}
-
-// ════════════════════════════════════════════════════════════════
-//  View-model normalising the API payload.
-//  (Server Swagger types many fields as JSON-encoded `string`s — we
-//  decode these defensively so the same widget works for both the
-//  multipart create payload and the populated read response.)
-// ════════════════════════════════════════════════════════════════
-
-class PoojaView {
-  PoojaView(this._raw);
-  final Map<String, dynamic> _raw;
-
-  // Top-level scalars
-  String get title => (_raw['title'] ?? '').toString();
-  String get category => (_raw['category'] ?? '').toString();
-  String get difficulty => (_raw['difficulty'] ?? '').toString();
-  String get duration => (_raw['duration'] ?? '').toString();
-  String get description => (_raw['description'] ?? '').toString();
-  String get status => (_raw['status'] ?? '').toString();
-  double? get rating {
-    final r = _raw['rating'];
-    if (r is num) return r.toDouble();
-    if (r is String) return double.tryParse(r);
-    return null;
-  }
-
-  // Deity – may be ObjectId string OR a populated object.
-  Map<String, dynamic>? get deityDoc {
-    final d = _raw['deity'];
-    if (d is Map<String, dynamic>) return d;
-    if (d is Map) return d.map((k, v) => MapEntry(k.toString(), v));
-    return null;
-  }
-
-  List<Map<String, dynamic>> get deitySections {
-    final d = deityDoc;
-    if (d == null) return const [];
-    final raw = _decodeList(d['sections']);
-    return raw.map((e) => _decodeMap(e)).toList();
-  }
-
-  List<Map<String, dynamic>> get deityStories {
-    final d = deityDoc;
-    debugPrint('PoojaView.deityDoc: $d');
-    if (d == null) return const [];
-    final raw = _decodeList(d['stories']);
-    debugPrint('PoojaView.deityStories decoded list: $raw');
-    return raw.map((e) => _decodeMap(e)).toList();
-  }
-
-  String get deityName {
-    final d = deityDoc;
-    if (d != null) {
-      return (d['name'] ?? d['title'] ?? '').toString();
-    }
-    final raw = (_raw['deity'] ?? '').toString();
-    // If the raw deity is an ObjectId (24 hex chars), don't display it.
-    if (raw.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(raw)) {
-      return '';
-    }
-    return raw;
-  }
-
-  // Hero image – pulled from media.images[0] / imageUrl / image.
-  String? get heroImage {
-    final media = _decodeMap(_raw['media']);
-    final imgs = media['images'];
-    if (imgs is List && imgs.isNotEmpty) {
-      final first = _cleanUrl(imgs.first.toString());
-      if (first.isNotEmpty) return first;
-    }
-
-    // Check deity doc for image if pooja doesn't have one
-    final dDoc = deityDoc;
-    if (dDoc != null) {
-      final dMedia = _decodeMap(dDoc['media']);
-      final dImgs = dMedia['images'];
-      if (dImgs is List && dImgs.isNotEmpty) {
-        final first = _cleanUrl(dImgs.first.toString());
-        if (first.isNotEmpty) return first;
-      }
-      final dDirect = _cleanUrl(
-        (dDoc['imageUrl'] ?? dDoc['image'] ?? '').toString(),
-      );
-      if (dDirect.isNotEmpty) return dDirect;
-    }
-
-    final direct = _cleanUrl(
-      (_raw['imageUrl'] ?? _raw['image'] ?? '').toString(),
-    );
-    return direct.isEmpty ? null : direct;
-  }
-
-  String? get audioUrl {
-    final media = _decodeMap(_raw['media']);
-    final list = media['audio'];
-    if (list is List && list.isNotEmpty) {
-      final first = _cleanUrl(list.first.toString());
-      if (first.isNotEmpty) return first;
-    }
-    final direct = _cleanUrl((_raw['audio'] ?? '').toString());
-    return direct.isEmpty ? null : direct;
-  }
-
-  List<String> get videoUrls {
-    final media = _decodeMap(_raw['media']);
-    final list = media['videos'] ?? media['video'];
-    if (list is List) {
-      return list
-          .map((e) => _cleanUrl(e.toString()))
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-    final direct = _cleanUrl((_raw['video'] ?? '').toString());
-    return direct.isEmpty ? const [] : [direct];
-  }
-
-  // Object/array fields – decoded if they arrive as JSON strings.
-  Map<String, dynamic> get purpose => _decodeMap(_raw['purpose']);
-  Map<String, dynamic> get deitySummary => _decodeMap(_raw['deitySummary']);
-  Map<String, dynamic> get preparation => _decodeMap(_raw['preparation']);
-  Map<String, dynamic> get mantra => _decodeMap(_raw['mantra']);
-  Map<String, dynamic> get spiritualMeaning =>
-      _decodeMap(_raw['spiritualMeaning']);
-  Map<String, dynamic> get guidance => _decodeMap(_raw['guidance']);
-  Map<String, dynamic> get completion => _decodeMap(_raw['completion']);
-
-  MantraView get mantraView {
-    final m = mantra;
-    return MantraView(
-      primary: (m['primary'] ?? '').toString(),
-      repetitions: (m['repetitions'] ?? '').toString(),
-      meaning: (m['meaning'] ?? '').toString(),
-      additional: (m['additional'] is List)
-          ? (m['additional'] as List).map((e) => e.toString()).toList()
-          : const [],
-    );
-  }
-
-  List<StepView> get steps {
-    final raw = _decodeList(_raw['steps']);
-    return raw.whereType<Map>().map((m) {
-      return StepView(
-        number: (m['stepNumber'] is num)
-            ? (m['stepNumber'] as num).toInt()
-            : int.tryParse(m['stepNumber']?.toString() ?? '') ?? 0,
-        title: (m['title'] ?? '').toString(),
-        description: (m['description'] ?? '').toString(),
-        subSteps: (m['subSteps'] is List)
-            ? (m['subSteps'] as List).map((e) => e.toString()).toList()
-            : const [],
-      );
-    }).toList();
-  }
-
-  List<String> get blessings {
-    final raw = _raw['blessings'];
-    if (raw is List) return raw.map((e) => e.toString()).toList();
-    if (raw is String && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) return decoded.map((e) => e.toString()).toList();
-      } catch (_) {}
-      return raw
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-    return const [];
-  }
-
-  List<String> get festivalIds {
-    final raw = _raw['festivalIds'];
-    if (raw is List) return raw.map((e) => e.toString()).toList();
-    if (raw is String && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) return decoded.map((e) => e.toString()).toList();
-      } catch (_) {}
-      return raw
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-    return const [];
-  }
-
-  // — helpers —
-  static String _cleanUrl(String url) {
-    return url.replaceAll('`', '').trim();
-  }
-
-  static Map<String, dynamic> _decodeMap(dynamic raw) {
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
-    if (raw is String && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) {
-          return decoded.map((k, v) => MapEntry(k.toString(), v));
-        }
-      } catch (_) {}
-    }
-    return const <String, dynamic>{};
-  }
-
-  static List<dynamic> _decodeList(dynamic raw) {
-    if (raw is List) return raw;
-    if (raw is String && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) return decoded;
-      } catch (_) {}
-    }
-    return const [];
-  }
-}
-
-class MantraView {
-  const MantraView({
-    required this.primary,
-    required this.repetitions,
-    required this.meaning,
-    required this.additional,
-  });
-  final String primary;
-  final String repetitions;
-  final String meaning;
-  final List<String> additional;
-}
-
-class StepView {
-  const StepView({
-    required this.number,
-    required this.title,
-    required this.description,
-    required this.subSteps,
-  });
-  final int number;
-  final String title;
-  final String description;
-  final List<String> subSteps;
-}
-
-class MeaningItem {
-  const MeaningItem({required this.title, required this.description});
-  final String title;
-  final String description;
 }

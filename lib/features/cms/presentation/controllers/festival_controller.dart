@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
-import 'package:satya_devotte_app/features/cms/models/festival_model.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 class FestivalController extends GetxController {

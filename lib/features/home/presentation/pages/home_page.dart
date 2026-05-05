@@ -91,28 +91,28 @@ class _HomePageState extends State<HomePage> {
         ApiEndpoints.home,
       );
       final payload = response.data;
-      if (payload is! Map<String, dynamic>) return;
+      if (payload is! Map) return;
       final data = payload['data'];
-      if (data is! Map<String, dynamic>) return;
+      if (data is! Map) return;
 
       final slokaData = data['dailySloka'];
       final poojasData = data['poojas'];
       final festivalsData = data['festivals'];
       final donationsData = data['donations'];
 
-      final parsedSloka = slokaData is Map<String, dynamic>
+      final parsedSloka = slokaData is Map
           ? slokaData['sloka']?.toString().trim()
           : null;
-      final parsedAuthor = slokaData is Map<String, dynamic>
+      final parsedAuthor = slokaData is Map
           ? slokaData['author']?.toString().trim()
           : null;
-      final parsedMeaning = slokaData is Map<String, dynamic>
+      final parsedMeaning = slokaData is Map
           ? slokaData['meaning']?.toString().trim()
           : null;
-      final parsedContemplation = slokaData is Map<String, dynamic>
+      final parsedContemplation = slokaData is Map
           ? slokaData['contemplation']?.toString().trim()
           : null;
-      final parsedPrayer = slokaData is Map<String, dynamic>
+      final parsedPrayer = slokaData is Map
           ? slokaData['prayer']?.toString().trim()
           : null;
 
@@ -165,25 +165,51 @@ class _HomePageState extends State<HomePage> {
     required String fallbackImage,
     bool useDatePlaceholderWhenImageMissing = false,
   }) {
-    if (source is! List) return const [];
-    return source.whereType<Map<String, dynamic>>().map((item) {
+    List<dynamic> list = [];
+    if (source is List) {
+      list = source;
+    } else if (source is Map) {
+      // Handle nested structures like { "festivals": [...] }
+      for (final k in ['festivals', 'poojas', 'items', 'results', 'data']) {
+        if (source[k] is List) {
+          list = source[k];
+          break;
+        }
+      }
+    }
+
+    if (list.isEmpty) return const [];
+
+    return list.map((raw) {
+      if (raw is! Map) return null;
+      final item = raw.map((k, v) => MapEntry(k.toString(), v));
+      
       final title = item['title']?.toString().trim();
-      final image = item['imageUrl']?.toString().trim().isNotEmpty == true
-          ? item['imageUrl']?.toString().trim()
-          : item['image']?.toString().trim();
+      
+      // Clean URL: remove spaces and backticks
+      String? _clean(dynamic v) {
+        final s = v?.toString().trim() ?? '';
+        if (s.isEmpty) return null;
+        return s.replaceAll('`', '').trim();
+      }
+
+      final image = _clean(item['imageUrl']) ?? _clean(item['image']);
+      
       final resolvedImagePath = (image != null && image.isNotEmpty)
           ? image
           : fallbackImage;
+          
       final placeholderText =
           useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
           ? DateFormatters.formatFestivalDate(item['date']?.toString())
           : null;
+          
       return HomeCircleItem(
         title: (title == null || title.isEmpty) ? 'Untitled' : title,
         imagePath: resolvedImagePath,
         placeholderText: placeholderText,
       );
-    }).toList();
+    }).whereType<HomeCircleItem>().toList();
   }
 
   void _onHomeScrollDirectionChanged(ScrollDirection direction) {
