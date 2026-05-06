@@ -266,8 +266,21 @@ class AuthController extends GetxController {
   // ─── Error mappers ────────────────────────────────────────────
   String _mapGoogleSignInError(Object error) {
     final message = error.toString();
+    if (message.contains('people.googleapis.com') ||
+        message.contains('People API') ||
+        message.contains('SERVICE_DISABLED')) {
+      return 'Google People API is disabled for this project. '
+          'Enable it in Google Cloud Console, wait a few minutes, and try again.';
+    }
     if (message.contains('google-sign-in-cancelled')) {
       return 'Google sign in was cancelled.';
+    }
+    if (message.contains('popup_closed')) {
+      return 'Google login popup was closed. Please try again and keep the popup open.';
+    }
+    if (message.contains('popup_blocked_by_browser') ||
+        message.contains('popup_blocked')) {
+      return 'Browser blocked the Google login popup. Please allow popups for this site.';
     }
     if (message.contains('ApiException: 10') ||
         message.toUpperCase().contains('DEVELOPER_ERROR')) {
@@ -300,6 +313,10 @@ class AuthController extends GetxController {
   }
 
   String _mapEmailSignInError(Object error) {
+    final raw = error.toString();
+    if (raw.contains('INVALID_LOGIN_CREDENTIALS')) {
+      return 'Invalid email or password.';
+    }
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'invalid-email':
@@ -312,6 +329,8 @@ class AuthController extends GetxController {
           return 'Invalid email or password.';
         case 'too-many-requests':
           return 'Too many attempts. Please try again later.';
+        case 'google-account-mismatch':
+          return 'Please choose the same Google account as the entered email to link providers.';
       }
     }
     if (error is DioException) {
