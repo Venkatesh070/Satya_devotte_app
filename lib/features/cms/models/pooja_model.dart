@@ -36,6 +36,7 @@ class PoojaModel {
     this.blessings = const [],
     this.festivalIds = const [],
     this.rating = 0.0,
+    this.poojaDate,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
@@ -78,6 +79,7 @@ class PoojaModel {
   final List<String> blessings;
   final List<String> festivalIds;
   final double rating;
+  final String? poojaDate;
   final String? createdBy;
   final String? createdAt;
   final String? updatedAt;
@@ -259,6 +261,7 @@ class PoojaModel {
               .toList() ??
           [],
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      poojaDate: _str(json, ['date', 'poojaDate', 'dateKey'], ''),
       createdBy: _extractId(json['createdBy']),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
@@ -333,6 +336,7 @@ class PoojaModel {
           : [],
     },
     'festivalIds': festivalIds,
+    if (poojaDate != null && poojaDate!.trim().isNotEmpty) 'date': poojaDate,
   };
 
   PoojaModel copyWith({
@@ -370,6 +374,7 @@ class PoojaModel {
     List<String>? completionBenefits,
     List<String>? blessings,
     List<String>? festivalIds,
+    String? poojaDate,
     String? createdBy,
   }) {
     return PoojaModel(
@@ -414,6 +419,7 @@ class PoojaModel {
       blessings: blessings ?? this.blessings,
       festivalIds: festivalIds ?? this.festivalIds,
       rating: rating,
+      poojaDate: poojaDate ?? this.poojaDate,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt,
       updatedAt: updatedAt,

@@ -66,5 +66,14 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required for add_2_calendar resolveActivity checks on Android 11+ -->
+        <intent>
+            <action android:name="android.intent.action.INSERT"/>
+            <data android:scheme="content"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.EDIT"/>
+            <data android:scheme="content"/>
+        </intent>
     </queries>
 </manifest>

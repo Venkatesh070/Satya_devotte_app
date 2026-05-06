@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -15,11 +17,24 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotationController;
+
   @override
   void initState() {
     super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat();
     _navigate();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
   }
 
   Future<void> _navigate() async {
@@ -53,92 +68,160 @@ class _SplashPageState extends State<SplashPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarDividerColor: Colors.black,
       ),
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        backgroundColor: const Color(0xFFF4F4F4),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final h = constraints.maxHeight;
-            return Stack(
-              children: [
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Image.asset(
-                    'assets/images/headerImg.png.png',
-                    fit: BoxFit.fitWidth,
-                    width: constraints.maxWidth,
-                  ),
-                ),
-                Positioned(
-                  top: -h * 0.02,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Opacity(
-                      opacity: 0.28,
-                      child: Image.asset(
-                        'assets/images/headerFlower.png.png',
-                        width: constraints.maxWidth * 0.78,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: h * 0.38,
-                  left: 0,
-                  right: 0,
-                  child: Center(
+        backgroundColor: const Color(0xFF17191E),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  Positioned.fill(
                     child: Image.asset(
-                      'assets/images/appLogo.png',
-                      width: 120,
-                      height: 120,
+                      'assets/images/onBoardBg3.png',
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
-                Positioned(
-                  top: h * 0.62,
-                  left: 0,
-                  right: 0,
-                  child: Column(
-                    children: [
-                      Text(
-                        'पूजा: कर्मणि कौशलम्',
-                        style: GoogleFonts.lora(
-                          color: const Color(0xFF8D8D8D),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
+                  Positioned(
+                    top: -200,
+                    left: 0,
+                    right: 0,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: AnimatedBuilder(
+                        animation: _rotationController,
+                        builder: (context, child) {
+                          final spin = _rotationController.value * 2 * math.pi;
+                          return Transform.rotate(angle: spin, child: child);
+                        },
+                        child: Image.asset('assets/images/flowerImg.png'),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Opacity(
+                      opacity: 1,
+                      child: ImageFiltered(
+                        imageFilter: ui.ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+                        child: SizedBox(
+                          width: 294.69,
+                          height: 294.69,
+                          child: Image.asset(
+                            'assets/images/onBoardRightCorner.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                      Text(
-                        'Pooja is peace in action',
-                        style: GoogleFonts.lora(
-                          color: const Color(0xFF7A7A7A),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Transform.translate(
+                      offset: const Offset(0, -55),
+                      child: AnimatedBuilder(
+                        animation: _rotationController,
+                        builder: (context, child) {
+                          final spin = _rotationController.value * 2 * math.pi;
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Transform.rotate(
+                                angle: spin,
+                                child: Image.asset('assets/images/chakra1.png'),
+                              ),
+                              Transform.rotate(
+                                angle: -spin,
+                                child: Transform.scale(
+                                  scale: 0.90,
+                                  child: Image.asset('assets/images/chakra2.png'),
+                                ),
+                              ),
+                              Transform.rotate(
+                                angle: spin,
+                                child: Transform.scale(
+                                  scale: 0.80,
+                                  child: Image.asset('assets/images/chakra3.png'),
+                                ),
+                              ),
+                              Transform.rotate(
+                                angle: -spin,
+                                child: Transform.scale(
+                                  scale: 0.53,
+                                  child: Image.asset('assets/images/chakra4.png'),
+                                ),
+                              ),
+                              Opacity(
+                                opacity: 0.8,
+                                child: Image.asset('assets/images/onBoardBgOverlay.png'),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.sizeOf(context).height * 0.365,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/svgs/whiteLogo.svg',
+                  width: 93,
+                  height: 112,
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: h * 0.05,
-                  child: Image.asset(
-                    'assets/images/footerImg.png.png',
-                    fit: BoxFit.fitWidth,
-                    width: constraints.maxWidth,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 88,
+              child: Column(
+                children: const [
+                  Text(
+                    'पूजा: कर्मणि कौशलम्',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Pooja is peace in action',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Image.asset(
+                  'assets/images/onBoardFooter.png',
+                  width: MediaQuery.sizeOf(context).width,
+                  fit: BoxFit.fitWidth,
+                  alignment: Alignment.bottomCenter,
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );

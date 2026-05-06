@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
@@ -54,7 +56,7 @@ class CalendarPage extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add Event'),
+            label: const Text(''),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF3B1E08),
@@ -600,76 +602,97 @@ class _EventCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2EBDC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  day,
-                  style: AppTypography.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF3B1E08),
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2EBDC),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Text(
-                  month,
-                  style: AppTypography.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8A6B4A),
-                  ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      day,
+                      style: AppTypography.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF3B1E08),
+                      ),
+                    ),
+                    Text(
+                      month,
+                      style: AppTypography.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF8A6B4A),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3B1E08),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      date != null
+                          ? '${DateFormat('EEEE').format(date)}, ${DateFormat('MMMM dd').format(date)}'
+                          : 'Unknown Date',
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF8A6B4A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1DD),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$daysToGo Days To Go',
                   style: AppTypography.inter(
-                    fontSize: 15,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF3B1E08),
+                    color: const Color(0xFFE0884A),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  date != null
-                      ? '${DateFormat('EEEE').format(date)}, ${DateFormat('MMMM dd').format(date)}'
-                      : 'Unknown Date',
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF8A6B4A),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF1DD),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '$daysToGo Days To Go',
-              style: AppTypography.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFFE0884A),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => _addEventToDeviceCalendar(title, date),
+              icon: const Icon(Icons.event_available_outlined, size: 16),
+              label: const Text('Add to Calendar'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF3B1E08),
+                side: const BorderSide(color: Color(0xFFEAD9BC)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ),
@@ -702,5 +725,49 @@ class _EventCard extends StatelessWidget {
       } catch (_) {}
     }
     return null;
+  }
+
+  Future<void> _addEventToDeviceCalendar(String title, DateTime? date) async {
+    if (date == null) {
+      Get.snackbar(
+        'Calendar',
+        'Unable to add event because date is missing.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final start = DateTime(date.year, date.month, date.day, 10, 0);
+    final end = DateTime(date.year, date.month, date.day, 11, 0);
+
+    try {
+      final opened = await addEventToCalendar(
+        title: title,
+        description: 'Perform ritual',
+        startDate: start,
+        endDate: end,
+      );
+      if (opened) {
+        Get.snackbar(
+          'Calendar',
+          kIsWeb
+              ? 'Calendar opened in browser. Save event there.'
+              : 'Calendar opened. Tap Save to add "$title".',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Calendar',
+          'Could not open calendar app on this device.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (_) {
+      Get.snackbar(
+        'Calendar',
+        'Failed to sync event to device calendar.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }

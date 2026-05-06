@@ -63,6 +63,9 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
   flutter_timezone: ^3.0.1
+  url_launcher: ^6.3.2
+  add_2_calendar: ^3.0.1
+  android_intent_plus: ^6.0.0
 
 dev_dependencies:
   flutter_test:

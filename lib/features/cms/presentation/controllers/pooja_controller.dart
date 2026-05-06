@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
@@ -146,6 +145,7 @@ class PoojaController extends GetxController {
     List<String> completionBenefits = const [],
     List<String> blessings = const [],
     List<String> festivalIds = const [],
+    String? poojaDate,
     String? imageUrl,
     String? audioUrl,
     String? videoUrl,
@@ -191,6 +191,7 @@ class PoojaController extends GetxController {
         completionBenefits: completionBenefits,
         blessings: blessings,
         festivalIds: festivalIds,
+        poojaDate: poojaDate,
       );
       final created = await _dataSource.createPooja(
         pooja,
@@ -335,9 +336,6 @@ class PoojaController extends GetxController {
 
   // ── Helpers ──────────────────────────────────────────────────
   void _snackOk(String msg) => showCmsSnackbar(title: 'Success', message: msg);
-
-  void _snackErr(String msg) =>
-      showCmsSnackbar(title: 'Error', message: msg, isError: true);
 
   String _parseError(Object e) {
     if (e is DioException) {
