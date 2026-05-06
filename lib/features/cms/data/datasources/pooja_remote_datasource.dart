@@ -100,17 +100,21 @@ class PoojaRemoteDataSource {
     PickedFile? video,
   }) async {
     final hasMedia = image != null || audio != null || video != null;
+    final payload = Map<String, dynamic>.from(pooja.toJson());
     if (!hasMedia) {
+      if (kDebugMode) {
+        debugPrint('[create-pooja] JSON payload: ${jsonEncode(payload)}');
+      }
       final response = await _apiClient.dio.post(
         ApiEndpoints.createPooja,
-        data: pooja.toJson(),
+        data: payload,
       );
       return PoojaModel.fromJson(
         _extractSingle(response.data as Map<String, dynamic>),
       );
     }
 
-    final formMap = _toMultipartFields(pooja.toJson());
+    final formMap = _toMultipartFields(payload);
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
@@ -131,6 +135,17 @@ class PoojaRemoteDataSource {
         filename: video.filename,
         contentType: MediaType.parse(video.mimeType),
       );
+    }
+    if (kDebugMode) {
+      final printable = <String, dynamic>{};
+      formMap.forEach((key, value) {
+        if (value is MultipartFile) {
+          printable[key] = 'MultipartFile(filename: ${value.filename})';
+        } else {
+          printable[key] = value;
+        }
+      });
+      debugPrint('[create-pooja] Multipart payload: ${jsonEncode(printable)}');
     }
     final response = await _apiClient.dio.post(
       ApiEndpoints.createPooja,

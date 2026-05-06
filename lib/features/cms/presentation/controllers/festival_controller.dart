@@ -1,6 +1,5 @@
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 // lib/features/cms/presentation/controllers/festival_controller.dart
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
@@ -51,14 +50,14 @@ class FestivalController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    Future.microtask(loadFestivals);
+    Future.microtask(() => loadFestivals(showErrorSnackbar: false));
   }
 
   void setFilter(String f) => _filter.value = f;
   void setMonth(int m) => _selectedMonth.value = m;
 
   // ── LOAD ──────────────────────────────────────────────────────
-  Future<void> loadFestivals() async {
+  Future<void> loadFestivals({bool showErrorSnackbar = true}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
@@ -69,11 +68,13 @@ class FestivalController extends GetxController {
       _festivals.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
-      showCmsSnackbar(
-        title: 'Error',
-        message: 'Failed to load festivals: ${_error.value}',
-        isError: true,
-      );
+      if (showErrorSnackbar) {
+        showCmsSnackbar(
+          title: 'Error',
+          message: 'Failed to load festivals: ${_error.value}',
+          isError: true,
+        );
+      }
     } finally {
       _isLoading.value = false;
     }

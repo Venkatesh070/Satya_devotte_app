@@ -101,6 +101,7 @@ flutter:
     - assets/chakra_animation.json
     - assets/images/
     - assets/images/home/
+    - assets/images/pooja/
     - assets/svgs/
     - assets/videos/
 

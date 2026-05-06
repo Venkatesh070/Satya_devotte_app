@@ -127,6 +127,30 @@ class PoojaModel {
         .toList();
   }
 
+  static String? _toApiDate(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final input = raw.trim();
+    try {
+      final ddMmYyyy = RegExp(r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$');
+      if (ddMmYyyy.hasMatch(input)) return input;
+
+      if (RegExp(r'^\d{8}$').hasMatch(input)) {
+        final day = input.substring(0, 2);
+        final month = input.substring(2, 4);
+        final year = input.substring(4, 8);
+        return '$day-$month-$year';
+      }
+
+      final parsed = DateTime.parse(input);
+      final day = parsed.day.toString().padLeft(2, '0');
+      final month = parsed.month.toString().padLeft(2, '0');
+      final year = parsed.year.toString();
+      return '$day-$month-$year';
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Inbound: API value → internal display value ───────────────
   // API sends: APPROVED, REJECTED, PENDING, DRAFT, published, active, etc.
   // We normalise to: 'Approved' | 'Queued' | 'Pending' | 'Draft' | 'Rejected'
@@ -269,7 +293,9 @@ class PoojaModel {
   }
 
   // ── toJson sends UPPERCASE status values the API accepts ─────
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() {
+    final apiDate = _toApiDate(date) ?? _toApiDate(poojaDate);
+    return {
     'title': title,
     'deity': deity,
     'category': category,
@@ -277,7 +303,7 @@ class PoojaModel {
     'duration': duration,
     'description': description,
     'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
-    if (date != null) 'date': date,
+    if (apiDate != null) 'date': apiDate,
     if (imageUrl != null) 'imageUrl': imageUrl,
     if (audioUrl != null) 'audioUrl': audioUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
@@ -336,8 +362,8 @@ class PoojaModel {
           : [],
     },
     'festivalIds': festivalIds,
-    if (poojaDate != null && poojaDate!.trim().isNotEmpty) 'date': poojaDate,
   };
+  }
 
   PoojaModel copyWith({
     String? title,

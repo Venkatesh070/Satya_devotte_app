@@ -24,57 +24,8 @@ class _RitualListPageState extends State<RitualListPage> {
   String? _error;
   List<PoojaListItem> _items = const [];
   String _searchQuery = '';
+  String _selectedCategory = 'All Poojas';
   Set<String> _favoriteIds = <String>{};
-  final Map<String, Set<String>> _appliedFilters = <String, Set<String>>{
-    'Deity': <String>{},
-    'Tithis': <String>{},
-    'Dosha': <String>{},
-    'Benefits': <String>{},
-    'Location': <String>{},
-  };
-
-  static const Map<String, List<String>> _filterOptions =
-      <String, List<String>>{
-        'Deity': <String>[
-          'Hanumanji',
-          'Ganeshji',
-          'Shivji',
-          'Lakshmi',
-          'Durga',
-          'Vishnu',
-          'Kaal Bhairav',
-          'Shani Dev',
-          'Rahu',
-        ],
-        'Tithis': <String>[
-          'Amavasya',
-          'Pournami',
-          'Ekadashi',
-          'Pradosham',
-          'Ashtami',
-        ],
-        'Dosha': <String>[
-          'Rahu Ketu',
-          'Manglik',
-          'Shani',
-          'Pitra',
-          'Kaal Sarp',
-        ],
-        'Benefits': <String>[
-          'Health',
-          'Wealth',
-          'Career',
-          'Marriage',
-          'Protection',
-        ],
-        'Location': <String>[
-          'Hyderabad',
-          'Bengaluru',
-          'Chennai',
-          'Mumbai',
-          'Delhi',
-        ],
-      };
 
   @override
   void initState() {
@@ -169,31 +120,42 @@ class _RitualListPageState extends State<RitualListPage> {
   List<PoojaListItem> get _filteredItems {
     final q = _searchQuery.trim().toLowerCase();
     return _items.where((item) {
-      if (q.isEmpty) return true;
-      final textMatch =
-          item.title.toLowerCase().contains(q) ||
-          item.deity.toLowerCase().contains(q) ||
-          item.description.toLowerCase().contains(q);
-      if (!textMatch) return false;
-
-      // Deity exact filter from API field.
-      final deitySet = _appliedFilters['Deity']!;
-      if (deitySet.isNotEmpty && !deitySet.contains(item.deity)) return false;
-
-      // Remaining filters are mapped heuristically from item text.
-      bool matchesByText(String key) {
-        final selected = _appliedFilters[key]!;
-        if (selected.isEmpty) return true;
-        final haystack = '${item.title} ${item.description} ${item.category}'
-            .toLowerCase();
-        return selected.any((s) => haystack.contains(s.toLowerCase()));
+      final selectedCategory = _selectedCategory.trim().toLowerCase();
+      if (selectedCategory != 'all poojas') {
+        final itemTitle = item.title.toLowerCase();
+        final itemDeity = item.deity.toLowerCase();
+        final itemCategory = item.category.toLowerCase();
+        if (!itemTitle.contains(selectedCategory) &&
+            !itemDeity.contains(selectedCategory) &&
+            !itemCategory.contains(selectedCategory)) {
+          return false;
+        }
       }
 
-      return matchesByText('Tithis') &&
-          matchesByText('Dosha') &&
-          matchesByText('Benefits') &&
-          matchesByText('Location');
+      if (q.isNotEmpty) {
+        final textMatch =
+            item.title.toLowerCase().contains(q) ||
+            item.deity.toLowerCase().contains(q) ||
+            item.description.toLowerCase().contains(q);
+        if (!textMatch) return false;
+      }
+
+      return true;
     }).toList();
+  }
+
+  List<String> get _categoryTabs {
+    final tabs = <String>['All Poojas'];
+    final seen = <String>{};
+    for (final item in _items) {
+      final label = item.deity.trim().isNotEmpty
+          ? "${item.deity.trim()} Pooja's"
+          : item.title.trim();
+      if (label.isEmpty) continue;
+      if (seen.add(label.toLowerCase())) tabs.add(label);
+      if (tabs.length >= 8) break;
+    }
+    return tabs;
   }
 
   @override
@@ -212,8 +174,8 @@ class _RitualListPageState extends State<RitualListPage> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _FixedHeaderDelegate(
-                  minExtentHeight: MediaQuery.paddingOf(context).top + 250,
-                  maxExtentHeight: MediaQuery.paddingOf(context).top + 250,
+                  minExtentHeight: MediaQuery.paddingOf(context).top + 280,
+                  maxExtentHeight: MediaQuery.paddingOf(context).top + 280,
                   child: _buildHeader(),
                 ),
               ),
@@ -240,31 +202,34 @@ class _RitualListPageState extends State<RitualListPage> {
   Widget _buildHeader() {
     final topInset = MediaQuery.paddingOf(context).top;
     return SizedBox(
-      height: topInset + 250,
+      height: topInset + 362,
       child: Stack(
         children: [
-          const Positioned(
-            top: -250,
-            left: 0,
-            right: 0,
-            child: Image(
-              image: AssetImage('assets/images/appHeaderImg.png'),
-              fit: BoxFit.fitWidth,
+          Positioned.fill(
+            child: Align(
               alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: MediaQuery.sizeOf(context).width,
+                height: 372,
+                child: Image.asset(
+                  'assets/images/pooja/pujaHeaderImg.png',
+                  fit: BoxFit.fill,
+                ),
+              ),
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(16, topInset + 14, 16, 10),
+            padding: EdgeInsets.fromLTRB(20, topInset + 16, 20, 8),
             child: Column(
               children: [
                 Row(
                   children: [
                     Expanded(
                       child: Text(
-                        'Pooja Rituals',
+                        'Puja Rituals',
                         style: AppTypography.lora(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w400,
                           color: Colors.white,
                         ),
                       ),
@@ -275,29 +240,26 @@ class _RitualListPageState extends State<RitualListPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 34),
+                const SizedBox(height: 20),
                 _buildSearchField(),
                 const SizedBox(height: 12),
-
-                // SizedBox(
-                //   height: 40,
-                //   child: Row(
-                //     children: [
-                //       _QuickFilterChip(
-                //         label: 'Filters',
-                //         icon: Icons.tune,
-                //         onTap: () => _openFiltersBottomSheet(),
-                //       ),
-                //       const SizedBox(width: 8),
-                //       Expanded(
-                //         child: ListView(
-                //           scrollDirection: Axis.horizontal,
-                //           children: _buildHeaderFilterChips(),
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
+                SizedBox(
+                  height: 92,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categoryTabs.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final tab = _categoryTabs[index];
+                      final isSelected = tab == _selectedCategory;
+                      return _CategoryTabChip(
+                        label: tab,
+                        selected: isSelected,
+                        onTap: () => setState(() => _selectedCategory = tab),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -306,66 +268,17 @@ class _RitualListPageState extends State<RitualListPage> {
     );
   }
 
-  List<Widget> _buildHeaderFilterChips() {
-    final selected = <_SelectedFilterEntry>[];
-    for (final entry in _appliedFilters.entries) {
-      for (final value in entry.value) {
-        selected.add(_SelectedFilterEntry(category: entry.key, value: value));
-      }
-    }
-
-    if (selected.isEmpty) {
-      return [
-        _QuickFilterChip(
-          label: 'Deity',
-          onTap: () => _openFiltersBottomSheet(initialCategory: 'Deity'),
-        ),
-        const SizedBox(width: 8),
-        _QuickFilterChip(
-          label: 'Benefits',
-          onTap: () => _openFiltersBottomSheet(initialCategory: 'Benefits'),
-        ),
-        const SizedBox(width: 8),
-        _QuickFilterChip(
-          label: 'Location',
-          onTap: () => _openFiltersBottomSheet(initialCategory: 'Location'),
-        ),
-      ];
-    }
-
-    final chips = <Widget>[];
-    for (var i = 0; i < selected.length; i++) {
-      final item = selected[i];
-      chips.add(
-        _AppliedFilterChip(
-          label: item.value,
-          onTap: () => _openFiltersBottomSheet(initialCategory: item.category),
-          onRemove: () {
-            setState(() {
-              _appliedFilters[item.category]!.remove(item.value);
-            });
-          },
-        ),
-      );
-      if (i != selected.length - 1) {
-        chips.add(const SizedBox(width: 8));
-      }
-    }
-    return chips;
-  }
-
   Widget _buildSearchField() {
     return Container(
-      height: 46,
+      height: 44,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        color: const Color(0x22FFFFFF),
+        borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Color(0xFFCF6F2B), size: 20),
+          const Icon(Icons.search, color: Colors.white, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -379,10 +292,10 @@ class _RitualListPageState extends State<RitualListPage> {
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
-                hintText: 'Search for Shiv Puja',
+                hintText: 'Search rituals...',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,
-                  color: const Color(0xFF8F8F8F),
+                  color: const Color(0xFFFAD9C0),
                 ),
               ),
             ),
@@ -415,7 +328,7 @@ class _RitualListPageState extends State<RitualListPage> {
       );
     }
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, listBottomPadding),
+      padding: EdgeInsets.fromLTRB(18, 0, 18, listBottomPadding),
       sliver: SliverList.separated(
         itemCount: items.length + 1,
         separatorBuilder: (_, __) =>
@@ -483,325 +396,6 @@ class _RitualListPageState extends State<RitualListPage> {
     );
   }
 
-  Future<void> _openFiltersBottomSheet({
-    String initialCategory = 'Deity',
-  }) async {
-    String activeCategory = initialCategory;
-    final tempFilters = <String, Set<String>>{
-      for (final e in _appliedFilters.entries) e.key: {...e.value},
-    };
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final options = _filterOptions[activeCategory] ?? const <String>[];
-          final selected = tempFilters[activeCategory]!;
-          return SafeArea(
-            top: false,
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.72,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Puja Filters',
-                          style: AppTypography.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E1E1E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 112,
-                          color: const Color(0xFFF7F7F7),
-                          child: ListView(
-                            children: _filterOptions.keys.map((k) {
-                              final isActive = k == activeCategory;
-                              return InkWell(
-                                onTap: () =>
-                                    setModalState(() => activeCategory = k),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isActive
-                                        ? Colors.white
-                                        : const Color(0xFFF7F7F7),
-                                    border: Border(
-                                      left: BorderSide(
-                                        color: isActive
-                                            ? const Color(0xFF2A6DE6)
-                                            : Colors.transparent,
-                                        width: 3,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    k,
-                                    style: AppTypography.inter(
-                                      fontSize: 14,
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                      color: const Color(0xFF2A2A2A),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CheckboxListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'Select All',
-                                    style: AppTypography.inter(fontSize: 13),
-                                  ),
-                                  value:
-                                      selected.length == options.length &&
-                                      options.isNotEmpty,
-                                  onChanged: (_) {
-                                    setModalState(() {
-                                      if (selected.length == options.length) {
-                                        selected.clear();
-                                      } else {
-                                        selected
-                                          ..clear()
-                                          ..addAll(options);
-                                      }
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                ),
-                                Text(
-                                  'Select your filters',
-                                  style: AppTypography.inter(
-                                    fontSize: 15,
-                                    color: const Color(0xFF9A9A9A),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Expanded(
-                                  child: GridView.builder(
-                                    itemCount: options.length,
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 3,
-                                          childAspectRatio: 0.72,
-                                          mainAxisSpacing: 10,
-                                          crossAxisSpacing: 10,
-                                        ),
-                                    itemBuilder: (_, i) {
-                                      final option = options[i];
-                                      final checked = selected.contains(option);
-                                      return GestureDetector(
-                                        onTap: () {
-                                          setModalState(() {
-                                            if (checked) {
-                                              selected.remove(option);
-                                            } else {
-                                              selected.add(option);
-                                            }
-                                          });
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                            border: Border.all(
-                                              color: checked
-                                                  ? const Color(0xFF2A6DE6)
-                                                  : const Color(0xFFE4E4E4),
-                                              width: checked ? 2 : 1,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              Expanded(
-                                                child: Stack(
-                                                  children: [
-                                                    Container(
-                                                      margin:
-                                                          const EdgeInsets.all(
-                                                            5,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                        gradient:
-                                                            const LinearGradient(
-                                                              colors: [
-                                                                Color(
-                                                                  0xFFECC07A,
-                                                                ),
-                                                                Color(
-                                                                  0xFFB06A20,
-                                                                ),
-                                                              ],
-                                                              begin: Alignment
-                                                                  .topCenter,
-                                                              end: Alignment
-                                                                  .bottomCenter,
-                                                            ),
-                                                      ),
-                                                      alignment:
-                                                          Alignment.center,
-                                                      child: Text(
-                                                        option
-                                                            .substring(0, 1)
-                                                            .toUpperCase(),
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      right: 4,
-                                                      top: 4,
-                                                      child: Container(
-                                                        width: 18,
-                                                        height: 18,
-                                                        decoration: BoxDecoration(
-                                                          color: checked
-                                                              ? const Color(
-                                                                  0xFF2A6DE6,
-                                                                )
-                                                              : Colors.white,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                4,
-                                                              ),
-                                                          border: Border.all(
-                                                            color: const Color(
-                                                              0xFFD0D0D0,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        child: checked
-                                                            ? const Icon(
-                                                                Icons.check,
-                                                                size: 13,
-                                                                color: Colors
-                                                                    .white,
-                                                              )
-                                                            : null,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                      6,
-                                                      0,
-                                                      6,
-                                                      6,
-                                                    ),
-                                                child: Text(
-                                                  option,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: AppTypography.inter(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              for (final set in tempFilters.values) {
-                                set.clear();
-                              }
-                              setModalState(() {});
-                            },
-                            child: const Text('Clear Filter'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                for (final e in tempFilters.entries) {
-                                  _appliedFilters[e.key] = {...e.value};
-                                }
-                              });
-                              Navigator.of(context).pop();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2A6DE6),
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Apply Filter'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -897,17 +491,34 @@ class _PoojaCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: 76,
-              height: 76,
+              width: 56,
+              height: 56,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: hasImage
-                          ? Image.network(item.imageUrl!, fit: BoxFit.cover)
-                          : _imageFallback(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAECD2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFD8CBB6),
+                          width: 1,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: hasImage
+                              ? Image.network(
+                                  item.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _imageFallback(),
+                                )
+                              : _imageFallback(),
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -1146,8 +757,8 @@ class _HeaderFavoriteButton extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -1194,106 +805,6 @@ class _HeaderFavoriteButton extends StatelessWidget {
   }
 }
 
-class _QuickFilterChip extends StatelessWidget {
-  const _QuickFilterChip({required this.label, required this.onTap, this.icon});
-
-  final String label;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F2),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 16, color: const Color(0xFF496182)),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF496182),
-              ),
-            ),
-            if (icon == null) ...[
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                size: 17,
-                color: Color(0xFF496182),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AppliedFilterChip extends StatelessWidget {
-  const _AppliedFilterChip({
-    required this.label,
-    required this.onTap,
-    required this.onRemove,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F7FF),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF5E8ED6)),
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2F5FA7),
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onRemove,
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: Color(0xFF2F5FA7),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectedFilterEntry {
-  const _SelectedFilterEntry({required this.category, required this.value});
-
-  final String category;
-  final String value;
-}
 
 class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   _FixedHeaderDelegate({
@@ -1328,3 +839,151 @@ class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
         child != oldDelegate.child;
   }
 }
+
+class _CategoryTabChip extends StatelessWidget {
+  const _CategoryTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const chipRadius = BorderRadius.only(
+      topLeft: Radius.circular(16),
+      topRight: Radius.circular(16),
+      bottomLeft: Radius.circular(0),
+      bottomRight: Radius.circular(0),
+    );
+
+    final chipBody = Container(
+      width: 98,
+      height: 88,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: chipRadius,
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0x40FFFFFF),
+            Color(0x24FFB677),
+            Color(0x18B64A00),
+          ],
+          stops: [0.0, 0.52, 1.0],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.inter(
+            fontSize: 32 / 3,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1.15,
+          ),
+        ),
+      ),
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 98,
+        height: 88,
+        child: Stack(
+          children: [
+            Positioned.fill(child: chipBody),
+            if (selected)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _TopRightChipBorderPainter(
+                      radius: 16,
+                      strokeWidth: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopRightChipBorderPainter extends CustomPainter {
+  const _TopRightChipBorderPainter({
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final double radius;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final topY = strokeWidth / 2;
+    final rightX = size.width - strokeWidth / 2;
+
+    // Top border fades from left -> bright near top-right.
+    final topPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: const [
+          Color(0x00FFEF11),
+          Color(0x55FFEF11),
+          Color(0xFFFFEF11),
+        ],
+        stops: const [0.0, 0.72, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, strokeWidth));
+
+    final topPath = Path()
+      ..moveTo(radius, topY)
+      ..lineTo(size.width - radius, topY)
+      ..arcToPoint(
+        Offset(rightX, radius),
+        radius: Radius.circular(radius),
+        clockwise: true,
+      );
+    canvas.drawPath(topPath, topPaint);
+
+    // Right border is brightest near top-right and fades downward.
+    final rightPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFEF11),
+          Color(0x66FFEF11),
+          Color(0x00FFEF11),
+        ],
+        stops: const [0.0, 0.35, 1.0],
+      ).createShader(Rect.fromLTWH(size.width - strokeWidth, 0, strokeWidth, size.height));
+
+    canvas.drawLine(
+      Offset(rightX, radius),
+      Offset(rightX, size.height - 2),
+      rightPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TopRightChipBorderPainter oldDelegate) {
+    return oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+

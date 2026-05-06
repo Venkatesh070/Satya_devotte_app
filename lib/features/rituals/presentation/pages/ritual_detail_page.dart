@@ -260,18 +260,37 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                         ),
                       const SizedBox(height: 14),
                       const HeaderDivider(),
-                      const SizedBox(height: 14),
-                      Text(
-                        'More Options',
-                        style: AppTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF3B1E08),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _SegmentedTabs(controller: _tabController, tabs: _tabs),
+                      const SizedBox(height: 8),
                     ],
+                  ),
+                ),
+              ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedHeaderDelegate(
+                  minExtentHeight: 92,
+                  maxExtentHeight: 92,
+                  child: Container(
+                    color: AppColors.appBgColor,
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'More Options',
+                          style: AppTypography.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF3B1E08),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _SegmentedTabs(
+                          controller: _tabController,
+                          tabs: _tabs,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -373,13 +392,15 @@ class _HeroHeader extends StatelessWidget {
                     ),
 
                     // Network Image (stretched over background)
-                    Image.network(
-                      pooja.heroImage!,
-                      fit: BoxFit.fill, // IMPORTANT
-                      alignment: Alignment.center,
-                      color: Colors.black.withOpacity(0.2), // optional overlay
-                      colorBlendMode: BlendMode.darken,
-                    ),
+                    if (pooja.heroImage != null && pooja.heroImage!.isNotEmpty)
+                      Image.network(
+                        pooja.heroImage!,
+                        fit: BoxFit.fill, // IMPORTANT
+                        alignment: Alignment.center,
+                        color: Colors.black.withOpacity(0.2), // optional overlay
+                        colorBlendMode: BlendMode.darken,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                   ],
                 ),
               ),
@@ -591,6 +612,40 @@ class _SegmentedTabs extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedHeaderDelegate({
+    required this.minExtentHeight,
+    required this.maxExtentHeight,
+    required this.child,
+  });
+
+  final double minExtentHeight;
+  final double maxExtentHeight;
+  final Widget child;
+
+  @override
+  double get minExtent => minExtentHeight;
+
+  @override
+  double get maxExtent => maxExtentHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedHeaderDelegate oldDelegate) {
+    return minExtentHeight != oldDelegate.minExtentHeight ||
+        maxExtentHeight != oldDelegate.maxExtentHeight ||
+        child != oldDelegate.child;
   }
 }
 

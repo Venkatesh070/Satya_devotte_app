@@ -40,7 +40,7 @@ class PoojaController extends GetxController {
   void onInit() {
     super.onInit();
     Future.microtask(() async {
-      await loadPoojas();
+      await loadPoojas(showErrorSnackbar: false);
       await loadDeities();
     });
   }
@@ -53,10 +53,10 @@ class PoojaController extends GetxController {
   /// so stale loadAllPoojas data is replaced with properly filtered data.
   void resetAndLoad() {
     _filter.value = 'All';
-    loadPoojas();
+    loadPoojas(showErrorSnackbar: false);
   }
 
-  Future<void> loadPoojas() async {
+  Future<void> loadPoojas({bool showErrorSnackbar = true}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
@@ -72,11 +72,13 @@ class PoojaController extends GetxController {
       _poojas.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
-      showCmsSnackbar(
-        title: 'Error',
-        message: 'Failed to load pujas: ${_error.value}',
-        isError: true,
-      );
+      if (showErrorSnackbar) {
+        showCmsSnackbar(
+          title: 'Error',
+          message: 'Failed to load pujas: ${_error.value}',
+          isError: true,
+        );
+      }
     } finally {
       _isLoading.value = false;
     }

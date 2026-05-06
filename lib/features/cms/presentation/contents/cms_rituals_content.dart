@@ -908,7 +908,6 @@ class _PoojaFormState extends State<_PoojaForm> {
   late List<Map<String, String>> _offeringsMeaningEntries;
   late List<Map<String, String>> _actionsMeaningEntries;
   late List<Map<String, String>> _otherSymbolismEntries;
-  DateTime? _poojaDate;
   bool _showStepEditor = false;
   bool _showOfferingsEditor = false;
   bool _showActionsEditor = false;
@@ -1007,7 +1006,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     _imageUrl = p?.imageUrl;
     _audioUrl = p?.audioUrl;
     _videoUrl = p?.videoUrl;
-    _poojaDate = _parsePoojaDate(p?.poojaDate);
     if (_festivalCtrl.festivals.isEmpty) {
       Future.microtask(_festivalCtrl.loadFestivals);
     }
@@ -1050,7 +1048,6 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
-    if (_poojaDate == null) return 'Date is required';
     if (_selectedDeityId == null || _selectedDeityId!.isEmpty) {
       return 'Deity is required';
     }
@@ -1065,59 +1062,6 @@ class _PoojaFormState extends State<_PoojaForm> {
       .map((e) => e.trim())
       .where((e) => e.isNotEmpty)
       .toList();
-
-  DateTime? _parsePoojaDate(String? s) {
-    if (s == null || s.trim().isEmpty) return null;
-    final input = s.trim();
-    try {
-      if (RegExp(r'^\d{8}$').hasMatch(input)) {
-        final day = int.parse(input.substring(0, 2));
-        final month = int.parse(input.substring(2, 4));
-        final year = int.parse(input.substring(4, 8));
-        return DateTime(year, month, day);
-      }
-      final p = input.split('-');
-      if (p.length == 3 && p[0].length == 2) {
-        return DateTime(int.parse(p[2]), int.parse(p[1]), int.parse(p[0]));
-      }
-      return DateTime.parse(input);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String _formatPoojaDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.year}';
-
-  String _displayPoojaDate(DateTime? d) {
-    if (d == null) return 'Select date';
-    return '${d.day.toString().padLeft(2, '0')}-'
-        '${d.month.toString().padLeft(2, '0')}-'
-        '${d.year}';
-  }
-
-  Future<void> _pickPoojaDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _poojaDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2040),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: CmsColors.orange,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
-      setState(() => _poojaDate = picked);
-    }
-  }
 
   _StepDraft _decodeStoredStep(String raw) {
     final parts = raw.split('||');
@@ -1350,14 +1294,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     return found?.title ?? id;
   }
 
-  String? _formatToApiDate(DateTime? d) {
-    if (d == null) return null;
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    final yyyy = d.year.toString();
-    return '$dd-$mm-$yyyy';
-  }
-
   DateTime? _parseDate(String s) {
     if (s.isEmpty) return null;
     try {
@@ -1398,6 +1334,10 @@ class _PoojaFormState extends State<_PoojaForm> {
       return;
     }
     final status = isDraft ? 'Draft' : 'Pending';
+    final scheduleDateApi =
+        '${_selectedDate!.day.toString().padLeft(2, '0')}-'
+        '${_selectedDate!.month.toString().padLeft(2, '0')}-'
+        '${_selectedDate!.year}';
     bool ok;
     if (_isEdit) {
       ok = await widget.controller.updatePooja(
@@ -1439,7 +1379,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           completionBenefits: _completionBenefits,
           blessings: blessingsPayload,
           festivalIds: _selectedFestivalIds,
-          poojaDate: _poojaDate == null ? null : _formatPoojaDate(_poojaDate!),
+          date: scheduleDateApi,
         ),
       );
     } else {
@@ -1480,7 +1420,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         completionBenefits: _completionBenefits,
         blessings: blessingsPayload,
         festivalIds: _selectedFestivalIds,
-        poojaDate: _poojaDate == null ? null : _formatPoojaDate(_poojaDate!),
+        date: scheduleDateApi,
       );
     }
     if (ok) widget.onSaved();
@@ -1577,53 +1517,6 @@ class _PoojaFormState extends State<_PoojaForm> {
             label: 'Duration *',
             hint: 'e.g. 45 min',
             controller: _durationCtrl,
-          ),
-          const SizedBox(height: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Date *',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              InkWell(
-                onTap: _pickPoojaDate,
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: CmsColors.bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: CmsColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _displayPoojaDate(_poojaDate),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _poojaDate == null
-                                ? CmsColors.textSecond
-                                : CmsColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: CmsColors.textSecond,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 12),
           Row(
