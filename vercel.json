@@ -1,5 +1,11 @@
 {
-    "buildCommand": "flutter build web --release",
+    "buildCommand": "chmod +x build.sh && ./build.sh",
     "outputDirectory": "build/web",
-    "installCommand": "flutter pub get"
+  
+    "rewrites": [
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
+      }
+    ]
   }
