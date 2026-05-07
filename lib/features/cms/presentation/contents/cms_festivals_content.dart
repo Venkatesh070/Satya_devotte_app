@@ -26,6 +26,12 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
   void initState() {
     super.initState();
     _ctrl = Get.find<FestivalController>();
+    // Trigger an initial fetch on first open so users don't have to
+    // manually press the reload icon to see the API content.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _ctrl.loadFestivals();
+    });
   }
 
   @override

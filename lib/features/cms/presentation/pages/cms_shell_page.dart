@@ -49,7 +49,14 @@ class _CmsShellPageState extends State<CmsShellPage> {
     setState(() => _selectedIndex = index);
     final targetRoute = _routeForIndex(index, auth.isSuperAdmin);
     if (targetRoute != null && targetRoute != Get.currentRoute) {
-      Get.toNamed(targetRoute);
+      // Use offNamed so the back stack does not grow each time the user
+      // clicks a sidebar tab (every CMS route maps to the same shell).
+      // Also force noTransition so Flutter web does not play the default
+      // page-scale animation that looks like the screen "shrinks".
+      Get.offNamed(
+        targetRoute,
+        preventDuplicates: false,
+      );
     }
   }
 

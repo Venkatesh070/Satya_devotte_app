@@ -37,50 +37,72 @@ class AppPages {
     ),
 
     // ─── CMS (admin + superadmin) ───────────────────────────────
+    // All CMS routes render the same `CmsShellPage`; the shell
+    // switches its content based on the selected sidebar item.
+    // Disable the default GetX page transition so tab clicks do not
+    // animate (which on Flutter web shows up as a "shrinking" zoom).
     GetPage(
       name: AppRoutes.cms,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsDeities,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsRituals,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsRitualCreate,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsRitualEdit,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsFestivals,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsUsers,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsNotifications,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsAnalytics,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
 
     // ─── Super Admin only ───────────────────────────────────────
@@ -88,16 +110,22 @@ class AppPages {
       name: AppRoutes.cmsApproval,
       page: CmsShellPage.new,
       middlewares: [SuperAdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsAdmins,
       page: CmsShellPage.new,
       middlewares: [SuperAdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
     GetPage(
       name: AppRoutes.cmsShlokas,
       page: CmsShellPage.new,
       middlewares: [SuperAdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
     ),
   ];
 }
