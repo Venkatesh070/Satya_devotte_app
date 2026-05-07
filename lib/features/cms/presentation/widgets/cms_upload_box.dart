@@ -50,10 +50,24 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
   PickedFile? _picked; // newly picked file (bytes in memory)
   String? _existingUrl; // pre-existing URL (editing mode)
 
+  static String? _trimUrl(String? url) {
+    final t = url?.trim();
+    if (t == null || t.isEmpty) return null;
+    return t;
+  }
+
   @override
   void initState() {
     super.initState();
-    _existingUrl = widget.initialUrl;
+    _existingUrl = _trimUrl(widget.initialUrl);
+  }
+
+  @override
+  void didUpdateWidget(CmsUploadBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialUrl != oldWidget.initialUrl && _picked == null) {
+      _existingUrl = _trimUrl(widget.initialUrl);
+    }
   }
 
   Future<void> _pick() async {
@@ -94,10 +108,15 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
   }
 
   void _remove() {
-    setState(() {
-      _picked = null;
-      _existingUrl = null;
-    });
+    if (_picked != null) {
+      setState(() {
+        _picked = null;
+        _existingUrl = _trimUrl(widget.initialUrl);
+      });
+      widget.onRemoved?.call();
+      return;
+    }
+    setState(() => _existingUrl = null);
     widget.onRemoved?.call();
   }
 

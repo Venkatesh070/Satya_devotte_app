@@ -42,10 +42,10 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
   late final TabController _tabController;
   static const _tabs = <String>[
-    'About the Ritual',
-    'Rituals and Remedies',
+    'Calendar Puja\'s',
     'About the Deity',
-    'Stories',
+    'Rituals and Remedies',
+    'Stories of Deity',
   ];
 
   @override
@@ -303,8 +303,8 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   pooja: p,
                   festivalNames: _festivalNames,
                 ),
-                _RitualsTab(key: ValueKey('rit_${p.title}'), pooja: p),
                 _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
+                _RitualsTab(key: ValueKey('rit_${p.title}'), pooja: p),
                 _StoriesTab(
                   key: ValueKey(
                     'story_${p.deityName}_${p.deityStories.length}',
@@ -700,6 +700,11 @@ class _AboutDeityTab extends StatelessWidget {
     final posture = _str(
       deityDoc?['posture'] ?? deityDoc?['seating'] ?? deityDoc?['iconography'],
     );
+    final physicalItems = _meaningList(
+      deityDoc?['physical_description'] ??
+          deityDoc?['physicalDescription'] ??
+          deityDoc?['appearance'],
+    );
     final physical =
         _str(
           deityDoc?['physical_description'] ??
@@ -768,7 +773,12 @@ class _AboutDeityTab extends StatelessWidget {
             value: posture,
             multiline: true,
           ),
-        if (physical.isNotEmpty)
+        if (physicalItems.isNotEmpty)
+          _LabeledTitleDescriptionList(
+            label: 'Physical Description',
+            items: physicalItems,
+          )
+        else if (physical.isNotEmpty)
           LabeledField(
             label: 'Physical Description',
             value: physical,
@@ -851,6 +861,71 @@ class _AboutDeityTab extends StatelessWidget {
             .toString(),
       );
     }).toList();
+  }
+}
+
+class _LabeledTitleDescriptionList extends StatelessWidget {
+  const _LabeledTitleDescriptionList({required this.label, required this.items});
+
+  final String label;
+  final List<MeaningItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8A6B4A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (int i = 0; i < items.length; i++) ...[
+            if (items[i].title.isNotEmpty)
+              Text(
+                items[i].title,
+                style: AppTypography.inter(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF3B1E08),
+                ),
+              ),
+            if (items[i].description.isNotEmpty) ...[
+              if (items[i].title.isNotEmpty) const SizedBox(height: 4),
+              Text(
+                items[i].description,
+                style: AppTypography.inter(
+                  fontSize: 13.5,
+                  height: 1.5,
+                  color: const Color(0xFF3B1E08),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            if (i != items.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
   }
 }
 

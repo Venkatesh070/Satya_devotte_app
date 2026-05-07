@@ -19,10 +19,12 @@ class DeityModel {
     this.spiritualSignificance = const [],
     this.connectingHowToPray = '',
     this.connectingWhatPleases = const [],
+    this.connectingDispleases = const [],
     this.connectingIdealTime = '',
     this.chantingMantra = '',
     this.chantingRepetitions = '',
     this.chantingBenefits = const [],
+    this.chantingPreferredDays = const [],
     this.chantingAssociatedColors = const [],
     this.homePlacement = '',
     this.homeOfferings = const [],
@@ -32,6 +34,9 @@ class DeityModel {
     this.devotionalNotes = '',
     this.stories = const [],
     this.rituals = const [],
+    this.ritualTitles = const {},
+    this.lineageForms = const [],
+    this.structure = const [],
   });
 
   final String id;
@@ -53,10 +58,12 @@ class DeityModel {
   final List<Map<String, String>> spiritualSignificance;
   final String connectingHowToPray;
   final List<String> connectingWhatPleases;
+  final List<String> connectingDispleases;
   final String connectingIdealTime;
   final String chantingMantra;
   final String chantingRepetitions;
   final List<String> chantingBenefits;
+  final List<String> chantingPreferredDays;
   final List<String> chantingAssociatedColors;
   final String homePlacement;
   final List<String> homeOfferings;
@@ -66,6 +73,12 @@ class DeityModel {
   final String devotionalNotes;
   final List<Map<String, String>> stories;
   final List<String> rituals;
+  /// Optional `id -> display title` map captured when the API returns
+  /// populated ritual objects (e.g. `{_id, title, name}`). Used by the CMS
+  /// edit form to render names instead of raw IDs while the pooja list loads.
+  final Map<String, String> ritualTitles;
+  final List<Map<String, String>> lineageForms;
+  final List<Map<String, String>> structure;
 
   factory DeityModel.fromJson(Map<String, dynamic> json) {
     return DeityModel(
@@ -98,12 +111,20 @@ class DeityModel {
       connectingWhatPleases: _listOfStrings(
         (json['connecting'] as Map?)?['what_pleases'],
       ),
-      connectingIdealTime: ((json['connecting'] as Map?)?['ideal_time'] ?? '')
-          .toString(),
+      connectingDispleases: _listOfStrings(
+        (json['connecting'] as Map?)?['displeases'] ??
+            (json['connecting'] as Map?)?['what_displeases'],
+      ),
+      connectingIdealTime: _stringFromAny(
+        (json['connecting'] as Map?)?['ideal_time'],
+      ),
       chantingMantra: ((json['chanting'] as Map?)?['mantra'] ?? '').toString(),
       chantingRepetitions:
           ((json['chanting'] as Map?)?['repetitions'] ?? '').toString(),
       chantingBenefits: _listOfStrings((json['chanting'] as Map?)?['benefits']),
+      chantingPreferredDays: _listOfStrings(
+        (json['chanting'] as Map?)?['preferred_days'],
+      ),
       chantingAssociatedColors: _listOfStrings(
         (json['chanting'] as Map?)?['associated_colors'],
       ),
@@ -122,8 +143,30 @@ class DeityModel {
       devotionalNotes: ((json['devotional_experience'] as Map?)?['notes'] ?? '')
           .toString(),
       stories: _listOfKeyValue(json['stories']),
-      rituals: _listOfStrings(json['rituals']),
+      rituals: _listOfIds(json['rituals']),
+      ritualTitles: _idToTitleMap(json['rituals']),
+      lineageForms: _listOfKeyValue(
+        (json['lineage'] as Map?)?['forms'] ?? json['lineage_forms'],
+      ),
+      structure: _listOfKeyValue(
+        json['structure'] ??
+            json['divine_structure'] ??
+            json['divineStructure'] ??
+            (json['lineage'] as Map?)?['structure'],
+      ),
     );
+  }
+
+  static String _stringFromAny(dynamic raw) {
+    if (raw == null) return '';
+    if (raw is String) return raw.trim();
+    if (raw is List) {
+      return raw
+          .map((e) => e?.toString().trim() ?? '')
+          .where((e) => e.isNotEmpty)
+          .join(', ');
+    }
+    return raw.toString();
   }
 
   static List<String> _listOfStrings(dynamic raw) {
@@ -132,6 +175,43 @@ class DeityModel {
         .map((e) => e?.toString().trim() ?? '')
         .where((e) => e.isNotEmpty)
         .toList();
+  }
+
+  /// Like [_listOfStrings] but for ID-bearing fields. The API may return either
+  /// raw IDs (`["67..."]`) or populated objects (`[{_id: "67...", title: ...}]`).
+  /// In either case we keep only the ID so UI lookups (e.g. ritual title)
+  /// can resolve a human-readable label.
+  static List<String> _listOfIds(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((e) {
+          if (e == null) return '';
+          if (e is String) return e.trim();
+          if (e is Map) {
+            final v = e['_id'] ?? e['id'];
+            return v?.toString().trim() ?? '';
+          }
+          return e.toString().trim();
+        })
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  /// Captures `id -> title` pairs when the API returns populated objects so
+  /// the UI can display human-readable names without an extra lookup.
+  static Map<String, String> _idToTitleMap(dynamic raw) {
+    if (raw is! List) return const {};
+    final out = <String, String>{};
+    for (final e in raw) {
+      if (e is! Map) continue;
+      final id = (e['_id'] ?? e['id'])?.toString().trim() ?? '';
+      if (id.isEmpty) continue;
+      final title =
+          (e['title'] ?? e['name'] ?? e['poojaName'] ?? '').toString().trim();
+      if (title.isEmpty) continue;
+      out[id] = title;
+    }
+    return out;
   }
 
   static List<Map<String, String>> _listOfKeyValue(dynamic raw) {

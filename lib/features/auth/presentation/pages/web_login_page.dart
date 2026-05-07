@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class WebLoginPage extends StatefulWidget {
@@ -29,6 +31,13 @@ class _WebLoginPageState extends State<WebLoginPage>
     } else {
       Get.offAllNamed(AppRoutes.home);
     }
+  }
+
+  void _openForgotPassword() {
+    final forgotCtrl = Get.find<ForgotPasswordController>();
+    forgotCtrl.emailController.clear();
+    forgotCtrl.isSuccess.value = false;
+    Get.to(() => const ForgotPasswordScreen());
   }
 
   @override
@@ -150,6 +159,13 @@ class _WebLoginPageState extends State<WebLoginPage>
                       decoration: const InputDecoration(
                         labelText: 'Password',
                         border: OutlineInputBorder(),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isEmailLoading ? null : _openForgotPassword,
+                        child: const Text('Forgot Password?'),
                       ),
                     ),
                     const SizedBox(height: 14),

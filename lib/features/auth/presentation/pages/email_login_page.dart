@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class EmailLoginPage extends StatefulWidget {
@@ -51,10 +53,16 @@ class _EmailLoginPageState extends State<EmailLoginPage>
     }
   }
 
+  void _openForgotPassword() {
+    final forgotCtrl = Get.find<ForgotPasswordController>();
+    forgotCtrl.emailController.clear();
+    forgotCtrl.isSuccess.value = false;
+    Get.to(() => const ForgotPasswordScreen());
+  }
+
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
-    final screenWidth = MediaQuery.sizeOf(context).width;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2EBDC),
@@ -195,6 +203,13 @@ class _EmailLoginPageState extends State<EmailLoginPage>
                             decoration: const InputDecoration(
                               labelText: "Password",
                               border: OutlineInputBorder(),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: isLoading ? null : _openForgotPassword,
+                              child: const Text('Forgot Password?'),
                             ),
                           ),
                           const SizedBox(height: 20),

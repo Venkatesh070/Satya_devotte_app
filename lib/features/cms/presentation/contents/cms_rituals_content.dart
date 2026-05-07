@@ -942,6 +942,12 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   bool get _isEdit => widget.pooja != null;
 
+  static String? _trimMediaUrl(String? url) {
+    final t = url?.trim();
+    if (t == null || t.isEmpty) return null;
+    return t;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1003,9 +1009,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     );
     _actionsMeaningEntries = List.from(p?.spiritualActionsMeaning ?? const []);
     _otherSymbolismEntries = List.from(p?.spiritualOtherSymbolism ?? const []);
-    _imageUrl = p?.imageUrl;
-    _audioUrl = p?.audioUrl;
-    _videoUrl = p?.videoUrl;
+    _imageUrl = _trimMediaUrl(p?.imageUrl);
+    _audioUrl = _trimMediaUrl(p?.audioUrl);
+    _videoUrl = _trimMediaUrl(p?.videoUrl);
     if (_festivalCtrl.festivals.isEmpty) {
       Future.microtask(_festivalCtrl.loadFestivals);
     }
@@ -1353,9 +1359,9 @@ class _PoojaFormState extends State<_PoojaForm> {
           duration: _durationCtrl.text.trim(),
           description: _descCtrl.text.trim(),
           status: status,
-          imageUrl: _imageUrl,
-          audioUrl: _audioUrl,
-          videoUrl: _videoUrl,
+          imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
+          audioUrl: _pickedAudio != null ? null : _trimMediaUrl(_audioUrl),
+          videoUrl: _pickedVideo != null ? null : _trimMediaUrl(_videoUrl),
           steps: _serializedSteps(),
           requiredItems: _items,
           purposeWhy: _purposeWhyCtrl.text.trim(),
@@ -1394,9 +1400,9 @@ class _PoojaFormState extends State<_PoojaForm> {
         duration: _durationCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         status: status,
-        imageUrl: _imageUrl,
-        audioUrl: _audioUrl,
-        videoUrl: _videoUrl,
+        imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
+        audioUrl: _pickedAudio != null ? null : _trimMediaUrl(_audioUrl),
+        videoUrl: _pickedVideo != null ? null : _trimMediaUrl(_videoUrl),
         steps: _serializedSteps(),
         requiredItems: _items,
         purposeWhy: _purposeWhyCtrl.text.trim(),
@@ -1940,8 +1946,11 @@ class _PoojaFormState extends State<_PoojaForm> {
             initialUrl: _imageUrl,
             onPicked: (f) => setState(() => _pickedImage = f),
             onRemoved: () => setState(() {
-              _pickedImage = null;
-              _imageUrl = null;
+              if (_pickedImage != null) {
+                _pickedImage = null;
+              } else {
+                _imageUrl = null;
+              }
             }),
           ),
           const SizedBox(height: 10),
@@ -1953,8 +1962,11 @@ class _PoojaFormState extends State<_PoojaForm> {
             initialUrl: _audioUrl,
             onPicked: (f) => setState(() => _pickedAudio = f),
             onRemoved: () => setState(() {
-              _pickedAudio = null;
-              _audioUrl = null;
+              if (_pickedAudio != null) {
+                _pickedAudio = null;
+              } else {
+                _audioUrl = null;
+              }
             }),
           ),
           const SizedBox(height: 10),
@@ -1966,8 +1978,11 @@ class _PoojaFormState extends State<_PoojaForm> {
             initialUrl: _videoUrl,
             onPicked: (f) => setState(() => _pickedVideo = f),
             onRemoved: () => setState(() {
-              _pickedVideo = null;
-              _videoUrl = null;
+              if (_pickedVideo != null) {
+                _pickedVideo = null;
+              } else {
+                _videoUrl = null;
+              }
             }),
           ),
         ],

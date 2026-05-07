@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 
@@ -66,11 +67,21 @@ class DeityController extends GetxController {
     }
   }
 
-  Future<bool> createDeity(Map<String, dynamic> payload) async {
+  Future<bool> createDeity(
+    Map<String, dynamic> payload, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      await _dataSource.createDeity(payload);
+      await _dataSource.createDeity(
+        payload,
+        image: image,
+        audio: audio,
+        video: video,
+      );
       await loadDeities(force: true);
       _ok('Deity created successfully');
       return true;
@@ -83,11 +94,23 @@ class DeityController extends GetxController {
     }
   }
 
-  Future<bool> updateDeity(String id, Map<String, dynamic> payload) async {
+  Future<bool> updateDeity(
+    String id,
+    Map<String, dynamic> payload, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      await _dataSource.updateDeity(id, payload);
+      await _dataSource.updateDeity(
+        id,
+        payload,
+        image: image,
+        audio: audio,
+        video: video,
+      );
       await loadDeities(force: true);
       _ok('Deity updated successfully');
       return true;
@@ -97,6 +120,16 @@ class DeityController extends GetxController {
       return false;
     } finally {
       _isSubmitting.value = false;
+    }
+  }
+
+  Future<DeityModel?> getDeityById(String id) async {
+    try {
+      return await _dataSource.getDeityById(id);
+    } catch (_) {
+      _error.value = 'Failed to load deity details';
+      _err(_error.value!);
+      return null;
     }
   }
 

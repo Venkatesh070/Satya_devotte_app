@@ -220,19 +220,24 @@ class PoojaModel {
                     ? json['media']['videos'][0]?.toString()
                     : null)
               : null),
-      steps:
-          (json['steps'] as List?)
-              ?.map((e) {
-                if (e is Map) {
-                  return e['title']?.toString().trim() ??
-                      e['description']?.toString().trim() ??
-                      '';
-                }
-                return e?.toString().trim() ?? '';
-              })
-              .where((e) => e.isNotEmpty)
-              .toList() ??
-          [],
+      steps: () {
+        final rawSteps = json['steps'] as List?;
+        if (rawSteps == null) return <String>[];
+        return rawSteps
+            .map((e) {
+              if (e is Map) {
+                final title = e['title']?.toString().trim() ?? '';
+                final description =
+                    e['description']?.toString().trim() ?? '';
+                if (title.isEmpty && description.isEmpty) return '';
+                if (description.isEmpty) return title;
+                return '$title||$description';
+              }
+              return e?.toString().trim() ?? '';
+            })
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }(),
       requiredItems:
           (json['requiredItems'] as List?)?.map((e) => e.toString()).toList() ??
           (json['required_items'] as List?)
@@ -365,6 +370,10 @@ class PoojaModel {
   };
   }
 
+  /// Sentinel: omit `imageUrl` / `audioUrl` / `videoUrl` in [copyWith] to keep previous values.
+  /// Pass `null` explicitly to clear (remove media).
+  static const Object _keepMediaUrl = Object();
+
   PoojaModel copyWith({
     String? title,
     String? deity,
@@ -374,9 +383,9 @@ class PoojaModel {
     String? description,
     String? status,
     String? date,
-    String? imageUrl,
-    String? audioUrl,
-    String? videoUrl,
+    Object? imageUrl = _keepMediaUrl,
+    Object? audioUrl = _keepMediaUrl,
+    Object? videoUrl = _keepMediaUrl,
     List<String>? steps,
     List<String>? requiredItems,
     String? purposeWhy,
@@ -413,9 +422,15 @@ class PoojaModel {
       description: description ?? this.description,
       status: status ?? this.status,
       date: date ?? this.date,
-      imageUrl: imageUrl ?? this.imageUrl,
-      audioUrl: audioUrl ?? this.audioUrl,
-      videoUrl: videoUrl ?? this.videoUrl,
+      imageUrl: identical(imageUrl, _keepMediaUrl)
+          ? this.imageUrl
+          : imageUrl as String?,
+      audioUrl: identical(audioUrl, _keepMediaUrl)
+          ? this.audioUrl
+          : audioUrl as String?,
+      videoUrl: identical(videoUrl, _keepMediaUrl)
+          ? this.videoUrl
+          : videoUrl as String?,
       steps: steps ?? this.steps,
       requiredItems: requiredItems ?? this.requiredItems,
       purposeWhy: purposeWhy ?? this.purposeWhy,

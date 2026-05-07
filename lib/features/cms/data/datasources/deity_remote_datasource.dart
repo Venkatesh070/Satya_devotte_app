@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 
 class DeityRemoteDataSource {
@@ -36,12 +41,117 @@ class DeityRemoteDataSource {
         .toList();
   }
 
-  Future<void> createDeity(Map<String, dynamic> payload) async {
-    await _apiClient.dio.post(ApiEndpoints.createDeity, data: payload);
+  Future<void> createDeity(
+    Map<String, dynamic> payload, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
+    final hasMedia = image != null || audio != null || video != null;
+    if (!hasMedia) {
+      if (kDebugMode) {
+        debugPrint('[create-deity] JSON payload: ${jsonEncode(payload)}');
+      }
+      await _apiClient.dio.post(ApiEndpoints.createDeity, data: payload);
+      return;
+    }
+
+    final formMap = _toMultipartFields(payload);
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
+      );
+    }
+    if (kDebugMode) {
+      final printable = <String, dynamic>{};
+      formMap.forEach((key, value) {
+        printable[key] = value is MultipartFile
+            ? 'MultipartFile(filename: ${value.filename})'
+            : value;
+      });
+      debugPrint('[create-deity] Multipart payload: ${jsonEncode(printable)}');
+    }
+    await _apiClient.dio.post(
+      ApiEndpoints.createDeity,
+      data: FormData.fromMap(formMap),
+    );
   }
 
-  Future<void> updateDeity(String id, Map<String, dynamic> payload) async {
-    await _apiClient.dio.patch(ApiEndpoints.updateDeity(id), data: payload);
+  Future<DeityModel> getDeityById(String id) async {
+    final response = await _apiClient.dio.get(ApiEndpoints.deity(id));
+    final raw = response.data;
+    if (raw is Map<String, dynamic>) {
+      final data = raw['data'];
+      if (data is Map<String, dynamic>) {
+        final deity = data['deity'];
+        if (deity is Map<String, dynamic>) {
+          return DeityModel.fromJson(deity);
+        }
+        return DeityModel.fromJson(data);
+      }
+      return DeityModel.fromJson(raw);
+    }
+    return DeityModel.fromJson(const <String, dynamic>{});
+  }
+
+  Future<void> updateDeity(
+    String id,
+    Map<String, dynamic> payload, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
+    final hasMedia = image != null || audio != null || video != null;
+    if (!hasMedia) {
+      await _apiClient.dio.patch(
+        ApiEndpoints.updateDeity(id),
+        data: payload,
+      );
+      return;
+    }
+
+    final formMap = _toMultipartFields(payload);
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
+      );
+    }
+    await _apiClient.dio.patch(
+      ApiEndpoints.updateDeity(id),
+      data: FormData.fromMap(formMap),
+    );
   }
 
   Future<void> deleteDeity(String id) async {
@@ -61,5 +171,18 @@ class DeityRemoteDataSource {
 
   Future<void> rejectDeity(String id) async {
     await reviewDeity(id, 'REJECTED');
+  }
+
+  Map<String, dynamic> _toMultipartFields(Map<String, dynamic> source) {
+    final out = <String, dynamic>{};
+    source.forEach((k, v) {
+      if (v == null) return;
+      if (v is Map || v is List) {
+        out[k] = jsonEncode(v);
+      } else {
+        out[k] = v.toString();
+      }
+    });
+    return out;
   }
 }

@@ -11,6 +11,8 @@ import 'package:satya_devotte_app/features/auth/data/datasources/auth_remote_dat
 import 'package:satya_devotte_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
+import 'package:satya_devotte_app/services/auth_service.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
@@ -58,6 +60,11 @@ class InitialBinding extends Bindings {
         Get.find<AuthSessionService>(),
       ),
       permanent: true,
+    );
+    Get.put<AuthService>(AuthService(), permanent: true);
+    Get.lazyPut<ForgotPasswordController>(
+      () => ForgotPasswordController(Get.find<AuthService>()),
+      fenix: true,
     );
     Get.put<ProfileRemoteDataSource>(
       ProfileRemoteDataSource(Get.find<ApiClient>()),

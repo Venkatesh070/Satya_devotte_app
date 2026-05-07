@@ -101,6 +101,14 @@ class PoojaRemoteDataSource {
   }) async {
     final hasMedia = image != null || audio != null || video != null;
     final payload = Map<String, dynamic>.from(pooja.toJson());
+    if (hasMedia) {
+      _stripMediaSlotsReplacedByFiles(
+        payload,
+        image: image,
+        audio: audio,
+        video: video,
+      );
+    }
     if (!hasMedia) {
       if (kDebugMode) {
         debugPrint('[create-pooja] JSON payload: ${jsonEncode(payload)}');
@@ -166,16 +174,25 @@ class PoojaRemoteDataSource {
   }) async {
     final hasMedia = image != null || audio != null || video != null;
     if (!hasMedia) {
+      final payload = Map<String, dynamic>.from(pooja.toJson());
+      _applyExplicitMediaClearsForPatch(payload, pooja);
       final response = await _apiClient.dio.patch(
         ApiEndpoints.updatePooja(id),
-        data: pooja.toJson(),
+        data: payload,
       );
       return PoojaModel.fromJson(
         _extractSingle(response.data as Map<String, dynamic>),
       );
     }
 
-    final formMap = _toMultipartFields(pooja.toJson());
+    final payload = Map<String, dynamic>.from(pooja.toJson());
+    _stripMediaSlotsReplacedByFiles(
+      payload,
+      image: image,
+      audio: audio,
+      video: video,
+    );
+    final formMap = _toMultipartFields(payload);
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
@@ -281,5 +298,64 @@ class PoojaRemoteDataSource {
     });
 
     return out;
+  }
+
+  /// Nested [media] must not keep old S3 URLs when a new file is sent for that slot.
+  /// Also send empty top-level URL strings so multipart PATCH does not leave stale URLs.
+  void _stripMediaSlotsReplacedByFiles(
+    Map<String, dynamic> payload, {
+    required PickedFile? image,
+    required PickedFile? audio,
+    required PickedFile? video,
+  }) {
+    if (image != null) {
+      payload['imageUrl'] = '';
+      _mediaMap(payload)['images'] = <String>[];
+    }
+    if (audio != null) {
+      payload['audioUrl'] = '';
+      _mediaMap(payload)['audio'] = <String>[];
+    }
+    if (video != null) {
+      payload['videoUrl'] = '';
+      _mediaMap(payload)['videos'] = <String>[];
+    }
+  }
+
+  /// PATCH often treats omitted keys as "leave unchanged". The CMS form sends full
+  /// state; [null] URL means the user cleared that slot — send empty strings / arrays.
+  void _applyExplicitMediaClearsForPatch(
+    Map<String, dynamic> payload,
+    PoojaModel p,
+  ) {
+    if (p.imageUrl == null) {
+      payload['imageUrl'] = '';
+      _mediaMap(payload)['images'] = <String>[];
+    }
+    if (p.audioUrl == null) {
+      payload['audioUrl'] = '';
+      _mediaMap(payload)['audio'] = <String>[];
+    }
+    if (p.videoUrl == null) {
+      payload['videoUrl'] = '';
+      _mediaMap(payload)['videos'] = <String>[];
+    }
+  }
+
+  Map<String, dynamic> _mediaMap(Map<String, dynamic> payload) {
+    final raw = payload['media'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) {
+      final m = Map<String, dynamic>.from(raw);
+      payload['media'] = m;
+      return m;
+    }
+    final fresh = <String, dynamic>{
+      'images': <String>[],
+      'audio': <String>[],
+      'videos': <String>[],
+    };
+    payload['media'] = fresh;
+    return fresh;
   }
 }

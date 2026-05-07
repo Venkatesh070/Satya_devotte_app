@@ -69,10 +69,26 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
     }).toList();
   }
 
-  Future<void> _save(Map<String, dynamic> payload) async {
+  Future<void> _save(
+    Map<String, dynamic> payload, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+  }) async {
     final ok = _editing != null
-        ? await _controller.updateDeity(_editing!.id, payload)
-        : await _controller.createDeity(payload);
+        ? await _controller.updateDeity(
+            _editing!.id,
+            payload,
+            image: image,
+            audio: audio,
+            video: video,
+          )
+        : await _controller.createDeity(
+            payload,
+            image: image,
+            audio: audio,
+            video: video,
+          );
 
     if (!ok) return;
 
@@ -81,6 +97,20 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
     setState(() {
       _showForm = false;
       _editing = null;
+    });
+  }
+
+  Future<void> _openEdit(_DeityItem deity) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final full = await _controller.getDeityById(deity.id);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _editing = full ?? deity;
+      _showForm = true;
     });
   }
 
@@ -319,10 +349,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                     CmsActionIcon(
                                       icon: Icons.edit_outlined,
                                       color: Colors.blue,
-                                      onTap: () => setState(() {
-                                        _editing = d;
-                                        _showForm = true;
-                                      }),
+                                      onTap: () => _openEdit(d),
                                       tooltip: 'Edit',
                                     ),
                                     const SizedBox(width: 6),
@@ -431,6 +458,14 @@ class _SmBtn extends StatelessWidget {
   }
 }
 
+typedef _DeitySaveCallback =
+    void Function(
+      Map<String, dynamic> payload, {
+      PickedFile? image,
+      PickedFile? audio,
+      PickedFile? video,
+    });
+
 class _DeityForm extends StatefulWidget {
   const _DeityForm({
     required this.initial,
@@ -439,7 +474,7 @@ class _DeityForm extends StatefulWidget {
   });
   final _DeityItem? initial;
   final VoidCallback onCancel;
-  final ValueChanged<Map<String, dynamic>> onSave;
+  final _DeitySaveCallback onSave;
 
   @override
   State<_DeityForm> createState() => _DeityFormState();
@@ -512,11 +547,15 @@ class _DeityFormState extends State<_DeityForm> {
   bool _showStoriesEditor = false;
   late final TextEditingController _lineageFormsTitleCtrl;
   late final TextEditingController _lineageFormsDescCtrl;
+  PickedFile? _pickedImage;
+  PickedFile? _pickedAudio;
+  PickedFile? _pickedVideo;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
+    _status = (initial?.status ?? 'Pending').toUpperCase();
     _nameCtrl = TextEditingController(text: initial?.name ?? '');
     _descCtrl = TextEditingController(text: initial?.description ?? '');
     _alternateNamesCtrl = TextEditingController();
@@ -586,14 +625,22 @@ class _DeityFormState extends State<_DeityForm> {
       _appearanceEntries.addAll(initial.appearance);
       _spiritualEntries.addAll(initial.spiritualSignificance);
       _whatPleases.addAll(initial.connectingWhatPleases);
+      _displeases.addAll(initial.connectingDispleases);
       _chantBenefits.addAll(initial.chantingBenefits);
+      _preferredDays.addAll(initial.chantingPreferredDays);
       _associatedColors.addAll(initial.chantingAssociatedColors);
       _homeOfferings.addAll(initial.homeOfferings);
       _homeDos.addAll(initial.homeDo);
       _homeDonts.addAll(initial.homeDont);
       _storiesEntries.addAll(initial.stories);
       _lineageFormsEntries.addAll(
-        initial.lineageParents.map((p) => {'title': p, 'description': ''}),
+        initial.structure.isNotEmpty
+            ? initial.structure
+            : (initial.lineageForms.isNotEmpty
+                  ? initial.lineageForms
+                  : initial.lineageParents
+                        .map((p) => {'title': p, 'description': ''})
+                        .toList()),
       );
     }
     Future.microtask(_loadRitualOptions);
@@ -691,6 +738,8 @@ class _DeityFormState extends State<_DeityForm> {
     for (final pooja in _poojaOptions) {
       if (pooja.id == id) return pooja.title;
     }
+    final cached = widget.initial?.ritualTitles[id];
+    if (cached != null && cached.isNotEmpty) return cached;
     return id;
   }
 
@@ -755,7 +804,7 @@ class _DeityFormState extends State<_DeityForm> {
         ),
         const SizedBox(height: 12),
         _MultiSelectPickerField(
-          fieldLabel: 'Ritual IDs',
+          fieldLabel: 'Associate Rituals',
           hintText: _isLoadingPoojas ? 'Loading poojas...' : 'Select rituals',
           options: _poojaOptions
               .map((p) => _MultiSelectOption(value: p.id, label: p.title))
@@ -1047,8 +1096,9 @@ class _DeityFormState extends State<_DeityForm> {
           accept: 'JPG, PNG up to 5MB',
           mediaType: PickMediaType.image,
           initialUrl: widget.initial?.imageUrl,
-          onPicked: (_) => setState(() {}),
+          onPicked: (file) => setState(() => _pickedImage = file),
           onRemoved: () => setState(() {
+            _pickedImage = null;
             _imageUrlsCtrl.clear();
           }),
         ),
@@ -1058,9 +1108,28 @@ class _DeityFormState extends State<_DeityForm> {
           icon: Icons.music_note_outlined,
           accept: 'MP3, AAC up to 20MB',
           mediaType: PickMediaType.audio,
-          onPicked: (_) => setState(() {}),
+          initialUrl: widget.initial?.audioUrls.isNotEmpty == true
+              ? widget.initial!.audioUrls.first
+              : null,
+          onPicked: (file) => setState(() => _pickedAudio = file),
           onRemoved: () => setState(() {
+            _pickedAudio = null;
             _audioUrlsCtrl.clear();
+          }),
+        ),
+        const SizedBox(height: 12),
+        CmsUploadBox(
+          label: 'Video',
+          icon: Icons.videocam_outlined,
+          accept: 'MP4, MOV up to 20MB',
+          mediaType: PickMediaType.video,
+          initialUrl: widget.initial?.videoUrls.isNotEmpty == true
+              ? widget.initial!.videoUrls.first
+              : null,
+          onPicked: (file) => setState(() => _pickedVideo = file),
+          onRemoved: () => setState(() {
+            _pickedVideo = null;
+            _videoUrlsCtrl.clear();
           }),
         ),
       ],
@@ -1175,7 +1244,8 @@ class _DeityFormState extends State<_DeityForm> {
                       );
                       return;
                     }
-                    widget.onSave({
+                    widget.onSave(
+                      {
                       'name': _nameCtrl.text.trim(),
                       'alternate_names': _valuesWithPending(
                         _alternateNamesCtrl,
@@ -1190,6 +1260,7 @@ class _DeityFormState extends State<_DeityForm> {
                         'vehicle': _lineageVehicleCtrl.text.trim(),
                         'abode': _lineageAbodeCtrl.text.trim(),
                       },
+                      'structure': _lineageFormsEntries,
                       'appearance': _appearanceEntries,
                       'spiritual_significance': _spiritualEntries,
                       'connecting': {
@@ -1198,7 +1269,11 @@ class _DeityFormState extends State<_DeityForm> {
                           _connectingWhatPleasesCtrl,
                           _whatPleases,
                         ),
-                        'ideal_time': _connectingIdealTimeCtrl.text.trim(),
+                        'displeases': _valuesWithPending(
+                          _connectingDispleasesCtrl,
+                          _displeases,
+                        ),
+                        'ideal_time': _csv(_connectingIdealTimeCtrl.text),
                       },
                       'chanting': {
                         'mantra': _chantingMantraCtrl.text.trim(),
@@ -1206,6 +1281,11 @@ class _DeityFormState extends State<_DeityForm> {
                         'benefits': _valuesWithPending(
                           _chantingBenefitsCtrl,
                           _chantBenefits,
+                        ),
+                        'preferred_days': List<String>.from(_preferredDays),
+                        'associated_colors': _valuesWithPending(
+                          _chantingAssociatedColorsCtrl,
+                          _associatedColors,
                         ),
                       },
                       'home_practice': {
@@ -1219,6 +1299,11 @@ class _DeityFormState extends State<_DeityForm> {
                           'dont': _valuesWithPending(_homeDontCtrl, _homeDonts),
                         },
                       },
+                      'devotional_experience': {
+                        'sign_of_connection':
+                            _devotionalSignCtrl.text.trim(),
+                        'notes': _devotionalNotesCtrl.text.trim(),
+                      },
                       'stories': _storiesEntries,
                       'rituals': List<String>.from(_ritualIds),
                       'media': {
@@ -1227,7 +1312,11 @@ class _DeityFormState extends State<_DeityForm> {
                         'videos': _csv(_videoUrlsCtrl.text),
                       },
                       'status': _status,
-                    });
+                    },
+                      image: _pickedImage,
+                      audio: _pickedAudio,
+                      video: _pickedVideo,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CmsColors.orange,
