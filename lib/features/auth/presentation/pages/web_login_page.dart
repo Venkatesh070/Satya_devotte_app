@@ -21,7 +21,6 @@ class _WebLoginPageState extends State<WebLoginPage>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final AnimationController _rotationController;
-  bool _showEmailForm = false;
 
   AuthController get controller => Get.find<AuthController>();
 
@@ -99,39 +98,11 @@ class _WebLoginPageState extends State<WebLoginPage>
 
   Widget _buildLoginCard({bool isFullHeight = false}) {
     final cardContent = Obx(() {
-              final isGoogleLoading = controller.isGoogleSignInLoading;
               final isEmailLoading = controller.isEmailSignInLoading;
-              if (_showEmailForm) {
-                return Column(
+              return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Material(
-                          color: const Color(0xFFF3F3F3),
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: isEmailLoading
-                                ? null
-                                : () => setState(() => _showEmailForm = false),
-                            child: const Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Icon(Icons.arrow_back, size: 18),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Continue with Email',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 14),
                     SizedBox(
                       height: 300,
@@ -205,145 +176,8 @@ class _WebLoginPageState extends State<WebLoginPage>
                         }
                       },
                     ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: isEmailLoading
-                          ? null
-                          : () async {
-                              final email = _emailController.text.trim();
-                              final password = _passwordController.text;
-                              if (email.isEmpty || password.isEmpty) {
-                                Get.snackbar(
-                                  'Required',
-                                  'Please enter email and password.',
-                                  snackPosition: SnackPosition.TOP,
-                                );
-                                return;
-                              }
-                              final ok = await controller.signUpWithEmailPassword(
-                                email: email,
-                                password: password,
-                              );
-                              if (ok) {
-                                _navigateByRole();
-                              } else {
-                                Get.snackbar(
-                                  'Signup Failed',
-                                  controller.lastAuthError ??
-                                      'Email sign up failed. Please try again.',
-                                  snackPosition: SnackPosition.TOP,
-                                );
-                              }
-                            },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('Create New Account'),
-                    ),
                   ],
                 );
-              }
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Sign In to Continue',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Choose a login method',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF7A7A7A),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: 300,
-                    width: double.infinity,
-                    child: Image.asset(
-                      'assets/images/yoga.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _WebSocialButton(
-                    label: 'Continue with Google',
-                    backgroundColor: const Color(0xFFF2F2F2),
-                    textColor: const Color(0xFF1F1F1F),
-                    leading: SvgPicture.asset(
-                      'assets/svgs/google.svg',
-                      width: 16,
-                      height: 16,
-                    ),
-                    isLoading: isGoogleLoading,
-                    isEnabled: !isGoogleLoading,
-                    onTap: () async {
-                      final ok = await controller.signInWithGoogle();
-                      if (ok) {
-                        _navigateByRole();
-                      } else {
-                        Get.snackbar(
-                          'Login Failed',
-                          controller.lastAuthError ??
-                              'Google sign in failed. Please try again.',
-                          snackPosition: SnackPosition.TOP,
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _WebSocialButton(
-                    label: 'Continue with Apple',
-                    backgroundColor: AppColors.black,
-                    textColor: AppColors.white,
-                    leading: SvgPicture.asset(
-                      'assets/svgs/apple.svg',
-                      width: 16,
-                      height: 16,
-                    ),
-                    isEnabled: !isGoogleLoading,
-                    onTap: () async {
-                      await controller.signInWithApple();
-                      _navigateByRole();
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Expanded(child: Divider()),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Text('Or'),
-                      ),
-                      Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    label: 'Continue with Email/Password',
-                    gradientColors: const [
-                      AppColors.gradientStart,
-                      AppColors.gradientEnd,
-                    ],
-                    textColor: AppColors.white,
-                    isLoading: isEmailLoading,
-                    enabled: !isGoogleLoading && !isEmailLoading,
-                    onTap: () {
-                      setState(() {
-                        _showEmailForm = true;
-                        _emailController.clear();
-                        _passwordController.clear();
-                      });
-                    },
-                  ),
-                ],
-              );
             });
 
     final cardBody = isFullHeight
@@ -457,65 +291,3 @@ class _WebLoginPageState extends State<WebLoginPage>
   }
 }
 
-class _WebSocialButton extends StatelessWidget {
-  const _WebSocialButton({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.leading,
-    required this.onTap,
-    this.isLoading = false,
-    this.isEnabled = true,
-  });
-
-  final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final Widget leading;
-  final VoidCallback onTap;
-  final bool isLoading;
-  final bool isEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final canTap = isEnabled && !isLoading;
-    return Material(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: canTap ? onTap : null,
-        child: SizedBox(
-          height: 48,
-          width: double.infinity,
-          child: Center(
-            child: isLoading
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      leading,
-                      const SizedBox(width: 8),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-}

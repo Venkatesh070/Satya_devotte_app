@@ -1,7 +1,6 @@
 // lib/features/cms/presentation/contents/cms_users_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -274,22 +273,6 @@ class _UsersTable extends StatelessWidget {
                                       constraints: const BoxConstraints(),
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  if (Get.find<AuthController>().isSuperAdmin)
-                                    Tooltip(
-                                      message: 'Promote to Admin',
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.star_outline,
-                                          size: 18,
-                                          color: CmsColors.orange,
-                                        ),
-                                        onPressed: () =>
-                                            _promoteDialog(context, u),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
@@ -456,122 +439,12 @@ class _UsersTable extends StatelessWidget {
                       ),
 
                     const SizedBox(height: 4),
-                    // Promote button — superadmin only
-                    if (Get.find<AuthController>().isSuperAdmin) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _promoteDialog(ctx, u);
-                          },
-                          icon: const Icon(Icons.star, size: 16),
-                          label: const Text(
-                            'Promote to Admin',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: CmsColors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _promoteDialog(BuildContext ctx, AdminModel u) {
-    showDialog<void>(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Promote to Admin',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: CmsColors.orange.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: CmsColors.orange.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  _Avatar(user: u),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          u.displayName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: CmsColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          u.email,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: CmsColors.textSecond,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'This user will be able to add and manage pujas and festivals.',
-              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: CmsColors.textSecond),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await Get.find<AdminController>().promoteToAdmin(u.email);
-            },
-            icon: const Icon(Icons.star, size: 16),
-            label: const Text('Promote'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: CmsColors.orange,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -666,20 +539,10 @@ class _UsersList extends StatelessWidget {
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    CmsActionIcon(
-                      icon: Icons.visibility_outlined,
-                      color: Colors.blue,
-                      onTap: () {},
-                    ),
-                    const SizedBox(width: 6),
-                    CmsActionIcon(
-                      icon: Icons.star_outline,
-                      color: CmsColors.orange,
-                      onTap: () {},
-                    ),
-                  ],
+                CmsActionIcon(
+                  icon: Icons.visibility_outlined,
+                  color: Colors.blue,
+                  onTap: () {},
                 ),
               ],
             ),

@@ -13,30 +13,18 @@ class CmsAdminsContent extends StatefulWidget {
   State<CmsAdminsContent> createState() => _CmsAdminsContentState();
 }
 
-class _CmsAdminsContentState extends State<CmsAdminsContent>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tab;
+class _CmsAdminsContentState extends State<CmsAdminsContent> {
   late final AdminController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
     _ctrl = Get.find<AdminController>();
-    // FIX: Always reload data when this screen is opened.
-    // AdminController is now registered with lazyPut(fenix:true) so its
-    // onInit fires here (first open) with a valid auth token. We also call
-    // loadAll() explicitly so data refreshes on every subsequent navigation
-    // back to this screen, not just the very first visit.
+    // Reload admins every time the screen is opened so the list stays
+    // in sync after promotions / demotions performed elsewhere.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _ctrl.loadAll();
+      if (mounted) _ctrl.loadAdmins();
     });
-  }
-
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
   }
 
   @override
@@ -72,7 +60,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
                         ),
                       )
                     : GestureDetector(
-                        onTap: _ctrl.loadAll,
+                        onTap: _ctrl.loadAdmins,
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
@@ -99,57 +87,6 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
           ),
         ),
 
-        // ── Tabs: Admins | All Users ──────────────────────────────
-        Container(
-          color: CmsColors.white,
-          child: TabBar(
-            controller: _tab,
-            labelColor: CmsColors.orange,
-            unselectedLabelColor: CmsColors.textSecond,
-            indicatorColor: CmsColors.orange,
-            indicatorWeight: 3,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 13),
-            tabs: [
-              Obx(
-                () => Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Admins'),
-                      if (_ctrl.admins.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: CmsColors.orange,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${_ctrl.admins.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const Tab(text: 'All Users'),
-            ],
-          ),
-        ),
         const Divider(height: 1, color: CmsColors.border),
 
         // ── Content ───────────────────────────────────────────────
@@ -163,7 +100,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
                     CircularProgressIndicator(color: CmsColors.orange),
                     SizedBox(height: 14),
                     Text(
-                      'Loading users...',
+                      'Loading admins...',
                       style: TextStyle(
                         color: CmsColors.textSecond,
                         fontSize: 13,
@@ -174,9 +111,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
               );
             }
 
-            if (_ctrl.error != null &&
-                _ctrl.admins.isEmpty &&
-                _ctrl.regularUsers.isEmpty) {
+            if (_ctrl.error != null && _ctrl.admins.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -199,42 +134,23 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
                     CmsPrimaryButton(
                       label: 'Retry',
                       icon: Icons.refresh,
-                      onTap: _ctrl.loadAll,
+                      onTap: _ctrl.loadAdmins,
                     ),
                   ],
                 ),
               );
             }
 
-            return TabBarView(
-              controller: _tab,
-              children: [
-                // Tab 1: Admins list
-                _UserList(
-                  users: _ctrl.admins,
-                  emptyIcon: Icons.admin_panel_settings_outlined,
-                  emptyTitle: 'No Admins Yet',
-                  emptySubtitle:
-                      'Promote a user to admin using the button above',
-                  onAction: (user) => _removeAdminDialog(context, user),
-                  actionLabel: 'Remove',
-                  actionColor: Colors.red,
-                  actionIcon: Icons.remove_moderator_outlined,
-                  onRefresh: _ctrl.loadAdmins,
-                ),
-                // Tab 2: Regular users
-                _UserList(
-                  users: _ctrl.regularUsers,
-                  emptyIcon: Icons.people_outline,
-                  emptyTitle: 'No Users',
-                  emptySubtitle: 'No regular users found',
-                  onAction: (user) => _promoteConfirmDialog(context, user),
-                  actionLabel: 'Make Admin',
-                  actionColor: CmsColors.orange,
-                  actionIcon: Icons.star_outline,
-                  onRefresh: _ctrl.loadRegularUsers,
-                ),
-              ],
+            return _UserList(
+              users: _ctrl.admins,
+              emptyIcon: Icons.admin_panel_settings_outlined,
+              emptyTitle: 'No Admins Yet',
+              emptySubtitle: 'Promote a user to admin using the button above',
+              onAction: (user) => _removeAdminDialog(context, user),
+              actionLabel: 'Remove',
+              actionColor: Colors.red,
+              actionIcon: Icons.remove_moderator_outlined,
+              onRefresh: _ctrl.loadAdmins,
             );
           }),
         ),
@@ -357,59 +273,6 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
     );
   }
 
-  // ── Promote from users list (confirm dialog) ──────────────────
-  void _promoteConfirmDialog(BuildContext ctx, AdminModel user) {
-    showDialog<void>(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Promote to Admin',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: CmsColors.textPrimary,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _UserInfoCard(user: user, color: CmsColors.orange),
-            const SizedBox(height: 12),
-            const Text(
-              'This user will be able to add poojas and festivals that go through approval.',
-              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: CmsColors.textSecond),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _ctrl.promoteToAdmin(user.email);
-            },
-            icon: const Icon(Icons.star, size: 16),
-            label: const Text('Promote to Admin'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: CmsColors.orange,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Remove admin role (confirm dialog) ───────────────────────
   void _removeAdminDialog(BuildContext ctx, AdminModel user) {
     showDialog<void>(
@@ -465,7 +328,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent>
 }
 
 // ════════════════════════════════════════════════════════════════
-// USER LIST — reused for both tabs
+// USER LIST
 // ════════════════════════════════════════════════════════════════
 class _UserList extends StatelessWidget {
   const _UserList({
