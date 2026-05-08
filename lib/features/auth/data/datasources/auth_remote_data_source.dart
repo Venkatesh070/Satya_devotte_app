@@ -21,6 +21,65 @@ class AuthRemoteDataSource {
     }
   }
 
+  /// Web admin sign-in. POSTs to `/auth/admin-login` with the Firebase ID token
+  /// in the Authorization header. The backend verifies the token AND ensures
+  /// the user has admin (or superadmin) privileges.
+  Future<AuthLoginResult> loginAsAdmin(
+    String firebaseIdToken, {
+    Map<String, dynamic>? userProfile,
+  }) async {
+    final response = await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.authAdminLogin,
+      data: userProfile == null
+          ? null
+          : <String, dynamic>{'user': userProfile},
+      options: Options(
+        headers: {'Authorization': 'Bearer $firebaseIdToken'},
+      ),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message:
+            'Admin login API failed with status ${response.statusCode}.',
+      );
+    }
+    final accessToken = _extractAccessToken(response.data);
+    final refreshToken = _extractRefreshToken(response.data);
+    final user = _extractUser(response.data);
+    if (accessToken == null || accessToken.isEmpty) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Access token is missing in admin login response.',
+      );
+    }
+    if (user == null) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'User data is missing in admin login response.',
+      );
+    }
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Refresh token is missing in admin login response.',
+      );
+    }
+    return AuthLoginResult(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: user,
+    );
+  }
+
   Future<AuthLoginResult> loginWithFirebaseToken(
     String firebaseIdToken, {
     Map<String, dynamic>? userProfile,

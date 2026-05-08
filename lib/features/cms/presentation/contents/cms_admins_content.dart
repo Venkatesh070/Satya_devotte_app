@@ -1,5 +1,6 @@
 // lib/features/cms/presentation/contents/cms_admins_content.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
@@ -158,70 +159,73 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
     );
   }
 
-  // ── Promote by email dialog ───────────────────────────────────
+  // ── Promote / invite admin — Super Admin API ──────────────────
   void _showPromoteDialog(BuildContext ctx) {
+    final fullNameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+
     showDialog<void>(
       context: ctx,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Promote User to Admin',
+          'Promote to Admin',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: CmsColors.textPrimary,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the email address of the user you want to promote.',
-              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: emailCtrl,
-              autofocus: true,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'e.g. user@example.com',
-                hintStyle: const TextStyle(
-                  color: Color(0xFFAAAAAA),
-                  fontSize: 13,
-                ),
-                prefixIcon: const Icon(
-                  Icons.email_outlined,
-                  size: 18,
-                  color: CmsColors.textSecond,
-                ),
-                filled: true,
-                fillColor: CmsColors.bg,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: CmsColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: CmsColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: CmsColors.orange),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter details for the new admin. They will receive an invitation '
+                'email when possible.',
+                style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: fullNameCtrl,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                style: const TextStyle(fontSize: 13),
+                decoration: _inviteFieldDecoration(
+                  label: 'Full name',
+                  hint: 'e.g. Jane Doe',
+                  icon: Icons.person_outline,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(fontSize: 13),
+                decoration: _inviteFieldDecoration(
+                  label: 'Email',
+                  hint: 'user@example.com',
+                  icon: Icons.email_outlined,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(fontSize: 13),
+                decoration: _inviteFieldDecoration(
+                  label: 'Phone (optional)',
+                  hint: '+91 …',
+                  icon: Icons.phone_outlined,
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -232,20 +236,48 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               onPressed: _ctrl.isSubmitting
                   ? null
                   : () async {
+                      final fullName = fullNameCtrl.text.trim();
                       final email = emailCtrl.text.trim();
-                      if (email.isEmpty) {
+                      final phoneRaw = phoneCtrl.text.trim();
+                      if (fullName.isEmpty || email.isEmpty) {
                         Get.snackbar(
                           'Required',
-                          'Please enter an email',
+                          'Please enter full name and email.',
                           snackPosition: SnackPosition.TOP,
-                          backgroundColor: CmsColors.orange,
+                          backgroundColor: CmsColors.orangeDark,
                           colorText: Colors.white,
                           margin: const EdgeInsets.all(12),
                         );
                         return;
                       }
-                      Navigator.pop(ctx);
-                      await _ctrl.promoteToAdmin(email);
+                      final result = await _ctrl.inviteAdmin(
+                        fullName: fullName,
+                        email: email,
+                        phone: phoneRaw.isEmpty ? null : phoneRaw,
+                      );
+                      if (!dialogCtx.mounted) return;
+                      if (result == null) return;
+
+                      Navigator.pop(dialogCtx);
+
+                      if (result.emailDelivered) {
+                        showCmsSnackbar(
+                          title: 'Success',
+                          message:
+                              'Admin created. Invitation email sent.',
+                        );
+                      } else if (result.passwordResetLink != null &&
+                          result.passwordResetLink!.isNotEmpty) {
+                        _showPasswordResetLinkDialog(
+                          ctx,
+                          result.passwordResetLink!,
+                        );
+                      } else {
+                        showCmsSnackbar(
+                          title: 'Success',
+                          message: 'Admin created.',
+                        );
+                      }
                     },
               icon: _ctrl.isSubmitting
                   ? const SizedBox(
@@ -256,7 +288,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.star, size: 16),
+                  : const Icon(Icons.person_add_outlined, size: 18),
               label: const Text('Promote'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
@@ -269,6 +301,99 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
             ),
           ),
         ],
+      ),
+    ).then((_) {
+      fullNameCtrl.dispose();
+      emailCtrl.dispose();
+      phoneCtrl.dispose();
+    });
+  }
+
+  void _showPasswordResetLinkDialog(BuildContext ctx, String resetLink) {
+    showDialog<void>(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Invitation email not sent',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Copy this password reset link and share it securely with the new admin.',
+              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              resetLink,
+              style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text(
+              'Close',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: resetLink));
+              if (!dCtx.mounted) return;
+              Navigator.pop(dCtx);
+              showCmsSnackbar(
+                title: 'Copied',
+                message: 'Password reset link copied to clipboard.',
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copy link'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CmsColors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inviteFieldDecoration({
+    required String label,
+    required String hint,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
+      prefixIcon: Icon(icon, size: 18, color: CmsColors.textSecond),
+      filled: true,
+      fillColor: CmsColors.bg,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: CmsColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: CmsColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: CmsColors.orange),
       ),
     );
   }

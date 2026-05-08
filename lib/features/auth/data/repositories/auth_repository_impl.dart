@@ -19,6 +19,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthLoginResult> loginAsAdmin(
+    String firebaseIdToken, {
+    Map<String, dynamic>? userProfile,
+  }) {
+    return _remoteDataSource.loginAsAdmin(
+      firebaseIdToken,
+      userProfile: userProfile,
+    );
+  }
+
+  @override
   Future<void> logout(String refreshToken) {
     return _remoteDataSource.logout(refreshToken);
   }

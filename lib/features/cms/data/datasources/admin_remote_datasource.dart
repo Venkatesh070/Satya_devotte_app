@@ -1,6 +1,9 @@
 // lib/features/cms/data/datasources/admin_remote_datasource.dart
+import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
+import 'package:satya_devotte_app/features/cms/models/invite_admin_result.dart';
 
 class AdminRemoteDataSource {
   AdminRemoteDataSource(this._apiClient);
@@ -47,7 +50,52 @@ class AdminRemoteDataSource {
     ).map((e) => AdminModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // ── POST /admin/create-admin — promote user to admin ──────────
+  /// POST /superadmin/admins — invite a new admin (Super Admin only).
+  Future<InviteAdminResult> inviteAdmin({
+    required String fullName,
+    required String email,
+    String? phone,
+  }) async {
+    final payload = <String, dynamic>{
+      'fullName': fullName.trim(),
+      'email': email.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+    };
+    try {
+      final res = await _apiClient.dio.post<Map<String, dynamic>>(
+        ApiEndpoints.superadminCreateAdmin,
+        data: payload,
+      );
+      final body = res.data;
+      if (body == null) {
+        throw Exception('Empty response from server.');
+      }
+      if (body['success'] != true) {
+        throw Exception(
+          body['message']?.toString() ?? 'Could not create admin invite.',
+        );
+      }
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Invalid response data.');
+      }
+      final link = data['passwordResetLink']?.toString();
+      final delivered = data['emailDelivered'] == true;
+      return InviteAdminResult(
+        emailDelivered: delivered,
+        passwordResetLink:
+            (link != null && link.isNotEmpty) ? link : null,
+      );
+    } on DioException catch (e) {
+      final raw = e.response?.data;
+      if (raw is Map && raw['message'] != null) {
+        throw Exception(raw['message'].toString());
+      }
+      rethrow;
+    }
+  }
+
+  // ── POST /admin/create-admin — promote user to admin (legacy) ─
   // body: { email: 'user@example.com' }  OR  { userId: 'xxx' }
   Future<AdminModel> createAdmin(String emailOrId) async {
     // Try email first; if it looks like a MongoDB ID, use userId

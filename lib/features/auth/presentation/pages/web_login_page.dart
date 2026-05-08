@@ -160,7 +160,7 @@ class _WebLoginPageState extends State<WebLoginPage>
                           );
                           return;
                         }
-                        final ok = await controller.signInWithEmailPassword(
+                        final ok = await controller.signInAsAdmin(
                           email: email,
                           password: password,
                         );
@@ -170,7 +170,7 @@ class _WebLoginPageState extends State<WebLoginPage>
                           Get.snackbar(
                             'Login Failed',
                             controller.lastAuthError ??
-                                'Email sign in failed. Please try again.',
+                                'Admin sign in failed. Please try again.',
                             snackPosition: SnackPosition.TOP,
                           );
                         }

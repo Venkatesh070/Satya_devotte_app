@@ -1,5 +1,7 @@
 class ApiEndpoints {
   static const String authLogin = '/api/v1/auth/login';
+  static const String authAdminLogin = '/api/v1/auth/admin/login';
+  
   static const String authLogout = '/api/v1/auth/logout';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
@@ -27,4 +29,6 @@ class ApiEndpoints {
   static const String home = '/api/v1/user-home';
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
+  /// Super Admin — invite/create admin user (POST JSON body).
+  static const String superadminCreateAdmin = '/api/v1/superadmin/admins';
 }

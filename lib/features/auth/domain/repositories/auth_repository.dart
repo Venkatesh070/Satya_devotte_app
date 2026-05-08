@@ -5,5 +5,14 @@ abstract class AuthRepository {
     String firebaseIdToken, {
     Map<String, dynamic>? userProfile,
   });
+
+  /// Admin sign-in used by the web login page. Sends the Firebase ID token in
+  /// the Authorization header to `/auth/admin-login` and lets the backend
+  /// enforce the admin role check.
+  Future<AuthLoginResult> loginAsAdmin(
+    String firebaseIdToken, {
+    Map<String, dynamic>? userProfile,
+  });
+
   Future<void> logout(String refreshToken);
 }

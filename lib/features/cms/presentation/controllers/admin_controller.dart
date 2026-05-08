@@ -1,8 +1,8 @@
 // lib/features/cms/presentation/controllers/admin_controller.dart
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
+import 'package:satya_devotte_app/features/cms/models/invite_admin_result.dart';
 
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
@@ -68,7 +68,33 @@ class AdminController extends GetxController {
     }
   }
 
-  // ── Promote user → admin ──────────────────────────────────────
+  /// Invites a new admin via Super Admin API `POST /superadmin/admins`.
+  /// Returns result for UI (email sent vs password reset link); `null` on error.
+  Future<InviteAdminResult?> inviteAdmin({
+    required String fullName,
+    required String email,
+    String? phone,
+  }) async {
+    _isSubmitting.value = true;
+    _error.value = null;
+    try {
+      final result = await _dataSource.inviteAdmin(
+        fullName: fullName,
+        email: email,
+        phone: phone,
+      );
+      await loadAdmins();
+      return result;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return null;
+    } finally {
+      _isSubmitting.value = false;
+    }
+  }
+
+  // ── Legacy: promote existing user by email (non-invite flow) ──
   Future<bool> promoteToAdmin(String emailOrId) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -114,11 +140,14 @@ class AdminController extends GetxController {
       showCmsSnackbar(title: 'Error', message: msg, isError: true);
 
   String _parseError(Object e) {
-    final m = e.toString();
-    if (m.contains('404')) return 'User not found.';
-    if (m.contains('401') || m.contains('403')) return 'Not authorised.';
-    if (m.contains('500')) return 'Server error. Try again.';
-    if (m.contains('SocketException') || m.contains('connection')) {
+    final s = e.toString();
+    if (s.startsWith('Exception: ')) {
+      return s.substring('Exception: '.length);
+    }
+    if (s.contains('404')) return 'User not found.';
+    if (s.contains('401') || s.contains('403')) return 'Not authorised.';
+    if (s.contains('500')) return 'Server error. Try again.';
+    if (s.contains('SocketException') || s.contains('connection')) {
       return 'No internet connection.';
     }
     return 'Something went wrong. Please try again.';

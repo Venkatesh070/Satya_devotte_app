@@ -58,17 +58,20 @@ class AuthController extends GetxController {
   }
 
   void _applyRole(Map<String, dynamic> user) {
-    // The API returns role: "admin" for both admin and superadmin.
-    // The real distinction is the separate isSuperAdmin: true boolean field.
+    // The API may indicate super admin in two ways:
+    //   • a dedicated `isSuperAdmin: true` boolean (legacy), or
+    //   • `role: "superadmin"` (current /auth/admin-login response).
+    final raw = (user['role'] as String? ?? 'user').trim().toLowerCase();
+    final isSuperAdmin = user['isSuperAdmin'] == true || raw == 'superadmin';
     print(
       '🔑 RAW ROLE: "${user['role']}" | isSuperAdmin field: ${user['isSuperAdmin']}',
     );
-    final isSuperAdmin = user['isSuperAdmin'] == true;
     if (isSuperAdmin) {
       _userRole.value = 'superadmin';
+    } else if (raw == 'admin') {
+      _userRole.value = 'admin';
     } else {
-      final raw = (user['role'] as String? ?? 'user').trim().toLowerCase();
-      _userRole.value = raw == 'admin' ? 'admin' : 'user';
+      _userRole.value = 'user';
     }
     print(
       '🔑 FINAL _userRole: "${_userRole.value}" | isSuperAdmin: $isSuperAdmin',
@@ -122,6 +125,73 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isGoogleSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
+  }
+
+  // ─── Admin Email / Password Sign-In (web) ───────────────────
+  // Signs in to Firebase first (email/password), then exchanges the resulting
+  // Firebase ID token at /auth/admin-login. The backend enforces the admin
+  // role on that endpoint and rejects regular users.
+  Future<bool> signInAsAdmin({
+    required String email,
+    required String password,
+  }) async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after admin sign in.');
+      }
+      final adminProfile = _firebaseService.getCurrentUserProfileDetails();
+      final loginResult = await _authRepository.loginAsAdmin(
+        firebaseIdToken,
+        userProfile: adminProfile,
+      );
+      // Server flag: explicit gate for the admin panel.
+      final canAccessAdminPanel = loginResult.user['canLoginAdminPanel'] == true;
+      final rawRole = (loginResult.user['role'] as String? ?? '')
+          .trim()
+          .toLowerCase();
+      final hasAdminRole = rawRole == 'admin' ||
+          rawRole == 'superadmin' ||
+          loginResult.user['isSuperAdmin'] == true;
+      if (!canAccessAdminPanel || !hasAdminRole) {
+        _lastAuthError.value =
+            'This account is not authorised to access the admin panel.';
+        await _firebaseService.signOut();
+        return false;
+      }
+      await _authSessionService.setSession(
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+        userData: loginResult.user,
+      );
+      _applyRole(loginResult.user);
+      _isAuthenticated.value = true;
+      return true;
+    } catch (error) {
+      await _authSessionService.clear();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapEmailSignInError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
       _authApiInFlight = false;
     }
   }
