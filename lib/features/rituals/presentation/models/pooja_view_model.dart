@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  View-model normalising the API payload.
@@ -8,6 +7,8 @@ import 'package:flutter/foundation.dart';
 class PoojaView {
   PoojaView(this._raw);
   final Map<String, dynamic> _raw;
+
+  Map<String, dynamic> get raw => _raw;
 
   String get title => (_raw['title'] ?? '').toString();
   String get category => (_raw['category'] ?? '').toString();

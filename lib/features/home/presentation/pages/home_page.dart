@@ -17,6 +17,7 @@ import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_list_page.dart';
+import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -180,36 +181,39 @@ class _HomePageState extends State<HomePage> {
 
     if (list.isEmpty) return const [];
 
-    return list.map((raw) {
-      if (raw is! Map) return null;
-      final item = raw.map((k, v) => MapEntry(k.toString(), v));
-      
-      final title = item['title']?.toString().trim();
-      
-      // Clean URL: remove spaces and backticks
-      String? _clean(dynamic v) {
-        final s = v?.toString().trim() ?? '';
-        if (s.isEmpty) return null;
-        return s.replaceAll('`', '').trim();
-      }
+    return list
+        .map((raw) {
+          if (raw is! Map) return null;
+          final item = raw.map((k, v) => MapEntry(k.toString(), v));
 
-      final image = _clean(item['imageUrl']) ?? _clean(item['image']);
-      
-      final resolvedImagePath = (image != null && image.isNotEmpty)
-          ? image
-          : fallbackImage;
-          
-      final placeholderText =
-          useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
-          ? DateFormatters.formatFestivalDate(item['date']?.toString())
-          : null;
-          
-      return HomeCircleItem(
-        title: (title == null || title.isEmpty) ? 'Untitled' : title,
-        imagePath: resolvedImagePath,
-        placeholderText: placeholderText,
-      );
-    }).whereType<HomeCircleItem>().toList();
+          final title = item['title']?.toString().trim();
+
+          // Clean URL: remove spaces and backticks
+          String? _clean(dynamic v) {
+            final s = v?.toString().trim() ?? '';
+            if (s.isEmpty) return null;
+            return s.replaceAll('`', '').trim();
+          }
+
+          final image = _clean(item['imageUrl']) ?? _clean(item['image']);
+
+          final resolvedImagePath = (image != null && image.isNotEmpty)
+              ? image
+              : fallbackImage;
+
+          final placeholderText =
+              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+              ? DateFormatters.formatFestivalDate(item['date']?.toString())
+              : null;
+
+          return HomeCircleItem(
+            title: (title == null || title.isEmpty) ? 'Untitled' : title,
+            imagePath: resolvedImagePath,
+            placeholderText: placeholderText,
+          );
+        })
+        .whereType<HomeCircleItem>()
+        .toList();
   }
 
   void _onHomeScrollDirectionChanged(ScrollDirection direction) {
@@ -721,7 +725,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       width: slotWidth,
                       child: _BottomItem(
                         icon: Icons.local_fire_department_outlined,
-                        label: 'Poojas',
+                        label: 'Deities',
                         selected: widget.currentIndex == 1,
                         onTap: () => _settleToIndex(1),
                       ),
