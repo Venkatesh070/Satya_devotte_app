@@ -22,7 +22,8 @@ class ProfilePage extends StatelessWidget {
           sessionUser ?? profile?['user'] as Map<String, dynamic>? ?? profile;
       final email = userData?['email']?.toString();
       final role = userData?['role']?.toString();
-      final id = userData?['id']?.toString() ??
+      final id =
+          userData?['id']?.toString() ??
           userData?['_id']?.toString() ??
           userData?['userId']?.toString();
 
