@@ -10,6 +10,7 @@ class AdminModel {
     this.profileImage,
     this.createdAt,
     this.isActive = true,
+    this.canLoginAdminPanel = true,
   });
 
   final String id;
@@ -20,6 +21,33 @@ class AdminModel {
   final String? profileImage;
   final String? createdAt;
   final bool isActive;
+  /// Whether this admin can sign in to the admin panel. Toggled via
+  /// PATCH `/api/v1/superadmin/admins/:id/panel-access`.
+  final bool canLoginAdminPanel;
+
+  AdminModel copyWith({
+    String? id,
+    String? email,
+    String? name,
+    String? role,
+    String? phone,
+    String? profileImage,
+    String? createdAt,
+    bool? isActive,
+    bool? canLoginAdminPanel,
+  }) {
+    return AdminModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      phone: phone ?? this.phone,
+      profileImage: profileImage ?? this.profileImage,
+      createdAt: createdAt ?? this.createdAt,
+      isActive: isActive ?? this.isActive,
+      canLoginAdminPanel: canLoginAdminPanel ?? this.canLoginAdminPanel,
+    );
+  }
 
   String get displayName => name.isNotEmpty ? name : email.split('@').first;
 
@@ -73,6 +101,11 @@ class AdminModel {
           json['profileImage'] as String? ?? json['photoURL'] as String?,
       createdAt: json['createdAt'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      canLoginAdminPanel:
+          json['canLoginAdminPanel'] as bool? ??
+          json['canAccessAdminPanel'] as bool? ??
+          json['isAdminPanelEnabled'] as bool? ??
+          true,
     );
   }
 }

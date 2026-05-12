@@ -15,12 +15,16 @@ class AdminController extends GetxController {
   final _isLoading = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
+  // Admin IDs that are currently mid-flight for the panel-access toggle.
+  // The UI watches this set to disable / spin the corresponding switch.
+  final _panelAccessPendingIds = <String>{}.obs;
 
   List<AdminModel> get admins => _admins;
   List<AdminModel> get regularUsers => _regularUsers;
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
+  bool isPanelAccessPending(String id) => _panelAccessPendingIds.contains(id);
 
   @override
   void onInit() {
@@ -116,6 +120,61 @@ class AdminController extends GetxController {
       return false;
     } finally {
       _isSubmitting.value = false;
+    }
+  }
+
+  /// Toggle whether an admin can sign in to the admin panel.
+  /// Performs an optimistic update so the toggle feels instant and reverts
+  /// on failure.
+  Future<bool> setPanelAccess({
+    required String id,
+    required bool canLoginAdminPanel,
+  }) async {
+    final index = _admins.indexWhere((a) => a.id == id);
+    if (index == -1) return false;
+
+    final previous = _admins[index];
+    if (previous.canLoginAdminPanel == canLoginAdminPanel) return true;
+
+    _admins[index] = previous.copyWith(
+      canLoginAdminPanel: canLoginAdminPanel,
+    );
+    _panelAccessPendingIds.add(id);
+
+    try {
+      final updated = await _dataSource.setPanelAccess(
+        id: id,
+        canLoginAdminPanel: canLoginAdminPanel,
+      );
+      final freshIndex = _admins.indexWhere((a) => a.id == id);
+      if (freshIndex != -1) {
+        _admins[freshIndex] = previous.copyWith(
+          canLoginAdminPanel: updated.canLoginAdminPanel,
+          name: updated.name.isNotEmpty ? updated.name : previous.name,
+          email: updated.email.isNotEmpty ? updated.email : previous.email,
+          role: updated.role.isNotEmpty ? updated.role : previous.role,
+          phone: updated.phone ?? previous.phone,
+          profileImage: updated.profileImage ?? previous.profileImage,
+          isActive: updated.isActive,
+        );
+      }
+      _ok(
+        canLoginAdminPanel
+            ? '${previous.displayName} can now access the admin panel'
+            : '${previous.displayName} can no longer access the admin panel',
+      );
+      return true;
+    } catch (e) {
+      // Revert optimistic update.
+      final freshIndex = _admins.indexWhere((a) => a.id == id);
+      if (freshIndex != -1) {
+        _admins[freshIndex] = previous;
+      }
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return false;
+    } finally {
+      _panelAccessPendingIds.remove(id);
     }
   }
 

@@ -152,6 +152,10 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               actionColor: Colors.red,
               actionIcon: Icons.remove_moderator_outlined,
               onRefresh: _ctrl.loadAdmins,
+              showPanelAccessToggle: true,
+              onTogglePanelAccess: (user, value) =>
+                  _ctrl.setPanelAccess(id: user.id, canLoginAdminPanel: value),
+              isPanelAccessPending: _ctrl.isPanelAccessPending,
             );
           }),
         ),
@@ -466,6 +470,9 @@ class _UserList extends StatelessWidget {
     required this.actionColor,
     required this.actionIcon,
     required this.onRefresh,
+    this.showPanelAccessToggle = false,
+    this.onTogglePanelAccess,
+    this.isPanelAccessPending,
   });
 
   final List<AdminModel> users;
@@ -477,6 +484,9 @@ class _UserList extends StatelessWidget {
   final Color actionColor;
   final IconData actionIcon;
   final Future<void> Function() onRefresh;
+  final bool showPanelAccessToggle;
+  final Future<bool> Function(AdminModel user, bool value)? onTogglePanelAccess;
+  final bool Function(String id)? isPanelAccessPending;
 
   @override
   Widget build(BuildContext context) {
@@ -503,6 +513,13 @@ class _UserList extends StatelessWidget {
           actionColor: actionColor,
           actionIcon: actionIcon,
           onAction: () => onAction(users[i]),
+          showPanelAccessToggle: showPanelAccessToggle,
+          onTogglePanelAccess: onTogglePanelAccess == null
+              ? null
+              : (value) => onTogglePanelAccess!(users[i], value),
+          isPanelAccessPending: isPanelAccessPending == null
+              ? null
+              : () => isPanelAccessPending!(users[i].id),
         ),
       ),
     );
@@ -519,6 +536,9 @@ class _UserCard extends StatelessWidget {
     required this.actionColor,
     required this.actionIcon,
     required this.onAction,
+    this.showPanelAccessToggle = false,
+    this.onTogglePanelAccess,
+    this.isPanelAccessPending,
   });
 
   final AdminModel user;
@@ -526,6 +546,9 @@ class _UserCard extends StatelessWidget {
   final Color actionColor;
   final IconData actionIcon;
   final VoidCallback onAction;
+  final bool showPanelAccessToggle;
+  final Future<bool> Function(bool value)? onTogglePanelAccess;
+  final bool Function()? isPanelAccessPending;
 
   Color get _roleColor {
     switch (user.role.toLowerCase()) {
@@ -643,6 +666,18 @@ class _UserCard extends StatelessWidget {
             ),
           ),
 
+          // Active / Inactive toggle (super-admin admin-panel access).
+          if (showPanelAccessToggle &&
+              onTogglePanelAccess != null &&
+              user.role.toLowerCase() != 'superadmin') ...[
+            _PanelAccessToggle(
+              user: user,
+              onChanged: onTogglePanelAccess!,
+              isPending: isPanelAccessPending,
+            ),
+            const SizedBox(width: 10),
+          ],
+
           // Action button
           GestureDetector(
             onTap: onAction,
@@ -685,6 +720,100 @@ class _UserCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+// ── Active / Inactive switch for an admin ─────────────────────────
+class _PanelAccessToggle extends StatelessWidget {
+  const _PanelAccessToggle({
+    required this.user,
+    required this.onChanged,
+    this.isPending,
+  });
+
+  final AdminModel user;
+  final Future<bool> Function(bool value) onChanged;
+  final bool Function()? isPending;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final ctrl = Get.find<AdminController>();
+      // Read latest value from the controller list so the toggle stays in
+      // sync with optimistic updates / refreshes.
+      AdminModel? current;
+      for (final a in ctrl.admins) {
+        if (a.id == user.id) {
+          current = a;
+          break;
+        }
+      }
+      final isActive = current?.canLoginAdminPanel ?? user.canLoginAdminPanel;
+      final pending =
+          isPending?.call() ?? ctrl.isPanelAccessPending(user.id);
+
+      final activeColor = const Color(0xFF2E7D32);
+      final inactiveColor = CmsColors.textSecond;
+      final color = isActive ? activeColor : inactiveColor;
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (pending)
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: color,
+                ),
+              )
+            else
+              Icon(
+                isActive
+                    ? Icons.check_circle_outline
+                    : Icons.block_outlined,
+                size: 14,
+                color: color,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              isActive ? 'Active' : 'Inactive',
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Transform.scale(
+              scale: 0.75,
+              child: Switch(
+                value: isActive,
+                onChanged: pending
+                    ? null
+                    : (v) {
+                        // Fire and forget — controller handles errors.
+                        onChanged(v);
+                      },
+                activeColor: Colors.white,
+                activeTrackColor: activeColor,
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: inactiveColor.withOpacity(0.5),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 }
 
 // ── User info card shown inside dialogs ───────────────────────────

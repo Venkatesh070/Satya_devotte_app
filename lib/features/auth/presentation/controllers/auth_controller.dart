@@ -150,6 +150,7 @@ class AuthController extends GetxController {
       await _firebaseService.signInWithEmailAndPassword(
         email: email,
         password: password,
+        allowGoogleAccountLinking: false,
       );
       final firebaseIdToken = await _firebaseService.getIdToken(
         forceRefresh: true,

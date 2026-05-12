@@ -128,8 +128,21 @@ class FirebaseService {
   Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
+    /// When `false`, only Firebase email/password sign-in runs — no
+    /// `fetchSignInMethodsForEmail` pre-check and no Google popup / linking.
+    /// Used by the Flutter **web** admin login (`signInAsAdmin`).
+    bool allowGoogleAccountLinking = true,
   }) async {
     final normalizedEmail = email.trim();
+
+    if (!allowGoogleAccountLinking) {
+      await _firebaseAuth.signInWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+      return;
+    }
+
     // Pre-check providers so Google-only accounts don't first trigger a
     // failed signInWithPassword call on web.
     final methods = await _firebaseAuth.fetchSignInMethodsForEmail(

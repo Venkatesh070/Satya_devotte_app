@@ -46,7 +46,7 @@ class CalendarPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Festival\nCalendar',
+            'Calendar',
             style: AppTypography.lora(
               fontSize: 24,
               fontWeight: FontWeight.w700,

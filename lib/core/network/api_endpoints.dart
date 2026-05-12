@@ -31,4 +31,9 @@ class ApiEndpoints {
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
   /// Super Admin — invite/create admin user (POST JSON body).
   static const String superadminCreateAdmin = '/api/v1/superadmin/admins';
+
+  /// Super Admin — toggle admin panel access (PATCH).
+  /// Body: `{ "canLoginAdminPanel": bool }`.
+  static String superadminAdminPanelAccess(String id) =>
+      '/api/v1/superadmin/admins/$id/panel-access';
 }

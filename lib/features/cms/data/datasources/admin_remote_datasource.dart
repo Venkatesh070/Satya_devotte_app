@@ -114,4 +114,34 @@ class AdminRemoteDataSource {
     final res = await _apiClient.dio.patch('/api/v1/admin/remove-admin/$id');
     return AdminModel.fromJson(_single(res.data as Map<String, dynamic>));
   }
+
+  /// PATCH `/api/v1/superadmin/admins/:id/panel-access` — toggle whether the
+  /// admin can sign in to the admin panel. Returns the updated admin.
+  Future<AdminModel> setPanelAccess({
+    required String id,
+    required bool canLoginAdminPanel,
+  }) async {
+    try {
+      final res = await _apiClient.dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.superadminAdminPanelAccess(id),
+        data: {'canLoginAdminPanel': canLoginAdminPanel},
+      );
+      final body = res.data;
+      if (body == null) {
+        throw Exception('Empty response from server.');
+      }
+      if (body['success'] == false) {
+        throw Exception(
+          body['message']?.toString() ?? 'Could not update panel access.',
+        );
+      }
+      return AdminModel.fromJson(_single(body));
+    } on DioException catch (e) {
+      final raw = e.response?.data;
+      if (raw is Map && raw['message'] != null) {
+        throw Exception(raw['message'].toString());
+      }
+      rethrow;
+    }
+  }
 }
