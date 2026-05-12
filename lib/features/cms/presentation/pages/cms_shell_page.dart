@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_users_c
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_analytics_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_shlokas_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_admins_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_content.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {
@@ -36,17 +37,29 @@ class CmsShellPage extends StatefulWidget {
 
 class _CmsShellPageState extends State<CmsShellPage> {
   int _selectedIndex = 0;
+  // Sidebar groups that the user has manually expanded. Groups that contain
+  // the currently selected leaf are always treated as expanded regardless
+  // of this set.
+  final Set<String> _expandedGroups = <String>{};
 
   @override
   void initState() {
     super.initState();
     final auth = Get.find<AuthController>();
     _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
+    // Auto-expand any group that owns the resolved selected index so the
+    // sidebar reflects the deep-linked tab on first paint.
+    final group = _groupLabelForIndex(_selectedIndex);
+    if (group != null) _expandedGroups.add(group);
   }
 
   void _onSelect(int index) {
     final auth = Get.find<AuthController>();
-    setState(() => _selectedIndex = index);
+    setState(() {
+      _selectedIndex = index;
+      final group = _groupLabelForIndex(index);
+      if (group != null) _expandedGroups.add(group);
+    });
     final targetRoute = _routeForIndex(index, auth.isSuperAdmin);
     if (targetRoute != null && targetRoute != Get.currentRoute) {
       // Use offNamed so the back stack does not grow each time the user
@@ -58,6 +71,16 @@ class _CmsShellPageState extends State<CmsShellPage> {
         preventDuplicates: false,
       );
     }
+  }
+
+  void _onToggleGroup(String label) {
+    setState(() {
+      if (_expandedGroups.contains(label)) {
+        _expandedGroups.remove(label);
+      } else {
+        _expandedGroups.add(label);
+      }
+    });
   }
 
   @override
@@ -80,10 +103,14 @@ class _CmsShellPageState extends State<CmsShellPage> {
           ? _WebLayout(
               selectedIndex: _selectedIndex,
               onSelect: _onSelect,
+              expandedGroups: _expandedGroups,
+              onToggleGroup: _onToggleGroup,
             )
           : _MobileLayout(
               selectedIndex: _selectedIndex,
               onSelect: _onSelect,
+              expandedGroups: _expandedGroups,
+              onToggleGroup: _onToggleGroup,
             ),
     );
   }
@@ -93,9 +120,16 @@ class _CmsShellPageState extends State<CmsShellPage> {
 // WEB LAYOUT — left sidebar + content
 // ════════════════════════════════════════════════════════════════
 class _WebLayout extends StatelessWidget {
-  const _WebLayout({required this.selectedIndex, required this.onSelect});
+  const _WebLayout({
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.expandedGroups,
+    required this.onToggleGroup,
+  });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final Set<String> expandedGroups;
+  final ValueChanged<String> onToggleGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +137,12 @@ class _WebLayout extends StatelessWidget {
       backgroundColor: CmsColors.bg,
       body: Row(
         children: [
-          _Sidebar(selectedIndex: selectedIndex, onSelect: onSelect),
+          _Sidebar(
+            selectedIndex: selectedIndex,
+            onSelect: onSelect,
+            expandedGroups: expandedGroups,
+            onToggleGroup: onToggleGroup,
+          ),
           Expanded(
             child: Column(
               children: [
@@ -122,9 +161,16 @@ class _WebLayout extends StatelessWidget {
 // MOBILE LAYOUT — matches Figma mobile screens
 // ════════════════════════════════════════════════════════════════
 class _MobileLayout extends StatelessWidget {
-  const _MobileLayout({required this.selectedIndex, required this.onSelect});
+  const _MobileLayout({
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.expandedGroups,
+    required this.onToggleGroup,
+  });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final Set<String> expandedGroups;
+  final ValueChanged<String> onToggleGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +215,12 @@ class _MobileLayout extends StatelessWidget {
           ),
         ],
       ),
-      drawer: _MobileDrawer(selectedIndex: selectedIndex, onSelect: onSelect),
+      drawer: _MobileDrawer(
+        selectedIndex: selectedIndex,
+        onSelect: onSelect,
+        expandedGroups: expandedGroups,
+        onToggleGroup: onToggleGroup,
+      ),
       body: _buildContent(selectedIndex),
     );
   }
@@ -179,9 +230,16 @@ class _MobileLayout extends StatelessWidget {
 // SIDEBAR — matches Figma left nav
 // ════════════════════════════════════════════════════════════════
 class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.selectedIndex, required this.onSelect});
+  const _Sidebar({
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.expandedGroups,
+    required this.onToggleGroup,
+  });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final Set<String> expandedGroups;
+  final ValueChanged<String> onToggleGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -285,17 +343,21 @@ class _Sidebar extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final items = _navItems(auth.isSuperAdmin);
-              return ListView.builder(
+              return ListView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 4,
                 ),
-                itemCount: items.length,
-                itemBuilder: (_, i) => _SidebarItem(
-                  item: items[i],
-                  isSelected: selectedIndex == i,
-                  onTap: () => onSelect(i),
-                ),
+                children: [
+                  for (final entry in items)
+                    ..._renderEntry(
+                      entry,
+                      selectedIndex: selectedIndex,
+                      expandedGroups: expandedGroups,
+                      onSelect: onSelect,
+                      onToggleGroup: onToggleGroup,
+                    ),
+                ],
               );
             }),
           ),
@@ -353,15 +415,17 @@ class _SidebarItem extends StatelessWidget {
     required this.item,
     required this.isSelected,
     required this.onTap,
+    this.indent = false,
   });
-  final _NavItem item;
+  final _NavEntry item;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool indent;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: 2, left: indent ? 18 : 0),
       child: Material(
         color: isSelected ? CmsColors.orange : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -383,19 +447,23 @@ class _SidebarItem extends StatelessWidget {
                       : item.isSpecial
                       ? CmsColors.orange
                       : Colors.white54,
-                  size: 18,
+                  size: indent ? 16 : 18,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : item.isSpecial
-                        ? CmsColors.orange
-                        : Colors.white60,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    item.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : item.isSpecial
+                          ? CmsColors.orange
+                          : Colors.white60,
+                      fontSize: indent ? 12.5 : 13,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],
@@ -407,13 +475,144 @@ class _SidebarItem extends StatelessWidget {
   }
 }
 
+// ── Expandable group header (e.g. "Pooja Kit") ────────────────────
+class _SidebarGroupHeader extends StatelessWidget {
+  const _SidebarGroupHeader({
+    required this.entry,
+    required this.expanded,
+    required this.highlight,
+    required this.onTap,
+  });
+
+  final _NavEntry entry;
+  final bool expanded;
+  // True when a child of this group is currently selected. We tint the
+  // header slightly so the user knows their selection lives inside it
+  // even when the group is collapsed for some reason.
+  final bool highlight;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = highlight
+        ? CmsColors.orange
+        : entry.isSpecial
+        ? CmsColors.orange
+        : Colors.white60;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: highlight ? CmsColors.orange.withOpacity(0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          hoverColor: Colors.white.withOpacity(0.08),
+          splashColor: Colors.white.withOpacity(0.12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              children: [
+                Icon(
+                  expanded ? entry.activeIcon : entry.icon,
+                  color: color,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    entry.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 13,
+                      fontWeight:
+                          highlight ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  duration: const Duration(milliseconds: 150),
+                  turns: expanded ? 0.5 : 0,
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: color,
+                    size: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Render either a single sidebar leaf or an expandable group + its visible
+// children. Shared by [_Sidebar] and [_MobileDrawer].
+List<Widget> _renderEntry(
+  _NavEntry entry, {
+  required int selectedIndex,
+  required Set<String> expandedGroups,
+  required ValueChanged<int> onSelect,
+  required ValueChanged<String> onToggleGroup,
+  VoidCallback? onSelectExtra,
+}) {
+  if (entry.isGroup) {
+    final children = entry.children ?? const <_NavEntry>[];
+    final hasSelectedChild = children.any((c) => c.index == selectedIndex);
+    // A group is rendered expanded when the user manually expanded it OR
+    // when one of its children is the active tab.
+    final expanded = hasSelectedChild || expandedGroups.contains(entry.label);
+    return [
+      _SidebarGroupHeader(
+        entry: entry,
+        expanded: expanded,
+        highlight: hasSelectedChild,
+        onTap: () => onToggleGroup(entry.label),
+      ),
+      if (expanded)
+        for (final child in children)
+          _SidebarItem(
+            item: child,
+            isSelected: child.index == selectedIndex,
+            indent: true,
+            onTap: () {
+              if (child.index != null) onSelect(child.index!);
+              onSelectExtra?.call();
+            },
+          ),
+    ];
+  }
+  return [
+    _SidebarItem(
+      item: entry,
+      isSelected: entry.index == selectedIndex,
+      onTap: () {
+        if (entry.index != null) onSelect(entry.index!);
+        onSelectExtra?.call();
+      },
+    ),
+  ];
+}
+
 // ════════════════════════════════════════════════════════════════
 // MOBILE DRAWER
 // ════════════════════════════════════════════════════════════════
 class _MobileDrawer extends StatelessWidget {
-  const _MobileDrawer({required this.selectedIndex, required this.onSelect});
+  const _MobileDrawer({
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.expandedGroups,
+    required this.onToggleGroup,
+  });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final Set<String> expandedGroups;
+  final ValueChanged<String> onToggleGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -490,20 +689,25 @@ class _MobileDrawer extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final items = _navItems(auth.isSuperAdmin);
-              return ListView.builder(
+              return ListView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 4,
                 ),
-                itemCount: items.length,
-                itemBuilder: (_, i) => _SidebarItem(
-                  item: items[i],
-                  isSelected: selectedIndex == i,
-                  onTap: () {
-                    onSelect(i);
-                    Navigator.pop(context);
-                  },
-                ),
+                children: [
+                  for (final entry in items)
+                    ..._renderEntry(
+                      entry,
+                      selectedIndex: selectedIndex,
+                      expandedGroups: expandedGroups,
+                      onSelect: onSelect,
+                      onToggleGroup: onToggleGroup,
+                      // Close the drawer when the user taps any leaf, but
+                      // leave it open when they just toggle a group header
+                      // so they can pick a sub-tab without re-opening it.
+                      onSelectExtra: () => Navigator.pop(context),
+                    ),
+                ],
               );
             }),
           ),
@@ -653,98 +857,234 @@ class _WebTopBar extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 // NAV ITEMS DATA
 // ════════════════════════════════════════════════════════════════
-class _NavItem {
-  const _NavItem(
-    this.label,
-    this.icon,
-    this.activeIcon, {
+//
+// A nav entry is either a selectable leaf (`index` set) or an expandable
+// group header (`children` non-empty, `index` null). Indices are the
+// single source of truth used by `_pageTitle`, `_buildContent` and the
+// route mapping helpers, so adding a new tab no longer depends on its
+// position in the sidebar list.
+class _NavEntry {
+  const _NavEntry({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+    this.index,
+    this.children,
     this.isSpecial = false,
   });
+
   final String label;
   final IconData icon;
   final IconData activeIcon;
+  final int? index;
+  final List<_NavEntry>? children;
   final bool isSpecial;
+
+  bool get isGroup =>
+      children != null && children!.isNotEmpty;
 }
 
-List<_NavItem> _navItems(bool isSuperAdmin) => [
-  const _NavItem('Dashboard', Icons.grid_view_outlined, Icons.grid_view),
-  const _NavItem('Manage Deities', Icons.auto_awesome_outlined, Icons.auto_awesome),
-  const _NavItem(
-    'Manage Pujas',
-    Icons.self_improvement_outlined,
-    Icons.self_improvement,
+/// Stable index assignments. Keep these in sync with `_pageTitle`,
+/// `_buildContent`, `_indexFromRoute` and `_routeForIndex` below.
+class _NavIds {
+  static const int dashboard = 0;
+  static const int deities = 1;
+  static const int pujas = 2;
+  static const int festivals = 3;
+  static const int donations = 4;
+  static const int notifications = 5;
+  static const int users = 6;
+  static const int analytics = 7;
+  // Super admin only.
+  static const int shlokas = 8;
+  static const int admins = 9;
+  // Pooja Kit group children.
+  static const int poojaKitManage = 10;
+  static const int poojaKitOrders = 11;
+  // Donations group children. `donations` (4) is kept as "Manage Donations"
+  // so existing routes / deep links continue to work.
+  static const int donationsAll = 12;
+}
+
+const String _poojaKitGroupLabel = 'Pooja Kit';
+const String _donationsGroupLabel = 'Donations';
+
+List<_NavEntry> _navItems(bool isSuperAdmin) => [
+  const _NavEntry(
+    label: 'Dashboard',
+    icon: Icons.grid_view_outlined,
+    activeIcon: Icons.grid_view,
+    index: _NavIds.dashboard,
   ),
-  const _NavItem(
-    'Manage Festivals',
-    Icons.celebration_outlined,
-    Icons.celebration,
+  const _NavEntry(
+    label: 'Manage Deities',
+    icon: Icons.auto_awesome_outlined,
+    activeIcon: Icons.auto_awesome,
+    index: _NavIds.deities,
   ),
-  const _NavItem(
-    'Donations',
-    Icons.volunteer_activism_outlined,
-    Icons.volunteer_activism,
+  const _NavEntry(
+    label: 'Manage Pujas',
+    icon: Icons.self_improvement_outlined,
+    activeIcon: Icons.self_improvement,
+    index: _NavIds.pujas,
   ),
-  const _NavItem(
-    'Notifications',
-    Icons.notifications_outlined,
-    Icons.notifications,
+  const _NavEntry(
+    label: 'Manage Festivals',
+    icon: Icons.celebration_outlined,
+    activeIcon: Icons.celebration,
+    index: _NavIds.festivals,
   ),
-  const _NavItem('Users', Icons.people_outline, Icons.people),
-  const _NavItem('Analytics', Icons.bar_chart_outlined, Icons.bar_chart),
+  const _NavEntry(
+    label: _donationsGroupLabel,
+    icon: Icons.volunteer_activism_outlined,
+    activeIcon: Icons.volunteer_activism,
+    children: [
+      _NavEntry(
+        label: 'Manage Donations',
+        icon: Icons.volunteer_activism_outlined,
+        activeIcon: Icons.volunteer_activism,
+        index: _NavIds.donations,
+      ),
+      _NavEntry(
+        label: 'All Donations',
+        icon: Icons.list_alt_outlined,
+        activeIcon: Icons.list_alt,
+        index: _NavIds.donationsAll,
+      ),
+    ],
+  ),
+  const _NavEntry(
+    label: _poojaKitGroupLabel,
+    icon: Icons.shopping_basket_outlined,
+    activeIcon: Icons.shopping_basket,
+    children: [
+      _NavEntry(
+        label: 'Manage Pooja Kit',
+        icon: Icons.inventory_2_outlined,
+        activeIcon: Icons.inventory_2,
+        index: _NavIds.poojaKitManage,
+      ),
+      _NavEntry(
+        label: 'Orders',
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long,
+        index: _NavIds.poojaKitOrders,
+      ),
+    ],
+  ),
+  const _NavEntry(
+    label: 'Notifications',
+    icon: Icons.notifications_outlined,
+    activeIcon: Icons.notifications,
+    index: _NavIds.notifications,
+  ),
+  const _NavEntry(
+    label: 'Users',
+    icon: Icons.people_outline,
+    activeIcon: Icons.people,
+    index: _NavIds.users,
+  ),
+  const _NavEntry(
+    label: 'Analytics',
+    icon: Icons.bar_chart_outlined,
+    activeIcon: Icons.bar_chart,
+    index: _NavIds.analytics,
+  ),
   if (isSuperAdmin) ...[
-    const _NavItem(
-      'Shlokas',
-      Icons.menu_book_outlined,
-      Icons.menu_book,
+    const _NavEntry(
+      label: 'Shlokas',
+      icon: Icons.menu_book_outlined,
+      activeIcon: Icons.menu_book,
+      index: _NavIds.shlokas,
       isSpecial: true,
     ),
-    const _NavItem(
-      'Manage Admins',
-      Icons.admin_panel_settings_outlined,
-      Icons.admin_panel_settings,
+    const _NavEntry(
+      label: 'Manage Admins',
+      icon: Icons.admin_panel_settings_outlined,
+      activeIcon: Icons.admin_panel_settings,
+      index: _NavIds.admins,
       isSpecial: true,
     ),
   ],
 ];
 
+/// Returns the sidebar group label that owns [index], or null if the
+/// index belongs to a top-level leaf. Used to auto-expand the matching
+/// group when a child tab is selected.
+String? _groupLabelForIndex(int index) {
+  switch (index) {
+    case _NavIds.poojaKitManage:
+    case _NavIds.poojaKitOrders:
+      return _poojaKitGroupLabel;
+    case _NavIds.donations:
+    case _NavIds.donationsAll:
+      return _donationsGroupLabel;
+    default:
+      return null;
+  }
+}
+
 String _pageTitle(int i) {
-  const titles = [
-    'Dashboard',
-    'Manage Deities',
-    'Manage Pujas',
-    'Manage Festivals',
-    'Donations',
-    'Notifications',
-    'Users',
-    'Analytics',
-    'Shlokas',
-    'Manage Admins',
-  ];
-  return i < titles.length ? titles[i] : 'Dashboard';
+  switch (i) {
+    case _NavIds.dashboard:
+      return 'Dashboard';
+    case _NavIds.deities:
+      return 'Manage Deities';
+    case _NavIds.pujas:
+      return 'Manage Pujas';
+    case _NavIds.festivals:
+      return 'Manage Festivals';
+    case _NavIds.donations:
+      return 'Manage Donations';
+    case _NavIds.donationsAll:
+      return 'All Donations';
+    case _NavIds.notifications:
+      return 'Notifications';
+    case _NavIds.users:
+      return 'Users';
+    case _NavIds.analytics:
+      return 'Analytics';
+    case _NavIds.shlokas:
+      return 'Shlokas';
+    case _NavIds.admins:
+      return 'Manage Admins';
+    case _NavIds.poojaKitManage:
+      return 'Manage Pooja Kit';
+    case _NavIds.poojaKitOrders:
+      return 'Pooja Kit Orders';
+    default:
+      return 'Dashboard';
+  }
 }
 
 Widget _buildContent(int i) {
   switch (i) {
-    case 0:
+    case _NavIds.dashboard:
       return const CmsDashboardContent();
-    case 1:
+    case _NavIds.deities:
       return const CmsDeitiesContent();
-    case 2:
+    case _NavIds.pujas:
       return const CmsRitualsContent();
-    case 3:
+    case _NavIds.festivals:
       return const CmsFestivalsContent();
-    case 4:
+    case _NavIds.donations:
       return const CmsDonationsContent();
-    case 5:
+    case _NavIds.donationsAll:
+      return const CmsDonationsAllContent();
+    case _NavIds.notifications:
       return const CmsNotificationsContent();
-    case 6:
+    case _NavIds.users:
       return const CmsUsersContent();
-    case 7:
+    case _NavIds.analytics:
       return const CmsAnalyticsContent();
-    case 8:
+    case _NavIds.shlokas:
       return const CmsShlokaContent();
-    case 9:
+    case _NavIds.admins:
       return const CmsAdminsContent();
+    case _NavIds.poojaKitManage:
+      return const CmsPoojaKitContent();
+    case _NavIds.poojaKitOrders:
+      return const CmsPoojaKitOrdersContent();
     default:
       return const CmsDashboardContent();
   }
@@ -755,51 +1095,67 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
     case AppRoutes.cmsDeities:
     case AppRoutes.cmsDeityCreate:
     case AppRoutes.cmsDeityEdit:
-      return 1;
+      return _NavIds.deities;
     case AppRoutes.cmsRituals:
     case AppRoutes.cmsRitualCreate:
     case AppRoutes.cmsRitualEdit:
-      return 2;
+      return _NavIds.pujas;
     case AppRoutes.cmsFestivals:
     case AppRoutes.cmsFestivalCreate:
-      return 3;
+      return _NavIds.festivals;
     case AppRoutes.cmsNotifications:
-      return 5;
+      return _NavIds.notifications;
     case AppRoutes.cmsUsers:
-      return 6;
+      return _NavIds.users;
     case AppRoutes.cmsAnalytics:
-      return 7;
+      return _NavIds.analytics;
+    case AppRoutes.cmsPoojaKit:
+      return _NavIds.poojaKitManage;
+    case AppRoutes.cmsPoojaKitOrders:
+      return _NavIds.poojaKitOrders;
+    case AppRoutes.cmsDonations:
+      return _NavIds.donations;
+    case AppRoutes.cmsDonationsAll:
+      return _NavIds.donationsAll;
     case AppRoutes.cmsShlokas:
-      return isSuperAdmin ? 8 : 0;
+      return isSuperAdmin ? _NavIds.shlokas : _NavIds.dashboard;
     case AppRoutes.cmsAdmins:
-      return isSuperAdmin ? 9 : 0;
+      return isSuperAdmin ? _NavIds.admins : _NavIds.dashboard;
     case AppRoutes.cmsApproval:
-      return 0;
+      return _NavIds.dashboard;
     case AppRoutes.cms:
     default:
-      return 0;
+      return _NavIds.dashboard;
   }
 }
 
 String? _routeForIndex(int index, bool isSuperAdmin) {
   switch (index) {
-    case 0:
+    case _NavIds.dashboard:
       return AppRoutes.cms;
-    case 1:
+    case _NavIds.deities:
       return AppRoutes.cmsDeities;
-    case 2:
+    case _NavIds.pujas:
       return AppRoutes.cmsRituals;
-    case 3:
+    case _NavIds.festivals:
       return AppRoutes.cmsFestivals;
-    case 5:
+    case _NavIds.notifications:
       return AppRoutes.cmsNotifications;
-    case 6:
+    case _NavIds.users:
       return AppRoutes.cmsUsers;
-    case 7:
+    case _NavIds.analytics:
       return AppRoutes.cmsAnalytics;
-    case 8:
+    case _NavIds.poojaKitManage:
+      return AppRoutes.cmsPoojaKit;
+    case _NavIds.poojaKitOrders:
+      return AppRoutes.cmsPoojaKitOrders;
+    case _NavIds.donations:
+      return AppRoutes.cmsDonations;
+    case _NavIds.donationsAll:
+      return AppRoutes.cmsDonationsAll;
+    case _NavIds.shlokas:
       return isSuperAdmin ? AppRoutes.cmsShlokas : AppRoutes.cms;
-    case 9:
+    case _NavIds.admins:
       return isSuperAdmin ? AppRoutes.cmsAdmins : AppRoutes.cms;
     default:
       return null;

@@ -6,10 +6,18 @@ import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/core/url_strategy/url_strategy.dart';
 import 'package:get/get.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Flutter web defaults to path-based URLs (`/login`). The browser then
+  // requests `/login` as a real path; static/dev servers often have no
+  // SPA fallback and return 404 ("Failed to load resource: login").
+  // Hash strategy keeps routes in the fragment (`/#/login`) so only `/`
+  // and asset files are fetched from the server. On native platforms
+  // `configureUrlStrategy` resolves to a no-op stub via conditional import.
+  configureUrlStrategy();
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(

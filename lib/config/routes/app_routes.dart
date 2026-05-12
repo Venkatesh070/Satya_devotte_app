@@ -7,6 +7,20 @@ class AppRoutes {
   static const String rituals = '/rituals';
   static const String ritualDetail = '/ritual-detail';
 
+  // ─── User-facing donations flow ───────────────────────────────
+  /// All approved donations (full list).
+  static const String userDonations = '/donations';
+  /// Single donation details. Pass `DonationModel` via `arguments`.
+  static const String userDonationDetails = '/donations/details';
+  /// Post-Paystack confirming screen. Pass `DonationInitData`.
+  static const String userDonationConfirming = '/donations/confirming';
+  /// Terminal screens. Pass `VerifyResult` (success) or
+  /// `DonationFailedArgs` (failed).
+  static const String userDonationSuccess = '/donations/success';
+  static const String userDonationFailed = '/donations/failed';
+  /// Authenticated user's contribution history.
+  static const String userContributions = '/donations/contributions';
+
   // ─── CMS routes (admin + superadmin) ─────────────────────────
   static const String cms = '/cms';
   static const String cmsDeities = '/cms/deities';
@@ -20,6 +34,18 @@ class AppRoutes {
   static const String cmsUsers = '/cms/users';
   static const String cmsNotifications = '/cms/notifications';
   static const String cmsAnalytics = '/cms/analytics';
+
+  // ─── Pooja Kit (admin + superadmin) ──────────────────────────
+  /// Manage Pooja Kit listing / create / edit.
+  static const String cmsPoojaKit = '/cms/pooja-kit';
+  /// Pooja Kit orders placed by devotees.
+  static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
+
+  // ─── Donations (admin + superadmin) ──────────────────────────
+  /// Admin's own donation campaigns (create / edit / review).
+  static const String cmsDonations = '/cms/donations';
+  /// All donations across admins (super-admin overview list).
+  static const String cmsDonationsAll = '/cms/donations/all';
 
   // ─── Super Admin only ─────────────────────────────────────────
   static const String cmsApproval = '/cms/approval';

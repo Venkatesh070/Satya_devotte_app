@@ -121,9 +121,22 @@ class AdminRemoteDataSource {
     required String id,
     required bool canLoginAdminPanel,
   }) async {
+    if (id.trim().isEmpty) {
+      // Without this guard, an empty id would produce
+      // `/api/v1/superadmin/admins//panel-access` which the backend
+      // matches with no route and returns `Route not found`.
+      throw Exception('Cannot update panel access: admin id is missing.');
+    }
+    final path = ApiEndpoints.superadminAdminPanelAccess(id);
     try {
+      // Temporary diagnostic so the exact PATCH URL + body show up in the
+      // console. Remove once the endpoint is confirmed wired up.
+      // ignore: avoid_print
+      print(
+        'setPanelAccess → PATCH $path  body={canLoginAdminPanel: $canLoginAdminPanel}',
+      );
       final res = await _apiClient.dio.patch<Map<String, dynamic>>(
-        ApiEndpoints.superadminAdminPanelAccess(id),
+        path,
         data: {'canLoginAdminPanel': canLoginAdminPanel},
       );
       final body = res.data;
@@ -137,6 +150,10 @@ class AdminRemoteDataSource {
       }
       return AdminModel.fromJson(_single(body));
     } on DioException catch (e) {
+      // ignore: avoid_print
+      print(
+        'setPanelAccess ✗ ${e.response?.statusCode} ${e.requestOptions.uri} → ${e.response?.data}',
+      );
       final raw = e.response?.data;
       if (raw is Map && raw['message'] != null) {
         throw Exception(raw['message'].toString());

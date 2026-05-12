@@ -1056,3 +1056,75 @@ class _DonationFormState extends State<_DonationForm> {
     });
   }
 }
+
+// ════════════════════════════════════════════════════════════════
+// ALL DONATIONS  (super-admin overview – placeholder for now)
+// ════════════════════════════════════════════════════════════════
+class CmsDonationsAllContent extends StatelessWidget {
+  const CmsDonationsAllContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        _DonationsHeader(
+          title: 'All Donations',
+          subtitle:
+              'Browse every donation campaign created across the platform.',
+        ),
+        Divider(height: 1, color: CmsColors.border),
+        Expanded(
+          child: CmsEmptyState(
+            icon: Icons.volunteer_activism_outlined,
+            title: 'No Donations Yet',
+            subtitle:
+                'Once admins start publishing donation campaigns they will '
+                'appear here as a unified, searchable list.',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DonationsHeader extends StatelessWidget {
+  const _DonationsHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isWeb ? 24 : 16,
+        vertical: 14,
+      ),
+      color: CmsColors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

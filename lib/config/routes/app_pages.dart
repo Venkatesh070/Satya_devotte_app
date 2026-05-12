@@ -104,6 +104,34 @@ class AppPages {
       transition: Transition.noTransition,
       transitionDuration: Duration.zero,
     ),
+    GetPage(
+      name: AppRoutes.cmsPoojaKit,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsPoojaKitOrders,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsDonations,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsDonationsAll,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
 
     // ─── Super Admin only ───────────────────────────────────────
     GetPage(

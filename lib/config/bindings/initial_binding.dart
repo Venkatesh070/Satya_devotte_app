@@ -19,12 +19,14 @@ import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_
 import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/donation_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
@@ -132,6 +134,15 @@ class InitialBinding extends Bindings {
     Get.put<DonationController>(
       DonationController(Get.find<DonationRemoteDataSource>()),
       permanent: true,
+    );
+    // ── CMS Pooja Kit Products ───────────────────────────────────
+    Get.put<ProductRemoteDataSource>(
+      ProductRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.lazyPut<ProductController>(
+      () => ProductController(Get.find<ProductRemoteDataSource>()),
+      fenix: true,
     );
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<MediaUploadService>(

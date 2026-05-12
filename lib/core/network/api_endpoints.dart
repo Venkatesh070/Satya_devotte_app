@@ -36,4 +36,37 @@ class ApiEndpoints {
   /// Body: `{ "canLoginAdminPanel": bool }`.
   static String superadminAdminPanelAccess(String id) =>
       '/api/v1/superadmin/admins/$id/panel-access';
+
+  // ── Pooja Kit Products ────────────────────────────────────────
+  /// POST — create a new Pooja Kit product (multipart/form-data).
+  static const String createProduct = '/api/v1/products/create-product';
+  /// GET — list products. Assumed to return `{ data: [ProductModel] }` or
+  /// `{ products: [...] }`. The data source normalises both shapes.
+  static const String allProducts = '/api/v1/products/all';
+  static String product(String id) => '/api/v1/products/$id';
+  /// PATCH — update product fields (multipart/form-data; same fields as create).
+  static String updateProduct(String id) => '/api/v1/products/$id';
+  /// DELETE — remove a product.
+  static String deleteProduct(String id) => '/api/v1/products/$id';
+  /// PUT — super-admin review (APPROVED / REJECTED / QUEUED) with optional
+  /// reason. Body: `{ status, reason? }`.
+  static String reviewProduct(String id) => '/api/v1/products/review/$id';
+  /// PATCH — flip lifecycle (`productStatus`: ACTIVE | INACTIVE).
+  static String productStatus(String id) => '/api/v1/products/$id/status';
+
+  // ── Donations (user flow) ─────────────────────────────────────
+  /// GET — list approved + visible donations for users.
+  static const String donations = '/api/v1/donations';
+
+  /// POST — initiate a Paystack payment for the given donation.
+  /// Body: `{ amount, currency?, note?, callbackUrl? }`.
+  static String donate(String id) => '/api/v1/donations/$id/donate';
+
+  /// GET — idempotent verification by Paystack reference.
+  static String verifyPayment(String reference) =>
+      '/api/v1/payments/verify/$reference';
+
+  /// GET — paginated history of the signed-in user's contributions.
+  /// Query: `page`, `limit`, `paymentStatus`.
+  static const String myContributions = '/api/v1/donations/contributions/my';
 }
