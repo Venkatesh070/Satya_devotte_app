@@ -1,154 +1,246 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:get/get.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
+import 'package:satya_devotte_app/core/notifications/push_router.dart';
+
+/// Top-level FCM background isolate handler.
+///
+/// Must be a top-level function annotated with `@pragma('vm:entry-point')`
+/// so the engine can locate it when the app is fully terminated. Keep it
+/// minimal — the isolate has no Flutter UI and our app state is gone.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (kDebugMode) {
+    debugPrint(
+      '[fcm bg] id=${message.messageId} type=${message.data['type']}',
+    );
+  }
+}
+
+/// All notification plumbing — local notifications, FCM foreground
+/// display, tap routing, and scheduled ritual reminders.
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
-  // Define channels as constants to ensure consistency
+  // ── Channels ────────────────────────────────────────────────────
+  /// MUST match the server payload:
+  /// `android.notification.channelId = "satya_default"`. Mismatched id
+  /// = silent drop on Android 8+.
+  static const String pushChannelId = 'satya_default';
+  static const String pushChannelName = 'Satya notifications';
+  static const String pushChannelDescription = 'General app notifications';
+
+  /// Local-only channels used for scheduled ritual reminders (existing
+  /// behavior, preserved).
   static const String scheduledChannelId = 'scheduled_channel_v2';
   static const String highImportanceChannelId = 'high_importance_channel_v2';
 
   Future<void> initialize() async {
     try {
-      // 1. Initialize Timezone FIRST (critical for scheduling)
+      // 1. Timezones must be ready before any zoned schedule call.
       tz.initializeTimeZones();
       final String timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
-      debugPrint('Timezone initialized to: $timeZoneName');
+      if (kDebugMode) debugPrint('Timezone initialized to: $timeZoneName');
 
-      // 2. Initialize Local Notifications
+      // 2. Register the background isolate handler BEFORE anything that
+      // could deliver a message.
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
+
+      // 3. Init the local notifications plugin (used for foreground
+      // display + tap payloads).
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosSettings =
-          DarwinInitializationSettings();
+          DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
       const InitializationSettings initSettings = InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
       );
-
       await _localNotifications.initialize(
         initSettings,
-        onDidReceiveNotificationResponse: (details) {
-          debugPrint('Local notification clicked: ${details.payload}');
-        },
+        onDidReceiveNotificationResponse: _onLocalNotificationTap,
       );
 
-      // 3. Create Notification Channels explicitly for Android
+      // 4. Create the three Android channels we use. The plan-mandated
+      // `satya_default` channel is the one server-sent broadcasts target.
       if (Platform.isAndroid) {
         final androidPlugin = _localNotifications
             .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin
             >();
 
-        // Channel for scheduled reminders
-        const AndroidNotificationChannel scheduledChannel =
-            AndroidNotificationChannel(
-              scheduledChannelId,
-              'Ritual Reminders',
-              description: 'Notifications for upcoming rituals and festivals',
-              importance: Importance.max,
-              enableVibration: true,
-              playSound: true,
-              showBadge: true,
-            );
+        const pushChannel = AndroidNotificationChannel(
+          pushChannelId,
+          pushChannelName,
+          description: pushChannelDescription,
+          importance: Importance.high,
+          enableVibration: true,
+          playSound: true,
+          showBadge: true,
+        );
+        const scheduledChannel = AndroidNotificationChannel(
+          scheduledChannelId,
+          'Ritual Reminders',
+          description: 'Notifications for upcoming rituals and festivals',
+          importance: Importance.max,
+          enableVibration: true,
+          playSound: true,
+          showBadge: true,
+        );
+        const highImportanceChannel = AndroidNotificationChannel(
+          highImportanceChannelId,
+          'General Notifications',
+          description: 'Important updates and messages',
+          importance: Importance.max,
+          enableVibration: true,
+          playSound: true,
+        );
 
-        // Channel for immediate/FCM messages
-        const AndroidNotificationChannel highImportanceChannel =
-            AndroidNotificationChannel(
-              highImportanceChannelId,
-              'General Notifications',
-              description: 'Important updates and messages',
-              importance: Importance.max,
-              enableVibration: true,
-              playSound: true,
-            );
-
+        await androidPlugin?.createNotificationChannel(pushChannel);
         await androidPlugin?.createNotificationChannel(scheduledChannel);
         await androidPlugin?.createNotificationChannel(highImportanceChannel);
 
-        // Request permissions (Android 13+ only, Android 11 returns true automatically)
+        // Android 13+ runtime permission. No-op on older versions.
         await androidPlugin?.requestNotificationsPermission();
         await androidPlugin?.requestExactAlarmsPermission();
       }
 
-      // 4. Get FCM Token
-      String? token = await _fcm.getToken();
-      debugPrint("FCM Token: $token");
+      // 5. iOS / macOS notification permission.
+      if (Platform.isIOS || Platform.isMacOS) {
+        await _fcm.requestPermission(alert: true, badge: true, sound: true);
+        // Make sure foreground pushes don't sneak past us silently on
+        // iOS — disable native presentation since we render ourselves.
+        await _fcm.setForegroundNotificationPresentationOptions(
+          alert: false,
+          badge: false,
+          sound: false,
+        );
+      }
 
-      // 5. Handle foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('FCM Foreground message received');
-        _showLocalNotification(message);
-      });
+      // 6. FCM listeners — foreground display, background tap, cold-start.
+      FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
-      // 6. Handle background messages
-      FirebaseMessaging.onBackgroundMessage(
-        _firebaseMessagingBackgroundHandler,
-      );
-
-      // 7. Startup Test: Show an immediate notification to verify setup
-      await _showImmediateTestNotification();
+      if (kDebugMode) {
+        final token = await _fcm.getToken();
+        if (token != null && token.length >= 12) {
+          debugPrint('[fcm] device token: ${token.substring(0, 12)}…');
+        }
+      }
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }
   }
 
-  Future<void> _showImmediateTestNotification() async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          highImportanceChannelId,
-          'System Test',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
+  /// Call once after Firebase + GetX bindings are ready. Handles the
+  /// "user tapped a tray notification while the app was terminated"
+  /// case — `getInitialMessage()` returns the `RemoteMessage` that
+  /// caused the launch.
+  Future<void> handleColdStart() async {
+    try {
+      final initial = await _fcm.getInitialMessage();
+      if (initial == null) return;
+      if (kDebugMode) {
+        debugPrint(
+          '[fcm cold] id=${initial.messageId} type=${initial.data['type']}',
         );
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await _localNotifications.show(
-      999,
-      'System Ready',
-      'Notification system is active and ready.',
-      details,
-    );
-    debugPrint('Startup test notification triggered');
+      }
+      PushRouter.navigateFromData(_dataAsMap(initial.data));
+    } catch (e) {
+      if (kDebugMode) debugPrint('[fcm cold] error: $e');
+    }
   }
 
-  Future<void> _showLocalNotification(RemoteMessage message) async {
+  // ── FCM message handlers ───────────────────────────────────────
+
+  Future<void> _onForegroundMessage(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
-
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          highImportanceChannelId,
-          'General Notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-        );
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
+    if (notification == null) {
+      // Data-only message — nothing to render, but the data may still
+      // matter for routing on a later tap.
+      return;
+    }
+    if (kDebugMode) {
+      debugPrint('[fcm fg] type=${message.data['type']} '
+          'title=${notification.title}');
+    }
+    final payload = jsonEncode(_dataAsMap(message.data));
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        pushChannelId,
+        pushChannelName,
+        channelDescription: pushChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: BigTextStyleInformation(notification.body ?? ''),
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
     );
-
     await _localNotifications.show(
-      notification.hashCode,
+      message.hashCode,
       notification.title,
       notification.body,
       details,
-      payload: message.data.toString(),
+      payload: payload,
     );
   }
+
+  void _onMessageOpenedApp(RemoteMessage message) {
+    if (kDebugMode) {
+      debugPrint('[fcm tap-bg] type=${message.data['type']}');
+    }
+    PushRouter.navigateFromData(_dataAsMap(message.data));
+  }
+
+  void _onLocalNotificationTap(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map) {
+        PushRouter.navigateFromData(
+          decoded.map((k, v) => MapEntry(k.toString(), v)),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[fcm tap-fg] payload decode failed: $e');
+    }
+  }
+
+  /// FCM data values are always strings on the wire, but the plugin
+  /// hands us a `Map<String, dynamic>`. Normalise to a plain map we can
+  /// JSON-encode without surprises.
+  Map<String, dynamic> _dataAsMap(Map<String, dynamic> data) {
+    return data.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // Existing ritual-reminder API (preserved)
+  // ════════════════════════════════════════════════════════════════
 
   Future<void> subscribeToEventNotification(
     String eventId,
@@ -159,18 +251,14 @@ class NotificationService {
     try {
       final cleanTopic = eventId.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_');
 
-      // 1. Subscribe to FCM Topic
       await _fcm.subscribeToTopic(cleanTopic);
 
-      // 2. Schedule Local Notification
       final now = DateTime.now();
-
-      // Calculate 1 min before
       DateTime scheduledDateTime = eventDate.subtract(
         const Duration(minutes: 1),
       );
-
-      // DEBUG/TEST: If event is today, always trigger in 10 seconds for verification
+      // DEBUG/TEST: If event is today, always trigger in 10 seconds for
+      // verification.
       if (scheduledDateTime.isBefore(now.add(const Duration(seconds: 30)))) {
         scheduledDateTime = now.add(const Duration(seconds: 10));
       }
@@ -182,7 +270,6 @@ class NotificationService {
         scheduledDate: scheduledDateTime,
       );
 
-      // 3. Backup to Firestore
       await _firestore.collection('ritual_reminders').doc(eventId).set({
         'eventId': eventId,
         'title': title,
@@ -193,16 +280,19 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Show a snackbar so the user knows the button click worked
       Get.snackbar(
         'Reminder Set',
-        'We will notify you at ${scheduledDateTime.hour}:${scheduledDateTime.minute.toString().padLeft(2, '0')}',
+        'We will notify you at '
+            '${scheduledDateTime.hour}:'
+            '${scheduledDateTime.minute.toString().padLeft(2, '0')}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.withOpacity(0.8),
         colorText: Colors.white,
       );
 
-      debugPrint('Notifications: Scheduled for $scheduledDateTime');
+      if (kDebugMode) {
+        debugPrint('Notifications: Scheduled for $scheduledDateTime');
+      }
     } catch (e) {
       debugPrint('Error subscribing to event notification: $e');
       rethrow;
@@ -227,7 +317,7 @@ class NotificationService {
             'Ritual Reminders',
             importance: Importance.max,
             priority: Priority.high,
-            fullScreenIntent: true, // Helps visibility on some devices
+            fullScreenIntent: true,
             category: AndroidNotificationCategory.reminder,
           ),
           iOS: DarwinNotificationDetails(
@@ -240,9 +330,9 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-      debugPrint(
-        'Local Notification successfully scheduled for: $scheduledDate',
-      );
+      if (kDebugMode) {
+        debugPrint('Local Notification scheduled for: $scheduledDate');
+      }
     } catch (e) {
       debugPrint('Error scheduling local notification: $e');
     }
@@ -263,9 +353,4 @@ class NotificationService {
       debugPrint('Error unsubscribing: $e');
     }
   }
-}
-
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint("Handling a background message: ${message.messageId}");
 }

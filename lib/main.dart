@@ -39,8 +39,13 @@ Future<void> main() async {
 
   InitialBinding().dependencies();
 
-  // Initialize notifications
-  await Get.find<NotificationService>().initialize();
+  // Initialize notifications.
+  final notifs = Get.find<NotificationService>();
+  await notifs.initialize();
 
   runApp(const SathyaApp());
+
+  // Handle cold-start taps AFTER `runApp` so GetX routing is ready to
+  // accept `Get.toNamed`. Fire-and-forget; failures are logged inside.
+  notifs.handleColdStart();
 }

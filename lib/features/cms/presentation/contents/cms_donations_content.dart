@@ -4,10 +4,12 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/donation_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
+import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
 
 class CmsDonationsContent extends StatefulWidget {
   const CmsDonationsContent({super.key});
@@ -1058,31 +1060,939 @@ class _DonationFormState extends State<_DonationForm> {
 }
 
 // ════════════════════════════════════════════════════════════════
-// ALL DONATIONS  (super-admin overview – placeholder for now)
+// ALL DONATIONS — super-admin overview of every contribution.
+// Source: GET /api/v1/donations/contributions/all
 // ════════════════════════════════════════════════════════════════
-class CmsDonationsAllContent extends StatelessWidget {
+class CmsDonationsAllContent extends StatefulWidget {
   const CmsDonationsAllContent({super.key});
+
+  @override
+  State<CmsDonationsAllContent> createState() => _CmsDonationsAllContentState();
+}
+
+class _CmsDonationsAllContentState extends State<CmsDonationsAllContent> {
+  late final CmsContributionsController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = Get.find<CmsContributionsController>();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 768;
+    return Column(
+      children: [
+        
+        const Divider(height: 1, color: CmsColors.border),
+        _AllDonationsFilterBar(ctrl: _ctrl),
+        Expanded(
+          child: Obx(() {
+            if (_ctrl.isLoading && _ctrl.items.isEmpty) {
+              return const _ContributionsLoading();
+            }
+            if (_ctrl.error != null && _ctrl.items.isEmpty) {
+              return _ContributionsError(
+                message: _ctrl.error!,
+                onRetry: _ctrl.refreshContributions,
+              );
+            }
+            if (_ctrl.isEmpty) {
+              return const CmsEmptyState(
+                icon: Icons.volunteer_activism_outlined,
+                title: 'No contributions yet',
+                subtitle:
+                    'Once devotees start donating their contributions '
+                    'will appear here.',
+              );
+            }
+            return RefreshIndicator(
+              color: CmsColors.orange,
+              onRefresh: _ctrl.refreshContributions,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 24 : 12,
+                  vertical: 14,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ContributionsTable(items: _ctrl.items),
+                    const SizedBox(height: 14),
+                    _ContributionsPaginationBar(ctrl: _ctrl),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Filter chips ────────────────────────────────────────────────
+class _AllDonationsFilterBar extends StatelessWidget {
+  const _AllDonationsFilterBar({required this.ctrl});
+  final CmsContributionsController ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 768;
+    return Container(
+      color: CmsColors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: isWide ? 24 : 12,
+        vertical: 10,
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Obx(() {
+          final active = ctrl.filter;
+          return Row(
+            children: [
+              for (final f in CmsContributionsController.filters) ...[
+                _FilterChip(
+                  label: _filterLabel(f),
+                  isActive: f == active,
+                  onTap: () => ctrl.setFilter(f),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: 'Reload',
+                onPressed: ctrl.isLoading ? null : ctrl.refreshContributions,
+                icon: ctrl.isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: CmsColors.orange,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.refresh,
+                        size: 18,
+                        color: CmsColors.textSecond,
+                      ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  String _filterLabel(String key) {
+    switch (key) {
+      case 'ALL':
+        return 'All';
+      case 'PAID':
+        return 'Paid';
+      case 'PENDING':
+        return 'Pending';
+      case 'FAILED':
+        return 'Failed';
+      default:
+        return key;
+    }
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isActive ? CmsColors.orange : CmsColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? CmsColors.orange : CmsColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isActive ? Colors.white : CmsColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Table ────────────────────────────────────────────────────────
+class _ContributionsTable extends StatelessWidget {
+  const _ContributionsTable({required this.items});
+  final List<DonationContribution> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 900;
+    if (isWide) return _WideTable(items: items);
+    return _NarrowList(items: items);
+  }
+}
+
+/// Human-readable contribution number, fully visible (selectable, no
+/// ellipsis).
+class _ContributionIdsBlock extends StatelessWidget {
+  const _ContributionIdsBlock({
+    required this.contribution,
+    this.dense = false,
+  });
+
+  final DonationContribution contribution;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final num = contribution.contributionNumber.trim();
+    if (num.isEmpty) {
+      return Text(
+        '—',
+        style: TextStyle(
+          fontSize: dense ? 12 : 12.5,
+          color: CmsColors.textPrimary,
+        ),
+      );
+    }
+    return SelectableText(
+      num,
+      style: TextStyle(
+        fontSize: dense ? 12 : 12.5,
+        fontWeight: FontWeight.w700,
+        color: CmsColors.textPrimary,
+      ),
+    );
+  }
+}
+
+/// Two-line date / time renderer using the existing `formattedDate`
+/// which is `"d MMM yyyy, h:mm a"`. We just split on the comma so the
+/// date sits on line 1 and the time on line 2.
+class _DateCell extends StatelessWidget {
+  const _DateCell({required this.formattedDate, this.dense = false});
+
+  final String formattedDate;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formattedDate.trim();
+    if (s.isEmpty) {
+      return Text(
+        '—',
+        style: TextStyle(
+          fontSize: dense ? 12 : 12.5,
+          color: CmsColors.textPrimary,
+        ),
+      );
+    }
+    final parts = s.split(', ');
+    final datePart = parts.first;
+    final timePart = parts.length > 1 ? parts.sublist(1).join(', ') : '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          datePart,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: dense ? 12 : 12.5,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        if (timePart.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            timePart,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: dense ? 11 : 11.5,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Wide layout: flex Table that always fits the parent width ──
+class _WideTable extends StatelessWidget {
+  const _WideTable({required this.items});
+  final List<DonationContribution> items;
+
+  // Proportional column widths — 8 columns.
+  static const _columnWidths = <int, TableColumnWidth>{
+    0: FlexColumnWidth(2.2), // Contribution ID
+    1: FlexColumnWidth(2.6), // Donor
+    2: FlexColumnWidth(2.4), // Donation
+    3: FlexColumnWidth(1.6), // Amount
+    4: FlexColumnWidth(1.4), // Status
+    5: FlexColumnWidth(2.0), // Date (two lines)
+    6: FlexColumnWidth(2.2), // Note
+    7: FlexColumnWidth(2.0), // Reference (Paystack ref)
+  };
+
+  static const _headerStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    color: CmsColors.textPrimary,
+    letterSpacing: 0.2,
+  );
+
+  static const _cellStyle = TextStyle(
+    fontSize: 12.5,
+    color: CmsColors.textPrimary,
+  );
+
+  Widget _pad(Widget child) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: child,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Table(
+          columnWidths: _columnWidths,
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            TableRow(
+              decoration: BoxDecoration(color: CmsColors.bg.withOpacity(.6)),
+              children: [
+                _pad(const Text('Contribution ID', style: _headerStyle)),
+                _pad(const Text('Donor', style: _headerStyle)),
+                _pad(const Text('Donation', style: _headerStyle)),
+                _pad(const Text(
+                  'Amount',
+                  style: _headerStyle,
+                  textAlign: TextAlign.right,
+                )),
+                _pad(const Text('Status', style: _headerStyle)),
+                _pad(const Text('Date', style: _headerStyle)),
+                _pad(const Text('Note', style: _headerStyle)),
+                _pad(const Text('Reference', style: _headerStyle)),
+              ],
+            ),
+            for (final c in items)
+              TableRow(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: CmsColors.border, width: 0.6),
+                  ),
+                ),
+                children: [
+                  _pad(_ContributionIdsBlock(contribution: c)),
+                  _pad(_DonorCell(contribution: c)),
+                  _pad(Text(
+                    c.donationTitle.isEmpty ? '—' : c.donationTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: _cellStyle,
+                  )),
+                  _pad(Text(
+                    c.formattedAmount,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: _cellStyle.copyWith(fontWeight: FontWeight.w700),
+                  )),
+                  _pad(Align(
+                    alignment: Alignment.centerLeft,
+                    child: _StatusPill(status: c.status),
+                  )),
+                  _pad(_DateCell(formattedDate: c.formattedDate)),
+                  _pad(Text(
+                    (c.note == null || c.note!.trim().isEmpty)
+                        ? '—'
+                        : c.note!.trim(),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: _cellStyle.copyWith(
+                      color: (c.note == null || c.note!.trim().isEmpty)
+                          ? CmsColors.textSecond
+                          : CmsColors.textPrimary,
+                    ),
+                  )),
+                  _pad(Text(
+                    c.reference ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: CmsColors.textSecond,
+                    ),
+                  )),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Narrow layout: card list, one card per contribution ────────
+class _NarrowList extends StatelessWidget {
+  const _NarrowList({required this.items});
+  final List<DonationContribution> items;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: const [
-        _DonationsHeader(
-          title: 'All Donations',
-          subtitle:
-              'Browse every donation campaign created across the platform.',
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < items.length; i++) ...[
+          _ContributionCard(contribution: items[i]),
+          if (i != items.length - 1) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _ContributionCard extends StatelessWidget {
+  const _ContributionCard({required this.contribution});
+  final DonationContribution contribution;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = contribution;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  c.donationTitle.isEmpty ? '—' : c.donationTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _StatusPill(status: c.status),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _DonorCell(contribution: c),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                c.formattedAmount,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: CmsColors.border),
+          const SizedBox(height: 10),
+          _ContributionIdsBlock(contribution: c, dense: true),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(
+                width: 96,
+                child: Text(
+                  'Date',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: CmsColors.textSecond,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _DateCell(
+                  formattedDate: c.formattedDate,
+                  dense: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _MetaRow(
+            label: 'Note',
+            value: (c.note == null || c.note!.trim().isEmpty)
+                ? '—'
+                : c.note!.trim(),
+          ),
+          const SizedBox(height: 4),
+          _MetaRow(
+            label: 'Reference',
+            value: c.reference ?? '—',
+            mono: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({
+    required this.label,
+    required this.value,
+    this.mono = false,
+  });
+  final String label;
+  final String value;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: CmsColors.textSecond,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
-        Divider(height: 1, color: CmsColors.border),
         Expanded(
-          child: CmsEmptyState(
-            icon: Icons.volunteer_activism_outlined,
-            title: 'No Donations Yet',
-            subtitle:
-                'Once admins start publishing donation campaigns they will '
-                'appear here as a unified, searchable list.',
+          child: Text(
+            value.isEmpty ? '—' : value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: CmsColors.textPrimary,
+              fontFamily: mono ? 'monospace' : null,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DonorCell extends StatelessWidget {
+  const _DonorCell({required this.contribution});
+  final DonationContribution contribution;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = contribution.donorName?.trim();
+    final email = contribution.donorEmail?.trim();
+    final hasName = name != null && name.isNotEmpty;
+    final hasEmail = email != null && email.isNotEmpty;
+    if (!hasName && !hasEmail) {
+      return const Text('—');
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasName)
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          if (hasEmail)
+            Text(
+              email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: CmsColors.textSecond,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.status});
+  final ContributionStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color bg;
+    late final Color fg;
+    late final String label;
+    switch (status) {
+      case ContributionStatus.paid:
+        bg = const Color(0xFFE8F5E9);
+        fg = const Color(0xFF2E7D32);
+        label = 'Paid';
+        break;
+      case ContributionStatus.pending:
+        bg = const Color(0xFFFFF3E0);
+        fg = const Color(0xFFEF6C00);
+        label = 'Pending';
+        break;
+      case ContributionStatus.failed:
+        bg = const Color(0xFFFFEBEE);
+        fg = const Color(0xFFC62828);
+        label = 'Failed';
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: fg,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Pagination ───────────────────────────────────────────────────
+class _ContributionsPaginationBar extends StatelessWidget {
+  const _ContributionsPaginationBar({required this.ctrl});
+  final CmsContributionsController ctrl;
+
+  static const _pageSizes = [10, 20, 50, 100];
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isWide = MediaQuery.of(context).size.width >= 768;
+      final page = ctrl.page;
+      final size = ctrl.limit;
+      final tp = ctrl.totalPages;
+      final totalRows = ctrl.total;
+      final start = totalRows == 0 ? 0 : (page - 1) * size + 1;
+      final end = (page * size).clamp(0, totalRows);
+
+      final left = <Widget>[
+        Text(
+          'Showing $start–$end of $totalRows',
+          style: const TextStyle(
+            fontSize: 12,
+            color: CmsColors.textSecond,
+          ),
+        ),
+        const SizedBox(width: 18),
+        const Text(
+          'Rows per page:',
+          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _pageSizes.contains(size) ? size : _pageSizes[1],
+              isDense: true,
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              items: _pageSizes
+                  .map((s) =>
+                      DropdownMenuItem(value: s, child: Text('$s')))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) ctrl.setLimit(v);
+              },
+            ),
+          ),
+        ),
+      ];
+
+      final pager = <Widget>[
+        _PagerBtnMini(
+          icon: Icons.chevron_left,
+          enabled: page > 1,
+          onTap: ctrl.prevPage,
+        ),
+        for (final n in _pageRange(page, tp))
+          n == -1
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    '…',
+                    style: TextStyle(color: CmsColors.textSecond),
+                  ),
+                )
+              : _PageNumberBtnMini(
+                  number: n,
+                  isActive: n == page,
+                  onTap: () => ctrl.goToPage(n),
+                ),
+        _PagerBtnMini(
+          icon: Icons.chevron_right,
+          enabled: page < tp,
+          onTap: ctrl.nextPage,
+        ),
+      ];
+
+      if (isWide) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Row(
+            children: [
+              ...left,
+              const Spacer(),
+              ...pager.map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: w,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Column(
+          children: [
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
+              children: left,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
+              children: pager,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  List<int> _pageRange(int current, int total) {
+    if (total <= 7) return [for (int i = 1; i <= total; i++) i];
+    final out = <int>[1];
+    final start = (current - 1).clamp(2, total - 4);
+    final end = (current + 1).clamp(5, total - 1);
+    if (start > 2) out.add(-1);
+    for (int i = start; i <= end; i++) {
+      out.add(i);
+    }
+    if (end < total - 1) out.add(-1);
+    out.add(total);
+    return out;
+  }
+}
+
+class _PagerBtnMini extends StatelessWidget {
+  const _PagerBtnMini({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled
+                ? CmsColors.textPrimary
+                : CmsColors.textSecond.withOpacity(0.5),
+          ),
+        ),
+      );
+}
+
+class _PageNumberBtnMini extends StatelessWidget {
+  const _PageNumberBtnMini({
+    required this.number,
+    required this.isActive,
+    required this.onTap,
+  });
+  final int number;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? CmsColors.orange : CmsColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? CmsColors.orange : CmsColors.border,
+            ),
+          ),
+          child: Text(
+            '$number',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isActive ? Colors.white : CmsColors.textPrimary,
+            ),
+          ),
+        ),
+      );
+}
+
+// ─── Loading + Error states ──────────────────────────────────────
+class _ContributionsLoading extends StatelessWidget {
+  const _ContributionsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40),
+        child: CircularProgressIndicator(color: CmsColors.orange),
+      ),
+    );
+  }
+}
+
+class _ContributionsError extends StatelessWidget {
+  const _ContributionsError({required this.message, required this.onRetry});
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: CmsColors.red,
+              size: 36,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Try again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CmsColors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

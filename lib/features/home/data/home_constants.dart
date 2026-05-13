@@ -3,11 +3,21 @@ class HomeCircleItem {
     required this.title,
     required this.imagePath,
     this.placeholderText,
+    this.id,
+    this.description,
   });
 
   final String title;
   final String imagePath;
   final String? placeholderText;
+
+  /// Optional backend id. Currently used by the Donations section so that
+  /// tapping a tile can deep-link straight into the donation flow.
+  final String? id;
+
+  /// Optional long-form description carried alongside [title] for screens
+  /// that need it (e.g. the donation details screen).
+  final String? description;
 }
 
 class HomeConstants {

@@ -67,6 +67,7 @@ dependencies:
   url_launcher: ^6.3.2
   add_2_calendar: ^3.0.1
   android_intent_plus: ^6.0.0
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
@@ -54,7 +57,31 @@ class AuthController extends GetxController {
     if (restored) {
       _isAuthenticated.value = true;
       _userRole.value = _authSessionService.userRole;
+      // Re-register the device with the backend on a cold start so any
+      // tokens that rotated while the app was closed get reconciled.
+      await _registerDeviceForPush();
     }
+  }
+
+  /// Best-effort register the device FCM token with the backend.
+  /// Never throws or blocks the calling auth flow — login UX must not
+  /// degrade if push registration fails (no Play Services, denied
+  /// permission, transient network, etc.).
+  Future<void> _registerDeviceForPush() async {
+    try {
+      if (!Get.isRegistered<FcmBootstrap>()) return;
+      // Fire and forget on purpose: callers do not await this.
+      unawaited(Get.find<FcmBootstrap>().registerWithBackend());
+    } catch (_) {}
+  }
+
+  /// Best-effort unregister BEFORE the session is cleared. Awaited so the
+  /// Dio interceptor still attaches a valid bearer to the DELETE.
+  Future<void> _unregisterDeviceFromPush() async {
+    try {
+      if (!Get.isRegistered<FcmBootstrap>()) return;
+      await Get.find<FcmBootstrap>().unregisterFromBackend();
+    } catch (_) {}
   }
 
   void _applyRole(Map<String, dynamic> user) {
@@ -108,6 +135,7 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      await _registerDeviceForPush();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -184,6 +212,7 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      await _registerDeviceForPush();
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -232,6 +261,7 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      await _registerDeviceForPush();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -288,6 +318,7 @@ class AuthController extends GetxController {
       );
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
+      await _registerDeviceForPush();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -312,10 +343,16 @@ class AuthController extends GetxController {
   Future<void> signInWithApple() async {
     await _firebaseService.signInWithApple();
     _isAuthenticated.value = true;
+    await _registerDeviceForPush();
   }
 
   Future<void> signOut() async {
-    // ── Clear local state FIRST so route guards see unauthenticated immediately ──
+    // ── Unregister this device's push token BEFORE clearing the session
+    //    so the auth interceptor can still attach a valid bearer to the
+    //    DELETE /fcm/unregister request. ──
+    await _unregisterDeviceFromPush();
+
+    // ── Clear local state so route guards see unauthenticated immediately ──
     _isAuthenticated.value = false;
     _userRole.value = 'user';
 

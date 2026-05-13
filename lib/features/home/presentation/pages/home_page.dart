@@ -13,6 +13,8 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
+import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donate_amount_sheet.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
@@ -81,6 +83,31 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openPoojasTabFromViewMore() async {
     await Get.toNamed(AppRoutes.rituals);
+  }
+
+  /// Tap on a single donation circle on the Home screen.
+  /// If the backend gave us a real `_id` we navigate straight to the
+  /// donation flow; otherwise we fall back to the full donations list.
+  void _onDonationItemTap(HomeCircleItem item) {
+    final id = item.id?.trim() ?? '';
+    if (id.isEmpty) {
+      _openDonationsList();
+      return;
+    }
+    final donation = Donation(
+      id: id,
+      title: item.title.replaceAll('\n', ' ').trim(),
+      description: item.description?.trim() ?? '',
+      imageUrl: item.imagePath.startsWith('http') ? item.imagePath : null,
+    );
+    // Two equally valid entry points — open the amount sheet directly so
+    // the user can donate in one tap. Power users can still browse all
+    // donations via the "More" tile.
+    DonateAmountSheet.show(context, donation: donation);
+  }
+
+  Future<void> _openDonationsList() async {
+    await Get.toNamed(AppRoutes.userDonations);
   }
 
   Future<void> _fetchHomeDataIfNeeded() async {
@@ -203,11 +230,16 @@ class _HomePageState extends State<HomePage> {
           useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
           ? DateFormatters.formatFestivalDate(item['date']?.toString())
           : null;
-          
+
+      final id = _clean(item['_id']) ?? _clean(item['id']);
+      final description = _clean(item['description']);
+
       return HomeCircleItem(
         title: (title == null || title.isEmpty) ? 'Untitled' : title,
         imagePath: resolvedImagePath,
         placeholderText: placeholderText,
+        id: id,
+        description: description,
       );
     }).whereType<HomeCircleItem>().toList();
   }
@@ -264,6 +296,8 @@ class _HomePageState extends State<HomePage> {
             festivals: _festivals,
             donations: _donations,
             onPoojasViewMore: _openPoojasTabFromViewMore,
+            onDonationTap: _onDonationItemTap,
+            onDonationsViewMore: _openDonationsList,
           ),
           const RitualListPage(),
           const CalendarPage(),
@@ -311,6 +345,8 @@ class _HomeTabContent extends StatelessWidget {
     required this.festivals,
     required this.donations,
     required this.onPoojasViewMore,
+    required this.onDonationTap,
+    required this.onDonationsViewMore,
   });
 
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
@@ -323,6 +359,8 @@ class _HomeTabContent extends StatelessWidget {
   final List<HomeCircleItem> festivals;
   final List<HomeCircleItem> donations;
   final Future<void> Function() onPoojasViewMore;
+  final void Function(HomeCircleItem item) onDonationTap;
+  final Future<void> Function() onDonationsViewMore;
 
   @override
   Widget build(BuildContext context) {
@@ -349,6 +387,8 @@ class _HomeTabContent extends StatelessWidget {
                 festivals: festivals,
                 donations: donations,
                 onPoojasViewMore: onPoojasViewMore,
+                onDonationTap: onDonationTap,
+                onDonationsViewMore: onDonationsViewMore,
               ),
             ),
           ],
@@ -364,12 +404,21 @@ class _HomeBodySections extends StatelessWidget {
     required this.festivals,
     required this.donations,
     required this.onPoojasViewMore,
+    required this.onDonationTap,
+    required this.onDonationsViewMore,
   });
 
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
   final List<HomeCircleItem> donations;
   final Future<void> Function() onPoojasViewMore;
+
+  /// Triggered when a real donation tile is tapped on the Home screen.
+  final void Function(HomeCircleItem item) onDonationTap;
+
+  /// Triggered by the trailing "More" tile inside the donations wrap
+  /// and by the "Make a Donation" CTA banner.
+  final Future<void> Function() onDonationsViewMore;
 
   @override
   Widget build(BuildContext context) {
@@ -393,16 +442,26 @@ class _HomeBodySections extends StatelessWidget {
           ),
         ),
         SizedBox(height: 10),
-        _DonationsContainer(items: donations),
+        _DonationsContainer(
+          items: donations,
+          onItemTap: onDonationTap,
+          onMoreTap: onDonationsViewMore,
+        ),
       ],
     );
   }
 }
 
 class _DonationsContainer extends StatelessWidget {
-  const _DonationsContainer({required this.items});
+  const _DonationsContainer({
+    required this.items,
+    required this.onItemTap,
+    required this.onMoreTap,
+  });
 
   final List<HomeCircleItem> items;
+  final void Function(HomeCircleItem item) onItemTap;
+  final Future<void> Function() onMoreTap;
 
   @override
   Widget build(BuildContext context) {
@@ -423,23 +482,25 @@ class _DonationsContainer extends StatelessWidget {
                     title: 'Donations',
                     items: items,
                     useWrap: true,
+                    onItemTap: onItemTap,
+                    onViewMoreTap: onMoreTap,
                   ),
                 ],
               ),
             ),
             Stack(
               alignment: Alignment.topCenter,
-              children: const [
+              children: [
                 // Decorative texture behind the donation CTA area.
-                Image(
+                const Image(
                   image: AssetImage('assets/images/flowerImg.png'),
                   width: 180,
                   height: 180,
                   fit: BoxFit.cover,
                 ),
                 Padding(
-                  padding: EdgeInsets.fromLTRB(10, 35, 10, 12),
-                  child: _DonationBannerCard(),
+                  padding: const EdgeInsets.fromLTRB(10, 35, 10, 12),
+                  child: _DonationBannerCard(onTap: onMoreTap),
                 ),
               ],
             ),
@@ -456,12 +517,17 @@ class _HomeCircleSection extends StatelessWidget {
     required this.items,
     this.useWrap = false,
     this.onViewMoreTap,
+    this.onItemTap,
   });
 
   final String title;
   final List<HomeCircleItem> items;
   final bool useWrap;
   final Future<void> Function()? onViewMoreTap;
+
+  /// Optional per-item tap handler. Currently used by the Donations wrap
+  /// to deep-link into the donation flow.
+  final void Function(HomeCircleItem item)? onItemTap;
 
   @override
   Widget build(BuildContext context) {
@@ -472,7 +538,13 @@ class _HomeCircleSection extends StatelessWidget {
         children: [
           _SectionTitle(title: title),
           useWrap
-              ? _CircleWrap(items: items)
+              ? _CircleWrap(
+                  items: items,
+                  onItemTap: onItemTap,
+                  onMoreTap: onViewMoreTap == null
+                      ? null
+                      : () => onViewMoreTap!(),
+                )
               : _CircleRow(items: items, onViewMoreTap: onViewMoreTap),
         ],
       ),
@@ -481,11 +553,13 @@ class _HomeCircleSection extends StatelessWidget {
 }
 
 class _DonationBannerCard extends StatelessWidget {
-  const _DonationBannerCard();
+  const _DonationBannerCard({this.onTap});
+
+  final Future<void> Function()? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
@@ -556,6 +630,15 @@ class _DonationBannerCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return card;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onTap!(),
+        borderRadius: BorderRadius.circular(20),
+        child: card,
       ),
     );
   }
@@ -1161,8 +1244,19 @@ class _CircleRow extends StatelessWidget {
 }
 
 class _CircleWrap extends StatelessWidget {
-  const _CircleWrap({required this.items});
+  const _CircleWrap({
+    required this.items,
+    this.onItemTap,
+    this.onMoreTap,
+  });
+
   final List<HomeCircleItem> items;
+
+  /// Invoked when a real (non-"More") tile is tapped.
+  final void Function(HomeCircleItem item)? onItemTap;
+
+  /// Invoked when the trailing "More" tile is tapped.
+  final VoidCallback? onMoreTap;
 
   bool _isMoreTitle(String title) {
     final normalized = title.trim().toLowerCase().replaceAll('\n', ' ');
@@ -1184,7 +1278,16 @@ class _CircleWrap extends StatelessWidget {
         children: [
           ...baseItems,
           staticMoreItem,
-        ].map((item) => _CircleItem(item: item)).toList(),
+        ]
+            .map(
+              (item) => _CircleItem(
+                item: item,
+                onTap: _isMoreTitle(item.title)
+                    ? onMoreTap
+                    : (onItemTap != null ? () => onItemTap!(item) : null),
+              ),
+            )
+            .toList(),
       ),
     );
   }

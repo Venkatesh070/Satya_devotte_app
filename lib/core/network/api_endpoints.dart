@@ -69,4 +69,37 @@ class ApiEndpoints {
   /// GET — paginated history of the signed-in user's contributions.
   /// Query: `page`, `limit`, `paymentStatus`.
   static const String myContributions = '/api/v1/donations/contributions/my';
+
+  /// GET — admin / super-admin: paginated list of contributions across
+  /// all donors. Query: `page`, `limit`, `paymentStatus` (optional).
+  static const String allContributions = '/api/v1/donations/contributions/all';
+
+  // ── Firebase Cloud Messaging (device token registry) ─────────
+  /// POST — register an FCM token for the signed-in user (idempotent,
+  /// server `$addToSet`s into `user.fcmTokens`).
+  /// Body: `{ token, platform: "android" | "ios" | "web", deviceId? }`.
+  static const String fcmRegister = '/api/v1/fcm/register';
+
+  /// DELETE — remove a previously-registered FCM token.
+  /// Body: `{ token }`.
+  static const String fcmUnregister = '/api/v1/fcm/unregister';
+
+  /// GET — sanity check; returns `{ count: N }` for the signed-in user.
+  static const String fcmMe = '/api/v1/fcm/me';
+
+  // ── Notifications (admin / super-admin) ───────────────────────
+  /// POST — send immediately OR schedule with `scheduledAt`. Body matches
+  /// the `SendNotificationRequest` shape.
+  static const String notificationsSend = '/api/v1/notifications/send';
+
+  /// GET — paginated history of admin broadcasts.
+  /// Query: `page`, `limit`, `status`, `audience`.
+  static const String notifications = '/api/v1/notifications';
+
+  /// GET — single notification by id.
+  static String notification(String id) => '/api/v1/notifications/$id';
+
+  /// POST — cancel a `SCHEDULED` broadcast before its send time.
+  static String cancelNotification(String id) =>
+      '/api/v1/notifications/$id/cancel';
 }

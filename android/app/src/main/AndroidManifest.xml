@@ -46,6 +46,22 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- FCM: default channel id must match the server payload
+             (android.notification.channelId = "satya_default"). The
+             channel itself is created at runtime by NotificationService
+             with importance HIGH so tray notifications heads-up. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="satya_default" />
+
+        <!-- FCM: tray icon. Falls back to the launcher icon since the
+             project does not yet ship a monochrome `ic_notification`
+             drawable. Replace with @drawable/ic_notification later for a
+             cleaner status-bar look. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>

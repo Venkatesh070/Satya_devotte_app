@@ -5,6 +5,12 @@ import 'package:satya_devotte_app/config/routes/route_guard.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/login_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/web_login_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donation_details_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donation_paystack_webview_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donation_success_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/donations_list_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/my_contributions_screen.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:satya_devotte_app/features/rituals/bindings/ritual_binding.dart';
@@ -33,6 +39,38 @@ class AppPages {
       name: AppRoutes.ritualDetail,
       page: RitualDetailPage.new,
       binding: RitualBinding(),
+      middlewares: [AuthGuard()],
+    ),
+
+    // ─── User-facing donations flow ─────────────────────────────
+    GetPage(
+      name: AppRoutes.userDonations,
+      page: DonationsListScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userDonationDetails,
+      page: DonationDetailsScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userDonationConfirming,
+      page: DonationPaystackWebViewScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userDonationSuccess,
+      page: DonationSuccessScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userDonationFailed,
+      page: DonationFailedScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userContributions,
+      page: MyContributionsScreen.new,
       middlewares: [AuthGuard()],
     ),
 
