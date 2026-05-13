@@ -233,15 +233,10 @@ class _HomePageState extends State<HomePage> {
               ? DateFormatters.formatFestivalDate(item['date']?.toString())
               : null;
 
-          final id = _clean(item['_id']) ?? _clean(item['id']);
-          final description = _clean(item['description']);
-
           return HomeCircleItem(
             title: (title == null || title.isEmpty) ? 'Untitled' : title,
             imagePath: resolvedImagePath,
             placeholderText: placeholderText,
-            id: id,
-            description: description,
           );
         })
         .whereType<HomeCircleItem>()
