@@ -3,8 +3,9 @@
 // Pooja Kit CMS screens.
 //
 // Sidebar group "Pooja Kit" expands into:
-//   • Manage Pooja Kit  → [CmsPoojaKitContent]   (list + Add form)
-//   • Orders            → [CmsPoojaKitOrdersContent] (placeholder)
+//   • Manage Pooja Kit  → [CmsPoojaKitContent]     (list + Add form)
+//   • Orders            → [CmsPoojaKitOrdersContent]  (placeholder)
+//   • Refund            → [CmsPoojaKitRefundsContent] (placeholder)
 //
 // Create flow uses multipart/form-data against
 // POST /api/v1/products/create-product.
@@ -2551,6 +2552,37 @@ class CmsPoojaKitOrdersContent extends StatelessWidget {
             subtitle:
                 'When devotees place a Pooja Kit order it will show up here '
                 'with their delivery and payment details.',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// REFUNDS — placeholder until refunds API is wired up
+// ════════════════════════════════════════════════════════════════
+class CmsPoojaKitRefundsContent extends StatelessWidget {
+  const CmsPoojaKitRefundsContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        _PoojaKitHeader(
+          title: 'Pooja Kit Refunds',
+          subtitle:
+              'Review and process refund requests raised against Pooja Kit '
+              'orders.',
+        ),
+        Divider(height: 1, color: CmsColors.border),
+        Expanded(
+          child: CmsEmptyState(
+            icon: Icons.assignment_return_outlined,
+            title: 'No Refunds Yet',
+            subtitle:
+                'Approved refund requests and their status will appear here '
+                'once a devotee initiates a refund.',
           ),
         ),
       ],

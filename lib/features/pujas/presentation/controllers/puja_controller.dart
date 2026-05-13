@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/features/rituals/domain/entities/ritual_entity.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_ritual_detail_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_rituals_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/sync_rituals_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/entities/puja_entity.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_puja_detail_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_pujas_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/sync_pujas_usecase.dart';
 
 class RitualController extends GetxController {
   RitualController(

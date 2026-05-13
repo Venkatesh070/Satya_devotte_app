@@ -7,9 +7,9 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:video_player/video_player.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/widgets/media_player_section.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/widgets/ritual_shared_widgets.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/media_player_section.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
 /// Figma reference (saffron temple header, circular deity portrait,

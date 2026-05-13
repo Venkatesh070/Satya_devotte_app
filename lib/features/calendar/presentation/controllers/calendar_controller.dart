@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -1,14 +1,14 @@
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/storage_service.dart';
 import 'package:satya_devotte_app/core/services/sync_service.dart';
-import 'package:satya_devotte_app/features/rituals/data/datasources/ritual_local_datasource.dart';
-import 'package:satya_devotte_app/features/rituals/data/datasources/ritual_remote_datasource.dart';
-import 'package:satya_devotte_app/features/rituals/data/repositories/ritual_repository_impl.dart';
-import 'package:satya_devotte_app/features/rituals/domain/repositories/ritual_repository.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_ritual_detail_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_rituals_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/sync_rituals_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/controllers/ritual_controller.dart';
+import 'package:satya_devotte_app/features/pujas/data/datasources/puja_local_datasource.dart';
+import 'package:satya_devotte_app/features/pujas/data/datasources/puja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/pujas/data/repositories/puja_repository_impl.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_puja_detail_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_pujas_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/sync_pujas_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/controllers/puja_controller.dart';
 
 class RitualBinding extends Bindings {
   @override

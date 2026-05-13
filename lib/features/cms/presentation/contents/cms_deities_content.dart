@@ -804,8 +804,8 @@ class _DeityFormState extends State<_DeityForm> {
         ),
         const SizedBox(height: 12),
         _MultiSelectPickerField(
-          fieldLabel: 'Associate Rituals',
-          hintText: _isLoadingPoojas ? 'Loading poojas...' : 'Select rituals',
+          fieldLabel: 'Associate Pujas',
+          hintText: _isLoadingPoojas ? 'Loading poojas...' : 'Select Pujas',
           options: _poojaOptions
               .map((p) => _MultiSelectOption(value: p.id, label: p.title))
               .toList(),
@@ -1305,7 +1305,7 @@ class _DeityFormState extends State<_DeityForm> {
                         'notes': _devotionalNotesCtrl.text.trim(),
                       },
                       'stories': _storiesEntries,
-                      'rituals': List<String>.from(_ritualIds),
+                      'pujas': List<String>.from(_ritualIds),
                       'media': {
                         'images': _csv(_imageUrlsCtrl.text),
                         'audio': _csv(_audioUrlsCtrl.text),

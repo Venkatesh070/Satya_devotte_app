@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
-import 'package:satya_devotte_app/features/rituals/data/models/ritual_model.dart';
+import 'package:satya_devotte_app/features/pujas/data/models/puja_model.dart';
 
 class RitualLocalDataSource {
   Box<dynamic> get _box => Hive.box(AppConstants.ritualsBox);

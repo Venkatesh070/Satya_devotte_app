@@ -18,7 +18,7 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/donate_a
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_list_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

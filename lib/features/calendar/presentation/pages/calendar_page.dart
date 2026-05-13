@@ -6,7 +6,7 @@ import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key});

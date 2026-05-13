@@ -143,8 +143,10 @@ class DeityModel {
       devotionalNotes: ((json['devotional_experience'] as Map?)?['notes'] ?? '')
           .toString(),
       stories: _listOfKeyValue(json['stories']),
-      rituals: _listOfIds(json['rituals']),
-      ritualTitles: _idToTitleMap(json['rituals']),
+      // Backend key was renamed `rituals` → `pujas`; accept both so older
+      // payloads still parse during the transition.
+      rituals: _listOfIds(json['pujas'] ),
+      ritualTitles: _idToTitleMap(json['pujas']),
       lineageForms: _listOfKeyValue(
         (json['lineage'] as Map?)?['forms'] ?? json['lineage_forms'],
       ),

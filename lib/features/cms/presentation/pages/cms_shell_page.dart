@@ -4,7 +4,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
-import 'package:satya_devotte_app/features/cms/presentation/contents/cms_rituals_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_puja_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_donations_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_festivals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_notifications_content.dart';
@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_users_c
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_analytics_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_shlokas_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_admins_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_manage_rituals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_content.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
@@ -904,6 +905,11 @@ class _NavIds {
   // Donations group children. `donations` (4) is kept as "Manage Donations"
   // so existing routes / deep links continue to work.
   static const int donationsAll = 12;
+  // Top-level "Manage Rituals" tab (distinct from `pujas` which is the
+  // historical "Manage Pujas" entry).
+  static const int manageRituals = 13;
+  // Pooja Kit group child for refunds.
+  static const int poojaKitRefunds = 14;
 }
 
 const String _poojaKitGroupLabel = 'Pooja Kit';
@@ -927,6 +933,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     icon: Icons.self_improvement_outlined,
     activeIcon: Icons.self_improvement,
     index: _NavIds.pujas,
+  ),
+  const _NavEntry(
+    label: 'Manage Rituals',
+    icon: Icons.local_fire_department_outlined,
+    activeIcon: Icons.local_fire_department,
+    index: _NavIds.manageRituals,
   ),
   const _NavEntry(
     label: 'Manage Festivals',
@@ -969,6 +981,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         icon: Icons.receipt_long_outlined,
         activeIcon: Icons.receipt_long,
         index: _NavIds.poojaKitOrders,
+      ),
+      _NavEntry(
+        label: 'Refund',
+        icon: Icons.assignment_return_outlined,
+        activeIcon: Icons.assignment_return,
+        index: _NavIds.poojaKitRefunds,
       ),
     ],
   ),
@@ -1015,6 +1033,7 @@ String? _groupLabelForIndex(int index) {
   switch (index) {
     case _NavIds.poojaKitManage:
     case _NavIds.poojaKitOrders:
+    case _NavIds.poojaKitRefunds:
       return _poojaKitGroupLabel;
     case _NavIds.donations:
     case _NavIds.donationsAll:
@@ -1052,6 +1071,10 @@ String _pageTitle(int i) {
       return 'Manage Pooja Kit';
     case _NavIds.poojaKitOrders:
       return 'Pooja Kit Orders';
+    case _NavIds.poojaKitRefunds:
+      return 'Pooja Kit Refunds';
+    case _NavIds.manageRituals:
+      return 'Manage Rituals';
     default:
       return 'Dashboard';
   }
@@ -1085,6 +1108,10 @@ Widget _buildContent(int i) {
       return const CmsPoojaKitContent();
     case _NavIds.poojaKitOrders:
       return const CmsPoojaKitOrdersContent();
+    case _NavIds.poojaKitRefunds:
+      return const CmsPoojaKitRefundsContent();
+    case _NavIds.manageRituals:
+      return const CmsManageRitualsContent();
     default:
       return const CmsDashboardContent();
   }
@@ -1113,6 +1140,10 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
       return _NavIds.poojaKitManage;
     case AppRoutes.cmsPoojaKitOrders:
       return _NavIds.poojaKitOrders;
+    case AppRoutes.cmsPoojaKitRefunds:
+      return _NavIds.poojaKitRefunds;
+    case AppRoutes.cmsManageRituals:
+      return _NavIds.manageRituals;
     case AppRoutes.cmsDonations:
       return _NavIds.donations;
     case AppRoutes.cmsDonationsAll:
@@ -1149,6 +1180,10 @@ String? _routeForIndex(int index, bool isSuperAdmin) {
       return AppRoutes.cmsPoojaKit;
     case _NavIds.poojaKitOrders:
       return AppRoutes.cmsPoojaKitOrders;
+    case _NavIds.poojaKitRefunds:
+      return AppRoutes.cmsPoojaKitRefunds;
+    case _NavIds.manageRituals:
+      return AppRoutes.cmsManageRituals;
     case _NavIds.donations:
       return AppRoutes.cmsDonations;
     case _NavIds.donationsAll:

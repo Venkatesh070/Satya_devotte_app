@@ -29,6 +29,9 @@ class AppRoutes {
   static const String cmsRituals = '/cms/rituals';
   static const String cmsRitualCreate = '/cms/rituals/create';
   static const String cmsRitualEdit = '/cms/rituals/edit';
+  /// Top-level "Manage Rituals" sidebar tab. Distinct from `cmsRituals`
+  /// which is the historical "Manage Pujas" entry.
+  static const String cmsManageRituals = '/cms/manage-rituals';
   static const String cmsFestivals = '/cms/festivals';
   static const String cmsFestivalCreate = '/cms/festivals/create';
   static const String cmsUsers = '/cms/users';
@@ -40,6 +43,8 @@ class AppRoutes {
   static const String cmsPoojaKit = '/cms/pooja-kit';
   /// Pooja Kit orders placed by devotees.
   static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
+  /// Pooja Kit refund requests / processed refunds.
+  static const String cmsPoojaKitRefunds = '/cms/pooja-kit/refunds';
 
   // ─── Donations (admin + superadmin) ──────────────────────────
   /// Admin's own donation campaigns (create / edit / review).

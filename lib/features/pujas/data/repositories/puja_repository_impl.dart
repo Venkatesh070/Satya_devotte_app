@@ -1,10 +1,10 @@
 import 'package:satya_devotte_app/core/services/storage_service.dart';
 import 'package:satya_devotte_app/core/services/sync_service.dart';
-import 'package:satya_devotte_app/features/rituals/data/datasources/ritual_local_datasource.dart';
-import 'package:satya_devotte_app/features/rituals/data/datasources/ritual_remote_datasource.dart';
-import 'package:satya_devotte_app/features/rituals/data/models/ritual_model.dart';
-import 'package:satya_devotte_app/features/rituals/domain/entities/ritual_entity.dart';
-import 'package:satya_devotte_app/features/rituals/domain/repositories/ritual_repository.dart';
+import 'package:satya_devotte_app/features/pujas/data/datasources/puja_local_datasource.dart';
+import 'package:satya_devotte_app/features/pujas/data/datasources/puja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/pujas/data/models/puja_model.dart';
+import 'package:satya_devotte_app/features/pujas/domain/entities/puja_entity.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 
 class RitualRepositoryImpl implements RitualRepository {
   RitualRepositoryImpl({

@@ -13,9 +13,9 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/donation
 import 'package:satya_devotte_app/features/donations/presentation/pages/my_contributions_screen.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
-import 'package:satya_devotte_app/features/rituals/bindings/ritual_binding.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_detail_page.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/pages/ritual_list_page.dart';
+import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_detail_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/features/splash/presentation/pages/splash_page.dart';
 
 class AppPages {
@@ -115,6 +115,13 @@ class AppPages {
       transitionDuration: Duration.zero,
     ),
     GetPage(
+      name: AppRoutes.cmsManageRituals,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
       name: AppRoutes.cmsFestivals,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
@@ -151,6 +158,13 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.cmsPoojaKitOrders,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsPoojaKitRefunds,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],
       transition: Transition.noTransition,

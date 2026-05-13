@@ -1,4 +1,4 @@
-import 'package:satya_devotte_app/features/rituals/domain/entities/ritual_entity.dart';
+import 'package:satya_devotte_app/features/pujas/domain/entities/puja_entity.dart';
 
 class RitualModel extends RitualEntity {
   const RitualModel({

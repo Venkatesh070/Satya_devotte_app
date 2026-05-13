@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:satya_devotte_app/features/rituals/domain/entities/ritual_entity.dart';
-import 'package:satya_devotte_app/features/rituals/domain/repositories/ritual_repository.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_ritual_detail_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/get_rituals_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/domain/usecases/sync_rituals_usecase.dart';
-import 'package:satya_devotte_app/features/rituals/presentation/controllers/ritual_controller.dart';
+import 'package:satya_devotte_app/features/pujas/domain/entities/puja_entity.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_puja_detail_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/get_pujas_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/domain/usecases/sync_pujas_usecase.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/controllers/puja_controller.dart';
 
 class _FakeRepo implements RitualRepository {
   final _ritual = const RitualEntity(

@@ -1,4 +1,4 @@
-import 'package:satya_devotte_app/features/rituals/data/models/ritual_model.dart';
+import 'package:satya_devotte_app/features/pujas/data/models/puja_model.dart';
 
 class RitualRemoteDataSource {
   RitualRemoteDataSource();

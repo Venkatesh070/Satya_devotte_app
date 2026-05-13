@@ -1,4 +1,4 @@
-import 'package:satya_devotte_app/features/rituals/domain/repositories/ritual_repository.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 
 class SyncRitualsUseCase {
   SyncRitualsUseCase(this._repository);
