@@ -21,9 +21,14 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pa
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
+import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
+import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -830,7 +835,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       width: slotWidth,
                       child: _BottomItem(
                         icon: Icons.shopping_bag_outlined,
-                        label: 'Puja Kit',
+                        label: 'Pooja Kit',
                         selected: widget.currentIndex == 1,
                         onTap: () => _settleToIndex(1),
                       ),

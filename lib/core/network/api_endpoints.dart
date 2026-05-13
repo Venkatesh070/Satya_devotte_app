@@ -1,7 +1,7 @@
 class ApiEndpoints {
   static const String authLogin = '/api/v1/auth/login';
   static const String authAdminLogin = '/api/v1/auth/admin/login';
-  
+
   static const String authLogout = '/api/v1/auth/logout';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
@@ -29,6 +29,7 @@ class ApiEndpoints {
   static const String home = '/api/v1/user-home';
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
+
   /// Super Admin — invite/create admin user (POST JSON body).
   static const String superadminCreateAdmin = '/api/v1/superadmin/admins';
 
@@ -40,21 +41,44 @@ class ApiEndpoints {
   // ── Pooja Kit Products ────────────────────────────────────────
   /// POST — create a new Pooja Kit product (multipart/form-data).
   static const String createProduct = '/api/v1/products/create-product';
+
   /// GET — list products (public).
   static const String products = '/api/v1/products';
+
   /// GET — list all products including inactive (super-admin).
   static const String allProducts = '/api/v1/products/all';
   static const String featuredProducts = '/api/v1/products/featured';
   static String product(String id) => '/api/v1/products/$id';
+
   /// PATCH — update product fields (multipart/form-data; same fields as create).
   static String updateProduct(String id) => '/api/v1/products/$id';
+
   /// DELETE — remove a product.
   static String deleteProduct(String id) => '/api/v1/products/$id';
+
   /// PUT — super-admin review (APPROVED / REJECTED / QUEUED) with optional
   /// reason. Body: `{ status, reason? }`.
   static String reviewProduct(String id) => '/api/v1/products/review/$id';
+
   /// PATCH — flip lifecycle (`productStatus`: ACTIVE | INACTIVE).
   static String productStatus(String id) => '/api/v1/products/$id/status';
+
+  // ── Orders (user flow) ────────────────────────────────────────
+  /// POST — place an order (from explicit items or cart).
+  /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
+  static const String createOrder = '/api/v1/orders';
+
+  /// POST — initialize a Paystack transaction for a specific order.
+  static String initializeOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/initialize';
+
+  /// POST — manually verify a Paystack transaction for an order.
+  static String verifyOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/verify';
+
+  /// GET — paginated history of the signed-in user's orders.
+  static const String myOrders = '/api/v1/orders/my';
+  static String order(String id) => '/api/v1/orders/$id';
 
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
@@ -62,7 +86,6 @@ class ApiEndpoints {
   static const String allOrders = '/api/v1/orders/all';
 
   /// GET — single order by Mongo `_id`.
-  static String order(String id) => '/api/v1/orders/$id';
 
   /// PATCH — fulfilment status. Body: `{ status, note? }`.
   /// `SHIPPED` requires `tracking.trackingNumber` already set.
@@ -101,20 +124,6 @@ class ApiEndpoints {
   /// POST — reject. Body: `{ adminNote? }`.
   static String rejectOrderRequest(String id) =>
       '/api/v1/orders/requests/$id/reject';
-
-  // ── Orders (user flow) ────────────────────────────────────────
-  /// POST — place an order (from explicit items or cart).
-  /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
-  static const String createOrder = '/api/v1/orders';
-  /// POST — initialize a Paystack transaction for a specific order.
-  static String initializeOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/initialize';
-  /// POST — manually verify a Paystack transaction for an order.
-  static String verifyOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/verify';
-  /// GET — paginated history of the signed-in user's orders.
-  static const String myOrders = '/api/v1/orders/my';
-
 
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.

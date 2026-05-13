@@ -62,7 +62,7 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Puja Kit Store',
+                      'Pooja Kit Store',
                       style: AppTypography.lora(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,

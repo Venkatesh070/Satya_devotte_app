@@ -34,8 +34,11 @@ class ProductDetailsPage extends StatelessWidget {
                       )
                     : Container(
                         color: Colors.grey[200],
-                        child: const Icon(Icons.shopping_bag_outlined,
-                            size: 80, color: Colors.grey),
+                        child: const Icon(
+                          Icons.shopping_bag_outlined,
+                          size: 80,
+                          color: Colors.grey,
+                        ),
                       ),
               ),
               leading: IconButton(
@@ -71,7 +74,9 @@ class ProductDetailsPage extends StatelessWidget {
                         if (product.salePrice != null)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.red,
                               borderRadius: BorderRadius.circular(8),
@@ -79,9 +84,10 @@ class ProductDetailsPage extends StatelessWidget {
                             child: const Text(
                               'SALE',
                               style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                       ],
@@ -133,7 +139,7 @@ class ProductDetailsPage extends StatelessWidget {
                     const SizedBox(height: 24),
                     if (product.items.isNotEmpty) ...[
                       Text(
-                        'Puja Kit Items',
+                        'Pooja Kit Items',
                         style: AppTypography.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -152,8 +158,11 @@ class ProductDetailsPage extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
                               children: [
-                                const Icon(Icons.check_circle_outline,
-                                    size: 18, color: Colors.green),
+                                const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 18,
+                                  color: Colors.green,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${item.itemName} (${item.quantity} ${item.unit})',
@@ -191,8 +200,10 @@ class ProductDetailsPage extends StatelessWidget {
             height: 52,
             child: ElevatedButton(
               onPressed: product.inStock
-                  ? () => Get.toNamed(AppRoutes.poojaKitCheckout,
-                      arguments: product)
+                  ? () => Get.toNamed(
+                      AppRoutes.poojaKitCheckout,
+                      arguments: product,
+                    )
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -203,8 +214,10 @@ class ProductDetailsPage extends StatelessWidget {
               ),
               child: Text(
                 product.inStock ? 'Order Now' : 'Out of Stock',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

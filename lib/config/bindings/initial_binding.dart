@@ -39,6 +39,9 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/product_
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
+import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/donations/data/donations_repository.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
@@ -177,20 +180,19 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
     Get.lazyPut<AdminOrderRequestsController>(
-      () => AdminOrderRequestsController(
-        Get.find<AdminOrdersRemoteDataSource>(),
-      ),
+      () =>
+          AdminOrderRequestsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
     Get.lazyPut<AdminPaymentsController>(
       () => AdminPaymentsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
-    // ── User-facing Pooja Kit (browse + checkout) ────────────────
     Get.put<PoojaKitController>(
       PoojaKitController(Get.find<ProductRemoteDataSource>()),
       permanent: true,
     );
+    // ── Pooja Kit Checkout flow ──────────────────────────────────
     Get.put<PoojaKitRepository>(
       PoojaKitRepository(Get.find<ApiClient>()),
       permanent: true,
