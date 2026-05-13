@@ -578,6 +578,64 @@ class CmsEmptyState extends StatelessWidget {
   }
 }
 
+// ── Pooja Kit / module section header ─────────────────────────────
+class CmsPoojaKitSectionHeader extends StatelessWidget {
+  const CmsPoojaKitSectionHeader({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    final headerCol = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            fontSize: 12,
+            color: CmsColors.textSecond,
+          ),
+        ),
+      ],
+    );
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isWeb ? 24 : 16,
+        vertical: 14,
+      ),
+      color: CmsColors.white,
+      child: trailing == null
+          ? headerCol
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: headerCol),
+                trailing!,
+              ],
+            ),
+    );
+  }
+}
+
 // ── Confirm delete dialog ─────────────────────────────────────────
 Future<bool?> showCmsDeleteDialog(
   BuildContext context, {

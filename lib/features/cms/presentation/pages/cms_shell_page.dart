@@ -14,6 +14,9 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_shlokas
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_admins_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_manage_rituals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {

@@ -1,0 +1,1773 @@
+// Pooja Kit → Orders tab content for the CMS.
+//
+// Drives `AdminOrdersController` from a single screen with two modes:
+//   • LIST   — paginated table/cards with orderStatus + paymentStatus +
+//              search filters and a page-size selector.
+//   • DETAIL — once a row is opened the same surface flips to an order
+//              detail view with summary / line items / shipping / tracking
+//              / invoice / fulfilment, plus contextual admin actions:
+//              Mark Processing, Add Tracking, Dispatch, Mark Delivered,
+//              Cancel order, and Verify (Paystack) by reference.
+//
+// Mirrors the section structure described in
+// `Flutter-cms-refund&orders&payments.plan` §4.
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
+class CmsPoojaKitOrdersContent extends StatelessWidget {
+  const CmsPoojaKitOrdersContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<AdminOrdersController>();
+    // First open of this tab triggers a fetch. Subsequent re-mounts keep
+    // whatever page/filter state the controller already holds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (c.items.isEmpty && !c.isLoading && c.error == null) {
+        c.refresh();
+      }
+    });
+    return Obx(() {
+      if (c.selectedOrderId != null) {
+        return _OrderDetailView(controller: c);
+      }
+      return _OrdersListView(controller: c);
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// LIST
+// ════════════════════════════════════════════════════════════════
+class _OrdersListView extends StatelessWidget {
+  const _OrdersListView({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CmsPoojaKitSectionHeader(
+          title: 'Pooja Kit Orders',
+          subtitle:
+              'Track and manage devotee orders for Pooja Kits. Filter by '
+              'status, search by order number and drill in to dispatch.',
+          trailing: IconButton(
+            tooltip: 'Refresh',
+            onPressed: controller.refresh,
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+        ),
+        const Divider(height: 1, color: CmsColors.border),
+        _OrdersFiltersBar(controller: controller),
+        const Divider(height: 1, color: CmsColors.border),
+        Expanded(child: _OrdersBody(controller: controller)),
+        _OrdersPaginationBar(controller: controller),
+      ],
+    );
+  }
+}
+
+class _OrdersFiltersBar extends StatefulWidget {
+  const _OrdersFiltersBar({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  State<_OrdersFiltersBar> createState() => _OrdersFiltersBarState();
+}
+
+class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
+  late final TextEditingController _search;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController(text: widget.controller.search);
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 900;
+    return Container(
+      color: CmsColors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: isWeb ? 24 : 16,
+        vertical: 12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Obx(
+            () => _ChipRow(
+              label: 'Order status',
+              options: AdminOrdersController.orderStatusFilters,
+              selected: widget.controller.orderStatus,
+              onSelect: widget.controller.setOrderStatusFilter,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Obx(
+            () => _ChipRow(
+              label: 'Payment',
+              options: AdminOrdersController.paymentStatusFilters,
+              selected: widget.controller.paymentStatus,
+              onSelect: widget.controller.setPaymentStatusFilter,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: TextField(
+                    controller: _search,
+                    onSubmitted: widget.controller.setSearch,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search by order number…',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFAAAAAA),
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              onPressed: () {
+                                _search.clear();
+                                widget.controller.setSearch('');
+                                setState(() {});
+                              },
+                            ),
+                      filled: true,
+                      fillColor: CmsColors.bg,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.orange),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _PageSizeDropdown(controller: widget.controller),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PageSizeDropdown extends StatelessWidget {
+  const _PageSizeDropdown({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(
+      () => Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: CmsColors.bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: controller.limit,
+            isDense: true,
+            items: const [10, 20, 50]
+                .map(
+                  (e) => DropdownMenuItem<int>(
+                    value: e,
+                    child: Text(
+                      '$e / page',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) {
+              if (v != null) controller.setLimit(v);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  const _ChipRow({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+  final String label;
+  final List<String> options;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final opt in options) ...[
+                  _FilterChip(
+                    label: _prettyChip(opt),
+                    selected: opt == selected,
+                    onTap: () => onSelect(opt),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _prettyChip(String wire) {
+    if (wire == 'ALL') return 'All';
+    return wire[0] + wire.substring(1).toLowerCase();
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color:
+              selected ? CmsColors.orange : CmsColors.orange.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? CmsColors.orange : CmsColors.orange.withOpacity(0.35),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : CmsColors.orangeDark,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrdersBody extends StatelessWidget {
+  const _OrdersBody({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (controller.error != null) {
+        return _ErrorBox(
+          message: controller.error!,
+          onRetry: controller.refresh,
+        );
+      }
+      if (controller.isEmpty) {
+        return const CmsEmptyState(
+          icon: Icons.receipt_long_outlined,
+          title: 'No Orders Yet',
+          subtitle:
+              'When devotees place a Pooja Kit order it will show up here.',
+        );
+      }
+      final wide = MediaQuery.of(context).size.width >= 1000;
+      return wide
+          ? _OrdersTable(orders: controller.items, controller: controller)
+          : _OrdersCardList(orders: controller.items, controller: controller);
+    });
+  }
+}
+
+class _OrdersTable extends StatelessWidget {
+  const _OrdersTable({required this.orders, required this.controller});
+  final List<AdminOrder> orders;
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Column(
+          children: [
+            const _TableHeader(
+              columns: [
+                _ColSpec('Order #', 160),
+                _ColSpec('Customer', 200),
+                _ColSpec('Total', 100),
+                _ColSpec('Payment', 110),
+                _ColSpec('Status', 110),
+                _ColSpec('Date', 130),
+                _ColSpec('', 60),
+              ],
+            ),
+            const Divider(height: 1, color: CmsColors.border),
+            for (final o in orders)
+              InkWell(
+                onTap: () => controller.openOrder(o.id),
+                child: _OrderRow(order: o),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderRow extends StatelessWidget {
+  const _OrderRow({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: CmsColors.border)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(
+              order.orderNumber.isEmpty ? '—' : order.orderNumber,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 200,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  order.userName.isEmpty ? '—' : order.userName,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: CmsColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (order.userEmail.isNotEmpty)
+                  Text(
+                    order.userEmail,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: CmsColors.textSecond,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 100,
+            child: Text(
+              order.formattedTotal,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 110,
+            child: PaymentStatusBadge(status: order.paymentStatus),
+          ),
+          SizedBox(
+            width: 110,
+            child: OrderStatusBadge(status: order.orderStatus),
+          ),
+          SizedBox(
+            width: 130,
+            child: Text(
+              order.formattedDate,
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textSecond,
+              ),
+            ),
+          ),
+          const SizedBox(
+            width: 60,
+            child: Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrdersCardList extends StatelessWidget {
+  const _OrdersCardList({required this.orders, required this.controller});
+  final List<AdminOrder> orders;
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: orders.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (_, i) {
+        final o = orders[i];
+        return InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => controller.openOrder(o.id),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: CmsColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        o.orderNumber.isEmpty ? '—' : o.orderNumber,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: CmsColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    OrderStatusBadge(status: o.orderStatus),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${o.userName.isEmpty ? '—' : o.userName} · ${o.userEmail}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: CmsColors.textSecond,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      o.formattedTotal,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    PaymentStatusBadge(status: o.paymentStatus),
+                    const Spacer(),
+                    Text(
+                      o.formattedDate,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _OrdersPaginationBar extends StatelessWidget {
+  const _OrdersPaginationBar({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.items.isEmpty || controller.isLoading) {
+        return const SizedBox.shrink();
+      }
+      return Container(
+        color: CmsColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Row(
+          children: [
+            Text(
+              'Page ${controller.page} of ${controller.totalPages} · '
+              '${controller.total} order${controller.total == 1 ? '' : 's'}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textSecond,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Previous',
+              onPressed: controller.page > 1 ? controller.prevPage : null,
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            IconButton(
+              tooltip: 'Next',
+              onPressed: controller.page < controller.totalPages
+                  ? controller.nextPage
+                  : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// DETAIL
+// ════════════════════════════════════════════════════════════════
+class _OrderDetailView extends StatelessWidget {
+  const _OrderDetailView({required this.controller});
+  final AdminOrdersController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final order = controller.detail;
+      return Column(
+        children: [
+          _DetailHeader(controller: controller, order: order),
+          const Divider(height: 1, color: CmsColors.border),
+          Expanded(
+            child: () {
+              if (controller.detailLoading && order == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (controller.detailError != null && order == null) {
+                return _ErrorBox(
+                  message: controller.detailError!,
+                  onRetry: controller.fetchDetail,
+                );
+              }
+              if (order == null) {
+                return const CmsEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'Order not found',
+                  subtitle: 'This order may have been removed.',
+                );
+              }
+              return _OrderDetailBody(controller: controller, order: order);
+            }(),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+class _DetailHeader extends StatelessWidget {
+  const _DetailHeader({required this.controller, required this.order});
+  final AdminOrdersController controller;
+  final AdminOrder? order;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    final title = order?.orderNumber.isNotEmpty == true
+        ? 'Order ${order!.orderNumber}'
+        : 'Order details';
+    return Container(
+      color: CmsColors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: isWeb ? 24 : 16,
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Back to orders',
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: controller.closeDetail,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                if (order != null)
+                  Text(
+                    order!.formattedDateTime,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: controller.fetchDetail,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderDetailBody extends StatelessWidget {
+  const _OrderDetailBody({required this.controller, required this.order});
+  final AdminOrdersController controller;
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SummaryCard(order: order),
+          const SizedBox(height: 14),
+          _LineItemsCard(order: order),
+          const SizedBox(height: 14),
+          _ShippingCard(order: order),
+          const SizedBox(height: 14),
+          _TrackingCard(controller: controller, order: order),
+          const SizedBox(height: 14),
+          _InvoiceCard(order: order),
+          const SizedBox(height: 14),
+          _FulfillmentCard(order: order),
+          const SizedBox(height: 20),
+          _ActionBar(controller: controller, order: order),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return CmsFormCard(
+      title: 'Summary',
+      children: [
+        Wrap(
+          spacing: 28,
+          runSpacing: 12,
+          children: [
+            _MetaPair(label: 'Order #', value: order.orderNumber.isEmpty ? '—' : order.orderNumber),
+            _MetaPair(label: 'Total', value: order.formattedTotal),
+            _MetaPair(label: 'Subtotal', value: order.formattedSubtotal),
+            _MetaPair(label: 'Shipping', value: order.formattedShipping),
+            _MetaPair(label: 'Tax', value: order.formattedTax),
+            _MetaPair(label: 'Currency', value: order.currency),
+            _MetaPair(
+              label: 'Method',
+              value: order.paymentMethod.isEmpty ? '—' : order.paymentMethod,
+            ),
+            _MetaPair(
+              label: 'Reference',
+              value: order.paystackReference.isEmpty
+                  ? '—'
+                  : order.paystackReference,
+            ),
+            _MetaPair(
+              label: 'Customer',
+              value: order.userName.isEmpty
+                  ? (order.userEmail.isEmpty ? '—' : order.userEmail)
+                  : '${order.userName}\n${order.userEmail}',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            OrderStatusBadge(status: order.orderStatus),
+            const SizedBox(width: 8),
+            PaymentStatusBadge(status: order.paymentStatus),
+            if (order.inventoryReserved) ...[
+              const SizedBox(width: 8),
+              const _MutedPill(text: 'Inventory reserved'),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LineItemsCard extends StatelessWidget {
+  const _LineItemsCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = order.items;
+    return CmsFormCard(
+      title: 'Items (${items.length})',
+      children: [
+        if (items.isEmpty)
+          const Text(
+            'No items on this order.',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          )
+        else
+          for (var i = 0; i < items.length; i++) ...[
+            _LineItemRow(item: items[i], currency: order.currency),
+            if (i != items.length - 1)
+              const Divider(height: 16, color: CmsColors.border),
+          ],
+      ],
+    );
+  }
+}
+
+class _LineItemRow extends StatelessWidget {
+  const _LineItemRow({required this.item, required this.currency});
+  final OrderLineItem item;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: item.image.isNotEmpty
+                ? Image.network(
+                    item.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _ItemPlaceholder(),
+                  )
+                : _ItemPlaceholder(),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.title.isEmpty ? '—' : item.title,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+              Text(
+                'Qty ${item.qty}  ·  Unit ${_money(item.unitPrice, currency)}',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: CmsColors.textSecond,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          _money(item.lineTotal, currency),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _money(double v, String c) {
+    final symbol = c == 'ZAR' ? 'R' : c;
+    final decimals = v.truncateToDouble() == v ? 0 : 2;
+    return '$symbol ${v.toStringAsFixed(decimals)}';
+  }
+}
+
+class _ItemPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: CmsColors.bg,
+      child: const Icon(
+        Icons.image_outlined,
+        size: 20,
+        color: CmsColors.textSecond,
+      ),
+    );
+  }
+}
+
+class _ShippingCard extends StatelessWidget {
+  const _ShippingCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final addr = order.shippingAddress;
+    return CmsFormCard(
+      title: 'Shipping',
+      children: [
+        if (addr == null)
+          const Text(
+            'No shipping address attached.',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          )
+        else ...[
+          if (addr.name.isNotEmpty) _AddrLine(text: addr.name, bold: true),
+          if (addr.line1.isNotEmpty) _AddrLine(text: addr.line1),
+          if (addr.line2.isNotEmpty) _AddrLine(text: addr.line2),
+          _AddrLine(
+            text: [
+              if (addr.city.isNotEmpty) addr.city,
+              if (addr.region.isNotEmpty) addr.region,
+              if (addr.postalCode.isNotEmpty) addr.postalCode,
+            ].join(', '),
+          ),
+          if (addr.country.isNotEmpty) _AddrLine(text: addr.country),
+          if (addr.phone.isNotEmpty)
+            _AddrLine(text: 'Phone: ${addr.phone}', muted: true),
+          if (addr.email.isNotEmpty)
+            _AddrLine(text: 'Email: ${addr.email}', muted: true),
+        ],
+      ],
+    );
+  }
+}
+
+class _AddrLine extends StatelessWidget {
+  const _AddrLine({required this.text, this.bold = false, this.muted = false});
+  final String text;
+  final bool bold;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+          color: muted ? CmsColors.textSecond : CmsColors.textPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackingCard extends StatelessWidget {
+  const _TrackingCard({required this.controller, required this.order});
+  final AdminOrdersController controller;
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = order.tracking;
+    return CmsFormCard(
+      title: 'Tracking',
+      children: [
+        if (t == null || !t.hasTrackingNumber) ...[
+          const Text(
+            'No tracking number set. Add tracking before you mark the order '
+            'as Shipped, or use Dispatch to do both in one step.',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          ),
+        ] else ...[
+          _MetaPair(label: 'Courier', value: t.courier.isEmpty ? '—' : t.courier),
+          const SizedBox(height: 4),
+          _MetaPair(label: 'Tracking #', value: t.trackingNumber),
+          if (t.trackingUrl.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () => _openUrl(t.trackingUrl),
+              child: Text(
+                t.trackingUrl,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: CmsColors.orange,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+          if (order.dispatchedAt != null) ...[
+            const SizedBox(height: 6),
+            _MetaPair(
+              label: 'Dispatched',
+              value: order.dispatchedAt.toString(),
+            ),
+          ],
+          if (order.sharedWithUserAt != null) ...[
+            const SizedBox(height: 4),
+            _MetaPair(
+              label: 'Shared with user',
+              value: order.sharedWithUserAt.toString(),
+            ),
+          ],
+        ],
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            CmsPrimaryButton(
+              label: t == null || !t.hasTrackingNumber
+                  ? 'Add tracking'
+                  : 'Edit tracking',
+              icon: Icons.local_shipping_outlined,
+              onTap: () => _showTrackingDialog(context, controller, t),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _InvoiceCard extends StatelessWidget {
+  const _InvoiceCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = order.invoice;
+    if (inv == null || inv.url.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return CmsFormCard(
+      title: 'Invoice',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (inv.number.isNotEmpty)
+                    Text(
+                      'Invoice #${inv.number}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                  if (inv.generatedAt != null)
+                    Text(
+                      inv.generatedAt!.toLocal().toString(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            CmsPrimaryButton(
+              label: 'Open invoice',
+              icon: Icons.open_in_new_rounded,
+              onTap: () => _openUrl(inv.url),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FulfillmentCard extends StatelessWidget {
+  const _FulfillmentCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = order.fulfillment;
+    if (f == null) return const SizedBox.shrink();
+    return CmsFormCard(
+      title: 'Fulfilment',
+      children: [
+        if (f.satisfied != null)
+          _MetaPair(
+            label: 'Satisfied',
+            value: f.satisfied! ? 'Yes' : 'No',
+          ),
+        if (f.ratedAt != null)
+          _MetaPair(
+            label: 'Rated at',
+            value: f.ratedAt!.toLocal().toString(),
+          ),
+        if (f.feedback.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Feedback: ${f.feedback}',
+            style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ActionBar extends StatelessWidget {
+  const _ActionBar({required this.controller, required this.order});
+  final AdminOrdersController controller;
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextStates = OrderStatusMachine.nextAllowed(
+      order.orderStatus,
+      hasTrackingNumber: order.hasTracking,
+    );
+    final canCancel = OrderStatusMachine.canAdminCancel(order.orderStatus);
+    return Obx(
+      () {
+        final busy = controller.mutating;
+        final children = <Widget>[];
+        if (nextStates.contains(OrderStatus.processing)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Mark processing',
+              icon: Icons.play_arrow_rounded,
+              isLoading: busy,
+              onTap: () => controller.markStatus(OrderStatus.processing),
+            ),
+          );
+        }
+        if (nextStates.contains(OrderStatus.shipped) || order.orderStatus == OrderStatus.processing) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Dispatch',
+              icon: Icons.local_shipping_rounded,
+              isLoading: busy,
+              onTap: () => _showDispatchDialog(context, controller, order.tracking),
+            ),
+          );
+        }
+        if (nextStates.contains(OrderStatus.delivered)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Mark delivered',
+              icon: Icons.check_circle_outline_rounded,
+              isLoading: busy,
+              onTap: () => controller.markStatus(OrderStatus.delivered),
+            ),
+          );
+        }
+        if (canCancel) {
+          children.add(
+            _OutlinedAction(
+              label: 'Cancel order',
+              icon: Icons.cancel_outlined,
+              color: CmsColors.red,
+              onTap: busy ? null : () => _showCancelDialog(context, controller),
+            ),
+          );
+        }
+        if (order.paystackReference.isNotEmpty) {
+          children.add(
+            _OutlinedAction(
+              label: 'Verify payment',
+              icon: Icons.refresh_rounded,
+              color: CmsColors.orangeDark,
+              onTap:
+                  busy ? null : () => controller.verifyPayment(order.paystackReference),
+            ),
+          );
+        }
+        if (children.isEmpty) {
+          return const Text(
+            'No admin actions available for this order in its current state.',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          );
+        }
+        return Wrap(spacing: 10, runSpacing: 10, children: children);
+      },
+    );
+  }
+}
+
+class _OutlinedAction extends StatelessWidget {
+  const _OutlinedAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: onTap == null ? color.withOpacity(0.05) : color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── dialogs ────────────────────────────────────────────────────────
+Future<void> _showTrackingDialog(
+  BuildContext context,
+  AdminOrdersController controller,
+  Tracking? current,
+) async {
+  final courier = TextEditingController(text: current?.courier ?? '');
+  final number = TextEditingController(text: current?.trackingNumber ?? '');
+  final url = TextEditingController(text: current?.trackingUrl ?? '');
+  final markShipped = ValueNotifier<bool>(false);
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (innerContext, setState) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: const Text(
+              'Save tracking',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CmsFormField(
+                    label: 'Courier',
+                    hint: 'e.g. DHL, Aramex, Postnet',
+                    controller: courier,
+                  ),
+                  const SizedBox(height: 8),
+                  CmsFormField(
+                    label: 'Tracking number',
+                    hint: 'e.g. AB123456789ZA',
+                    controller: number,
+                  ),
+                  const SizedBox(height: 8),
+                  CmsFormField(
+                    label: 'Tracking URL (optional)',
+                    hint: 'https://…',
+                    controller: url,
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: markShipped,
+                    builder: (_, v, __) => Row(
+                      children: [
+                        Checkbox(
+                          value: v,
+                          activeColor: CmsColors.orange,
+                          onChanged: (val) =>
+                              markShipped.value = val ?? false,
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'Also mark as SHIPPED (dispatch)',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: CmsColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: CmsColors.textSecond),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CmsColors.orange,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () async {
+                  final c = courier.text.trim();
+                  final n = number.text.trim();
+                  if (c.isEmpty || n.isEmpty) return;
+                  Navigator.pop(dialogContext);
+                  if (markShipped.value) {
+                    await controller.dispatch(
+                      courier: c,
+                      trackingNumber: n,
+                      trackingUrl: url.text.trim().isEmpty
+                          ? null
+                          : url.text.trim(),
+                    );
+                  } else {
+                    await controller.saveTracking(
+                      courier: c,
+                      trackingNumber: n,
+                      trackingUrl: url.text.trim().isEmpty
+                          ? null
+                          : url.text.trim(),
+                    );
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+Future<void> _showDispatchDialog(
+  BuildContext context,
+  AdminOrdersController controller,
+  Tracking? current,
+) async {
+  final courier = TextEditingController(text: current?.courier ?? '');
+  final number = TextEditingController(text: current?.trackingNumber ?? '');
+  final url = TextEditingController(text: current?.trackingUrl ?? '');
+  final note = TextEditingController();
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Dispatch order',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Saves tracking and marks the order SHIPPED. The customer '
+                  'will receive a shipping notification email.',
+                  style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+                ),
+                const SizedBox(height: 10),
+                CmsFormField(
+                  label: 'Courier',
+                  hint: 'e.g. DHL, Aramex, Postnet',
+                  controller: courier,
+                ),
+                const SizedBox(height: 8),
+                CmsFormField(
+                  label: 'Tracking number',
+                  hint: 'e.g. AB123456789ZA',
+                  controller: number,
+                ),
+                const SizedBox(height: 8),
+                CmsFormField(
+                  label: 'Tracking URL (optional)',
+                  hint: 'https://…',
+                  controller: url,
+                ),
+                const SizedBox(height: 8),
+                CmsFormField(
+                  label: 'Note (optional)',
+                  hint: 'Internal dispatch note',
+                  controller: note,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CmsColors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final c = courier.text.trim();
+              final n = number.text.trim();
+              if (c.isEmpty || n.isEmpty) return;
+              Navigator.pop(dialogContext);
+              await controller.dispatch(
+                courier: c,
+                trackingNumber: n,
+                trackingUrl: url.text.trim().isEmpty ? null : url.text.trim(),
+                note: note.text.trim().isEmpty ? null : note.text.trim(),
+              );
+            },
+            child: const Text('Dispatch'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _showCancelDialog(
+  BuildContext context,
+  AdminOrdersController controller,
+) async {
+  final reason = TextEditingController();
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Cancel order',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: CmsColors.red,
+          ),
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Cancels the order and restocks inventory. If the order was '
+                'already PAID, payment is marked REFUNDED. This cannot be '
+                'undone.',
+                style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              ),
+              const SizedBox(height: 10),
+              CmsFormField(
+                label: 'Reason (optional)',
+                hint: 'Why is this order being cancelled?',
+                controller: reason,
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Keep order',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CmsColors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await controller.cancelOrder(
+                reason: reason.text.trim().isEmpty
+                    ? null
+                    : reason.text.trim(),
+              );
+            },
+            child: const Text('Cancel order'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// ── small shared widgets ───────────────────────────────────────────
+class _TableHeader extends StatelessWidget {
+  const _TableHeader({required this.columns});
+  final List<_ColSpec> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final col in columns)
+            SizedBox(
+              width: col.width,
+              child: Text(
+                col.label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textSecond,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColSpec {
+  const _ColSpec(this.label, this.width);
+  final String label;
+  final double width;
+}
+
+class _MetaPair extends StatelessWidget {
+  const _MetaPair({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textSecond,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          SelectableText(
+            value,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MutedPill extends StatelessWidget {
+  const _MutedPill({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFEFEF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: CmsColors.textSecond,
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBox extends StatelessWidget {
+  const _ErrorBox({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: CmsColors.red, size: 36),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            CmsPrimaryButton(
+              label: 'Retry',
+              icon: Icons.refresh_rounded,
+              onTap: onRetry,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Status badges ──────────────────────────────────────────────────
+class OrderStatusBadge extends StatelessWidget {
+  const OrderStatusBadge({super.key, required this.status});
+  final OrderStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _color(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withOpacity(0.35)),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: c,
+        ),
+      ),
+    );
+  }
+
+  static Color _color(OrderStatus s) {
+    switch (s) {
+      case OrderStatus.placed:
+        return const Color(0xFF1976D2);
+      case OrderStatus.processing:
+        return CmsColors.orangeDark;
+      case OrderStatus.shipped:
+        return const Color(0xFF6A1B9A);
+      case OrderStatus.delivered:
+        return CmsColors.green;
+      case OrderStatus.fulfilled:
+        return const Color(0xFF2E7D32);
+      case OrderStatus.cancelled:
+        return CmsColors.red;
+      case OrderStatus.unknown:
+        return Colors.grey;
+    }
+  }
+}
+
+class PaymentStatusBadge extends StatelessWidget {
+  const PaymentStatusBadge({super.key, required this.status});
+  final PaymentStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _color(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withOpacity(0.35)),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: c,
+        ),
+      ),
+    );
+  }
+
+  static Color _color(PaymentStatus s) {
+    switch (s) {
+      case PaymentStatus.paid:
+        return CmsColors.green;
+      case PaymentStatus.pending:
+        return CmsColors.orange;
+      case PaymentStatus.failed:
+        return CmsColors.red;
+      case PaymentStatus.refunded:
+        return const Color(0xFF6A1B9A);
+      case PaymentStatus.unknown:
+        return Colors.grey;
+    }
+  }
+}
+
+Future<void> _openUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    // Best-effort; swallow.
+  }
+}

@@ -3,10 +3,10 @@
 // Pooja Kit CMS screens.
 //
 // Sidebar group "Pooja Kit" expands into:
-//   • Manage Pooja Kit  → [CmsPoojaKitContent]       (list + Add form)
-//   • Orders            → [CmsPoojaKitOrdersContent]   (placeholder)
-//   • Refund            → [CmsPoojaKitRefundsContent]  (placeholder)
-//   • Payments          → [CmsPoojaKitPaymentsContent] (placeholder)
+//   • Manage Pooja Kit  → [CmsPoojaKitContent]            (this file, list + Add form)
+//   • Orders            → [CmsPoojaKitOrdersContent]      (cms_pooja_kit_orders_content.dart)
+//   • Refund            → [CmsPoojaKitRefundsContent]     (cms_pooja_kit_refunds_content.dart)
+//   • Payments          → [CmsPoojaKitPaymentsContent]    (cms_pooja_kit_payments_content.dart)
 //
 // Create flow uses multipart/form-data against
 // POST /api/v1/products/create-product.
@@ -2531,135 +2531,9 @@ class _SimpleDropdown extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// ORDERS — placeholder until backend orders API is wired up
-// ════════════════════════════════════════════════════════════════
-class CmsPoojaKitOrdersContent extends StatelessWidget {
-  const CmsPoojaKitOrdersContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        _PoojaKitHeader(
-          title: 'Pooja Kit Orders',
-          subtitle: 'Track and manage devotee orders for Pooja Kits.',
-        ),
-        Divider(height: 1, color: CmsColors.border),
-        Expanded(
-          child: CmsEmptyState(
-            icon: Icons.receipt_long_outlined,
-            title: 'No Orders Yet',
-            subtitle:
-                'When devotees place a Pooja Kit order it will show up here '
-                'with their delivery and payment details.',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// REFUNDS — placeholder until refunds API is wired up
-// ════════════════════════════════════════════════════════════════
-class CmsPoojaKitRefundsContent extends StatelessWidget {
-  const CmsPoojaKitRefundsContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        _PoojaKitHeader(
-          title: 'Pooja Kit Refunds',
-          subtitle:
-              'Review and process refund requests raised against Pooja Kit '
-              'orders.',
-        ),
-        Divider(height: 1, color: CmsColors.border),
-        Expanded(
-          child: CmsEmptyState(
-            icon: Icons.assignment_return_outlined,
-            title: 'No Refunds Yet',
-            subtitle:
-                'Approved refund requests and their status will appear here '
-                'once a devotee initiates a refund.',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// PAYMENTS — placeholder until payments API is wired up
-// ════════════════════════════════════════════════════════════════
-class CmsPoojaKitPaymentsContent extends StatelessWidget {
-  const CmsPoojaKitPaymentsContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        _PoojaKitHeader(
-          title: 'Pooja Kit Payments',
-          subtitle:
-              'Track payment transactions, settlements and reconciliations '
-              'for Pooja Kit orders.',
-        ),
-        Divider(height: 1, color: CmsColors.border),
-        Expanded(
-          child: CmsEmptyState(
-            icon: Icons.payments_outlined,
-            title: 'No Payments Yet',
-            subtitle:
-                'Once devotees complete payments for their Pooja Kit orders '
-                'the transactions will appear here with status and references.',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PoojaKitHeader extends StatelessWidget {
-  const _PoojaKitHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final isWeb = MediaQuery.of(context).size.width >= 768;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isWeb ? 24 : 16,
-        vertical: 14,
-      ),
-      color: CmsColors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              color: CmsColors.textSecond,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// NOTE: CmsPoojaKitOrdersContent / CmsPoojaKitRefundsContent /
+// CmsPoojaKitPaymentsContent live in their own files now and are wired into
+// the sidebar by `cms_shell_page.dart`. See:
+//   • lib/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart
+//   • lib/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart
+//   • lib/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart

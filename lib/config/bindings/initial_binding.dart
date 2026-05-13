@@ -22,6 +22,10 @@ import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_dat
 import 'package:satya_devotte_app/features/cms/data/datasources/donation_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_notifications_controller.dart';
@@ -161,6 +165,25 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<ProductController>(
       () => ProductController(Get.find<ProductRemoteDataSource>()),
+      fenix: true,
+    );
+    // ── CMS Pooja Kit: orders / requests (refunds) / payments ────
+    Get.put<AdminOrdersRemoteDataSource>(
+      AdminOrdersRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.lazyPut<AdminOrdersController>(
+      () => AdminOrdersController(Get.find<AdminOrdersRemoteDataSource>()),
+      fenix: true,
+    );
+    Get.lazyPut<AdminOrderRequestsController>(
+      () => AdminOrderRequestsController(
+        Get.find<AdminOrdersRemoteDataSource>(),
+      ),
+      fenix: true,
+    );
+    Get.lazyPut<AdminPaymentsController>(
+      () => AdminPaymentsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
     // ── User-facing donations flow ────────────────────────────────

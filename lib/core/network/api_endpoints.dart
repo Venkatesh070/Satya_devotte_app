@@ -54,6 +54,52 @@ class ApiEndpoints {
   /// PATCH — flip lifecycle (`productStatus`: ACTIVE | INACTIVE).
   static String productStatus(String id) => '/api/v1/products/$id/status';
 
+  // ── Pooja Kit Orders (admin / super-admin) ────────────────────
+  /// GET — paginated list of every order. Query: `page`, `limit`,
+  /// `orderStatus`, `paymentStatus`, `user`, `search` (order # substring).
+  static const String allOrders = '/api/v1/orders/all';
+
+  /// GET — single order by Mongo `_id`.
+  static String order(String id) => '/api/v1/orders/$id';
+
+  /// PATCH — fulfilment status. Body: `{ status, note? }`.
+  /// `SHIPPED` requires `tracking.trackingNumber` already set.
+  static String orderStatus(String id) => '/api/v1/orders/$id/status';
+
+  /// PATCH — payment fields. Body: `{ paymentStatus?, paymentMethod? }`.
+  /// Use sparingly — Paystack verify normally sets PAID.
+  static String orderPayment(String id) => '/api/v1/orders/$id/payment';
+
+  /// PATCH — set tracking only.
+  /// Body: `{ courier, trackingNumber, trackingUrl? }`.
+  static String orderTracking(String id) => '/api/v1/orders/$id/tracking';
+
+  /// POST — set tracking + mark `SHIPPED`. Triggers tracking email.
+  /// Body: `{ courier, trackingNumber, trackingUrl?, note? }`.
+  static String orderDispatch(String id) => '/api/v1/orders/$id/dispatch';
+
+  /// POST — admin terminal cancel for paid / pre-ship orders.
+  /// Body: `{ reason? }`. Not allowed once SHIPPED / DELIVERED / FULFILLED.
+  static String orderCancelPaid(String id) => '/api/v1/orders/$id/cancel-paid';
+
+  // ── Pooja Kit Order Requests (cancel / refund / replacement) ──
+  /// GET — paginated requests inbox. Query: `page`, `limit`, `status`,
+  /// `type`, `user`.
+  static const String orderRequests = '/api/v1/orders/requests';
+
+  /// GET — single request detail with populated `order` and (when set)
+  /// `replacementOrder`.
+  static String orderRequest(String id) => '/api/v1/orders/requests/$id';
+
+  /// POST — approve. Body: `{ adminNote? }`. Side effects depend on
+  /// request type (see Flutter-cms-refund&orders&payments plan §2.5).
+  static String approveOrderRequest(String id) =>
+      '/api/v1/orders/requests/$id/approve';
+
+  /// POST — reject. Body: `{ adminNote? }`.
+  static String rejectOrderRequest(String id) =>
+      '/api/v1/orders/requests/$id/reject';
+
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.
   static const String donations = '/api/v1/donations';
