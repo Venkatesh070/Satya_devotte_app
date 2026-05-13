@@ -11,6 +11,10 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/donation
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_success_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donations_list_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/my_contributions_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_details_page.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_checkout_page.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_payment_webview_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/order_success_screen.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
@@ -23,7 +27,10 @@ class AppPages {
     // ─── App flow ───────────────────────────────────────────────
     GetPage(name: AppRoutes.splash, page: SplashPage.new),
     if (!kIsWeb) GetPage(name: AppRoutes.onboarding, page: OnboardingPage.new),
-    GetPage(name: AppRoutes.login, page: () => kIsWeb ? const WebLoginPage() : const LoginPage()),
+    GetPage(
+      name: AppRoutes.login,
+      page: () => kIsWeb ? const WebLoginPage() : const LoginPage(),
+    ),
     GetPage(
       name: AppRoutes.home,
       page: BottomTabPage.new,
@@ -71,6 +78,28 @@ class AppPages {
     GetPage(
       name: AppRoutes.userContributions,
       page: MyContributionsScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+
+    // ─── Pooja Kit flow ────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.poojaKitDetails,
+      page: ProductDetailsPage.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaKitCheckout,
+      page: ProductCheckoutPage.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaKitPayment,
+      page: ProductPaymentWebViewScreen.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaKitOrderSuccess,
+      page: OrderSuccessScreen.new,
       middlewares: [AuthGuard()],
     ),
 

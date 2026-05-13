@@ -32,6 +32,9 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/festival
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
+import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/donations/data/donations_repository.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
@@ -63,10 +66,7 @@ class InitialBinding extends Bindings {
     Get.put<NotificationService>(NotificationService(), permanent: true);
     // ── FCM token registry (depends on ApiClient + AuthSessionService) ──
     Get.put<FcmApi>(FcmApi(Get.find<ApiClient>()), permanent: true);
-    Get.put<FcmBootstrap>(
-      FcmBootstrap(Get.find<FcmApi>()),
-      permanent: true,
-    );
+    Get.put<FcmBootstrap>(FcmBootstrap(Get.find<FcmApi>()), permanent: true);
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<LocationService>(LocationService(), permanent: true);
     Get.put<SyncService>(SyncService(), permanent: true);
@@ -161,6 +161,19 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<ProductController>(
       () => ProductController(Get.find<ProductRemoteDataSource>()),
+      fenix: true,
+    );
+    Get.put<PoojaKitController>(
+      PoojaKitController(Get.find<ProductRemoteDataSource>()),
+      permanent: true,
+    );
+    // ── Pooja Kit Checkout flow ──────────────────────────────────
+    Get.put<PoojaKitRepository>(
+      PoojaKitRepository(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.lazyPut<PoojaKitCheckoutController>(
+      () => PoojaKitCheckoutController(Get.find<PoojaKitRepository>()),
       fenix: true,
     );
     // ── User-facing donations flow ────────────────────────────────
