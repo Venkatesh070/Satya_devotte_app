@@ -45,6 +45,8 @@ class AppRoutes {
   static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
   /// Pooja Kit refund requests / processed refunds.
   static const String cmsPoojaKitRefunds = '/cms/pooja-kit/refunds';
+  /// Pooja Kit payments overview.
+  static const String cmsPoojaKitPayments = '/cms/pooja-kit/payments';
 
   // ─── Donations (admin + superadmin) ──────────────────────────
   /// Admin's own donation campaigns (create / edit / review).

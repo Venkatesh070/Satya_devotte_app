@@ -176,10 +176,10 @@ class _ListSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-      itemCount: 4,
+      itemCount: 6,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, __) => Container(
-        height: 220,
+        height: 110,
         decoration: BoxDecoration(
           color: const Color(0xFFEFE6D2),
           borderRadius: BorderRadius.circular(16),

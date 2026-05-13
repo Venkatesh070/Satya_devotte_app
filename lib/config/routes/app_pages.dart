@@ -171,6 +171,13 @@ class AppPages {
       transitionDuration: Duration.zero,
     ),
     GetPage(
+      name: AppRoutes.cmsPoojaKitPayments,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
       name: AppRoutes.cmsDonations,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],

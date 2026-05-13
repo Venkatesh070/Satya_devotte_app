@@ -16,22 +16,22 @@ class RitualListPage extends StatefulWidget {
 }
 
 class _RitualListPageState extends State<RitualListPage> {
-  static const _favoritesPrefsKey = 'favorite_pooja_ids';
+  static const _favoritesPrefsKey = 'favorite_deity_ids';
 
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = false;
   String? _error;
-  List<PoojaListItem> _items = const [];
+  List<DeityListItem> _items = const [];
   String _searchQuery = '';
-  String _selectedCategory = 'All Poojas';
+  String _selectedCategory = 'All Deities';
   Set<String> _favoriteIds = <String>{};
 
   @override
   void initState() {
     super.initState();
     _loadFavorites();
-    _loadPoojas();
+    _loadDeities();
   }
 
   @override
@@ -40,7 +40,7 @@ class _RitualListPageState extends State<RitualListPage> {
     super.dispose();
   }
 
-  Future<void> _loadPoojas() async {
+  Future<void> _loadDeities() async {
     if (_isLoading) return;
     setState(() {
       _isLoading = true;
@@ -48,26 +48,36 @@ class _RitualListPageState extends State<RitualListPage> {
     });
     try {
       final response = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.poojas,
+        ApiEndpoints.deities,
       );
       final payload = response.data;
       final data = payload is Map<String, dynamic> ? payload['data'] : null;
-      final poojas = data is Map<String, dynamic> ? data['poojas'] : null;
-      final list = poojas is List
-          ? poojas
-          : (data is List ? data : (payload is List ? payload : const []));
+
+      // Handle different response structures
+      List<dynamic> list = [];
+      if (data is Map<String, dynamic>) {
+        list = data['deities'] ?? data['results'] ?? data['items'] ?? [];
+      } else if (data is List) {
+        list = data;
+      } else if (payload is List) {
+        list = payload;
+      } else if (payload is Map<String, dynamic>) {
+        list =
+            payload['deities'] ?? payload['results'] ?? payload['items'] ?? [];
+      }
+
       final mapped = list
           .whereType<Map<String, dynamic>>()
-          .map(PoojaListItem.fromJson)
+          .map(DeityListItem.fromJson)
           .toList();
       if (!mounted) return;
       setState(() => _items = mapped);
     } on DioException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message ?? 'Failed to load poojas.');
+      setState(() => _error = e.message ?? 'Failed to load deities.');
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load poojas.');
+      setState(() => _error = 'Failed to load deities.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -84,7 +94,7 @@ class _RitualListPageState extends State<RitualListPage> {
     });
   }
 
-  Future<void> _toggleFavorite(PoojaListItem item) async {
+  Future<void> _toggleFavorite(DeityListItem item) async {
     final next = {..._favoriteIds};
     final added = next.add(item.id);
     if (!added) next.remove(item.id);
@@ -97,7 +107,7 @@ class _RitualListPageState extends State<RitualListPage> {
     if (!mounted) return;
     Get.snackbar(
       added ? 'Added to favorites' : 'Removed from favorites',
-      item.title,
+      item.name,
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       duration: const Duration(milliseconds: 1200),
@@ -109,7 +119,7 @@ class _RitualListPageState extends State<RitualListPage> {
         .where((item) => _favoriteIds.contains(item.id))
         .toList();
     Get.to(
-      () => _FavoritePoojasPage(
+      () => _FavoriteDeitiesPage(
         items: favoriteItems,
         favoriteIds: _favoriteIds,
         onToggleFavorite: _toggleFavorite,
@@ -117,25 +127,30 @@ class _RitualListPageState extends State<RitualListPage> {
     );
   }
 
-  List<PoojaListItem> get _filteredItems {
+  void _openDeityDetail(DeityListItem item) {
+    Get.toNamed<dynamic>(
+      AppRoutes.ritualDetail,
+      arguments: item.toRitualDetailArgs(),
+    );
+  }
+
+  List<DeityListItem> get _filteredItems {
     final q = _searchQuery.trim().toLowerCase();
     return _items.where((item) {
       final selectedCategory = _selectedCategory.trim().toLowerCase();
-      if (selectedCategory != 'all poojas') {
+      if (selectedCategory != 'all deities') {
+        final itemName = item.name.toLowerCase();
         final itemTitle = item.title.toLowerCase();
-        final itemDeity = item.deity.toLowerCase();
-        final itemCategory = item.category.toLowerCase();
-        if (!itemTitle.contains(selectedCategory) &&
-            !itemDeity.contains(selectedCategory) &&
-            !itemCategory.contains(selectedCategory)) {
+        if (!itemName.contains(selectedCategory) &&
+            !itemTitle.contains(selectedCategory)) {
           return false;
         }
       }
 
       if (q.isNotEmpty) {
         final textMatch =
+            item.name.toLowerCase().contains(q) ||
             item.title.toLowerCase().contains(q) ||
-            item.deity.toLowerCase().contains(q) ||
             item.description.toLowerCase().contains(q);
         if (!textMatch) return false;
       }
@@ -145,12 +160,10 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   List<String> get _categoryTabs {
-    final tabs = <String>['All Poojas'];
+    final tabs = <String>['All Deities'];
     final seen = <String>{};
     for (final item in _items) {
-      final label = item.deity.trim().isNotEmpty
-          ? "${item.deity.trim()} Pooja's"
-          : item.title.trim();
+      final label = item.name.trim();
       if (label.isEmpty) continue;
       if (seen.add(label.toLowerCase())) tabs.add(label);
       if (tabs.length >= 8) break;
@@ -167,7 +180,7 @@ class _RitualListPageState extends State<RitualListPage> {
         bottom: false,
         child: RefreshIndicator(
           color: AppColors.gradientEnd,
-          onRefresh: _loadPoojas,
+          onRefresh: _loadDeities,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -226,7 +239,7 @@ class _RitualListPageState extends State<RitualListPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Puja Rituals',
+                        'Divine Deities',
                         style: AppTypography.lora(
                           fontSize: 28,
                           fontWeight: FontWeight.w400,
@@ -292,10 +305,10 @@ class _RitualListPageState extends State<RitualListPage> {
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
-                hintText: 'Search rituals...',
+                hintText: 'Search god name...',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,
-                  color: const Color(0xFFFAD9C0),
+                  color: const Color(0xFFFFFFFF),
                 ),
               ),
             ),
@@ -317,7 +330,7 @@ class _RitualListPageState extends State<RitualListPage> {
           padding: const EdgeInsets.all(32),
           child: Center(
             child: Text(
-              'No poojas found.',
+              'No deities found.',
               style: AppTypography.inter(
                 fontSize: 14,
                 color: const Color(0xFF7A5A3D),
@@ -339,7 +352,7 @@ class _RitualListPageState extends State<RitualListPage> {
               padding: const EdgeInsets.only(top: 16, bottom: 8),
               child: Center(
                 child: Text(
-                  'You have reached to the end of the screen.',
+                  'You have reached to the end of the list.',
                   style: AppTypography.inter(
                     fontSize: 12,
                     color: const Color(0xFF8A6B4A),
@@ -349,14 +362,11 @@ class _RitualListPageState extends State<RitualListPage> {
             );
           }
           final item = items[index];
-          return _PoojaCard(
+          return _DeityCard(
             item: item,
             isFavorite: _favoriteIds.contains(item.id),
             onFavoriteTap: () => _toggleFavorite(item),
-            onTap: () => Get.toNamed<dynamic>(
-              AppRoutes.ritualDetail,
-              arguments: item.id,
-            ),
+            onTap: () => _openDeityDetail(item),
           );
         },
       ),
@@ -381,7 +391,7 @@ class _RitualListPageState extends State<RitualListPage> {
           ),
           const SizedBox(height: 14),
           ElevatedButton(
-            onPressed: _loadPoojas,
+            onPressed: _loadDeities,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gradientEnd,
               foregroundColor: Colors.white,
@@ -395,25 +405,22 @@ class _RitualListPageState extends State<RitualListPage> {
       ),
     );
   }
-
 }
 
 // ─────────────────────────────────────────────────────────
 // Supporting widgets & models
 // ─────────────────────────────────────────────────────────
 
-class PoojaListItem {
-  const PoojaListItem({
+class DeityListItem {
+  const DeityListItem({
     required this.id,
+    required this.name,
     required this.title,
-    required this.deity,
-    required this.category,
     required this.description,
-    required this.duration,
     required this.imageUrl,
   });
 
-  factory PoojaListItem.fromJson(Map<String, dynamic> e) {
+  factory DeityListItem.fromJson(Map<String, dynamic> e) {
     String? resolveImageUrl() {
       final media = e['media'];
       if (media is Map) {
@@ -428,52 +435,48 @@ class PoojaListItem {
       return direct.isNotEmpty ? direct : null;
     }
 
-    String resolveDeity() {
-      final raw = e['deity'];
-      if (raw is Map) {
-        return (raw['name'] ?? raw['title'] ?? '').toString();
-      }
-      final value = raw?.toString() ?? '';
-      final isObjectId =
-          value.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(value);
-      return isObjectId ? '' : value;
-    }
-
-    return PoojaListItem(
+    return DeityListItem(
       id: (e['_id'] ?? e['id'] ?? '').toString(),
-      title: e['title']?.toString() ?? 'Untitled Pooja',
-      deity: resolveDeity(),
-      category: e['category']?.toString() ?? '',
-      description: e['description']?.toString() ?? '',
-      duration: e['duration']?.toString() ?? '',
+      name: (e['name'] ?? e['title'] ?? 'Untitled Deity').toString(),
+      title: (e['title'] ?? e['subtitle'] ?? '').toString(),
+      description: (e['description'] ?? e['about'] ?? '').toString(),
       imageUrl: resolveImageUrl(),
     );
   }
 
-  final String id;
-  final String title;
-  final String deity;
-  final String category;
-  final String description;
-  final String duration;
-  final String? imageUrl;
-
-  String get durationLabel {
-    if (duration.isEmpty) return '-';
-    final n = int.tryParse(duration);
-    return n != null ? '$n min' : duration;
+  Map<String, dynamic> toRitualDetailArgs() {
+    final media = <String, dynamic>{
+      if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        'images': <String>[imageUrl!.trim()],
+    };
+    return {
+      'type': 'deity',
+      'id': id,
+      '_id': id,
+      'name': name,
+      'title': title,
+      'description': description,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (media.isNotEmpty) 'media': media,
+    };
   }
+
+  final String id;
+  final String name;
+  final String title;
+  final String description;
+  final String? imageUrl;
 }
 
-class _PoojaCard extends StatelessWidget {
-  const _PoojaCard({
+class _DeityCard extends StatelessWidget {
+  const _DeityCard({
     required this.item,
     required this.onTap,
     required this.isFavorite,
     required this.onFavoriteTap,
   });
 
-  final PoojaListItem item;
+  final DeityListItem item;
   final VoidCallback onTap;
   final bool isFavorite;
   final VoidCallback onFavoriteTap;
@@ -481,18 +484,17 @@ class _PoojaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = item.imageUrl != null && item.imageUrl!.trim().isNotEmpty;
-    debugPrint('hasAImge-->,${hasImage}');
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 56,
-              height: 56,
+              width: 70,
+              height: 70,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -502,8 +504,8 @@ class _PoojaCard extends StatelessWidget {
                         color: const Color(0xFFFAECD2),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFFD8CBB6),
-                          width: 1,
+                          color: const Color(0xFFFAECD2),
+                          width: 3,
                         ),
                       ),
                       child: Padding(
@@ -513,8 +515,10 @@ class _PoojaCard extends StatelessWidget {
                           child: hasImage
                               ? Image.network(
                                   item.imageUrl!,
+
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => _imageFallback(),
+                                  errorBuilder: (_, __, ___) =>
+                                      _imageFallback(),
                                 )
                               : _imageFallback(),
                         ),
@@ -538,20 +542,20 @@ class _PoojaCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.title,
+                    item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.lora(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF3B1E08),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1C1917),
                       height: 1.15,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  if (item.deity.isNotEmpty)
+                  if (item.title.isNotEmpty)
                     Text(
-                      item.deity,
+                      item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
@@ -560,25 +564,18 @@ class _PoojaCard extends StatelessWidget {
                         color: const Color(0xFF8C775F),
                       ),
                     ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: Color(0xFF3B1E08),
+                  const SizedBox(height: 5),
+                  if (item.description.isNotEmpty)
+                    Text(
+                      item.description,
+                      // maxLines: 2,
+                      // overflow: TextOverflow.ellipsis,
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF78716C),
+                        fontWeight: FontWeight.w400,
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        item.durationLabel,
-                        style: AppTypography.inter(
-                          fontSize: 12.5,
-                          color: const Color(0xFF3B1E08),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
@@ -622,33 +619,40 @@ class _FavoriteBadge extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          size: 19,
-          color: isFavorite ? const Color(0xFFE25B4B) : const Color(0xFFCF9B3A),
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+          ).createShader(bounds),
+          child: Icon(
+            isFavorite ? Icons.favorite : Icons.favorite_border,
+            size: 19,
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
 }
 
-class _FavoritePoojasPage extends StatefulWidget {
-  const _FavoritePoojasPage({
+class _FavoriteDeitiesPage extends StatefulWidget {
+  const _FavoriteDeitiesPage({
     required this.items,
     required this.favoriteIds,
     required this.onToggleFavorite,
   });
 
-  final List<PoojaListItem> items;
+  final List<DeityListItem> items;
   final Set<String> favoriteIds;
-  final Future<void> Function(PoojaListItem item) onToggleFavorite;
+  final Future<void> Function(DeityListItem item) onToggleFavorite;
 
   @override
-  State<_FavoritePoojasPage> createState() => _FavoritePoojasPageState();
+  State<_FavoriteDeitiesPage> createState() => _FavoriteDeitiesPageState();
 }
 
-class _FavoritePoojasPageState extends State<_FavoritePoojasPage> {
-  late List<PoojaListItem> _items;
+class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
+  late List<DeityListItem> _items;
   late Set<String> _favoriteIds;
 
   @override
@@ -658,7 +662,7 @@ class _FavoritePoojasPageState extends State<_FavoritePoojasPage> {
     _favoriteIds = {...widget.favoriteIds};
   }
 
-  Future<void> _toggleFavorite(PoojaListItem item) async {
+  Future<void> _toggleFavorite(DeityListItem item) async {
     await widget.onToggleFavorite(item);
     if (!mounted) return;
     setState(() {
@@ -680,7 +684,7 @@ class _FavoritePoojasPageState extends State<_FavoritePoojasPage> {
         elevation: 0,
         foregroundColor: const Color(0xFF3B1E08),
         title: Text(
-          'Favorites',
+          'Favorite Deities',
           style: AppTypography.lora(
             fontSize: 22,
             fontWeight: FontWeight.w700,
@@ -702,7 +706,7 @@ class _FavoritePoojasPageState extends State<_FavoritePoojasPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No favorite poojas yet.',
+                      'No favorite deities yet.',
                       textAlign: TextAlign.center,
                       style: AppTypography.inter(
                         fontSize: 14,
@@ -729,13 +733,13 @@ class _FavoritePoojasPageState extends State<_FavoritePoojasPage> {
               ),
               itemBuilder: (context, index) {
                 final item = _items[index];
-                return _PoojaCard(
+                return _DeityCard(
                   item: item,
                   isFavorite: _favoriteIds.contains(item.id),
                   onFavoriteTap: () => _toggleFavorite(item),
                   onTap: () => Get.toNamed<dynamic>(
                     AppRoutes.ritualDetail,
-                    arguments: item.id,
+                    arguments: item.toRitualDetailArgs(),
                   ),
                 );
               },
@@ -770,10 +774,17 @@ class _HeaderFavoriteButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.favorite_border,
-              size: 23,
-              color: Color(0xFFCF6F2B),
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+              ).createShader(bounds),
+              child: const Icon(
+                Icons.favorite_border,
+                size: 23,
+                color: Colors.white,
+              ),
             ),
           ),
           if (count > 0)
@@ -804,7 +815,6 @@ class _HeaderFavoriteButton extends StatelessWidget {
     );
   }
 }
-
 
 class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   _FixedHeaderDelegate({
@@ -869,11 +879,7 @@ class _CategoryTabChip extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0x40FFFFFF),
-            Color(0x24FFB677),
-            Color(0x18B64A00),
-          ],
+          colors: [Color(0x40FFFFFF), Color(0x24FFB677), Color(0x18B64A00)],
           stops: [0.0, 0.52, 1.0],
         ),
       ),
@@ -940,11 +946,7 @@ class _TopRightChipBorderPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
-        colors: const [
-          Color(0x00FFEF11),
-          Color(0x55FFEF11),
-          Color(0xFFFFEF11),
-        ],
+        colors: const [Color(0x00FFEF11), Color(0x55FFEF11), Color(0xFFFFEF11)],
         stops: const [0.0, 0.72, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, strokeWidth));
 
@@ -962,16 +964,24 @@ class _TopRightChipBorderPainter extends CustomPainter {
     final rightPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: const [
-          Color(0xFFFFEF11),
-          Color(0x66FFEF11),
-          Color(0x00FFEF11),
-        ],
-        stops: const [0.0, 0.35, 1.0],
-      ).createShader(Rect.fromLTWH(size.width - strokeWidth, 0, strokeWidth, size.height));
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [
+              Color(0xFFFFEF11),
+              Color(0x66FFEF11),
+              Color(0x00FFEF11),
+            ],
+            stops: const [0.0, 0.35, 1.0],
+          ).createShader(
+            Rect.fromLTWH(
+              size.width - strokeWidth,
+              0,
+              strokeWidth,
+              size.height,
+            ),
+          );
 
     canvas.drawLine(
       Offset(rightX, radius),
@@ -986,4 +996,3 @@ class _TopRightChipBorderPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
-

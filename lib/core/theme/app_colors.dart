@@ -12,4 +12,9 @@ class AppColors {
   static const Color appBgColor = Color(0xFFFAECD2);
   static const Color donationBgColor = Color(0xFFFAECD2);
   static const Color textColor = Color(0xFF4A1C00);
+
+  // Background Gradient from image
+  static const Color bgGradientTop = Color(0xFF000000);
+  static const Color bgGradientMiddle = Color(0xFF4A1C00);
+  static const Color bgGradientBottom = Color(0xFFED5A00);
 }

@@ -417,14 +417,34 @@ class _SidebarItem extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.indent = false,
+    this.onLight = false,
   });
   final _NavEntry item;
   final bool isSelected;
   final VoidCallback onTap;
   final bool indent;
+  // When true the item is rendered on a light (white) surface — used for
+  // children of an expanded sidebar group. We flip the foreground colors
+  // so the icon/label remain readable against the lighter background.
+  final bool onLight;
 
   @override
   Widget build(BuildContext context) {
+    final Color iconColor;
+    final Color labelColor;
+    if (isSelected) {
+      iconColor = Colors.white;
+      labelColor = Colors.white;
+    } else if (item.isSpecial) {
+      iconColor = CmsColors.orange;
+      labelColor = CmsColors.orange;
+    } else if (onLight) {
+      iconColor = const Color(0xFF4B5563); // slate-600
+      labelColor = const Color(0xFF111827); // gray-900
+    } else {
+      iconColor = Colors.white54;
+      labelColor = Colors.white60;
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: 2, left: indent ? 18 : 0),
       child: Material(
@@ -433,8 +453,12 @@ class _SidebarItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          hoverColor: Colors.white.withOpacity(0.08),
-          splashColor: Colors.white.withOpacity(0.12),
+          hoverColor: onLight
+              ? Colors.black.withOpacity(0.05)
+              : Colors.white.withOpacity(0.08),
+          splashColor: onLight
+              ? Colors.black.withOpacity(0.08)
+              : Colors.white.withOpacity(0.12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -443,11 +467,7 @@ class _SidebarItem extends StatelessWidget {
               children: [
                 Icon(
                   isSelected ? item.activeIcon : item.icon,
-                  color: isSelected
-                      ? Colors.white
-                      : item.isSpecial
-                      ? CmsColors.orange
-                      : Colors.white54,
+                  color: iconColor,
                   size: indent ? 16 : 18,
                 ),
                 const SizedBox(width: 10),
@@ -456,11 +476,7 @@ class _SidebarItem extends StatelessWidget {
                     item.label,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : item.isSpecial
-                          ? CmsColors.orange
-                          : Colors.white60,
+                      color: labelColor,
                       fontSize: indent ? 12.5 : 13,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w400,
@@ -483,6 +499,7 @@ class _SidebarGroupHeader extends StatelessWidget {
     required this.expanded,
     required this.highlight,
     required this.onTap,
+    this.onLight = false,
   });
 
   final _NavEntry entry;
@@ -492,14 +509,28 @@ class _SidebarGroupHeader extends StatelessWidget {
   // even when the group is collapsed for some reason.
   final bool highlight;
   final VoidCallback onTap;
+  // When true the header sits on a white surface (the expanded-group panel)
+  // and needs dark-on-light foreground colors.
+  final bool onLight;
 
   @override
   Widget build(BuildContext context) {
-    final color = highlight
-        ? CmsColors.orange
-        : entry.isSpecial
-        ? CmsColors.orange
-        : Colors.white60;
+    final Color color;
+    if (highlight) {
+      color = CmsColors.orange;
+    } else if (entry.isSpecial) {
+      color = CmsColors.orange;
+    } else if (onLight) {
+      color = const Color(0xFF111827); // gray-900
+    } else {
+      color = Colors.white60;
+    }
+    final hoverColor = onLight
+        ? Colors.black.withOpacity(0.05)
+        : Colors.white.withOpacity(0.08);
+    final splashColor = onLight
+        ? Colors.black.withOpacity(0.08)
+        : Colors.white.withOpacity(0.12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
@@ -508,8 +539,8 @@ class _SidebarGroupHeader extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          hoverColor: Colors.white.withOpacity(0.08),
-          splashColor: Colors.white.withOpacity(0.12),
+          hoverColor: hoverColor,
+          splashColor: splashColor,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -529,8 +560,9 @@ class _SidebarGroupHeader extends StatelessWidget {
                     style: TextStyle(
                       color: color,
                       fontSize: 13,
-                      fontWeight:
-                          highlight ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: (highlight || onLight)
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
                 ),
@@ -568,24 +600,61 @@ List<Widget> _renderEntry(
     // A group is rendered expanded when the user manually expanded it OR
     // when one of its children is the active tab.
     final expanded = hasSelectedChild || expandedGroups.contains(entry.label);
+
+    if (!expanded) {
+      return [
+        _SidebarGroupHeader(
+          entry: entry,
+          expanded: false,
+          highlight: hasSelectedChild,
+          onTap: () => onToggleGroup(entry.label),
+        ),
+      ];
+    }
+
+    // Expanded → render header + children together on a light surface so
+    // the active section visually pops out of the dark sidebar.
     return [
-      _SidebarGroupHeader(
-        entry: entry,
-        expanded: expanded,
-        highlight: hasSelectedChild,
-        onTap: () => onToggleGroup(entry.label),
-      ),
-      if (expanded)
-        for (final child in children)
-          _SidebarItem(
-            item: child,
-            isSelected: child.index == selectedIndex,
-            indent: true,
-            onTap: () {
-              if (child.index != null) onSelect(child.index!);
-              onSelectExtra?.call();
-            },
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SidebarGroupHeader(
+                entry: entry,
+                expanded: true,
+                highlight: hasSelectedChild,
+                onTap: () => onToggleGroup(entry.label),
+                onLight: true,
+              ),
+              for (final child in children)
+                _SidebarItem(
+                  item: child,
+                  isSelected: child.index == selectedIndex,
+                  indent: true,
+                  onLight: true,
+                  onTap: () {
+                    if (child.index != null) onSelect(child.index!);
+                    onSelectExtra?.call();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
     ];
   }
   return [
@@ -910,6 +979,8 @@ class _NavIds {
   static const int manageRituals = 13;
   // Pooja Kit group child for refunds.
   static const int poojaKitRefunds = 14;
+  // Pooja Kit group child for payments.
+  static const int poojaKitPayments = 15;
 }
 
 const String _poojaKitGroupLabel = 'Pooja Kit';
@@ -988,6 +1059,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         activeIcon: Icons.assignment_return,
         index: _NavIds.poojaKitRefunds,
       ),
+      _NavEntry(
+        label: 'Payments',
+        icon: Icons.payments_outlined,
+        activeIcon: Icons.payments,
+        index: _NavIds.poojaKitPayments,
+      ),
     ],
   ),
   const _NavEntry(
@@ -1034,6 +1111,7 @@ String? _groupLabelForIndex(int index) {
     case _NavIds.poojaKitManage:
     case _NavIds.poojaKitOrders:
     case _NavIds.poojaKitRefunds:
+    case _NavIds.poojaKitPayments:
       return _poojaKitGroupLabel;
     case _NavIds.donations:
     case _NavIds.donationsAll:
@@ -1073,6 +1151,8 @@ String _pageTitle(int i) {
       return 'Pooja Kit Orders';
     case _NavIds.poojaKitRefunds:
       return 'Pooja Kit Refunds';
+    case _NavIds.poojaKitPayments:
+      return 'Pooja Kit Payments';
     case _NavIds.manageRituals:
       return 'Manage Rituals';
     default:
@@ -1110,6 +1190,8 @@ Widget _buildContent(int i) {
       return const CmsPoojaKitOrdersContent();
     case _NavIds.poojaKitRefunds:
       return const CmsPoojaKitRefundsContent();
+    case _NavIds.poojaKitPayments:
+      return const CmsPoojaKitPaymentsContent();
     case _NavIds.manageRituals:
       return const CmsManageRitualsContent();
     default:
@@ -1142,6 +1224,8 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
       return _NavIds.poojaKitOrders;
     case AppRoutes.cmsPoojaKitRefunds:
       return _NavIds.poojaKitRefunds;
+    case AppRoutes.cmsPoojaKitPayments:
+      return _NavIds.poojaKitPayments;
     case AppRoutes.cmsManageRituals:
       return _NavIds.manageRituals;
     case AppRoutes.cmsDonations:
@@ -1182,6 +1266,8 @@ String? _routeForIndex(int index, bool isSuperAdmin) {
       return AppRoutes.cmsPoojaKitOrders;
     case _NavIds.poojaKitRefunds:
       return AppRoutes.cmsPoojaKitRefunds;
+    case _NavIds.poojaKitPayments:
+      return AppRoutes.cmsPoojaKitPayments;
     case _NavIds.manageRituals:
       return AppRoutes.cmsManageRituals;
     case _NavIds.donations:

@@ -23,6 +23,7 @@ class DonationCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
+        height: 110, // Fixed height for a neat horizontal layout
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -36,50 +37,52 @@ class DonationCard extends StatelessWidget {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
+            // Left: Image
+            SizedBox(
+              width: 100,
+              height: double.infinity,
               child: _Image(url: donation.imageUrl),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    donation.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.lora(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textColor,
-                    ),
-                  ),
-                  if (donation.description.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+            // Middle: Text Info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      donation.description,
-                      maxLines: 2,
+                      donation.title,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 12,
-                        color: const Color(0xFF6B5841),
-                        height: 1.35,
+                      style: AppTypography.lora(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textColor,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    if (donation.description.isNotEmpty)
+                      Text(
+                        donation.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF6B5841),
+                          height: 1.3,
+                        ),
+                      ),
                   ],
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Spacer(),
-                      _DonateButton(onTap: onDonate),
-                    ],
-                  ),
-                ],
+                ),
               ),
+            ),
+            // Right: Donate Button
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _DonateButton(onTap: onDonate),
             ),
           ],
         ),
@@ -100,7 +103,7 @@ class _Image extends StatelessWidget {
         child: Icon(
           Icons.volunteer_activism_outlined,
           color: Color(0xFF8C5A2A),
-          size: 36,
+          size: 24, // Smaller icon for horizontal card
         ),
       ),
     );
@@ -128,7 +131,8 @@ class _DonateButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFB10F33),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        minimumSize: const Size(80, 36),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
         ),
@@ -136,7 +140,7 @@ class _DonateButton extends StatelessWidget {
       ),
       child: const Text(
         'Donate',
-        style: TextStyle(fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     );
   }
