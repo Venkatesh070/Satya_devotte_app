@@ -436,7 +436,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const HeaderDivider(),
                       const SizedBox(height: 14),
@@ -446,12 +446,13 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: Text(
                             p.description,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.justify,
                             style: AppTypography.inter(
-                              fontSize: 13.5,
+                              fontSize: 14,
                               height: 1.55,
-                              color: const Color(0xFF4A1C00),
+                              color: const Color(0xFF1C1917),
                               fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
@@ -468,7 +469,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   minExtentHeight: 92,
                   maxExtentHeight: 92,
                   child: Container(
-                    color: AppColors.appBgColor,
+                    color: Color(0xFFFAECD2),
                     padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,9 +477,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                         Text(
                           'More Options',
                           style: AppTypography.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF3B1E08),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF4A1C00),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -519,10 +520,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
             child: Material(
-              color: Colors.white,
+              color: AppColors.appBgColor,
               shape: const CircleBorder(),
               elevation: 2,
-              shadowColor: Color(0x22000000),
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: Get.back,
@@ -530,7 +530,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   width: 40,
                   height: 40,
                   child: Icon(
-                    Icons.arrow_back_ios_new,
+                    Icons.arrow_back,
                     size: 18,
                     color: Color(0xFF1F1F1F),
                   ),
@@ -609,13 +609,13 @@ class _HeroHeader extends StatelessWidget {
               ),
               // 3. Circular Deity Portrait
               Positioned(
-                bottom: -50,
+                bottom: -25,
                 child: _DeityPortrait(imageUrl: pooja.heroImage),
               ),
             ],
           ),
 
-          const SizedBox(height: 64), // Space for the overlapping portrait
+          const SizedBox(height: 30), // Space for the overlapping portrait
           Text(
             pooja.deityName,
             style: AppTypography.lora(
@@ -638,8 +638,8 @@ class _DeityPortrait extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 116,
-      height: 116,
+      width: 80,
+      height: 80,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.appBgColor,
@@ -677,71 +677,6 @@ class _DeityPortrait extends StatelessWidget {
       child: const Icon(Icons.temple_hindu, size: 52, color: Colors.white),
     );
   }
-}
-
-/// Soft curved cream edge for the hero image, matching the Figma header.
-class _HeroCurve extends StatelessWidget {
-  const _HeroCurve({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(double.infinity, 58),
-      painter: _HeroCurvePainter(color),
-    );
-  }
-}
-
-class _HeroCurvePainter extends CustomPainter {
-  const _HeroCurvePainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, size.height * 0.3)
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        size.height * 1.0,
-        size.width,
-        size.height * 0.3,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _HeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height * 0.7);
-    path.quadraticBezierTo(
-      size.width * 0.2,
-      size.height * 0.7,
-      size.width * 0.5,
-      size.height * 0.95,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.8,
-      size.height * 0.7,
-      size.width,
-      size.height * 0.7,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -943,6 +878,12 @@ class _AboutDeityTab extends StatelessWidget {
         ? pooja.deityName
         : pooja.title; // Always show *something*.
 
+    final connecting = deityDoc?['connecting'] as Map?;
+    final chanting = deityDoc?['chanting'] as Map?;
+    final homePractice = deityDoc?['home_practice'] as Map?;
+    final devotionalExp = deityDoc?['devotional_experience'] as Map?;
+    final structure = deityDoc?['structure'] as List?;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
@@ -960,47 +901,175 @@ class _AboutDeityTab extends StatelessWidget {
             value: divineRole,
             multiline: true,
           ),
-        if (family.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          const SectionHeader(title: 'Divine Structure & Lineage'),
+
+        // 5. Divine Structure (Modern or Legacy)
+        if (structure != null && structure.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Divine Structure & Symbolism'),
           const SizedBox(height: 10),
-          LabeledField(
-            label: 'Family / Divine Associations',
-            value: family,
-            multiline: true,
-          ),
-        ],
-        if (posture.isNotEmpty)
-          LabeledField(
-            label: 'Seating / Posture (Iconography)',
-            value: posture,
-            multiline: true,
-          ),
-        if (physicalItems.isNotEmpty)
-          _LabeledTitleDescriptionList(
-            label: 'Physical Description',
-            items: physicalItems,
-          )
-        else if (physical.isNotEmpty)
-          LabeledField(
-            label: 'Physical Description',
-            value: physical,
-            multiline: true,
-          ),
-        if (weapons.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          const SectionHeader(title: 'Symbols & Weapons'),
-          const SizedBox(height: 10),
-          for (final w in weapons)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: LabeledField(
-                label: w.title,
-                value: w.description,
-                multiline: true,
+          for (final s in structure.whereType<Map>())
+            DeitySectionCard(section: s.cast<String, dynamic>()),
+        ] else ...[
+          // Legacy/Fallback Structure
+          if (family.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            const SectionHeader(title: 'Divine Structure & Lineage'),
+            const SizedBox(height: 10),
+            LabeledField(
+              label: 'Family / Divine Associations',
+              value: family,
+              multiline: true,
+            ),
+          ],
+          if (posture.isNotEmpty)
+            LabeledField(
+              label: 'Seating / Posture (Iconography)',
+              value: posture,
+              multiline: true,
+            ),
+          if (physicalItems.isNotEmpty)
+            _LabeledTitleDescriptionList(
+              label: 'Physical Description',
+              items: physicalItems,
+            )
+          else if (physical.isNotEmpty)
+            LabeledField(
+              label: 'Physical Description',
+              value: physical,
+              multiline: true,
+            ),
+          if (weapons.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            const SectionHeader(title: 'Symbols & Weapons'),
+            const SizedBox(height: 10),
+            for (final w in weapons)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: LabeledField(
+                  label: w.title,
+                  value: w.description,
+                  multiline: true,
+                ),
               ),
+          ],
+        ],
+
+        // 1. Connecting with the Divine
+        if (connecting != null) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Connecting with the Divine'),
+          const SizedBox(height: 10),
+          if (_str(connecting['how_to_pray']).isNotEmpty)
+            LabeledField(
+              label: 'How to Pray / Connect',
+              value: _str(connecting['how_to_pray']),
+              multiline: true,
+            ),
+          if (_list(connecting['what_pleases']).isNotEmpty)
+            LabeledChipsField(
+              label: 'What Pleases the Deity',
+              items: _list(connecting['what_pleases']),
+              positive: true,
+            ),
+          if (_list(connecting['displeases']).isNotEmpty)
+            LabeledChipsField(
+              label: 'What Displeases the Deity',
+              items: _list(connecting['displeases']),
+              positive: false,
+            ),
+          if (_list(connecting['ideal_time']).isNotEmpty)
+            LabeledChipsField(
+              label: 'Ideal Time for Connection',
+              items: _list(connecting['ideal_time']),
             ),
         ],
+
+        // 2. Mantras & Chanting
+        if (chanting != null) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Mantras & Chanting'),
+          const SizedBox(height: 10),
+          if (_str(chanting['mantra']).isNotEmpty)
+            LabeledField(
+              label: 'Main Mantra',
+              value: _str(chanting['mantra']),
+              multiline: true,
+            ),
+          if (_str(chanting['repetitions']).isNotEmpty)
+            LabeledField(
+              label: 'Repetitions',
+              value: _str(chanting['repetitions']),
+            ),
+          if (_list(chanting['benefits']).isNotEmpty)
+            LabeledChipsField(
+              label: 'Benefits of Chanting',
+              items: _list(chanting['benefits']),
+              positive: true,
+            ),
+          if (_list(chanting['preferred_days']).isNotEmpty)
+            LabeledChipsField(
+              label: 'Preferred Days',
+              items: _list(chanting['preferred_days']),
+            ),
+          if (_list(chanting['associated_colors']).isNotEmpty)
+            LabeledChipsField(
+              label: 'Associated Colors',
+              items: _list(chanting['associated_colors']),
+            ),
+        ],
+
+        // 3. Home Practice
+        if (homePractice != null) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Home Practice'),
+          const SizedBox(height: 10),
+          if (homePractice['do_and_dont'] is Map) ...[
+            if (_list((homePractice['do_and_dont'] as Map)['do']).isNotEmpty)
+              LabeledChipsField(
+                label: 'Do\'s',
+                items: _list((homePractice['do_and_dont'] as Map)['do']),
+                positive: true,
+              ),
+            if (_list((homePractice['do_and_dont'] as Map)['dont']).isNotEmpty)
+              LabeledChipsField(
+                label: 'Don\'ts',
+                items: _list((homePractice['do_and_dont'] as Map)['dont']),
+                positive: false,
+              ),
+          ],
+          if (_str(homePractice['placement']).isNotEmpty)
+            LabeledField(
+              label: 'Placement / Altar Setup',
+              value: _str(homePractice['placement']),
+              multiline: true,
+            ),
+          if (_list(homePractice['offerings']).isNotEmpty)
+            LabeledChipsField(
+              label: 'Offerings',
+              items: _list(homePractice['offerings']),
+              positive: true,
+            ),
+        ],
+
+        // 4. Devotional Experience
+        if (devotionalExp != null) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Devotional Experience'),
+          const SizedBox(height: 10),
+          if (_str(devotionalExp['sign_of_connection']).isNotEmpty)
+            LabeledField(
+              label: 'Signs of Connection',
+              value: _str(devotionalExp['sign_of_connection']),
+              multiline: true,
+            ),
+          if (_str(devotionalExp['notes']).isNotEmpty)
+            LabeledField(
+              label: 'Special Notes',
+              value: _str(devotionalExp['notes']),
+              multiline: true,
+            ),
+        ],
+
         if (divineRole.isNotEmpty ||
             whyPray.isNotEmpty ||
             keyQualities.isNotEmpty ||
@@ -1206,32 +1275,33 @@ class _RitualsTab extends StatelessWidget {
               ],
             ),
           ),
-        if (hasAnyStory) ...[
-          const SizedBox(height: 12),
-          _SectionCard(
-            icon: Icons.menu_book_outlined,
-            title: 'Deity Story',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (fallbackStory.isNotEmpty) ...[
-                  Text(
-                    fallbackStory,
-                    style: AppTypography.inter(
-                      fontSize: 13.5,
-                      height: 1.55,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  if (stories.isNotEmpty || storySections.isNotEmpty)
-                    const SizedBox(height: 12),
-                ],
-                for (final s in stories) DeitySectionCard(section: s),
-                for (final s in storySections) DeitySectionCard(section: s),
-              ],
-            ),
-          ),
-        ],
+
+        // if (hasAnyStory) ...[
+        //   const SizedBox(height: 12),
+        //   _SectionCard(
+        //     icon: Icons.menu_book_outlined,
+        //     title: 'Deity Story',
+        //     child: Column(
+        //       crossAxisAlignment: CrossAxisAlignment.start,
+        //       children: [
+        //         if (fallbackStory.isNotEmpty) ...[
+        //           Text(
+        //             fallbackStory,
+        //             style: AppTypography.inter(
+        //               fontSize: 13.5,
+        //               height: 1.55,
+        //               color: const Color(0xFF4A1C00),
+        //             ),
+        //           ),
+        //           if (stories.isNotEmpty || storySections.isNotEmpty)
+        //             const SizedBox(height: 12),
+        //         ],
+        //         for (final s in stories) DeitySectionCard(section: s),
+        //         for (final s in storySections) DeitySectionCard(section: s),
+        //       ],
+        //     ),
+        //   ),
+        // ],
       ],
     );
   }
@@ -1356,10 +1426,10 @@ class _StoriesTab extends StatelessWidget {
         ],
 
         // 4. Render other story-related sections (lineage, origin, etc.)
-        for (final s in storySections) ...[
-          DeitySectionCard(section: s),
-          const SizedBox(height: 12),
-        ],
+        // for (final s in storySections) ...[
+        //   DeitySectionCard(section: s),
+        //   const SizedBox(height: 12),
+        // ],
       ],
     );
   }
@@ -1540,9 +1610,9 @@ class _CalendarPujaCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.lora(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF3B1E08),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1C1917),
                             height: 1.15,
                           ),
                         ),
@@ -1553,9 +1623,9 @@ class _CalendarPujaCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF7A4621),
+                              fontSize: 11,
+                              color: const Color(0xFF78716C),
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         const SizedBox(height: 10),
@@ -1565,7 +1635,7 @@ class _CalendarPujaCard extends StatelessWidget {
                               const Icon(
                                 Icons.calendar_month_outlined,
                                 size: 15,
-                                color: Color(0xFF3B1E08),
+                                color: Color(0xFF1C1917),
                               ),
                               const SizedBox(width: 5),
                               Expanded(
@@ -1576,7 +1646,7 @@ class _CalendarPujaCard extends StatelessWidget {
                                   style: AppTypography.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF3B1E08),
+                                    color: const Color(0xFF1C1917),
                                   ),
                                 ),
                               ),
@@ -1589,7 +1659,7 @@ class _CalendarPujaCard extends StatelessWidget {
                             const Icon(
                               Icons.access_time,
                               size: 15,
-                              color: Color(0xFF3B1E08),
+                              color: Color(0xFF1C1917),
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -1597,7 +1667,7 @@ class _CalendarPujaCard extends StatelessWidget {
                               style: AppTypography.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF3B1E08),
+                                color: const Color(0xFF1C1917),
                               ),
                             ),
                           ],
@@ -1700,10 +1770,24 @@ class _CalendarThumb extends StatelessWidget {
                 ],
                 border: Border.all(color: const Color(0xFFEAD9BC), width: 1),
               ),
-              child: const Icon(
-                Icons.favorite_border,
-                size: 20,
-                color: Color(0xFFCF9B3A),
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFE25B4B), Color(0xFFCF9B3A)],
+                ).createShader(bounds),
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                  ).createShader(bounds),
+                  child: Icon(
+                    Icons.favorite_border,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),

@@ -77,7 +77,7 @@ class StoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -94,9 +94,9 @@ class StoryCard extends StatelessWidget {
             Text(
               title,
               style: AppTypography.lora(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF3B1E08),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF1C1917),
                 height: 1.3,
               ),
             ),
@@ -116,7 +116,8 @@ class StoryCard extends StatelessWidget {
             style: AppTypography.inter(
               fontSize: 14,
               height: 1.6,
-              color: const Color(0xFF4A1C00),
+              color: const Color(0xFF1C1917),
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -403,9 +404,9 @@ class SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: AppTypography.inter(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF3B1E08),
+          color: const Color(0xFF4A1C00),
         ),
       ),
     );
@@ -449,9 +450,10 @@ class DeitySectionCard extends StatelessWidget {
           Text(
             title,
             style: AppTypography.lora(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
             ),
           ),
           if (summaryText.isNotEmpty) ...[

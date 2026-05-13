@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/rituals/presentation/models/pooja_view_model.dart';
@@ -111,11 +113,20 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
           step: widget.pooja.steps[i],
           totalSteps: widget.pooja.steps.length,
           audioUrl: widget.pooja.audioUrl,
-          onNext: i == widget.pooja.steps.length - 1 ? _finish : _nextPage,
+          onNext: _nextPage,
           onBack: _previousPage,
         ),
       );
     }
+
+    // 8. Completion Screen
+    screens.add(
+      _CompletionScreen(
+        pooja: widget.pooja,
+        onFinish: _finish,
+        onBack: _previousPage,
+      ),
+    );
 
     return screens;
   }
@@ -209,6 +220,7 @@ class _BaseWizardScreen extends StatelessWidget {
                   child: // Inside _BaseWizardScreen's build → SafeArea → Column → Padding → Row:
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Back button — always shown
                       GestureDetector(
@@ -231,61 +243,119 @@ class _BaseWizardScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Play Mantra button — only when audioUrl is present
-                      if (audioUrl != null)
-                        GestureDetector(
-                          onTap: () {
-                            // TODO: trigger audio playback
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.07),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.18),
+                      // Right Actions
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Play Mantra button — only when audioUrl is present
+                          if (audioUrl != null) ...[
+                            GestureDetector(
+                              onTap: () {
+                                // TODO: trigger audio playback
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.07),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Gradient play circle
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Color(0xFFFFBF00),
+                                            Color(0xFFFF6200),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.play_arrow,
+                                        color: Colors.white,
+                                        size: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Play mantra',
+                                      style: AppTypography.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Gradient play circle
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Color(0xFFFFBF00),
-                                        Color(0xFFFF6200),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                            const SizedBox(width: 10),
+                          ],
+
+                          // Share button
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                debugPrint('Share button tapped');
+                                const shareText =
+                                    'Check out this Pooja/App on Sathya Devotee! \n\n'
+                                    'Download for Android: https://play.google.com/store/apps/details?id=com.sathyadevotee.app \n'
+                                    'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
+                                Share.share(shareText).catchError((e) {
+                                  debugPrint('Share error: $e');
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.white.withOpacity(0.08),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.14),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.share_outlined,
+                                      color: Colors.white,
+                                      size: 16,
                                     ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 13,
-                                  ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Share App/Pooja',
+                                      style: AppTypography.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Play mantra',
-                                  style: AppTypography.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withOpacity(0.9),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -810,6 +880,145 @@ class _PujaStepScreen extends StatelessWidget {
 }
 
 // ── helpers ──────────────────────────────────────────────────────
+
+class _CompletionScreen extends StatelessWidget {
+  const _CompletionScreen({
+    required this.pooja,
+    required this.onFinish,
+    required this.onBack,
+  });
+  final PoojaView pooja;
+  final VoidCallback onFinish;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseWizardScreen(
+      onBack: onBack,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          children: [
+            const Spacer(flex: 2),
+            // Success Icon
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                size: 80,
+                color: Color(0xFF4CAF50),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Pooja Completed\nSuccessfully!',
+              textAlign: TextAlign.center,
+              style: AppTypography.lora(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'May Lord ${pooja.deityName} bless you with peace and prosperity.',
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
+                height: 1.5,
+              ),
+            ),
+            const Spacer(flex: 2),
+
+            // Donation Section
+            GestureDetector(
+              onTap: () => Get.toNamed(AppRoutes.userDonations),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFB10F33), Color(0xFF8E0B2A)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0x22FFFFFF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.volunteer_activism_outlined,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Make a Donation',
+                            style: AppTypography.lora(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Support noble causes & earn blessings',
+                            style: AppTypography.inter(
+                              color: const Color(0xFFFDE7EC),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0x26FFFFFF),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Spacer(),
+            _WizardButton(label: 'Back to Home', onTap: onFinish),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 enum _StepCardType { instruction, mantra, significance }
 

@@ -305,10 +305,10 @@ class _RitualListPageState extends State<RitualListPage> {
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
-                hintText: 'Search deities...',
+                hintText: 'Search god name...',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,
-                  color: const Color(0xFFFAD9C0),
+                  color: const Color(0xFFFFFFFF),
                 ),
               ),
             ),
@@ -352,7 +352,7 @@ class _RitualListPageState extends State<RitualListPage> {
               padding: const EdgeInsets.only(top: 16, bottom: 8),
               child: Center(
                 child: Text(
-                  'You have reached to the end of the screen.',
+                  'You have reached to the end of the list.',
                   style: AppTypography.inter(
                     fontSize: 12,
                     color: const Color(0xFF8A6B4A),
@@ -488,13 +488,13 @@ class _DeityCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 56,
-              height: 56,
+              width: 70,
+              height: 70,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -504,8 +504,8 @@ class _DeityCard extends StatelessWidget {
                         color: const Color(0xFFFAECD2),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFFD8CBB6),
-                          width: 1,
+                          color: const Color(0xFFFAECD2),
+                          width: 3,
                         ),
                       ),
                       child: Padding(
@@ -515,6 +515,7 @@ class _DeityCard extends StatelessWidget {
                           child: hasImage
                               ? Image.network(
                                   item.imageUrl!,
+
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
                                       _imageFallback(),
@@ -545,9 +546,9 @@ class _DeityCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.lora(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF3B1E08),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1C1917),
                       height: 1.15,
                     ),
                   ),
@@ -567,11 +568,12 @@ class _DeityCard extends StatelessWidget {
                   if (item.description.isNotEmpty)
                     Text(
                       item.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      // maxLines: 2,
+                      // overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
                         fontSize: 11,
-                        color: const Color(0xFF8A6B4A),
+                        color: const Color(0xFF78716C),
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                 ],
@@ -617,10 +619,17 @@ class _FavoriteBadge extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          size: 19,
-          color: isFavorite ? const Color(0xFFE25B4B) : const Color(0xFFCF9B3A),
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+          ).createShader(bounds),
+          child: Icon(
+            isFavorite ? Icons.favorite : Icons.favorite_border,
+            size: 19,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -765,10 +774,17 @@ class _HeaderFavoriteButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.favorite_border,
-              size: 23,
-              color: Color(0xFFCF6F2B),
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+              ).createShader(bounds),
+              child: const Icon(
+                Icons.favorite_border,
+                size: 23,
+                color: Colors.white,
+              ),
             ),
           ),
           if (count > 0)
