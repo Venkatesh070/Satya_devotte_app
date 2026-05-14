@@ -68,6 +68,18 @@ class ProfilePage extends StatelessWidget {
                           ],
                         ),
                       ),
+                    const SizedBox(height: 24),
+                    _ProfileLink(
+                      icon: Icons.receipt_long_outlined,
+                      label: 'My Orders',
+                      onTap: () => Get.toNamed(AppRoutes.userOrders),
+                    ),
+                    const SizedBox(height: 12),
+                    _ProfileLink(
+                      icon: Icons.volunteer_activism_outlined,
+                      label: 'My Contributions',
+                      onTap: () => Get.toNamed(AppRoutes.userContributions),
+                    ),
                     const Spacer(),
                     CustomButton(
                       label: 'Refresh Profile',
@@ -90,5 +102,49 @@ class ProfilePage extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+class _ProfileLink extends StatelessWidget {
+  const _ProfileLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFF7F3EA)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: const Color(0xFF8B4513)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
   }
 }

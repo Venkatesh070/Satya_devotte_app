@@ -32,6 +32,9 @@ class AppRoutes {
   /// Checkout screen for pooja kit.
   static const String poojaKitCheckout = '/pooja-kit/checkout';
 
+  /// Cart screen for pooja kit.
+  static const String poojaKitCart = '/pooja-kit/cart';
+
   /// WebView for Paystack payment. Pass `OrderInitData`.
   static const String poojaKitPayment = '/pooja-kit/payment';
 
@@ -41,6 +44,9 @@ class AppRoutes {
   /// User's order history.
   static const String userOrders = '/user/orders';
 
+  /// Single order detail.
+  static const String userOrderDetail = '/user/orders/detail';
+
   // ─── CMS routes (admin + superadmin) ─────────────────────────
   static const String cms = '/cms';
   static const String cmsDeities = '/cms/deities';
@@ -49,6 +55,7 @@ class AppRoutes {
   static const String cmsRituals = '/cms/rituals';
   static const String cmsRitualCreate = '/cms/rituals/create';
   static const String cmsRitualEdit = '/cms/rituals/edit';
+
   /// Top-level "Manage Rituals" sidebar tab. Distinct from `cmsRituals`
   /// which is the historical "Manage Pujas" entry.
   static const String cmsManageRituals = '/cms/manage-rituals';
@@ -64,8 +71,10 @@ class AppRoutes {
 
   /// Pooja Kit orders placed by devotees.
   static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
-  /// Pooja Kit: replace, cancel & refund order requests (admin inbox).
+
+  /// Pooja Kit refund requests / processed refunds.
   static const String cmsPoojaKitRefunds = '/cms/pooja-kit/refunds';
+
   /// Pooja Kit payments overview.
   static const String cmsPoojaKitPayments = '/cms/pooja-kit/payments';
 

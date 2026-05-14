@@ -48,6 +48,26 @@ class PoojaKitCheckoutController extends GetxController {
     }
   }
 
+  Future<OrderInitData?> initiateCartCheckout({
+    required AddressModel shippingAddress,
+    String? notes,
+  }) async {
+    _isInitiating.value = true;
+    _lastError.value = null;
+    try {
+      final res = await _repo.initiateCartOrder(
+        shippingAddress: shippingAddress,
+        notes: notes,
+      );
+      return res;
+    } catch (e) {
+      _lastError.value = e.toString();
+      return null;
+    } finally {
+      _isInitiating.value = false;
+    }
+  }
+
   Future<VerifyResult?> verify(String orderId, String reference) async {
     _isVerifying.value = true;
     _lastError.value = null;

@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 
 class ProductDetailsPage extends StatelessWidget {
@@ -15,6 +16,7 @@ class ProductDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = Get.arguments as ProductModel;
+    final cartCtrl = Get.find<CartController>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -45,6 +47,7 @@ class ProductDetailsPage extends StatelessWidget {
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Get.back(),
               ),
+              actions: [_CartBadge(controller: cartCtrl)],
             ),
 
             // Content
@@ -195,34 +198,104 @@ class ProductDetailsPage extends StatelessWidget {
           ],
         ),
         child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: product.inStock
-                  ? () => Get.toNamed(
-                      AppRoutes.poojaKitCheckout,
-                      arguments: product,
-                    )
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: product.inStock
+                        ? () => cartCtrl.addToCart(product.id)
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Add to Cart',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                product.inStock ? 'Order Now' : 'Out of Stock',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: product.inStock
+                        ? () => Get.toNamed(
+                            AppRoutes.poojaKitCheckout,
+                            arguments: product,
+                          )
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      product.inStock ? 'Order Now' : 'Out of Stock',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CartBadge extends StatelessWidget {
+  const _CartBadge({required this.controller});
+  final CartController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+          onPressed: () => Get.toNamed(AppRoutes.poojaKitCart),
+        ),
+        Positioned(
+          right: 8,
+          top: 8,
+          child: Obx(() {
+            final count = controller.itemCount;
+            if (count == 0) return const SizedBox.shrink();
+            return Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }

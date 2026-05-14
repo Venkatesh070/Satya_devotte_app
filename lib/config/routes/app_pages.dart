@@ -15,6 +15,10 @@ import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_d
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_checkout_page.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_payment_webview_screen.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/order_success_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/user_order_detail_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/user_orders_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/cart_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/bindings/user_orders_binding.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
@@ -24,6 +28,18 @@ import 'package:satya_devotte_app/features/splash/presentation/pages/splash_page
 
 class AppPages {
   static final pages = <GetPage<dynamic>>[
+    GetPage(
+      name: AppRoutes.userOrders,
+      page: () => const UserOrdersScreen(),
+      binding: UserOrdersBinding(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.userOrderDetail,
+      page: () => const UserOrderDetailScreen(),
+      binding: UserOrdersBinding(),
+      middlewares: [AuthGuard()],
+    ),
     // ─── App flow ───────────────────────────────────────────────
     GetPage(name: AppRoutes.splash, page: SplashPage.new),
     if (!kIsWeb) GetPage(name: AppRoutes.onboarding, page: OnboardingPage.new),
@@ -90,6 +106,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.poojaKitCheckout,
       page: ProductCheckoutPage.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaKitCart,
+      page: () => const CartScreen(),
       middlewares: [AuthGuard()],
     ),
     GetPage(

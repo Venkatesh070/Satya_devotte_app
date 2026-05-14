@@ -80,12 +80,18 @@ class ApiEndpoints {
   static const String myOrders = '/api/v1/orders/my';
   static String order(String id) => '/api/v1/orders/$id';
 
+  /// POST — cancel my order (only allowed while PENDING).
+  static String cancelOrder(String id) => '/api/v1/orders/$id/cancel';
+
+  /// POST — customer confirms delivery.
+  /// Body: `{ satisfied: boolean, feedback?: string }`.
+  static String confirmDelivery(String id) =>
+      '/api/v1/orders/$id/confirm-delivery';
+
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
   /// `orderStatus`, `paymentStatus`, `user`, `search` (order # substring).
   static const String allOrders = '/api/v1/orders/all';
-
-  /// GET — single order by Mongo `_id`.
 
   /// PATCH — fulfilment status. Body: `{ status, note? }`.
   /// `SHIPPED` requires `tracking.trackingNumber` already set.
@@ -124,6 +130,26 @@ class ApiEndpoints {
   /// POST — reject. Body: `{ adminNote? }`.
   static String rejectOrderRequest(String id) =>
       '/api/v1/orders/requests/$id/reject';
+
+  // ── Cart (authenticated) ───────────────────────────────────
+  /// GET — get the current user's cart.
+  static const String cart = '/api/v1/cart';
+
+  /// POST — add a product line to the cart. Body: `{ productId, quantity }`.
+  static const String cartAdd = '/api/v1/cart/add';
+
+  /// POST — remove a product from the cart. Body: `{ productId }`.
+  static const String cartRemove = '/api/v1/cart/remove';
+
+  /// DELETE — remove one product line from the cart.
+  static String cartRemoveItem(String productId) =>
+      '/api/v1/cart/items/$productId';
+
+  /// PUT — set line quantity for a product in the cart. Body: `{ productId, quantity }`.
+  static const String cartUpdate = '/api/v1/cart/update';
+
+  /// DELETE — remove all items from the cart.
+  static const String cartClear = '/api/v1/cart/clear';
 
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
 
@@ -32,6 +33,16 @@ class ProfileController extends GetxController {
   }
 
   Future<void> loadProfile() async {
+    // ── DEBUG: Print Bearer Token for manual API testing ──
+    if (kDebugMode) {
+      final token = await _authSessionService.getAccessToken();
+      print('╔══════════════════════════════════════════════════════════╗');
+      print('║             CURRENT USER BEARER TOKEN                    ║');
+      print('╠══════════════════════════════════════════════════════════╣');
+      print('  $token');
+      print('╚══════════════════════════════════════════════════════════╝');
+    }
+
     _isLoading.value = true;
     _error.value = null;
     try {

@@ -19,6 +19,7 @@ import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
@@ -1552,6 +1553,7 @@ class _FeaturedProductsSection extends StatelessWidget {
             itemCount: products.length,
             itemBuilder: (context, index) {
               final product = products[index];
+              final cartCtrl = Get.find<CartController>();
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: ProductCard(
@@ -1561,10 +1563,7 @@ class _FeaturedProductsSection extends StatelessWidget {
                     AppRoutes.poojaKitDetails,
                     arguments: product,
                   ),
-                  onDonateTap: () => Get.toNamed(
-                    AppRoutes.poojaKitCheckout,
-                    arguments: product,
-                  ),
+                  onAddToCartTap: () => cartCtrl.addToCart(product.id),
                 ),
               );
             },
