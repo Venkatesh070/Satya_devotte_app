@@ -1,4 +1,4 @@
-// Pooja Kit → Refund tab content for the CMS.
+// Pooja Kit → Replace & Cancel Requests tab content for the CMS.
 //
 // Surfaces `GET /orders/requests` which carries cancellation, refund and
 // replacement requests raised by devotees. The flow:
@@ -53,10 +53,10 @@ class _RequestsListView extends StatelessWidget {
     return Column(
       children: [
         CmsPoojaKitSectionHeader(
-          title: 'Refund & Order Requests',
+          title: 'Replace & Cancel Requests',
           subtitle:
-              'Review devotee-raised cancellations, refunds and replacement '
-              'requests. Approve to apply the action, reject with a note.',
+              'Review cancellations, refunds and replacement requests from '
+              'devotees. Approve to apply the action, or reject with a note.',
           trailing: IconButton(
             tooltip: 'Refresh',
             onPressed: controller.refresh,
@@ -380,36 +380,42 @@ class _RequestDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final r = controller.detail;
-      return Column(
-        children: [
-          _DetailHeader(controller: controller, request: r),
-          const Divider(height: 1, color: CmsColors.border),
-          Expanded(
-            child: () {
-              if (controller.detailLoading && r == null) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (controller.detailError != null && r == null) {
-                return _ErrorBox(
-                  message: controller.detailError!,
-                  onRetry: controller.fetchDetail,
-                );
-              }
-              if (r == null) {
-                return const CmsEmptyState(
-                  icon: Icons.search_off_rounded,
-                  title: 'Request not found',
-                  subtitle: 'It may have been resolved or removed.',
-                );
-              }
-              return _DetailBody(controller: controller, request: r);
-            }(),
-          ),
-        ],
-      );
-    });
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) controller.closeDetail();
+      },
+      child: Obx(() {
+        final r = controller.detail;
+        return Column(
+          children: [
+            _DetailHeader(controller: controller, request: r),
+            const Divider(height: 1, color: CmsColors.border),
+            Expanded(
+              child: () {
+                if (controller.detailLoading && r == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.detailError != null && r == null) {
+                  return _ErrorBox(
+                    message: controller.detailError!,
+                    onRetry: controller.fetchDetail,
+                  );
+                }
+                if (r == null) {
+                  return const CmsEmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: 'Request not found',
+                    subtitle: 'It may have been resolved or removed.',
+                  );
+                }
+                return _DetailBody(controller: controller, request: r);
+              }(),
+            ),
+          ],
+        );
+      }),
+    );
   }
 }
 

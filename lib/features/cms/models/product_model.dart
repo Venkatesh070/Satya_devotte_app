@@ -84,6 +84,9 @@ class ProductModel {
   bool get isQueued => status.toUpperCase() == 'QUEUED';
   bool get isRejected => status.toUpperCase() == 'REJECTED';
 
+  bool get inStock => stockQuantity > 0;
+  num get effectivePrice => salePrice ?? price;
+
   ProductModel copyWith({
     String? id,
     String? title,

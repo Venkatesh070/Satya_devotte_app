@@ -205,7 +205,7 @@ class ProductController extends GetxController {
         isFeatured: isFeatured,
         image: image,
       );
-      _ok('Pooja Kit "${created.title}" created');
+      _ok('Puja Kit "${created.title}" created');
       // Server is the source of truth for pagination — reload so totals
       // and the current page reflect the newly-created product.
       await loadProducts();
@@ -274,7 +274,7 @@ class ProductController extends GetxController {
     if (index != -1) _products.removeAt(index);
     try {
       await _dataSource.deleteProduct(id);
-      _ok('Pooja Kit deleted');
+      _ok('Puja Kit deleted');
       // Refresh from server so totals/pages stay accurate. `loadProducts`
       // clamps the page if we just removed the last item on the last page.
       await loadProducts();

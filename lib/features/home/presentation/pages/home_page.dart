@@ -18,8 +18,13 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/donate_a
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
+import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
+import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,6 +49,7 @@ class _HomePageState extends State<HomePage> {
   List<HomeCircleItem> _poojas = HomeConstants.upcomingPooja;
   List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
   List<HomeCircleItem> _donations = HomeConstants.donations;
+  List<ProductModel> _featuredProducts = [];
 
   @override
   void initState() {
@@ -115,9 +121,15 @@ class _HomePageState extends State<HomePage> {
     if (_isFetchingHome) return;
     _isFetchingHome = true;
     try {
-      final response = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.home,
-      );
+      final apiClient = Get.find<ApiClient>();
+
+      // Fetch home layout data
+      final response = await apiClient.dio.get<dynamic>(ApiEndpoints.home);
+
+      // Fetch featured products separately as per requirement
+      final productDs = ProductRemoteDataSource(apiClient);
+      final products = await productDs.getFeaturedProducts(limit: 10);
+
       final payload = response.data;
       if (payload is! Map) return;
       final data = payload['data'];
@@ -160,6 +172,7 @@ class _HomePageState extends State<HomePage> {
 
       if (!mounted) return;
       setState(() {
+        _featuredProducts = products;
         if (parsedSloka != null && parsedSloka.isNotEmpty) {
           _dailySloka = parsedSloka;
         }
@@ -294,10 +307,12 @@ class _HomePageState extends State<HomePage> {
             poojas: _poojas,
             festivals: _festivals,
             donations: _donations,
+            featuredProducts: _featuredProducts,
             onPoojasViewMore: _openPoojasTabFromViewMore,
             onDonationTap: _onDonationItemTap,
             onDonationsViewMore: _openDonationsList,
           ),
+          const PoojaKitPage(),
           const RitualListPage(),
           const CalendarPage(),
           const ProfilePage(),
@@ -343,6 +358,7 @@ class _HomeTabContent extends StatelessWidget {
     required this.poojas,
     required this.festivals,
     required this.donations,
+    required this.featuredProducts,
     required this.onPoojasViewMore,
     required this.onDonationTap,
     required this.onDonationsViewMore,
@@ -357,6 +373,7 @@ class _HomeTabContent extends StatelessWidget {
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
   final List<HomeCircleItem> donations;
+  final List<ProductModel> featuredProducts;
   final Future<void> Function() onPoojasViewMore;
   final void Function(HomeCircleItem item) onDonationTap;
   final Future<void> Function() onDonationsViewMore;
@@ -385,6 +402,7 @@ class _HomeTabContent extends StatelessWidget {
                 poojas: poojas,
                 festivals: festivals,
                 donations: donations,
+                featuredProducts: featuredProducts,
                 onPoojasViewMore: onPoojasViewMore,
                 onDonationTap: onDonationTap,
                 onDonationsViewMore: onDonationsViewMore,
@@ -402,6 +420,7 @@ class _HomeBodySections extends StatelessWidget {
     required this.poojas,
     required this.festivals,
     required this.donations,
+    required this.featuredProducts,
     required this.onPoojasViewMore,
     required this.onDonationTap,
     required this.onDonationsViewMore,
@@ -410,6 +429,7 @@ class _HomeBodySections extends StatelessWidget {
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
   final List<HomeCircleItem> donations;
+  final List<ProductModel> featuredProducts;
   final Future<void> Function() onPoojasViewMore;
 
   /// Triggered when a real donation tile is tapped on the Home screen.
@@ -427,11 +447,15 @@ class _HomeBodySections extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
           child: _HomeCircleSection(
-            title: 'Upcoming Pooja',
+            title: 'Upcoming Puja',
             items: poojas,
             onViewMoreTap: onPoojasViewMore,
           ),
         ),
+        if (featuredProducts.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _FeaturedProductsSection(products: featuredProducts),
+        ],
         SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
@@ -653,7 +677,7 @@ class _BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final PageController pageController;
   final Future<void> Function(int) onTap;
-  static const int lastTabIndex = 3;
+  static const int lastTabIndex = 4;
 
   @override
   State<_BottomNavBar> createState() => _BottomNavBarState();
@@ -686,7 +710,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 
   void _handleDragUpdate(DragUpdateDetails details) {
     if (_isSettling) return;
-    const tabWidth = 90.0;
+    const tabWidth = 72.0;
     setState(() {
       _dragPageValue = (_dragPageValue - (details.delta.dx / tabWidth)).clamp(
         0.0,
@@ -731,8 +755,9 @@ class _BottomNavBarState extends State<_BottomNavBar> {
       height: 94,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const slotWidth = 90.0;
-          const railWidth = slotWidth * 6;
+          const slotWidth =
+              72.0; // Reduced slotWidth to fit 5 items comfortably
+          const railWidth = slotWidth * 7;
           final railLeft = (constraints.maxWidth - railWidth) / 2;
           return AnimatedBuilder(
             animation: widget.pageController,
@@ -751,12 +776,14 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                   slotWidth;
               // Offset by half-slot so active tab center aligns with screen center.
               final homeLeft = (railLeft + (slotWidth * 2.5)) - horizontalShift;
-              final poojasLeft =
+              final poojaKitLeft =
                   (railLeft + (slotWidth * 3.5)) - horizontalShift;
-              final calendarLeft =
+              final poojasLeft =
                   (railLeft + (slotWidth * 4.5)) - horizontalShift;
-              final profileLeft =
+              final calendarLeft =
                   (railLeft + (slotWidth * 5.5)) - horizontalShift;
+              final profileLeft =
+                  (railLeft + (slotWidth * 6.5)) - horizontalShift;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragStart: _handleDragStart,
@@ -796,6 +823,20 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                     ),
                     Positioned(
                       top: _tabTopOffset(
+                        centerX: poojaKitLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: poojaKitLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.shopping_bag_outlined,
+                        label: 'Puja Kit',
+                        selected: widget.currentIndex == 1,
+                        onTap: () => _settleToIndex(1),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
                         centerX: poojasLeft + (slotWidth / 2),
                         totalWidth: constraints.maxWidth,
                       ),
@@ -804,8 +845,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.local_fire_department_outlined,
                         label: 'Deities',
-                        selected: widget.currentIndex == 1,
-                        onTap: () => _settleToIndex(1),
+                        selected: widget.currentIndex == 2,
+                        onTap: () => _settleToIndex(2),
                       ),
                     ),
                     Positioned(
@@ -818,8 +859,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.calendar_today_outlined,
                         label: 'Calendar',
-                        selected: widget.currentIndex == 2,
-                        onTap: () => _settleToIndex(2),
+                        selected: widget.currentIndex == 3,
+                        onTap: () => _settleToIndex(3),
                       ),
                     ),
                     Positioned(
@@ -832,8 +873,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.person_outline,
                         label: 'Profile',
-                        selected: widget.currentIndex == 3,
-                        onTap: () => _settleToIndex(3),
+                        selected: widget.currentIndex == 4,
+                        onTap: () => _settleToIndex(4),
                       ),
                     ),
                   ],
@@ -1482,4 +1523,49 @@ class _TopCurveHighlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FeaturedProductsSection extends StatelessWidget {
+  const _FeaturedProductsSection({required this.products});
+  final List<ProductModel> products;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          child: SectionTitle('Featured Puja Kits'),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 280,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            scrollDirection: Axis.horizontal,
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: ProductCard(
+                  product: product,
+                  width: 160,
+                  onTap: () => Get.toNamed(
+                    AppRoutes.poojaKitDetails,
+                    arguments: product,
+                  ),
+                  onDonateTap: () => Get.toNamed(
+                    AppRoutes.poojaKitCheckout,
+                    arguments: product,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 
 // ════════════════════════════════════════════════════════════════
@@ -264,15 +265,18 @@ void showCmsSnackbar({
   required String message,
   bool isError = false,
 }) {
+  final inset = GetSnackbarInsets.platformDefault();
+
   Get.snackbar(
     title,
     message,
     snackPosition: SnackPosition.TOP,
+    maxWidth: inset.maxWidth,
     backgroundColor: isError
         ? const Color(0xFFF44336)
         : const Color(0xFF4CAF50),
     colorText: Colors.white,
-    margin: const EdgeInsets.all(12),
+    margin: inset.margin,
     borderRadius: 10,
     icon: Icon(
       isError ? Icons.error_outline : Icons.check_circle_outline,

@@ -118,7 +118,8 @@ class AdminPaymentsController extends GetxController {
       if (updated != null) {
         final idx = _items.indexWhere((o) => o.id == updated.id);
         if (idx != -1) {
-          _items[idx] = updated;
+          final prev = _items[idx];
+          _items[idx] = updated.withCustomerFallback(prev);
           _items.refresh();
         }
       } else {
@@ -126,7 +127,8 @@ class AdminPaymentsController extends GetxController {
         final fresh = await _ds.getOrder(order.id);
         final idx = _items.indexWhere((o) => o.id == fresh.id);
         if (idx != -1) {
-          _items[idx] = fresh;
+          final prev = _items[idx];
+          _items[idx] = fresh.withCustomerFallback(prev);
           _items.refresh();
         }
       }

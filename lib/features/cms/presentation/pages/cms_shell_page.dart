@@ -986,7 +986,7 @@ class _NavIds {
   static const int poojaKitPayments = 15;
 }
 
-const String _poojaKitGroupLabel = 'Pooja Kit';
+const String _poojaKitGroupLabel = 'Puja Kit';
 const String _donationsGroupLabel = 'Donations';
 
 List<_NavEntry> _navItems(bool isSuperAdmin) => [
@@ -1045,7 +1045,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     activeIcon: Icons.shopping_basket,
     children: [
       _NavEntry(
-        label: 'Manage Pooja Kit',
+        label: 'Manage Puja Kit',
         icon: Icons.inventory_2_outlined,
         activeIcon: Icons.inventory_2,
         index: _NavIds.poojaKitManage,
@@ -1057,7 +1057,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         index: _NavIds.poojaKitOrders,
       ),
       _NavEntry(
-        label: 'Refund',
+        label: 'Replace & Cancel Requests',
         icon: Icons.assignment_return_outlined,
         activeIcon: Icons.assignment_return,
         index: _NavIds.poojaKitRefunds,
@@ -1149,13 +1149,13 @@ String _pageTitle(int i) {
     case _NavIds.admins:
       return 'Manage Admins';
     case _NavIds.poojaKitManage:
-      return 'Manage Pooja Kit';
+      return 'Manage Puja Kit';
     case _NavIds.poojaKitOrders:
-      return 'Pooja Kit Orders';
+      return 'Puja Kit Orders';
     case _NavIds.poojaKitRefunds:
-      return 'Pooja Kit Refunds';
+      return 'Replace & Cancel Requests';
     case _NavIds.poojaKitPayments:
-      return 'Pooja Kit Payments';
+      return 'Puja Kit Payments';
     case _NavIds.manageRituals:
       return 'Manage Rituals';
     default:

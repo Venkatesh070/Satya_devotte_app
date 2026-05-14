@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
+import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
@@ -153,10 +154,13 @@ class _WebLoginPageState extends State<WebLoginPage>
                         final email = _emailController.text.trim();
                         final password = _passwordController.text;
                         if (email.isEmpty || password.isEmpty) {
+                          final inset = GetSnackbarInsets.platformDefault();
                           Get.snackbar(
                             'Required',
                             'Please enter email and password.',
                             snackPosition: SnackPosition.TOP,
+                            maxWidth: inset.maxWidth,
+                            margin: inset.margin,
                           );
                           return;
                         }
@@ -167,11 +171,14 @@ class _WebLoginPageState extends State<WebLoginPage>
                         if (ok) {
                           _navigateByRole();
                         } else {
+                          final inset = GetSnackbarInsets.platformDefault();
                           Get.snackbar(
                             'Login Failed',
                             controller.lastAuthError ??
                                 'Admin sign in failed. Please try again.',
                             snackPosition: SnackPosition.TOP,
+                            maxWidth: inset.maxWidth,
+                            margin: inset.margin,
                           );
                         }
                       },

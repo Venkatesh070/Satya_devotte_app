@@ -52,8 +52,10 @@ class ProductRemoteDataSource {
   /// pagination shapes (top-level keys, nested under `data`, or with a
   /// `pagination` envelope) and we surface the same `(items, total,
   /// totalPages)` record either way.
-  Future<({List<ProductModel> items, int total, int totalPages})>
-      getProducts({int page = 1, int limit = 10}) async {
+  Future<({List<ProductModel> items, int total, int totalPages})> getProducts({
+    int page = 1,
+    int limit = 10,
+  }) async {
     final res = await _apiClient.dio.get(
       ApiEndpoints.allProducts,
       queryParameters: {'page': page, 'limit': limit},
@@ -62,14 +64,48 @@ class ProductRemoteDataSource {
     if (body is! Map<String, dynamic>) {
       return (items: const <ProductModel>[], total: 0, totalPages: 1);
     }
-    final items = _list(body)
-        .whereType<Map<String, dynamic>>()
-        .map(ProductModel.fromJson)
-        .toList();
+    final items = _list(
+      body,
+    ).whereType<Map<String, dynamic>>().map(ProductModel.fromJson).toList();
 
     final total = _readTotal(body, fallback: items.length);
     final totalPages = _readTotalPages(body, total: total, limit: limit);
     return (items: items, total: total, totalPages: totalPages);
+  }
+
+  /// GET `/api/v1/products?page=&limit=` — paged product list (public).
+  Future<({List<ProductModel> items, int total, int totalPages})>
+  getPublicProducts({int page = 1, int limit = 10}) async {
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.products,
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final body = res.data;
+    if (body is! Map<String, dynamic>) {
+      return (items: const <ProductModel>[], total: 0, totalPages: 1);
+    }
+    final items = _list(
+      body,
+    ).whereType<Map<String, dynamic>>().map(ProductModel.fromJson).toList();
+
+    final total = _readTotal(body, fallback: items.length);
+    final totalPages = _readTotalPages(body, total: total, limit: limit);
+    return (items: items, total: total, totalPages: totalPages);
+  }
+
+  /// GET `/api/v1/products/featured?limit=` — list featured pooja kits (public).
+  Future<List<ProductModel>> getFeaturedProducts({int limit = 10}) async {
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.featuredProducts,
+      queryParameters: {'limit': limit},
+    );
+    final body = res.data;
+    if (body is! Map<String, dynamic>) {
+      return const <ProductModel>[];
+    }
+    return _list(
+      body,
+    ).whereType<Map<String, dynamic>>().map(ProductModel.fromJson).toList();
   }
 
   int _readInt(dynamic v) {

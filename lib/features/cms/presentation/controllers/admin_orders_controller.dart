@@ -149,6 +149,9 @@ class AdminOrdersController extends GetxController {
     _selectedOrderId.value = null;
     _detail.value = null;
     _detailError.value = null;
+    // Re-fetch the current list page so status / payment / totals reflect any
+    // changes made on the detail screen (and so GET /orders/all runs again).
+    _load(page: _page.value);
   }
 
   Future<void> fetchDetail() async {
@@ -268,7 +271,11 @@ class AdminOrdersController extends GetxController {
     return _mutate(() async {
       final updated = await _ds.verifyPayment(reference.trim());
       if (updated != null) {
-        _replaceDetail(updated);
+        final cur = _detail.value;
+        final merged = (cur != null && cur.id == updated.id)
+            ? updated.withCustomerFallback(cur)
+            : updated;
+        _replaceDetail(merged);
       } else {
         await fetchDetail();
       }

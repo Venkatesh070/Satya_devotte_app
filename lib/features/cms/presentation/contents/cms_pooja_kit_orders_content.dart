@@ -14,6 +14,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
@@ -54,25 +55,42 @@ class _OrdersListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CmsPoojaKitSectionHeader(
-          title: 'Pooja Kit Orders',
-          subtitle:
-              'Track and manage devotee orders for Pooja Kits. Filter by '
-              'status, search by order number and drill in to dispatch.',
-          trailing: IconButton(
-            tooltip: 'Refresh',
-            onPressed: controller.refresh,
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-        ),
+        // const CmsPoojaKitSectionHeader(
+        //   title: 'Orders',
+        //   subtitle:
+        //       'Track and manage devotee orders for Pooja Kits. Filter by '
+        //       'status, search by order number and drill in to dispatch.',
+        // ),
         const Divider(height: 1, color: CmsColors.border),
         _OrdersFiltersBar(controller: controller),
         const Divider(height: 1, color: CmsColors.border),
         Expanded(child: _OrdersBody(controller: controller)),
-        _OrdersPaginationBar(controller: controller),
+        Obx(() {
+          final showPager = controller.total > 0 ||
+              controller.items.isNotEmpty;
+          if (!showPager) return const SizedBox.shrink();
+          return Material(
+            color: CmsColors.white,
+            child: Container(
+              decoration: BoxDecoration(
+                color: CmsColors.white,
+                border: Border(top: BorderSide(color: CmsColors.border)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                minimum: const EdgeInsets.only(bottom: 4),
+                child: _OrdersPaginationBar(controller: controller),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -182,51 +200,32 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              _PageSizeDropdown(controller: widget.controller),
+              const SizedBox(width: 8),
+              Obx(
+                () => IconButton(
+                  tooltip: 'Reload',
+                  onPressed: widget.controller.isLoading
+                      ? null
+                      : widget.controller.refresh,
+                  icon: widget.controller.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh,
+                          size: 20,
+                          color: CmsColors.textSecond,
+                        ),
+                ),
+              ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PageSizeDropdown extends StatelessWidget {
-  const _PageSizeDropdown({required this.controller});
-  final AdminOrdersController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () => Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: CmsColors.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: CmsColors.border),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<int>(
-            value: controller.limit,
-            isDense: true,
-            items: const [10, 20, 50]
-                .map(
-                  (e) => DropdownMenuItem<int>(
-                    value: e,
-                    child: Text(
-                      '$e / page',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v != null) controller.setLimit(v);
-            },
-          ),
-        ),
       ),
     );
   }
@@ -331,16 +330,16 @@ class _OrdersBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading) {
+      if (controller.isLoading && controller.items.isEmpty) {
         return const Center(child: CircularProgressIndicator());
       }
-      if (controller.error != null) {
+      if (controller.error != null && controller.items.isEmpty) {
         return _ErrorBox(
           message: controller.error!,
           onRetry: controller.refresh,
         );
       }
-      if (controller.isEmpty) {
+      if (!controller.isLoading && controller.isEmpty) {
         return const CmsEmptyState(
           icon: Icons.receipt_long_outlined,
           title: 'No Orders Yet',
@@ -378,10 +377,10 @@ class _OrdersTable extends StatelessWidget {
                 _ColSpec('Order #', 160),
                 _ColSpec('Customer', 200),
                 _ColSpec('Total', 100),
-                _ColSpec('Payment', 110),
-                _ColSpec('Status', 110),
-                _ColSpec('Date', 130),
-                _ColSpec('', 60),
+                _ColSpec('Payment', 92),
+                _ColSpec('Status', 100),
+                _ColSpec('Date', 152),
+                _ColSpec('', 56),
               ],
             ),
             const Divider(height: 1, color: CmsColors.border),
@@ -392,6 +391,70 @@ class _OrdersTable extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Line 1: calendar date. Line 2: local time and timezone name.
+class CmsKitOrderDateCell extends StatelessWidget {
+  const CmsKitOrderDateCell({
+    super.key,
+    required this.at,
+    this.textAlign = TextAlign.start,
+  });
+
+  final DateTime? at;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    if (at == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(
+          '—',
+          textAlign: textAlign,
+          style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+      );
+    }
+    final dt = at!.toLocal();
+    final dateStr = DateFormat('d MMM yyyy').format(dt);
+    final timeStr = DateFormat('h:mm a').format(dt);
+    final tzName = dt.timeZoneName;
+    final cross = textAlign == TextAlign.end
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Column(
+        crossAxisAlignment: cross,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            dateStr,
+            textAlign: textAlign,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$timeStr · $tzName',
+            textAlign: textAlign,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              height: 1.25,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -409,79 +472,97 @@ class _OrderRow extends StatelessWidget {
         border: Border(bottom: BorderSide(color: CmsColors.border)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 160,
-            child: Text(
-              order.orderNumber.isEmpty ? '—' : order.orderNumber,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: CmsColors.textPrimary,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                order.orderNumber.isEmpty ? '—' : order.orderNumber,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textPrimary,
+                ),
               ),
             ),
           ),
           SizedBox(
             width: 200,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  order.userName.isEmpty ? '—' : order.userName,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: CmsColors.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (order.userEmail.isNotEmpty)
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    order.userEmail,
+                    order.userName.isEmpty ? '—' : order.userName,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: CmsColors.textSecond,
+                      fontSize: 12.5,
+                      color: CmsColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-              ],
+                  if (order.userEmail.isNotEmpty)
+                    Text(
+                      order.userEmail,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CmsColors.textSecond,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
           ),
           SizedBox(
             width: 100,
-            child: Text(
-              order.formattedTotal,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: CmsColors.textPrimary,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                order.formattedTotal,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textPrimary,
+                ),
               ),
             ),
           ),
           SizedBox(
-            width: 110,
-            child: PaymentStatusBadge(status: order.paymentStatus),
+            width: 92,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: PaymentStatusBadge(status: order.paymentStatus),
+              ),
+            ),
           ),
           SizedBox(
-            width: 110,
-            child: OrderStatusBadge(status: order.orderStatus),
+            width: 100,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OrderStatusBadge(status: order.orderStatus),
+              ),
+            ),
           ),
           SizedBox(
-            width: 130,
-            child: Text(
-              order.formattedDate,
-              style: const TextStyle(
-                fontSize: 12,
+            width: 152,
+            child: CmsKitOrderDateCell(at: order.createdAt),
+          ),
+          SizedBox(
+            width: 56,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
                 color: CmsColors.textSecond,
               ),
-            ),
-          ),
-          const SizedBox(
-            width: 60,
-            child: Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: CmsColors.textSecond,
             ),
           ),
         ],
@@ -517,6 +598,7 @@ class _OrdersCardList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
@@ -528,7 +610,18 @@ class _OrdersCardList extends StatelessWidget {
                         ),
                       ),
                     ),
-                    OrderStatusBadge(status: o.orderStatus),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          PaymentStatusBadge(status: o.paymentStatus),
+                          OrderStatusBadge(status: o.orderStatus),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -543,25 +636,19 @@ class _OrdersCardList extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      o.formattedTotal,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: CmsColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        o.formattedTotal,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: CmsColors.textPrimary,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    PaymentStatusBadge(status: o.paymentStatus),
-                    const Spacer(),
-                    Text(
-                      o.formattedDate,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: CmsColors.textSecond,
-                      ),
-                    ),
+                    CmsKitOrderDateCell(at: o.createdAt, textAlign: TextAlign.end),
                   ],
                 ),
               ],
@@ -577,43 +664,226 @@ class _OrdersPaginationBar extends StatelessWidget {
   const _OrdersPaginationBar({required this.controller});
   final AdminOrdersController controller;
 
+  static const _pageSizes = [10, 20, 50, 100];
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.items.isEmpty || controller.isLoading) {
-        return const SizedBox.shrink();
-      }
-      return Container(
-        color: CmsColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Row(
-          children: [
-            Text(
-              'Page ${controller.page} of ${controller.totalPages} · '
-              '${controller.total} order${controller.total == 1 ? '' : 's'}',
+      final isWide = MediaQuery.of(context).size.width >= 768;
+      final page = controller.page;
+      final size = controller.limit;
+      final tp = controller.totalPages;
+      final totalRows = controller.total;
+      final start = totalRows == 0 ? 0 : (page - 1) * size + 1;
+      final end = (page * size).clamp(0, totalRows);
+
+      final left = <Widget>[
+        Text(
+          'Showing $start–$end of $totalRows',
+          style: const TextStyle(
+            fontSize: 12,
+            color: CmsColors.textSecond,
+          ),
+        ),
+        const SizedBox(width: 18),
+        const Text(
+          'Rows per page:',
+          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _pageSizes.contains(size) ? size : _pageSizes[1],
+              isDense: true,
               style: const TextStyle(
                 fontSize: 12,
-                color: CmsColors.textSecond,
+                color: CmsColors.textPrimary,
+                fontWeight: FontWeight.w600,
               ),
+              items: _pageSizes
+                  .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) controller.setLimit(v);
+              },
             ),
-            const Spacer(),
-            IconButton(
-              tooltip: 'Previous',
-              onPressed: controller.page > 1 ? controller.prevPage : null,
-              icon: const Icon(Icons.chevron_left_rounded),
+          ),
+        ),
+      ];
+
+      final pager = <Widget>[
+        _OrdersPagerBtnMini(
+          icon: Icons.chevron_left,
+          enabled: page > 1,
+          onTap: controller.prevPage,
+        ),
+        for (final n in _ordersPageRange(page, tp))
+          n == -1
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    '…',
+                    style: TextStyle(color: CmsColors.textSecond),
+                  ),
+                )
+              : _OrdersPageNumberBtnMini(
+                  number: n,
+                  isActive: n == page,
+                  onTap: () => controller.goToPage(n),
+                ),
+        _OrdersPagerBtnMini(
+          icon: Icons.chevron_right,
+          enabled: page < tp,
+          onTap: controller.nextPage,
+        ),
+      ];
+
+      if (isWide) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: CmsColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CmsColors.border),
             ),
-            IconButton(
-              tooltip: 'Next',
-              onPressed: controller.page < controller.totalPages
-                  ? controller.nextPage
-                  : null,
-              icon: const Icon(Icons.chevron_right_rounded),
+            child: Row(
+              children: [
+                ...left,
+                const Spacer(),
+                ...pager.map(
+                  (w) => Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: w,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Column(
+            children: [
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 6,
+                children: left,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                runSpacing: 4,
+                children: pager,
+              ),
+            ],
+          ),
         ),
       );
     });
   }
+}
+
+List<int> _ordersPageRange(int current, int total) {
+  if (total <= 7) return [for (int i = 1; i <= total; i++) i];
+  final out = <int>[1];
+  final start = (current - 1).clamp(2, total - 4);
+  final end = (current + 1).clamp(5, total - 1);
+  if (start > 2) out.add(-1);
+  for (int i = start; i <= end; i++) {
+    out.add(i);
+  }
+  if (end < total - 1) out.add(-1);
+  out.add(total);
+  return out;
+}
+
+class _OrdersPagerBtnMini extends StatelessWidget {
+  const _OrdersPagerBtnMini({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled
+                ? CmsColors.textPrimary
+                : CmsColors.textSecond.withOpacity(0.5),
+          ),
+        ),
+      );
+}
+
+class _OrdersPageNumberBtnMini extends StatelessWidget {
+  const _OrdersPageNumberBtnMini({
+    required this.number,
+    required this.isActive,
+    required this.onTap,
+  });
+  final int number;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? CmsColors.orange : CmsColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? CmsColors.orange : CmsColors.border,
+            ),
+          ),
+          child: Text(
+            '$number',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isActive ? Colors.white : CmsColors.textPrimary,
+            ),
+          ),
+        ),
+      );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -625,36 +895,42 @@ class _OrderDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final order = controller.detail;
-      return Column(
-        children: [
-          _DetailHeader(controller: controller, order: order),
-          const Divider(height: 1, color: CmsColors.border),
-          Expanded(
-            child: () {
-              if (controller.detailLoading && order == null) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (controller.detailError != null && order == null) {
-                return _ErrorBox(
-                  message: controller.detailError!,
-                  onRetry: controller.fetchDetail,
-                );
-              }
-              if (order == null) {
-                return const CmsEmptyState(
-                  icon: Icons.search_off_rounded,
-                  title: 'Order not found',
-                  subtitle: 'This order may have been removed.',
-                );
-              }
-              return _OrderDetailBody(controller: controller, order: order);
-            }(),
-          ),
-        ],
-      );
-    });
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) controller.closeDetail();
+      },
+      child: Obx(() {
+        final order = controller.detail;
+        return Column(
+          children: [
+            _DetailHeader(controller: controller, order: order),
+            const Divider(height: 1, color: CmsColors.border),
+            Expanded(
+              child: () {
+                if (controller.detailLoading && order == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.detailError != null && order == null) {
+                  return _ErrorBox(
+                    message: controller.detailError!,
+                    onRetry: controller.fetchDetail,
+                  );
+                }
+                if (order == null) {
+                  return const CmsEmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: 'Order not found',
+                    subtitle: 'This order may have been removed.',
+                  );
+                }
+                return _OrderDetailBody(controller: controller, order: order);
+              }(),
+            ),
+          ],
+        );
+      }),
+    );
   }
 }
 
@@ -1692,6 +1968,8 @@ class OrderStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10.5,
           fontWeight: FontWeight.w700,
@@ -1737,6 +2015,8 @@ class PaymentStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10.5,
           fontWeight: FontWeight.w700,

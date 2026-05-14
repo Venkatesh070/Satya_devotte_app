@@ -5,7 +5,7 @@
 // Sidebar group "Pooja Kit" expands into:
 //   • Manage Pooja Kit  → [CmsPoojaKitContent]            (this file, list + Add form)
 //   • Orders            → [CmsPoojaKitOrdersContent]      (cms_pooja_kit_orders_content.dart)
-//   • Refund            → [CmsPoojaKitRefundsContent]     (cms_pooja_kit_refunds_content.dart)
+//   • Replace & Cancel  → [CmsPoojaKitRefundsContent]     (cms_pooja_kit_refunds_content.dart)
 //   • Payments          → [CmsPoojaKitPaymentsContent]    (cms_pooja_kit_payments_content.dart)
 //
 // Create flow uses multipart/form-data against
@@ -116,7 +116,7 @@ class _ProductList extends StatelessWidget {
             children: [
               if (isTablet) ...[
                 const Text(
-                  'Pooja Kits',
+                  'Puja Kits',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -127,7 +127,7 @@ class _ProductList extends StatelessWidget {
               ],
               Expanded(
                 child: CmsSearchBar(
-                  hint: 'Search Pooja Kits...',
+                  hint: 'Search Puja Kits...',
                   onChanged: ctrl.setSearch,
                 ),
               ),
@@ -253,14 +253,14 @@ class _ProductList extends StatelessWidget {
               return CmsEmptyState(
                 icon: Icons.shopping_basket_outlined,
                 title: (ctrl.filter == 'All' && ctrl.search.isEmpty)
-                    ? 'No Pooja Kits Yet'
-                    : 'No matching Pooja Kits',
+                    ? 'No Puja Kits Yet'
+                    : 'No matching Puja Kits',
                 subtitle:
-                    'Pooja Kits you create will appear here. Tap "+ Add Product" '
+                    'Puja Kits you create will appear here. Tap "+ Add Product" '
                     'to create your first kit.',
                 actionLabel:
                     (ctrl.filter == 'All' && ctrl.search.isEmpty)
-                        ? 'Add Pooja Kit'
+                        ? 'Add Puja Kit'
                         : null,
                 onAction:
                     (ctrl.filter == 'All' && ctrl.search.isEmpty)
@@ -372,7 +372,7 @@ void _approveDialog(
     builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: const Text(
-        'Approve Pooja Kit',
+        'Approve Puja Kit',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       content: Column(
@@ -396,7 +396,7 @@ void _approveDialog(
           ),
           const SizedBox(height: 10),
           const Text(
-            'This will publish the Pooja Kit to all users.',
+            'This will publish the Puja Kit to all users.',
             style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
           ),
         ],
@@ -440,7 +440,7 @@ void _rejectDialog(
     builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: const Text(
-        'Reject Pooja Kit',
+        'Reject Puja Kit',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       content: Column(
@@ -2101,7 +2101,7 @@ class _ProductFormState extends State<_ProductForm> {
               children: [
                 CmsFormField(
                   label: 'Title *',
-                  hint: 'e.g. Ganesh Pooja Kit',
+                  hint: 'e.g. Ganesh Puja Kit',
                   controller: _titleCtrl,
                 ),
                 const SizedBox(height: 12),
@@ -2182,7 +2182,7 @@ class _ProductFormState extends State<_ProductForm> {
               title: 'Kit Items',
               children: [
                 Text(
-                  'Add the items included in this Pooja Kit. At least one item '
+                  'Add the items included in this Puja Kit. At least one item '
                   'is recommended.',
                   style: const TextStyle(
                     fontSize: 12,
@@ -2336,7 +2336,7 @@ class _ProductFormState extends State<_ProductForm> {
                             ),
                           )
                         : Text(
-                            _isEdit ? 'Save Changes' : 'Create Pooja Kit',
+                            _isEdit ? 'Save Changes' : 'Create Puja Kit',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                             ),
@@ -2371,7 +2371,7 @@ class _ProductFormState extends State<_ProductForm> {
           ),
           const SizedBox(width: 12),
           Text(
-            _isEdit ? 'Edit Pooja Kit' : 'Add Pooja Kit',
+            _isEdit ? 'Edit Puja Kit' : 'Add Puja Kit',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,

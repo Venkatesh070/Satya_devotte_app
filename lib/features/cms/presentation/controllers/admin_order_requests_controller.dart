@@ -1,5 +1,5 @@
 // Order-requests inbox + detail controller (cancellations / refunds /
-// replacements). Backs the "Refund" tab under Pooja Kit.
+// replacements). Backs the "Replace & Cancel Requests" tab under Pooja Kit.
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
@@ -125,6 +125,7 @@ class AdminOrderRequestsController extends GetxController {
     _selectedId.value = null;
     _detail.value = null;
     _detailError.value = null;
+    _load(page: _page.value);
   }
 
   Future<void> fetchDetail() async {

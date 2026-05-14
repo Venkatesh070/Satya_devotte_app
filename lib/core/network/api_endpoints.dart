@@ -40,9 +40,11 @@ class ApiEndpoints {
   // ── Pooja Kit Products ────────────────────────────────────────
   /// POST — create a new Pooja Kit product (multipart/form-data).
   static const String createProduct = '/api/v1/products/create-product';
-  /// GET — list products. Assumed to return `{ data: [ProductModel] }` or
-  /// `{ products: [...] }`. The data source normalises both shapes.
+  /// GET — list products (public).
+  static const String products = '/api/v1/products';
+  /// GET — list all products including inactive (super-admin).
   static const String allProducts = '/api/v1/products/all';
+  static const String featuredProducts = '/api/v1/products/featured';
   static String product(String id) => '/api/v1/products/$id';
   /// PATCH — update product fields (multipart/form-data; same fields as create).
   static String updateProduct(String id) => '/api/v1/products/$id';
@@ -99,6 +101,20 @@ class ApiEndpoints {
   /// POST — reject. Body: `{ adminNote? }`.
   static String rejectOrderRequest(String id) =>
       '/api/v1/orders/requests/$id/reject';
+
+  // ── Orders (user flow) ────────────────────────────────────────
+  /// POST — place an order (from explicit items or cart).
+  /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
+  static const String createOrder = '/api/v1/orders';
+  /// POST — initialize a Paystack transaction for a specific order.
+  static String initializeOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/initialize';
+  /// POST — manually verify a Paystack transaction for an order.
+  static String verifyOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/verify';
+  /// GET — paginated history of the signed-in user's orders.
+  static const String myOrders = '/api/v1/orders/my';
+
 
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.

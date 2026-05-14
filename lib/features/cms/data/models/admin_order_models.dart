@@ -415,6 +415,43 @@ class AdminOrder {
       userEmail: userEmail,
     );
   }
+
+  /// Some endpoints (e.g. Paystack verify) return an order without a populated
+  /// `user` map. When merging into a list row that already had customer data,
+  /// copy [fallback]'s customer fields so the UI does not blank out.
+  AdminOrder withCustomerFallback(AdminOrder fallback) {
+    final stripped = userName.trim().isEmpty && userEmail.trim().isEmpty;
+    if (!stripped) return this;
+    final fbHas = fallback.userName.trim().isNotEmpty ||
+        fallback.userEmail.trim().isNotEmpty ||
+        fallback.userId.trim().isNotEmpty;
+    if (!fbHas) return this;
+    return AdminOrder(
+      id: id,
+      orderNumber: orderNumber,
+      orderStatus: orderStatus,
+      paymentStatus: paymentStatus,
+      paymentMethod: paymentMethod,
+      paystackReference: paystackReference,
+      currency: currency,
+      totalAmount: totalAmount,
+      subtotalAmount: subtotalAmount,
+      shippingAmount: shippingAmount,
+      taxAmount: taxAmount,
+      createdAt: createdAt,
+      dispatchedAt: dispatchedAt,
+      sharedWithUserAt: sharedWithUserAt,
+      items: items,
+      shippingAddress: shippingAddress,
+      tracking: tracking,
+      invoice: invoice,
+      fulfillment: fulfillment,
+      inventoryReserved: inventoryReserved,
+      userId: userId.trim().isNotEmpty ? userId : fallback.userId,
+      userName: fallback.userName,
+      userEmail: fallback.userEmail,
+    );
+  }
 }
 
 /// One page of `GET /orders/all` results.
