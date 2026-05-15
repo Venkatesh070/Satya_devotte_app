@@ -151,6 +151,31 @@ class ApiEndpoints {
   /// DELETE — remove all items from the cart.
   static const String cartClear = '/api/v1/cart/clear';
 
+  // ── Rituals (Admin) ──────────────────────────────────────────
+  /// POST — create a ritual (admin only).
+  static const String createRitual = '/api/v1/rituals/create-ritual';
+
+  /// GET — get rituals.
+  static const String rituals = '/api/v1/rituals';
+
+  /// GET — get current user's (admin) rituals.
+  static const String myRituals = '/api/v1/rituals/my';
+
+  /// GET — get all rituals (superadmin).
+  static const String allRituals = '/api/v1/rituals/all';
+
+  /// GET — get single ritual by id.
+  static String ritual(String id) => '/api/v1/rituals/$id';
+
+  /// PATCH — update ritual by id.
+  static String updateRitual(String id) => '/api/v1/rituals/$id';
+
+  /// DELETE — delete ritual by id.
+  static String deleteRitual(String id) => '/api/v1/rituals/$id';
+
+  /// PUT — review ritual by id (superadmin).
+  static String reviewRitual(String id) => '/api/v1/rituals/review/$id';
+
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.
   static const String donations = '/api/v1/donations';

@@ -16,6 +16,8 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/services/auth_service.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
@@ -110,6 +112,18 @@ class InitialBinding extends Bindings {
     );
     Get.put<PoojaController>(
       PoojaController(Get.find<PoojaRemoteDataSource>()),
+      permanent: true,
+    );
+    // ── CMS Rituals ──────────────────────────────────────────────
+    Get.put<RitualRemoteDataSource>(
+      RitualRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<RitualController>(
+      RitualController(
+        Get.find<RitualRemoteDataSource>(),
+        Get.find<PoojaRemoteDataSource>(),
+      ),
       permanent: true,
     );
     // ── CMS Festivals ────────────────────────────────────────────
