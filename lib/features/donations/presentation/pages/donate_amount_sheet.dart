@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 
 class DonateAmountSheet extends StatefulWidget {
@@ -21,12 +22,7 @@ class DonateAmountSheet extends StatefulWidget {
 
   static Future<void> show(BuildContext context,
       {required Donation donation}) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DonateAmountSheet(donation: donation),
-    );
+    return MakeDonationScreen.open(donation: donation);
   }
 
   @override
