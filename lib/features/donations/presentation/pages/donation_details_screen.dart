@@ -65,7 +65,8 @@ class DonationDetailsScreen extends StatelessWidget {
                 textColor: Colors.white,
                 gradientColors: kFigmaActionGradient,
                 borderRadius: 14,
-                onTap: () => MakeDonationScreen.open(donation: donation),
+                onTap: () =>
+                    MakeDonationScreen.show(context, donation: donation),
               ),
             ),
           ),

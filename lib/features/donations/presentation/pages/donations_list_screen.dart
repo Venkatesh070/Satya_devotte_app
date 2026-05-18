@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_card.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_summary_card.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
 
 class DonationsListScreen extends StatelessWidget {
@@ -16,75 +18,84 @@ class DonationsListScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFEF9F3),
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await ctrl.refreshDonations();
-                await ctrl.fetchContributions();
-              },
-              child: Obx(() {
-                return CustomScrollView(
+      body: Obx(() {
+        // Explicitly access observables to ensure Obx tracks them
+        final items = ctrl.items;
+        final loading = ctrl.isLoading;
+        final error = ctrl.error;
+        // Trigger listeners for summary getters
+        final total = ctrl.totalDonated;
+        final count = ctrl.contributionsCount;
+
+        return Column(
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await ctrl.refreshDonations();
+                  await ctrl.fetchContributions();
+                },
+                child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     const SliverToBoxAdapter(child: SizedBox(height: 20)),
                     SliverToBoxAdapter(child: _buildSummaryCard(ctrl)),
                     const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                    SliverToBoxAdapter(
+                    const SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
                           'Offer your donations to',
-                          style: AppTypography.inter(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF3B1E08),
+                            color: Color(0xFF3B1E08),
                           ),
                         ),
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                    if (ctrl.isLoading && ctrl.items.isEmpty)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: _ListSkeleton(),
-                        ),
+                    if (loading && items.isEmpty)
+                      const SliverPadding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverToBoxAdapter(child: _ListSkeleton()),
                       )
-                    else if (ctrl.error != null && ctrl.items.isEmpty)
+                    else if (error != null && items.isEmpty)
                       SliverToBoxAdapter(
                         child: _ErrorState(
-                          message: ctrl.error!,
+                          message: error,
                           onRetry: ctrl.refreshDonations,
                         ),
                       )
-                    else if (ctrl.isEmpty)
+                    else if (items.isEmpty)
                       const SliverToBoxAdapter(child: _EmptyState())
                     else
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate((_, i) {
-                            final d = ctrl.items[i];
+                            final d = items[i];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: DonationCard(
                                 donation: d,
-                                onTap: () => _openDetails(d),
+                                onTap: () => MakeDonationScreen.show(
+                                  context,
+                                  donation: d,
+                                ),
                               ),
                             );
-                          }, childCount: ctrl.items.length),
+                          }, childCount: items.length),
                         ),
                       ),
                   ],
-                );
-              }),
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 
@@ -113,10 +124,11 @@ class DonationsListScreen extends StatelessWidget {
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Get.back(),
                       ),
-                      Text(
+                      const Text(
                         'Donations',
-                        style: AppTypography.lora(
+                        style: TextStyle(
                           fontSize: 22,
+                          fontFamily: 'Lora',
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -131,22 +143,18 @@ class DonationsListScreen extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white30),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.history,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
+                          Icon(Icons.history, size: 16, color: Colors.white),
+                          SizedBox(width: 6),
                           Text(
                             'History',
-                            style: AppTypography.inter(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -166,90 +174,41 @@ class DonationsListScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryCard(DonationsListController ctrl) {
-    final total = NumberFormat.currency(
-      symbol: 'R ',
-      decimalDigits: ctrl.totalDonated.truncateToDouble() == ctrl.totalDonated
-          ? 0
-          : 2,
-    ).format(ctrl.totalDonated);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF9F2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF3E5D0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'total donated',
-                  style: AppTypography.inter(
-                    fontSize: 11,
-                    color: const Color(0xFF8A6B4A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  total,
-                  style: AppTypography.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1F4CB7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 36,
-            color: const Color(0xFFF3E5D0),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'contributions',
-                  style: AppTypography.inter(
-                    fontSize: 11,
-                    color: const Color(0xFF8A6B4A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${ctrl.contributionsCount}',
-                  style: AppTypography.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF3B1E08),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return DonationSummaryCard(
+      totalLabel: 'total donated',
+      totalValue: DonationUi.formatCurrency(ctrl.totalDonated),
+      countLabel: 'contributions',
+      countValue: '${ctrl.contributionsCount}',
     );
   }
+}
 
-  void _openDetails(Donation donation) {
-    Get.toNamed(AppRoutes.userDonationDetails, arguments: donation);
+class _TempleHeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height - 30);
+
+    // Create a scalloped arch with 3 curves
+    final scallopWidth = size.width / 3;
+    for (var i = 0; i < 3; i++) {
+      final xStart = i * scallopWidth;
+      final xEnd = (i + 1) * scallopWidth;
+      path.quadraticBezierTo(
+        xStart + scallopWidth / 2,
+        size.height + 10,
+        xEnd,
+        size.height - 30,
+      );
+    }
+
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
   }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
 class _EmptyState extends StatelessWidget {
@@ -322,37 +281,4 @@ class _ListSkeleton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TempleHeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height - 40);
-
-    final controlPoint1 = Offset(size.width * 0.25, size.height);
-    final endPoint1 = Offset(size.width * 0.5, size.height - 30);
-    path.quadraticBezierTo(
-      controlPoint1.dx,
-      controlPoint1.dy,
-      endPoint1.dx,
-      endPoint1.dy,
-    );
-
-    final controlPoint2 = Offset(size.width * 0.75, size.height - 60);
-    final endPoint2 = Offset(size.width, size.height - 20);
-    path.quadraticBezierTo(
-      controlPoint2.dx,
-      controlPoint2.dy,
-      endPoint2.dx,
-      endPoint2.dy,
-    );
-
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
