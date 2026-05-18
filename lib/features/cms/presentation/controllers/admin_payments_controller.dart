@@ -18,6 +18,8 @@ class AdminPaymentsController extends GetxController {
     'PENDING',
     'FAILED',
     'REFUNDED',
+    'REFUND_INITIATED',
+    'REFUND_FAILED',
   ];
 
   final _items = <AdminOrder>[].obs;

@@ -180,24 +180,13 @@ class ProductRemoteDataSource {
   ///
   /// Mirrors this curl exactly:
   /// ```
-  /// curl -X POST /api/v1/products/create-product \
-  ///   -F title=... -F slug=... -F description=... \
-  ///   -F items='[{"itemName":"...","quantity":"...","unit":"..."}]' \
-  ///   -F stockQuantity=... -F price=... -F salePrice=... \
-  ///   -F currency=ZAR -F category=Ganesh \
-  ///   -F status=PENDING -F productStatus=ACTIVE \
-  ///   -F isFeatured=true -F image=@/path/to/file.jpg
-  /// ```
-  ///
-  /// `status` is the review state (PENDING | APPROVED | REJECTED) that the
-  /// backend / super admin manages — new submissions default to PENDING.
-  /// `productStatus` is the admin-controlled lifecycle (ACTIVE | INACTIVE).
+  /// `items` JSON: `[{"inventoryItem":"<id>","quantity":2}]` — stock units per kit.
+  /// Do not send `stockQuantity`; it is computed from inventory on the server.
   Future<ProductModel> createProduct({
     required String title,
     required String slug,
     String description = '',
     required List<ProductItem> items,
-    required int stockQuantity,
     required num price,
     num? salePrice,
     String currency = 'ZAR',
@@ -211,10 +200,7 @@ class ProductRemoteDataSource {
       'title': title,
       'slug': slug,
       'description': description,
-      // The backend expects `items` as a JSON-encoded string when using
-      // multipart/form-data (single -F value, identical to the curl).
       'items': jsonEncode(items.map((e) => e.toJson()).toList()),
-      'stockQuantity': stockQuantity.toString(),
       'price': price.toString(),
       if (salePrice != null) 'salePrice': salePrice.toString(),
       'currency': currency,
@@ -261,7 +247,6 @@ class ProductRemoteDataSource {
     String? slug,
     String? description,
     List<ProductItem>? items,
-    int? stockQuantity,
     num? price,
     num? salePrice,
     String? currency,
@@ -270,6 +255,7 @@ class ProductRemoteDataSource {
     String? productStatus,
     bool? isFeatured,
     PickedFile? image,
+    bool clearSalePrice = false,
   }) async {
     final fields = <String, dynamic>{
       if (title != null) 'title': title,
@@ -277,9 +263,9 @@ class ProductRemoteDataSource {
       if (description != null) 'description': description,
       if (items != null)
         'items': jsonEncode(items.map((e) => e.toJson()).toList()),
-      if (stockQuantity != null) 'stockQuantity': stockQuantity.toString(),
       if (price != null) 'price': price.toString(),
       if (salePrice != null) 'salePrice': salePrice.toString(),
+      if (clearSalePrice) 'salePrice': '',
       if (currency != null) 'currency': currency,
       if (category != null) 'category': category,
       if (status != null) 'status': status,

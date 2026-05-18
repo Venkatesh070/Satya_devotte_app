@@ -5,7 +5,7 @@
 // Sidebar group "Pooja Kit" expands into:
 //   • Manage Pooja Kit  → [CmsPoojaKitContent]            (this file, list + Add form)
 //   • Orders            → [CmsPoojaKitOrdersContent]      (cms_pooja_kit_orders_content.dart)
-//   • Replace & Cancel  → [CmsPoojaKitRefundsContent]     (cms_pooja_kit_refunds_content.dart)
+//   • Replace  → [CmsPoojaKitRefundsContent]     (cms_pooja_kit_refunds_content.dart)
 //   • Payments          → [CmsPoojaKitPaymentsContent]    (cms_pooja_kit_payments_content.dart)
 //
 // Create flow uses multipart/form-data against
@@ -14,7 +14,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/cms/data/models/inventory_models.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -624,7 +626,7 @@ class _ProductTable extends StatelessWidget {
         children: [
           Expanded(flex: _flexName, child: _HCell('Product Name')),
           Expanded(flex: _flexCreated, child: _HCell('Created At')),
-          Expanded(flex: _flexQty, child: _HCell('Quantity')),
+          Expanded(flex: _flexQty, child: _HCell('Kits')),
           Expanded(flex: _flexPrice, child: _HCell('Price', alignRight: true)),
           Expanded(
             flex: _flexStatus,
@@ -1588,7 +1590,7 @@ class _ProductCard extends StatelessWidget {
                               ),
                               _metaChip(
                                 icon: Icons.inventory_2_outlined,
-                                label: 'Stock ${product.stockQuantity}',
+                                label: '${product.stockQuantity} kits',
                                 color: const Color(0xFF1976D2),
                               ),
                               if (product.items.isNotEmpty)
@@ -1870,42 +1872,93 @@ class _ProductForm extends StatefulWidget {
   State<_ProductForm> createState() => _ProductFormState();
 }
 
+class _KitLineEditor {
+  _KitLineEditor({
+    required this.inventoryItemId,
+    TextEditingController? quantityCtrl,
+    this.onQtyChanged,
+  }) : quantityCtrl = quantityCtrl ?? TextEditingController(text: '1') {
+    if (onQtyChanged != null) {
+      this.quantityCtrl.addListener(onQtyChanged!);
+    }
+  }
+
+  String inventoryItemId;
+  final TextEditingController quantityCtrl;
+  final VoidCallback? onQtyChanged;
+
+  void dispose() {
+    if (onQtyChanged != null) {
+      quantityCtrl.removeListener(onQtyChanged!);
+    }
+    quantityCtrl.dispose();
+  }
+}
+
+String _kitMoney(num amount, String currency) {
+  final sym = currency == 'ZAR' ? 'R' : currency;
+  final n = amount == amount.roundToDouble()
+      ? amount.toStringAsFixed(0)
+      : amount.toStringAsFixed(2);
+  return '$sym $n';
+}
+
+class _KitComponentsCost {
+  const _KitComponentsCost({
+    required this.listTotal,
+    required this.saleTotal,
+    required this.currency,
+    this.skippedOtherCurrency = 0,
+    this.hasInventorySale = false,
+  });
+
+  /// Sum of inventory list `price` × units per kit.
+  final num listTotal;
+  /// Sum using each item's sale price when set (else list price).
+  final num saleTotal;
+  final String currency;
+  final int skippedOtherCurrency;
+  final bool hasInventorySale;
+
+  bool get hasLines =>
+      listTotal > 0 || saleTotal > 0 || skippedOtherCurrency > 0;
+}
+
+String _formatPriceInput(num value) {
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(2);
+}
+
+bool _inventoryHasSale(InventoryItem inv) {
+  final sale = inv.salePrice;
+  return sale != null && sale < inv.price;
+}
+
 class _ProductFormState extends State<_ProductForm> {
+  late final InventoryController _invCtrl;
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _categoryCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _salePriceCtrl;
-  late final TextEditingController _stockCtrl;
   late String _currency;
+  late String _reviewStatus;
   late String _productStatus;
   late bool _isFeatured;
   PickedFile? _image;
   bool _slugManuallyEdited = false;
-  // Each row is `[itemNameCtrl, quantityCtrl, unitCtrl]`. We keep the list
-  // mutable so rows can be added/removed without losing other fields.
-  final List<List<TextEditingController>> _itemRows = [];
+  final List<_KitLineEditor> _kitLines = [];
 
   bool get _isEdit => widget.product != null;
 
-  static const _currencies = ['ZAR', 'INR', 'USD', 'EUR', 'GBP'];
-  // Admin-controlled lifecycle. Review `status` is auto-set to PENDING by
-  // the backend when admins create a product, so it's not exposed here.
-  static const _productStatuses = ['ACTIVE', 'INACTIVE'];
-  static const _units = [
-    'packet',
-    'grams',
-    'kilograms',
-    'ml',
-    'litres',
-    'pieces',
-    'box',
-  ];
+  static const _reviewStatuses = ['DRAFT', 'PENDING'];
 
   @override
   void initState() {
     super.initState();
+    _invCtrl = Get.find<InventoryController>();
     final p = widget.product;
     _titleCtrl = TextEditingController(text: p?.title ?? '');
     _slugCtrl = TextEditingController(text: p?.slug ?? '');
@@ -1917,31 +1970,41 @@ class _ProductFormState extends State<_ProductForm> {
     _salePriceCtrl = TextEditingController(
       text: p?.salePrice == null ? '' : p!.salePrice.toString(),
     );
-    _stockCtrl = TextEditingController(
-      text: (p?.stockQuantity ?? 0).toString(),
-    );
     _currency = p?.currency.isNotEmpty == true ? p!.currency : 'ZAR';
+    _reviewStatus = p != null && _reviewStatuses.contains(p.status.toUpperCase())
+        ? p.status.toUpperCase()
+        : 'PENDING';
     _productStatus =
         p?.productStatus.isNotEmpty == true ? p!.productStatus : 'ACTIVE';
     _isFeatured = p?.isFeatured ?? false;
     _slugManuallyEdited = p != null && p.slug.isNotEmpty;
 
-    _titleCtrl.addListener(_syncSlug);
-    _slugCtrl.addListener(_markSlugEdited);
+    if (!_isEdit) {
+      _titleCtrl.addListener(_syncSlug);
+      _slugCtrl.addListener(_markSlugEdited);
+    }
+    _priceCtrl.addListener(_onPricingFieldsChanged);
+    _salePriceCtrl.addListener(_onPricingFieldsChanged);
 
     if (p != null && p.items.isNotEmpty) {
       for (final item in p.items) {
-        _itemRows.add([
-          TextEditingController(text: item.itemName),
-          TextEditingController(text: item.quantity),
-          TextEditingController(
-            text: _units.contains(item.unit) ? item.unit : _units.first,
-          ),
-        ]);
+        _kitLines.add(_newKitLine(
+          inventoryItemId: item.inventoryItem,
+          quantityText: item.quantity.toString(),
+        ));
       }
     } else {
-      _addItemRow();
+      _addKitLine();
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _invCtrl.loadPickerItems();
+    });
+  }
+
+  void _onPricingFieldsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _syncSlug() {
@@ -1963,22 +2026,80 @@ class _ProductFormState extends State<_ProductForm> {
     }
   }
 
-  void _addItemRow() {
+  _KitLineEditor _newKitLine({
+    String inventoryItemId = '',
+    String quantityText = '1',
+  }) {
+    return _KitLineEditor(
+      inventoryItemId: inventoryItemId,
+      quantityCtrl: TextEditingController(text: quantityText),
+      onQtyChanged: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  void _addKitLine() {
     setState(() {
-      _itemRows.add([
-        TextEditingController(),
-        TextEditingController(),
-        TextEditingController(text: _units.first),
-      ]);
+      _kitLines.add(_newKitLine());
     });
   }
 
-  void _removeItemRow(int index) {
-    setState(() {
-      final row = _itemRows.removeAt(index);
-      for (final c in row) {
-        c.dispose();
+  InventoryItem? _inventoryForId(String id) {
+    if (id.isEmpty) return null;
+    final fromPicker = _invCtrl.inventoryById(id);
+    if (fromPicker != null) return fromPicker;
+    for (final i in _pickerOptions) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
+
+  _KitComponentsCost _componentsCost() {
+    var listTotal = 0.0;
+    var saleTotal = 0.0;
+    var skipped = 0;
+    var hasSale = false;
+    for (final line in _kitLines) {
+      if (line.inventoryItemId.isEmpty) continue;
+      final qty = num.tryParse(line.quantityCtrl.text.trim());
+      if (qty == null || qty <= 0) continue;
+      final inv = _inventoryForId(line.inventoryItemId);
+      if (inv == null) continue;
+      if (inv.currency != _currency) {
+        skipped++;
+        continue;
       }
+      listTotal += inv.price * qty;
+      final onSale = _inventoryHasSale(inv);
+      if (onSale) hasSale = true;
+      final unitSale = onSale ? inv.salePrice! : inv.price;
+      saleTotal += unitSale * qty;
+    }
+    return _KitComponentsCost(
+      listTotal: listTotal,
+      saleTotal: saleTotal,
+      currency: _currency,
+      skippedOtherCurrency: skipped,
+      hasInventorySale: hasSale,
+    );
+  }
+
+  void _applyInventoryPricesToKit() {
+    final cost = _componentsCost();
+    if (cost.listTotal <= 0) return;
+    _priceCtrl.text = _formatPriceInput(cost.listTotal);
+    if (cost.hasInventorySale && cost.saleTotal < cost.listTotal) {
+      _salePriceCtrl.text = _formatPriceInput(cost.saleTotal);
+    } else {
+      _salePriceCtrl.clear();
+    }
+    setState(() {});
+  }
+
+  void _removeKitLine(int index) {
+    setState(() {
+      _kitLines.removeAt(index).dispose();
     });
   }
 
@@ -1988,37 +2109,81 @@ class _ProductFormState extends State<_ProductForm> {
     _slugCtrl.dispose();
     _descCtrl.dispose();
     _categoryCtrl.dispose();
+    _priceCtrl.removeListener(_onPricingFieldsChanged);
+    _salePriceCtrl.removeListener(_onPricingFieldsChanged);
     _priceCtrl.dispose();
     _salePriceCtrl.dispose();
-    _stockCtrl.dispose();
-    for (final row in _itemRows) {
-      for (final c in row) {
-        c.dispose();
-      }
+    for (final line in _kitLines) {
+      line.dispose();
     }
     super.dispose();
   }
 
   List<ProductItem> _collectItems() {
     final out = <ProductItem>[];
-    for (final row in _itemRows) {
-      final name = row[0].text.trim();
-      final qty = row[1].text.trim();
-      final unit = row[2].text.trim();
-      if (name.isEmpty && qty.isEmpty) continue;
-      out.add(ProductItem(itemName: name, quantity: qty, unit: unit));
+    for (final line in _kitLines) {
+      if (line.inventoryItemId.isEmpty) continue;
+      final qty = num.tryParse(line.quantityCtrl.text.trim());
+      if (qty == null || qty <= 0) continue;
+      out.add(ProductItem(inventoryItem: line.inventoryItemId, quantity: qty));
     }
     return out;
+  }
+
+  List<InventoryItem> get _pickerOptions {
+    final ids = <String>{};
+    final list = <InventoryItem>[];
+    for (final i in _invCtrl.pickerItems) {
+      if (ids.add(i.id)) list.add(i);
+    }
+    for (final line in _kitLines) {
+      if (line.inventoryItemId.isEmpty) continue;
+      if (ids.contains(line.inventoryItemId)) continue;
+      ProductItem? fromProduct;
+      for (final e in widget.product?.items ?? const <ProductItem>[]) {
+        if (e.inventoryItem == line.inventoryItemId) {
+          fromProduct = e;
+          break;
+        }
+      }
+      if (fromProduct != null) {
+        ids.add(line.inventoryItemId);
+        list.add(
+          InventoryItem(
+            id: line.inventoryItemId,
+            name: fromProduct.inventoryName ?? line.inventoryItemId,
+            slug: '',
+            category: '',
+            unit: fromProduct.inventoryUnit ?? '',
+            itemQuantity: fromProduct.inventoryItemQuantity ?? 1,
+            stockQuantity: 0,
+            lowStockThreshold: 0,
+            status: 'ACTIVE',
+            price: fromProduct.inventoryPrice ?? 0,
+            salePrice: fromProduct.inventorySalePrice,
+            currency: fromProduct.inventoryCurrency ?? _currency,
+          ),
+        );
+      }
+    }
+    list.sort((a, b) => a.name.compareTo(b.name));
+    return list;
   }
 
   Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
     final slug = _slugCtrl.text.trim();
     final priceText = _priceCtrl.text.trim();
-    if (title.isEmpty || slug.isEmpty || priceText.isEmpty) {
+    if (!_isEdit && slug.isEmpty) _syncSlug();
+    final resolvedSlug = _isEdit
+        ? (widget.product!.slug.isNotEmpty
+            ? widget.product!.slug
+            : ProductController.slugify(title))
+        : (slug.isNotEmpty ? slug : ProductController.slugify(title));
+    if (title.isEmpty || resolvedSlug.isEmpty || priceText.isEmpty) {
       showCmsSnackbar(
         title: 'Required',
-        message: 'Title, slug and price are required.',
+        message: 'Title and price are required.',
         isError: true,
       );
       return;
@@ -2043,39 +2208,52 @@ class _ProductFormState extends State<_ProductForm> {
       );
       return;
     }
-    final stock = int.tryParse(_stockCtrl.text.trim()) ?? 0;
+    if (salePrice != null && salePrice > price) {
+      showCmsSnackbar(
+        title: 'Invalid sale price',
+        message: 'Sale price cannot exceed list price.',
+        isError: true,
+      );
+      return;
+    }
+
     final items = _collectItems();
+    if (items.isEmpty) {
+      showCmsSnackbar(
+        title: 'Kit lines required',
+        message:
+            'Add at least one inventory item with units per kit (quantity > 0).',
+        isError: true,
+      );
+      return;
+    }
 
     bool ok;
     if (_isEdit) {
       ok = await widget.ctrl.updateProduct(
         id: widget.product!.id,
         title: title,
-        slug: slug,
+        slug: resolvedSlug,
         description: _descCtrl.text.trim(),
         items: items,
-        stockQuantity: stock,
         price: price,
         salePrice: salePrice,
+        clearSalePrice: salePriceText.isEmpty,
         currency: _currency,
         category: _categoryCtrl.text.trim(),
-        productStatus: _productStatus,
-        isFeatured: _isFeatured,
         image: _image,
       );
     } else {
       ok = await widget.ctrl.createProduct(
         title: title,
-        slug: slug,
+        slug: resolvedSlug,
         description: _descCtrl.text.trim(),
         items: items,
-        stockQuantity: stock,
         price: price,
         salePrice: salePrice,
         currency: _currency,
         category: _categoryCtrl.text.trim(),
-        // `status` defaults to PENDING on create — the backend / super
-        // admin review the submission and flip it to APPROVED/REJECTED.
+        status: _reviewStatus,
         productStatus: _productStatus,
         isFeatured: _isFeatured,
         image: _image,
@@ -2096,124 +2274,162 @@ class _ProductFormState extends State<_ProductForm> {
           children: [
             _formHeader(),
             const SizedBox(height: 20),
-            CmsFormCard(
-              title: 'Basic Details',
-              children: [
-                CmsFormField(
-                  label: 'Title *',
-                  hint: 'e.g. Ganesh Puja Kit',
-                  controller: _titleCtrl,
-                ),
-                const SizedBox(height: 12),
-                CmsFormField(
-                  label: 'Slug *',
-                  hint: 'ganesh-pooja-kit',
-                  controller: _slugCtrl,
-                ),
-                const SizedBox(height: 12),
-                CmsFormField(
-                  label: 'Description',
-                  hint: 'Complete Ganesh pooja essentials kit',
-                  controller: _descCtrl,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 12),
-                CmsFormField(
-                  label: 'Category',
-                  hint: 'e.g. Ganesh',
-                  controller: _categoryCtrl,
-                ),
-              ],
-            ),
+            if (isWeb)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: CmsFormCard(
+                      title: 'Basic details',
+                      children: [
+                        CmsFormField(
+                          label: 'Title *',
+                          hint: 'e.g. Ganesh Puja Kit',
+                          controller: _titleCtrl,
+                        ),
+                        const SizedBox(height: 12),
+                        CmsFormField(
+                          label: 'Description',
+                          hint: 'Complete Ganesh pooja essentials kit',
+                          controller: _descCtrl,
+                          maxLines: 3,
+                        ),
+                        // const SizedBox(height: 12),
+                        // CmsFormField(
+                        //   label: 'Category',
+                        //   hint: 'e.g. Ganesh',
+                        //   controller: _categoryCtrl,
+                        // ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CmsFormCard(
+                      title: 'Product image',
+                      children: [
+                        CmsUploadBox(
+                          label:
+                              _isEdit ? 'Product Image' : 'Product Image ',
+                          icon: Icons.image_outlined,
+                          accept: 'JPG, PNG up to 5MB',
+                          mediaType: PickMediaType.image,
+                          initialUrl: widget.product?.imageUrl,
+                          onPicked: (f) => setState(() => _image = f),
+                          onRemoved: () => setState(() => _image = null),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              CmsFormCard(
+                title: 'Basic details',
+                children: [
+                  CmsFormField(
+                    label: 'Title *',
+                    hint: 'e.g. Ganesh Puja Kit',
+                    controller: _titleCtrl,
+                  ),
+                  const SizedBox(height: 12),
+                  CmsFormField(
+                    label: 'Description',
+                    hint: 'Complete Ganesh pooja essentials kit',
+                    controller: _descCtrl,
+                    maxLines: 3,
+                  ),
+                  // const SizedBox(height: 12),
+                  // CmsFormField(
+                  //   label: 'Category',
+                  //   hint: 'e.g. Ganesh',
+                  //   controller: _categoryCtrl,
+                  // ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              CmsFormCard(
+                title: 'Product image',
+                children: [
+                  CmsUploadBox(
+                    label: _isEdit ? 'Product Image' : 'Product Image *',
+                    icon: Icons.image_outlined,
+                    accept: 'JPG, PNG up to 5MB',
+                    mediaType: PickMediaType.image,
+                    initialUrl: widget.product?.imageUrl,
+                    onPicked: (f) => setState(() => _image = f),
+                    onRemoved: () => setState(() => _image = null),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
 
             CmsFormCard(
-              title: 'Pricing & Stock',
+              title: 'Kit components (inventory)',
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: CmsFormField(
-                        label: 'Price *',
-                        hint: '999',
-                        controller: _priceCtrl,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CmsFormField(
-                        label: 'Sale Price',
-                        hint: '799',
-                        controller: _salePriceCtrl,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Pick warehouse items and how many stock units each kit '
+                  'consumes (packs, not grams).',
+                  style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _Labeled(
-                        label: 'Currency',
-                        child: _SimpleDropdown(
-                          value: _currency,
-                          items: _currencies,
-                          onChanged: (v) => setState(() => _currency = v),
+                Obx(() {
+                  if (_invCtrl.isPickerLoading && _pickerOptions.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CmsFormField(
-                        label: 'Stock Quantity',
-                        hint: '50',
-                        controller: _stockCtrl,
+                    );
+                  }
+                  if (_pickerOptions.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'No active inventory items. Add stock under '
+                        'Manage Inventory first.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: CmsColors.textSecond,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            CmsFormCard(
-              title: 'Kit Items',
-              children: [
-                Text(
-                  'Add the items included in this Puja Kit. At least one item '
-                  'is recommended.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CmsColors.textSecond,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ..._itemRows.asMap().entries.map(
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+                ..._kitLines.asMap().entries.map(
                       (e) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: _ItemRow(
-                          itemNameCtrl: e.value[0],
-                          quantityCtrl: e.value[1],
-                          unitCtrl: e.value[2],
-                          units: _units,
-                          canRemove: _itemRows.length > 1,
-                          onRemove: () => _removeItemRow(e.key),
+                        child: _KitInventoryLineRow(
+                          line: e.value,
+                          inventoryOptions: _pickerOptions,
+                          canRemove: _kitLines.length > 1,
+                          onRemove: () => _removeKitLine(e.key),
+                          onInventoryChanged: (id) => setState(
+                            () => e.value.inventoryItemId = id,
+                          ),
                         ),
                       ),
                     ),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: _addItemRow,
+                    onPressed: _pickerOptions.isEmpty ? null : _addKitLine,
                     icon: const Icon(
                       Icons.add,
                       size: 16,
                       color: CmsColors.orange,
                     ),
                     label: const Text(
-                      'Add item',
+                      'Add component',
                       style: TextStyle(
                         color: CmsColors.orange,
                         fontWeight: FontWeight.w600,
@@ -2226,69 +2442,69 @@ class _ProductFormState extends State<_ProductForm> {
             const SizedBox(height: 16),
 
             CmsFormCard(
-              title: 'Status & Image',
+              title: 'Kit pricing',
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
+                      flex: 2,
                       child: _Labeled(
-                        label: 'Product Status',
-                        child: _SimpleDropdown(
-                          value: _productStatus,
-                          items: _productStatuses,
-                          onChanged: (v) => setState(() => _productStatus = v),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _Labeled(
-                        label: 'Featured',
+                        label: 'Currency',
                         child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: CmsColors.bg,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: CmsColors.border),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Show as featured',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: CmsColors.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              Switch(
-                                value: _isFeatured,
-                                activeColor: Colors.white,
-                                activeTrackColor: CmsColors.orange,
-                                onChanged: (v) =>
-                                    setState(() => _isFeatured = v),
-                              ),
-                            ],
+                          child: Text(
+                            _currency,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: CmsColors.textPrimary,
+                            ),
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: CmsFormField(
+                        label: 'Kit price *',
+                        hint: '999',
+                        controller: _priceCtrl,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: CmsFormField(
+                        label: 'Sale price',
+                        hint: '799',
+                        controller: _salePriceCtrl,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                CmsUploadBox(
-                  label: _isEdit ? 'Product Image' : 'Product Image *',
-                  icon: Icons.image_outlined,
-                  accept: 'JPG, PNG up to 5MB',
-                  mediaType: PickMediaType.image,
-                  initialUrl: widget.product?.imageUrl,
-                  onPicked: (f) => setState(() => _image = f),
-                  onRemoved: () => setState(() => _image = null),
+                _KitComponentsCostSummary(
+                  cost: _componentsCost(),
+                  kitPriceText: _priceCtrl.text.trim(),
+                  kitSalePriceText: _salePriceCtrl.text.trim(),
+                  onApplyInventoryPrices: _applyInventoryPricesToKit,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Kit price uses inventory list prices; kit sale price uses '
+                  'inventory sale prices when any component is on sale.',
+                  style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
                 ),
               ],
             ),
@@ -2382,26 +2598,152 @@ class _ProductFormState extends State<_ProductForm> {
       );
 }
 
-// ── A single Kit Item row (itemName / quantity / unit / remove) ──
-class _ItemRow extends StatelessWidget {
-  const _ItemRow({
-    required this.itemNameCtrl,
-    required this.quantityCtrl,
-    required this.unitCtrl,
-    required this.units,
-    required this.canRemove,
-    required this.onRemove,
-  });
+/// Units per kit with − / + controls and white input background.
+class _KitUnitsStepper extends StatelessWidget {
+  const _KitUnitsStepper({required this.line});
 
-  final TextEditingController itemNameCtrl;
-  final TextEditingController quantityCtrl;
-  final TextEditingController unitCtrl;
-  final List<String> units;
-  final bool canRemove;
-  final VoidCallback onRemove;
+  final _KitLineEditor line;
+
+  int _currentQty() {
+    final parsed = num.tryParse(line.quantityCtrl.text.trim());
+    if (parsed == null || parsed < 1) return 1;
+    return parsed.round();
+  }
+
+  void _setQty(int value) {
+    final next = value < 1 ? 1 : value;
+    line.quantityCtrl.text = next.toString();
+  }
+
+  void _adjust(int delta) => _setQty(_currentQty() + delta);
 
   @override
   Widget build(BuildContext context) {
+    return _Labeled(
+      label: 'Units / kit *',
+      child: Container(
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Row(
+          children: [
+            _KitQtyIconButton(
+              icon: Icons.remove,
+              tooltip: 'Decrease units',
+              onPressed: _currentQty() > 1 ? () => _adjust(-1) : null,
+            ),
+            Expanded(
+              child: TextFormField(
+                controller: line.quantityCtrl,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textPrimary,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '1',
+                  hintStyle: TextStyle(
+                    color: Color(0xFFAAAAAA),
+                    fontSize: 13,
+                  ),
+                  filled: true,
+                  fillColor: CmsColors.white,
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                onChanged: (_) {
+                  final raw = line.quantityCtrl.text.trim();
+                  if (raw.isEmpty) return;
+                  final parsed = int.tryParse(raw);
+                  if (parsed != null && parsed < 1) {
+                    _setQty(1);
+                  }
+                },
+              ),
+            ),
+            _KitQtyIconButton(
+              icon: Icons.add,
+              tooltip: 'Increase units',
+              onPressed: () => _adjust(1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KitQtyIconButton extends StatelessWidget {
+  const _KitQtyIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 36,
+      height: 40,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        icon: Icon(
+          icon,
+          size: 18,
+          color: onPressed == null
+              ? CmsColors.textSecond.withOpacity(0.4)
+              : CmsColors.orange,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Kit BOM line: inventory picker + units per kit ──
+class _KitInventoryLineRow extends StatelessWidget {
+  const _KitInventoryLineRow({
+    required this.line,
+    required this.inventoryOptions,
+    required this.canRemove,
+    required this.onRemove,
+    required this.onInventoryChanged,
+  });
+
+  final _KitLineEditor line;
+  final List<InventoryItem> inventoryOptions;
+  final bool canRemove;
+  final VoidCallback onRemove;
+  final ValueChanged<String> onInventoryChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = line.inventoryItemId.isNotEmpty &&
+            inventoryOptions.any((i) => i.id == line.inventoryItemId)
+        ? line.inventoryItemId
+        : '';
+
+    InventoryItem? inv;
+    if (selected.isNotEmpty) {
+      for (final i in inventoryOptions) {
+        if (i.id == selected) {
+          inv = i;
+          break;
+        }
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -2409,57 +2751,597 @@ class _ItemRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: CmsColors.border),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
-            child: CmsFormField(
-              label: 'Item',
-              hint: 'Agarbatti',
-              controller: itemNameCtrl,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: CmsFormField(
-              label: 'Qty',
-              hint: '1',
-              controller: quantityCtrl,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: _Labeled(
-              label: 'Unit',
-              child: _SimpleDropdown(
-                value: units.contains(unitCtrl.text)
-                    ? unitCtrl.text
-                    : units.first,
-                items: units,
-                onChanged: (v) => unitCtrl.text = v,
-              ),
-            ),
-          ),
-          if (canRemove) ...[
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.only(top: 22),
-              child: IconButton(
-                tooltip: 'Remove item',
-                onPressed: onRemove,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.red,
-                  size: 20,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: _Labeled(
+                  label: 'Inventory item *',
+                  child: _InventoryPickerField(
+                    value: selected,
+                    items: inventoryOptions,
+                    onChanged: onInventoryChanged,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: _KitUnitsStepper(line: line),
+              ),
+              if (canRemove) ...[
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(top: 22),
+                  child: IconButton(
+                    tooltip: 'Remove line',
+                    onPressed: onRemove,
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (inv != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${inv.itemSizeLabel} · ${inv.stockQuantity} in stock',
+              style: const TextStyle(
+                fontSize: 11,
+                color: CmsColors.textSecond,
+              ),
             ),
+            const SizedBox(height: 4),
+            _KitLinePriceInfo(inv: inv, line: line),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Tap field → searchable dialog with list + sale prices per row.
+class _InventoryPickerField extends StatelessWidget {
+  const _InventoryPickerField({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String value;
+  final List<InventoryItem> items;
+  final ValueChanged<String> onChanged;
+
+  InventoryItem? get _selected {
+    if (value.isEmpty) return null;
+    for (final i in items) {
+      if (i.id == value) return i;
+    }
+    return null;
+  }
+
+  Future<void> _openPicker(BuildContext context) async {
+    final id = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _InventoryPickerDialog(
+        items: items,
+        selectedId: value.isNotEmpty ? value : null,
+      ),
+    );
+    if (id != null) onChanged(id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: CmsColors.bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: const Text(
+          'No inventory',
+          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+      );
+    }
+
+    final selected = _selected;
+    return Material(
+      color: CmsColors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => _openPicker(context),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: selected == null
+                    ? const Text(
+                        'Select inventory item',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CmsColors.textSecond,
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selected.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: CmsColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          _InventoryListSalePrices(inv: selected, compact: true),
+                        ],
+                      ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 22,
+                color: CmsColors.textSecond,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InventoryPickerDialog extends StatefulWidget {
+  const _InventoryPickerDialog({
+    required this.items,
+    this.selectedId,
+  });
+
+  final List<InventoryItem> items;
+  final String? selectedId;
+
+  @override
+  State<_InventoryPickerDialog> createState() => _InventoryPickerDialogState();
+}
+
+class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
+  late final TextEditingController _searchCtrl;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<InventoryItem> get _filtered {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.items;
+    return widget.items.where((i) {
+      return i.name.toLowerCase().contains(q) ||
+          i.category.toLowerCase().contains(q) ||
+          i.slug.toLowerCase().contains(q) ||
+          i.unit.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Select inventory item',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search by name, category, unit…',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: CmsColors.bg,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.orange),
+                  ),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: filtered.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'No items match your search.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CmsColors.textSecond,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final item = filtered[index];
+                        final isSelected = item.id == widget.selectedId;
+                        return InkWell(
+                          onTap: () => Navigator.pop(context, item.id),
+                          child: Container(
+                            color: isSelected
+                                ? CmsColors.orange.withOpacity(0.06)
+                                : null,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.name,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? CmsColors.orange
+                                              : CmsColors.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${item.itemSizeLabel} · ${item.stockQuantity} in stock',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: CmsColors.textSecond,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                _InventoryListSalePrices(inv: item),
+                                if (isSelected) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.check_circle,
+                                    size: 18,
+                                    color: CmsColors.orange,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// List price (struck through when on sale) + sale price label.
+class _InventoryListSalePrices extends StatelessWidget {
+  const _InventoryListSalePrices({
+    required this.inv,
+    this.compact = false,
+  });
+
+  final InventoryItem inv;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSale = _inventoryHasSale(inv);
+    final listStyle = TextStyle(
+      fontSize: compact ? 11 : 12,
+      fontWeight: compact ? FontWeight.w500 : FontWeight.w600,
+      color: onSale ? CmsColors.textSecond : CmsColors.textPrimary,
+      decoration: onSale ? TextDecoration.lineThrough : null,
+    );
+    final saleStyle = TextStyle(
+      fontSize: compact ? 11 : 12,
+      fontWeight: FontWeight.w700,
+      color: CmsColors.orange,
+    );
+
+    if (!onSale) {
+      return Text(
+        _kitMoney(inv.price, inv.currency),
+        style: listStyle.copyWith(decoration: null),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(_kitMoney(inv.price, inv.currency), style: listStyle),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
+          child: Text(
+            '→',
+            style: TextStyle(
+              fontSize: compact ? 10 : 11,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ),
+        Text(_kitMoney(inv.salePrice!, inv.currency), style: saleStyle),
+      ],
+    );
+  }
+}
+
+class _KitLinePriceInfo extends StatelessWidget {
+  const _KitLinePriceInfo({required this.inv, required this.line});
+
+  final InventoryItem inv;
+  final _KitLineEditor line;
+
+  @override
+  Widget build(BuildContext context) {
+    final qty = num.tryParse(line.quantityCtrl.text.trim()) ?? 0;
+    final onSale = _inventoryHasSale(inv);
+    final listLine = qty > 0 ? inv.price * qty : 0.0;
+    final saleLine = qty > 0 && onSale ? inv.salePrice! * qty : listLine;
+
+    const labelStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      color: CmsColors.textSecond,
+    );
+    const valueStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      color: CmsColors.textPrimary,
+    );
+
+    if (qty <= 0) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            const TextSpan(text: 'Total Item Price: ', style: labelStyle),
+            const TextSpan(text: '—', style: valueStyle),
+          ],
+        ),
+      );
+    }
+
+    if (onSale) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            const TextSpan(text: 'Total Item Price: ', style: labelStyle),
+            TextSpan(
+              text: _kitMoney(saleLine, inv.currency),
+              style: valueStyle.copyWith(color: CmsColors.orange),
+            ),
+            const TextSpan(text: ' / ', style: labelStyle),
+            TextSpan(
+              text: _kitMoney(listLine, inv.currency),
+              style: valueStyle.copyWith(
+                color: CmsColors.textSecond,
+                decoration: TextDecoration.lineThrough,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          const TextSpan(text: 'Total Item Price: ', style: labelStyle),
+          TextSpan(
+            text: _kitMoney(listLine, inv.currency),
+            style: valueStyle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KitComponentsCostSummary extends StatelessWidget {
+  const _KitComponentsCostSummary({
+    required this.cost,
+    required this.kitPriceText,
+    required this.kitSalePriceText,
+    required this.onApplyInventoryPrices,
+  });
+
+  final _KitComponentsCost cost;
+  final String kitPriceText;
+  final String kitSalePriceText;
+  final VoidCallback onApplyInventoryPrices;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!cost.hasLines) {
+      return const Text(
+        'Add kit components to see inventory price totals.',
+        style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+      );
+    }
+
+    final kitPrice = num.tryParse(kitPriceText);
+    final kitSale = num.tryParse(kitSalePriceText);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8F0),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: CmsColors.orange.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _costRow(
+            label: 'Components total (list price)',
+            value: _kitMoney(cost.listTotal, cost.currency),
+            valueColor: CmsColors.orangeDark,
+          ),
+          if (cost.hasInventorySale) ...[
+            const SizedBox(height: 6),
+            _costRow(
+              label: 'Components total (sale price)',
+              value: _kitMoney(cost.saleTotal, cost.currency),
+              valueColor: const Color(0xFF2E7D32),
+            ),
+          ],
+          if (cost.skippedOtherCurrency > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${cost.skippedOtherCurrency} line(s) skipped — currency does not '
+              'match ${cost.currency}.',
+              style: const TextStyle(fontSize: 10, color: CmsColors.textSecond),
+            ),
+          ],
+          if (kitPrice != null && kitPrice > 0) ...[
+            const SizedBox(height: 8),
+            _costRow(
+              label: 'Kit price entered',
+              value: _kitMoney(kitPrice, cost.currency),
+            ),
+          ],
+          if (kitSale != null && kitSale > 0) ...[
+            const SizedBox(height: 4),
+            _costRow(
+              label: 'Kit sale price entered',
+              value: _kitMoney(kitSale, cost.currency),
+            ),
+          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: cost.listTotal > 0 ? onApplyInventoryPrices : null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: CmsColors.orangeDark,
+                side: const BorderSide(color: CmsColors.orange),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              icon: const Icon(Icons.price_check_outlined, size: 18),
+              label: Text(
+                cost.hasInventorySale
+                    ? 'Use inventory prices for kit & sale price'
+                    : 'Use inventory prices for kit price',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _costRow({
+    required String label,
+    required String value,
+    Color valueColor = CmsColors.textPrimary,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: CmsColors.textSecond),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2486,49 +3368,6 @@ class _Labeled extends StatelessWidget {
           child,
         ],
       );
-}
-
-class _SimpleDropdown extends StatelessWidget {
-  const _SimpleDropdown({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-  final String value;
-  final List<String> items;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: CmsColors.bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: CmsColors.border),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: items.contains(value) ? value : items.first,
-          isExpanded: true,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: CmsColors.textSecond,
-          ),
-          style: const TextStyle(
-            fontSize: 13,
-            color: CmsColors.textPrimary,
-          ),
-          items: items
-              .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
 }
 
 // NOTE: CmsPoojaKitOrdersContent / CmsPoojaKitRefundsContent /

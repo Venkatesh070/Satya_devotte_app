@@ -56,6 +56,24 @@ class ApiEndpoints {
   /// PATCH — flip lifecycle (`productStatus`: ACTIVE | INACTIVE).
   static String productStatus(String id) => '/api/v1/products/$id/status';
 
+  // ── Warehouse inventory (admin) ─────────────────────────────
+  /// GET — category master for dropdowns. Query: `activeOnly` (default true).
+  static const String inventoryCategories = '/api/v1/inventory/categories';
+
+  /// POST — upsert category master data (superadmin only).
+  static const String inventoryCategoriesSeed =
+      '/api/v1/inventory/categories';
+
+  /// GET — paginated items. Query: `page`, `limit`, `search`, `category`,
+  /// `status`, `lowStock`.
+  static const String inventory = '/api/v1/inventory';
+
+  static String inventoryItem(String id) => '/api/v1/inventory/$id';
+
+  /// POST — adjust stock. Body: `{ delta, reason }`.
+  static String inventoryAdjustStock(String id) =>
+      '/api/v1/inventory/$id/adjust-stock';
+
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
   /// `orderStatus`, `paymentStatus`, `user`, `search` (order # substring).
@@ -84,24 +102,24 @@ class ApiEndpoints {
   /// Body: `{ reason? }`. Not allowed once SHIPPED / DELIVERED / FULFILLED.
   static String orderCancelPaid(String id) => '/api/v1/orders/$id/cancel-paid';
 
-  // ── Pooja Kit Order Requests (cancel / refund / replacement) ──
-  /// GET — paginated requests inbox. Query: `page`, `limit`, `status`,
-  /// `type`, `user`.
-  static const String orderRequests = '/api/v1/orders/requests';
+  // ── Pooja Kit replacement requests (admin) ─────────────────────
+  /// GET — paginated replacement inbox. Query: `page`, `limit`, `status`.
+  static const String adminReplacements = '/api/v1/admin/replacements';
 
-  /// GET — single request detail with populated `order` and (when set)
-  /// `replacementOrder`.
-  static String orderRequest(String id) => '/api/v1/orders/requests/$id';
+  /// GET — single replacement request with populated `order` / `replacementOrder`.
+  static String orderReplacementRequest(String id) =>
+      '/api/v1/admin/replacements/$id';
 
-  /// POST — approve. Body: `{ adminNote? }`. Side effects depend on
-  /// request type (see Flutter-cms-refund&orders&payments plan §2.5).
-  static String approveOrderRequest(String id) =>
-      '/api/v1/orders/requests/$id/approve';
+  /// POST — approve. Body: `{ adminNote? }`.
+  static String approveReplacementRequest(String id) =>
+      '/api/v1/admin/replacements/$id/approve';
 
   /// POST — reject. Body: `{ adminNote? }`.
-  static String rejectOrderRequest(String id) =>
-      '/api/v1/orders/requests/$id/reject';
+  static String rejectReplacementRequest(String id) =>
+      '/api/v1/admin/replacements/$id/reject';
 
+  /// Legacy combined requests inbox (cancel / refund / replacement).
+  static const String orderRequests = '/api/v1/orders/requests';
   // ── Orders (user flow) ────────────────────────────────────────
   /// POST — place an order (from explicit items or cart).
   /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.

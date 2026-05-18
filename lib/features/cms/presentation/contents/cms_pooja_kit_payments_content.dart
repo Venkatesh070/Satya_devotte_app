@@ -128,9 +128,7 @@ class _FiltersBarState extends State<_FiltersBar> {
                       children: [
                         for (final opt in AdminPaymentsController.filters) ...[
                           _Pill(
-                            label: opt == 'ALL'
-                                ? 'All'
-                                : opt[0] + opt.substring(1).toLowerCase(),
+                            label: paymentStatusWireChipLabel(opt),
                             selected: opt == widget.controller.filter,
                             onTap: () => widget.controller.setFilter(opt),
                           ),

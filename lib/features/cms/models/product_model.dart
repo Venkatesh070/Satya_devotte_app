@@ -2,36 +2,123 @@
 //
 // Pooja Kit product. Maps to the backend `Product` resource managed via
 // `POST /api/v1/products/create-product` (multipart/form-data).
+// See Flutter-admin-pujakit.plan.
 
+/// One BOM line: warehouse stock units consumed per kit.
 class ProductItem {
   const ProductItem({
-    required this.itemName,
+    required this.inventoryItem,
     required this.quantity,
-    required this.unit,
+    this.inventoryName,
+    this.inventoryUnit,
+    this.inventoryItemQuantity,
+    this.inventoryPrice,
+    this.inventorySalePrice,
+    this.inventoryCurrency,
   });
 
-  final String itemName;
-  final String quantity; // backend treats this as a string ("1", "50")
-  final String unit; // packet, grams, ml, …
+  /// `InventoryItem` ObjectId (24 hex).
+  final String inventoryItem;
+  /// Stock **units** per kit (packs), not grams.
+  final num quantity;
+  /// Populated on GET when `items.inventoryItem` is expanded.
+  final String? inventoryName;
+  final String? inventoryUnit;
+  final num? inventoryItemQuantity;
+  final num? inventoryPrice;
+  final num? inventorySalePrice;
+  final String? inventoryCurrency;
+
+  String get displayLabel {
+    if (inventoryName != null && inventoryName!.isNotEmpty) {
+      final size = inventoryItemQuantity != null && inventoryUnit != null
+          ? ' (${inventoryItemQuantity} $inventoryUnit)'
+          : '';
+      return '${inventoryName!}$size';
+    }
+    return inventoryItem;
+  }
 
   Map<String, dynamic> toJson() => {
-        'itemName': itemName,
+        'inventoryItem': inventoryItem,
         'quantity': quantity,
-        'unit': unit,
       };
 
-  factory ProductItem.fromJson(Map<String, dynamic> json) => ProductItem(
-        itemName: json['itemName']?.toString() ?? '',
-        quantity: json['quantity']?.toString() ?? '',
-        unit: json['unit']?.toString() ?? '',
-      );
+  factory ProductItem.fromJson(Map<String, dynamic> json) {
+    var invId = '';
+    String? name;
+    String? unit;
+    num? itemQty;
 
-  ProductItem copyWith({String? itemName, String? quantity, String? unit}) =>
+    num? invPrice;
+    num? invSale;
+    String? invCurrency;
+
+    final inv = json['inventoryItem'];
+    if (inv is String) {
+      invId = inv;
+    } else if (inv is Map<String, dynamic>) {
+      invId = (inv['_id'] ?? inv['id'] ?? '').toString();
+      name = inv['name']?.toString();
+      unit = inv['unit']?.toString();
+      final iq = inv['itemQuantity'];
+      if (iq is num) {
+        itemQty = iq;
+      } else if (iq != null) {
+        itemQty = num.tryParse(iq.toString());
+      }
+      invPrice = _parseNum(inv['price']);
+      invSale = _parseNum(inv['salePrice']);
+      invCurrency = inv['currency']?.toString();
+    }
+
+    final rawQty = json['quantity'];
+    num qty = 1;
+    if (rawQty is num) {
+      qty = rawQty;
+    } else if (rawQty != null) {
+      qty = num.tryParse(rawQty.toString()) ?? 1;
+    }
+
+    return ProductItem(
+      inventoryItem: invId,
+      quantity: qty,
+      inventoryName: name ?? json['itemName']?.toString(),
+      inventoryUnit: unit ?? json['unit']?.toString(),
+      inventoryItemQuantity: itemQty,
+      inventoryPrice: invPrice,
+      inventorySalePrice: invSale,
+      inventoryCurrency: invCurrency,
+    );
+  }
+
+  ProductItem copyWith({
+    String? inventoryItem,
+    num? quantity,
+    String? inventoryName,
+    String? inventoryUnit,
+    num? inventoryItemQuantity,
+    num? inventoryPrice,
+    num? inventorySalePrice,
+    String? inventoryCurrency,
+  }) =>
       ProductItem(
-        itemName: itemName ?? this.itemName,
+        inventoryItem: inventoryItem ?? this.inventoryItem,
         quantity: quantity ?? this.quantity,
-        unit: unit ?? this.unit,
+        inventoryName: inventoryName ?? this.inventoryName,
+        inventoryUnit: inventoryUnit ?? this.inventoryUnit,
+        inventoryItemQuantity:
+            inventoryItemQuantity ?? this.inventoryItemQuantity,
+        inventoryPrice: inventoryPrice ?? this.inventoryPrice,
+        inventorySalePrice: inventorySalePrice ?? this.inventorySalePrice,
+        inventoryCurrency: inventoryCurrency ?? this.inventoryCurrency,
       );
+}
+
+num? _parseNum(dynamic v) {
+  if (v is num) return v;
+  if (v is String) return num.tryParse(v);
+  return null;
 }
 
 class ProductModel {
@@ -59,28 +146,23 @@ class ProductModel {
   final String slug;
   final String description;
   final List<ProductItem> items;
+  /// Max kits buildable from inventory (computed server-side).
   final int stockQuantity;
   final num price;
   final num? salePrice;
   final String currency;
   final String category;
-  /// Review status assigned by the backend / super admin.
-  /// Values: PENDING | APPROVED | REJECTED.
   final String status;
-  /// Admin-controlled lifecycle.
-  /// Values: ACTIVE | INACTIVE.
   final String productStatus;
   final bool isFeatured;
   final String? imageUrl;
   final String? createdAt;
-  /// Backend `_id` of the user who created this product. Used by the UI
-  /// to detect whether the current super-admin is also the creator (in
-  /// which case the action set switches to "Publish Now / Queue").
   final String? createdBy;
 
   bool get isActive => productStatus.toUpperCase() == 'ACTIVE';
   bool get isApproved => status.toUpperCase() == 'APPROVED';
   bool get isPending => status.toUpperCase() == 'PENDING';
+  bool get isDraft => status.toUpperCase() == 'DRAFT';
   bool get isQueued => status.toUpperCase() == 'QUEUED';
   bool get isRejected => status.toUpperCase() == 'REJECTED';
 
@@ -180,8 +262,7 @@ class ProductModel {
       currency: _str(json, ['currency'], 'ZAR'),
       category: _str(json, ['category']),
       status: _str(json, ['status'], 'PENDING').toUpperCase(),
-      productStatus:
-          _str(json, ['productStatus'], 'ACTIVE').toUpperCase(),
+      productStatus: _str(json, ['productStatus'], 'ACTIVE').toUpperCase(),
       isFeatured: json['isFeatured'] == true,
       imageUrl: _str(json, ['imageUrl', 'image']).isEmpty
           ? null

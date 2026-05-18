@@ -177,7 +177,6 @@ class ProductController extends GetxController {
     required String slug,
     String description = '',
     required List<ProductItem> items,
-    required int stockQuantity,
     required num price,
     num? salePrice,
     String currency = 'ZAR',
@@ -195,7 +194,6 @@ class ProductController extends GetxController {
         slug: slug,
         description: description,
         items: items,
-        stockQuantity: stockQuantity,
         price: price,
         salePrice: salePrice,
         currency: currency,
@@ -226,7 +224,6 @@ class ProductController extends GetxController {
     String? slug,
     String? description,
     List<ProductItem>? items,
-    int? stockQuantity,
     num? price,
     num? salePrice,
     String? currency,
@@ -235,6 +232,7 @@ class ProductController extends GetxController {
     String? productStatus,
     bool? isFeatured,
     PickedFile? image,
+    bool clearSalePrice = false,
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -245,7 +243,6 @@ class ProductController extends GetxController {
         slug: slug,
         description: description,
         items: items,
-        stockQuantity: stockQuantity,
         price: price,
         salePrice: salePrice,
         currency: currency,
@@ -254,6 +251,7 @@ class ProductController extends GetxController {
         productStatus: productStatus,
         isFeatured: isFeatured,
         image: image,
+        clearSalePrice: clearSalePrice,
       );
       _replaceLocal(updated);
       _ok('"${updated.title}" updated');

@@ -22,6 +22,7 @@ import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_dat
 import 'package:satya_devotte_app/features/cms/data/datasources/donation_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/inventory_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
@@ -36,6 +37,7 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/festival
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
@@ -165,6 +167,14 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<ProductController>(
       () => ProductController(Get.find<ProductRemoteDataSource>()),
+      fenix: true,
+    );
+    Get.put<InventoryRemoteDataSource>(
+      InventoryRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.lazyPut<InventoryController>(
+      () => InventoryController(Get.find<InventoryRemoteDataSource>()),
       fenix: true,
     );
     // ── CMS Pooja Kit: orders / requests (refunds) / payments ────

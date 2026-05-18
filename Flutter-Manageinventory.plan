@@ -1,0 +1,752 @@
+Update Flutter Admin Inventory Flow Plan
+
+Current state
+
+
+
+
+
+Flutter-admin-inventory-flow.plan is empty (1 line).
+
+
+
+Backend is implemented and mounted at /api/v1 ([src/app.js](src/app.js)).
+
+
+
+Inventory routes: [src/routes/inventoryRoutes.js](src/routes/inventoryRoutes.js) — all require authenticate + authorizeRoles("admin").
+
+
+
+Recent changes to document: price, salePrice, currency, effectivePrice on [InventoryItem](src/models/InventoryItem.js) (mirrors [Product](src/models/Product.js) pricing).
+
+Document structure to write
+
+Single markdown plan file at repo root (same location the user referenced). Suggested sections:
+
+1. Overview and architecture
+
+flowchart LR
+  subgraph admin [Flutter Admin]
+    Auth[Admin login]
+    InvCRUD[Inventory CRUD]
+    ProdKit[Product kits]
+  end
+  subgraph api [API /api/v1]
+    InvAPI["/inventory"]
+    ProdAPI["/products"]
+    CatAPI["/inventory/categories"]
+  end
+  subgraph data [MongoDB]
+    InvItem[InventoryItem stock source]
+    Product[Product kit lines]
+  end
+  Auth --> InvAPI
+  InvCRUD --> InvAPI
+  ProdKit --> ProdAPI
+  InvAPI --> InvItem
+  ProdAPI --> Product
+  Product -->|"items[].inventoryItem"| InvItem
+
+Key concepts (plain language for Flutter devs):
+
+
+
+
+
+
+
+Concept
+
+
+
+Meaning
+
+
+
+Example
+
+
+
+
+
+stockQuantity
+
+
+
+Count of warehouse units (packs)
+
+
+
+50 packs
+
+
+
+
+
+itemQuantity
+
+
+
+Amount per stock unit
+
+
+
+50
+
+
+
+
+
+unit
+
+
+
+Measure for itemQuantity
+
+
+
+grams
+
+
+
+
+
+totalAvailableQuantity
+
+
+
+Virtual: stockQuantity × itemQuantity
+
+
+
+2500 g
+
+
+
+
+
+price / salePrice / currency
+
+
+
+Per stock unit list/sale price (ZAR default)
+
+
+
+R29.99/pack
+
+
+
+
+
+effectivePrice
+
+
+
+Virtual: sale if set, else price
+
+
+
+R24.99
+
+
+
+
+
+Product items[]
+
+
+
+{ inventoryItem, quantity } — stock units per kit
+
+
+
+2 packs per kit
+
+
+
+
+
+Product stockQuantity (API)
+
+
+
+Computed max kits buildable — not stored
+
+
+
+read-only on product
+
+Orders deduct InventoryItem.stockQuantity, not product-level stock ([inventoryService.js](src/services/inventoryService.js)).
+
+2. Authentication
+
+
+
+
+
+
+
+Step
+
+
+
+Endpoint
+
+
+
+Notes
+
+
+
+
+
+Firebase sign-in
+
+
+
+Client-side (password provider only)
+
+
+
+Required before admin login
+
+
+
+
+
+Admin login
+
+
+
+POST /api/v1/auth/admin-login
+
+
+
+Header: Authorization: Bearer <Firebase ID token>
+
+
+
+
+
+Legacy alias
+
+
+
+POST /api/v1/auth/admin/login
+
+
+
+Same handler
+
+
+
+
+
+API calls
+
+
+
+All inventory routes
+
+
+
+Header: Authorization: Bearer <accessToken> from login response data.accessToken
+
+
+
+
+
+Refresh
+
+
+
+POST /api/v1/auth/refresh
+
+
+
+Body: { refreshToken }
+
+Login success shape ([sendSuccess](src/utils/response.js)):
+
+{
+  "success": true,
+  "data": { "accessToken": "...", "refreshToken": "...", "user": { ... } },
+  "message": "..."
+}
+
+Flutter: store accessToken securely; attach to every /inventory and /products admin call.
+
+3. Inventory category master data
+
+21 codes in [src/masterdata/inventory/categories/constants.js](src/masterdata/inventory/categories/constants.js) (e.g. SACRED_POWDERS, FLOWERS_AND_LEAVES, … MISCELLANEOUS).
+
+
+
+
+
+
+
+Method
+
+
+
+Path
+
+
+
+Role
+
+
+
+Purpose
+
+
+
+
+
+GET
+
+
+
+/api/v1/inventory/categories
+
+
+
+admin
+
+
+
+Dropdown labels; query activeOnly=false to include inactive
+
+
+
+
+
+POST
+
+
+
+/api/v1/inventory/categories/seed
+
+
+
+superadmin
+
+
+
+refresh DB; use once per env if empty
+
+Bootstrap flow: admin login → GET /inventory/categories → if empty, superadmin runs seed (or npm run seed:inventory-categories against Mongo).
+
+4. Inventory CRUD API reference
+
+Base: /api/v1/inventory. All require admin JWT.
+
+
+
+
+
+
+
+Method
+
+
+
+Path
+
+
+
+Content-Type
+
+
+
+Body / query
+
+
+
+
+
+GET
+
+
+
+/
+
+
+
+—
+
+
+
+Query: page, limit (max 100), search, category, status, lowStock=true
+
+
+
+
+
+GET
+
+
+
+/:id
+
+
+
+—
+
+
+
+—
+
+
+
+
+
+POST
+
+
+
+/
+
+
+
+multipart/form-data
+
+
+
+See create fields below + optional image file
+
+
+
+
+
+PATCH
+
+
+
+/:id
+
+
+
+multipart/form-data
+
+
+
+Partial update; optional image
+
+
+
+
+
+POST
+
+
+
+/:id/adjust-stock
+
+
+
+application/json
+
+
+
+{ "delta": 10, "reason": "delivery" } — delta non-zero integer
+
+
+
+
+
+DELETE
+
+
+
+/:id
+
+
+
+—
+
+
+
+Query ?hard=true for permanent delete
+
+Create required fields ([inventoryValidation.js](src/validations/inventoryValidation.js)):
+
+
+
+
+
+name, category (valid code), unit, itemQuantity (positive)
+
+
+
+price (≥ 0), currency (e.g. ZAR)
+
+
+
+Optional: salePrice, slug, description, stockQuantity (default 0), supplierName, lowStockThreshold, status (ACTIVE/INACTIVE)
+
+Validation rules to surface in UI:
+
+
+
+
+
+salePrice ≤ price (Joi + mongoose pre-validate)
+
+
+
+Numeric fields may be sent as strings in multipart (backend coerces)
+
+
+
+category stored uppercase
+
+Example multipart create (curl-style for plan):
+
+POST /api/v1/inventory
+name=Turmeric powder 50g
+category=SACRED_POWDERS
+unit=grams
+itemQuantity=50
+stockQuantity=100
+price=29.99
+salePrice=24.99
+currency=ZAR
+lowStockThreshold=10
+image=<file>
+
+List response (data):
+
+{
+  "items": [ { "_id", "name", "slug", "category", "unit", "itemQuantity", "stockQuantity", "totalAvailableQuantity", "price", "salePrice", "currency", "effectivePrice", "isLowStock", "lowStockThreshold", "status", "imageUrl", ... } ],
+  "pagination": { "page", "limit", "total", "totalPages" }
+}
+
+Adjust-stock response: data.item (updated row) + data.reason.
+
+5. Product kit flow (admin)
+
+Products remain separate merchandising layer with their own price / salePrice / currency (kit selling price), while inventory holds component unit pricing.
+
+
+
+
+
+
+
+Method
+
+
+
+Path
+
+
+
+Notes
+
+
+
+
+
+POST
+
+
+
+/api/v1/products/create-product
+
+
+
+multipart; items as JSON string
+
+
+
+
+
+PATCH
+
+
+
+/api/v1/products/:id
+
+
+
+multipart partial update
+
+
+
+
+
+GET
+
+
+
+/api/v1/products/:id
+
+
+
+stockQuantity enriched from inventory
+
+items JSON (required on create):
+
+[
+  { "inventoryItem": "507f1f77bcf86cd799439011", "quantity": 2 }
+]
+
+quantity = stock units consumed per kit (not grams). Flutter: multi-select inventory rows → build this array → jsonEncode into form field items.
+
+Other product fields: title, price, currency, optional salePrice, description, deity, category, status (DRAFT|PENDING), productStatus, image.
+
+6. Recommended Flutter screens / flow
+
+flowchart TD
+  Login[AdminLoginScreen]
+  Home[AdminHome]
+  CatList[CategoryPicker]
+  InvList[InventoryListScreen]
+  InvForm[InventoryFormScreen]
+  StockAdj[AdjustStockSheet]
+  ProdForm[ProductKitFormScreen]
+  Login --> Home
+  Home --> InvList
+  Home --> ProdForm
+  InvList --> InvForm
+  InvList --> StockAdj
+  InvForm --> CatList
+  ProdForm --> InvList
+
+
+
+
+
+
+
+Screen
+
+
+
+APIs
+
+
+
+UI notes
+
+
+
+
+
+Login
+
+
+
+auth/admin-login
+
+
+
+Firebase password → ID token → exchange for JWT
+
+
+
+
+
+Inventory list
+
+
+
+GET /inventory
+
+
+
+Filters: search, category, low stock badge via isLowStock
+
+
+
+
+
+Inventory form
+
+
+
+POST/PATCH /inventory
+
+
+
+Fields for stock dims + price row (price, sale, currency); image picker
+
+
+
+
+
+Adjust stock
+
+
+
+POST .../adjust-stock
+
+
+
++/- stepper, reason optional
+
+
+
+
+
+Categories
+
+
+
+GET /inventory/categories
+
+
+
+Load once; cache codes → labels
+
+
+
+
+
+Product kit
+
+
+
+POST /products/create-product
+
+
+
+Pick inventory lines + per-line qty; separate kit selling price
+
+Dart models: mirror inventory JSON including virtuals totalAvailableQuantity, effectivePrice, isLowStock. Use http or dio with MultipartRequest for create/update.
+
+7. Error handling and edge cases
+
+
+
+
+
+Standard error: { "success": false, "message": "..." } with 4xx/5xx
+
+
+
+409 on checkout if inventory insufficient (store app; admin should prevent via low-stock list)
+
+
+
+Legacy inventory rows without price: document that updates may fail until price/currency set in DB
+
+
+
+Category seed: superadmin only; document Render/production seed via API if local Mongo unreachable
+
+8. Environment
+
+
+
+
+
+Base URL: {HOST}/api/v1 (e.g. Render UAT URL from env.uat if applicable)
+
+
+
+Swagger: {HOST}/api-docs ([src/config/swagger.js](src/config/swagger.js) — InventoryItem schema includes pricing)

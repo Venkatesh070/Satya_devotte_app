@@ -4,7 +4,7 @@
 // (historical naming). This new screen is reserved for a real CMS rituals
 // module (e.g. independent of pujas) and is intentionally a placeholder
 // until the API is wired up — mirrors the placeholder style used by the
-// Pooja Kit Orders / Replace & Cancel Requests tabs.
+// Pooja Kit Orders / Replace Requests tabs.
 import 'package:flutter/material.dart';
 
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';

@@ -59,6 +59,9 @@ class AppRoutes {
   static const String cmsAnalytics = '/cms/analytics';
 
   // ─── Pooja Kit (admin + superadmin) ──────────────────────────
+  /// Stock levels for approved Puja Kit products.
+  static const String cmsPoojaKitInventory = '/cms/pooja-kit/inventory';
+
   /// Manage Pooja Kit listing / create / edit.
   static const String cmsPoojaKit = '/cms/pooja-kit';
 

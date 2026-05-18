@@ -146,6 +146,7 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
               options: AdminOrdersController.paymentStatusFilters,
               selected: widget.controller.paymentStatus,
               onSelect: widget.controller.setPaymentStatusFilter,
+              optionLabel: paymentStatusWireChipLabel,
             ),
           ),
           const SizedBox(height: 12),
@@ -237,14 +238,19 @@ class _ChipRow extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onSelect,
+    this.optionLabel,
   });
   final String label;
   final List<String> options;
   final String selected;
   final ValueChanged<String> onSelect;
+  /// When set, maps each [options] wire to chip text (e.g. payment filters).
+  final String Function(String wire)? optionLabel;
 
   @override
   Widget build(BuildContext context) {
+    String labelFor(String wire) =>
+        optionLabel != null ? optionLabel!(wire) : _prettyChip(wire);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -266,7 +272,7 @@ class _ChipRow extends StatelessWidget {
               children: [
                 for (final opt in options) ...[
                   _FilterChip(
-                    label: _prettyChip(opt),
+                    label: labelFor(opt),
                     selected: opt == selected,
                     onTap: () => onSelect(opt),
                   ),
@@ -1012,8 +1018,10 @@ class _OrderDetailBody extends StatelessWidget {
           const SizedBox(height: 14),
           _ShippingCard(order: order),
           const SizedBox(height: 14),
-          _TrackingCard(controller: controller, order: order),
-          const SizedBox(height: 14),
+          if (order.isPaymentPaid) ...[
+            _TrackingCard(controller: controller, order: order),
+            const SizedBox(height: 14),
+          ],
           _InvoiceCard(order: order),
           const SizedBox(height: 14),
           _FulfillmentCard(order: order),
@@ -1408,11 +1416,12 @@ class _ActionBar extends StatelessWidget {
       hasTrackingNumber: order.hasTracking,
     );
     final canCancel = OrderStatusMachine.canAdminCancel(order.orderStatus);
+    final canFulfil = order.isPaymentPaid;
     return Obx(
       () {
         final busy = controller.mutating;
         final children = <Widget>[];
-        if (nextStates.contains(OrderStatus.processing)) {
+        if (canFulfil && nextStates.contains(OrderStatus.processing)) {
           children.add(
             CmsPrimaryButton(
               label: 'Mark processing',
@@ -1422,7 +1431,9 @@ class _ActionBar extends StatelessWidget {
             ),
           );
         }
-        if (nextStates.contains(OrderStatus.shipped) || order.orderStatus == OrderStatus.processing) {
+        if (canFulfil &&
+            (nextStates.contains(OrderStatus.shipped) ||
+                order.orderStatus == OrderStatus.processing)) {
           children.add(
             CmsPrimaryButton(
               label: 'Dispatch',
@@ -1432,7 +1443,7 @@ class _ActionBar extends StatelessWidget {
             ),
           );
         }
-        if (nextStates.contains(OrderStatus.delivered)) {
+        if (canFulfil && nextStates.contains(OrderStatus.delivered)) {
           children.add(
             CmsPrimaryButton(
               label: 'Mark delivered',
@@ -2036,6 +2047,10 @@ class PaymentStatusBadge extends StatelessWidget {
         return CmsColors.red;
       case PaymentStatus.refunded:
         return const Color(0xFF6A1B9A);
+      case PaymentStatus.refundInitiated:
+        return CmsColors.orange;
+      case PaymentStatus.refundFailed:
+        return CmsColors.red;
       case PaymentStatus.unknown:
         return Colors.grey;
     }

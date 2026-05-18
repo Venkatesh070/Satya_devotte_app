@@ -34,6 +34,8 @@ class AdminOrdersController extends GetxController {
     'PENDING',
     'FAILED',
     'REFUNDED',
+    'REFUND_INITIATED',
+    'REFUND_FAILED',
   ];
 
   // ── list state ────────────────────────────────────────────────────

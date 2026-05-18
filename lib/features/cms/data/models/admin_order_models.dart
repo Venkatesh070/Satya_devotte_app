@@ -17,7 +17,15 @@ enum OrderStatus {
 }
 
 /// Payment status from the backend `paymentStatus` enum.
-enum PaymentStatus { pending, paid, failed, refunded, unknown }
+enum PaymentStatus {
+  pending,
+  paid,
+  failed,
+  refunded,
+  refundInitiated,
+  refundFailed,
+  unknown,
+}
 
 extension OrderStatusX on OrderStatus {
   String get wire {
@@ -92,6 +100,10 @@ extension PaymentStatusX on PaymentStatus {
         return 'FAILED';
       case PaymentStatus.refunded:
         return 'REFUNDED';
+      case PaymentStatus.refundInitiated:
+        return 'REFUND_INITIATED';
+      case PaymentStatus.refundFailed:
+        return 'REFUND_FAILED';
       case PaymentStatus.unknown:
         return 'UNKNOWN';
     }
@@ -107,6 +119,10 @@ extension PaymentStatusX on PaymentStatus {
         return 'Failed';
       case PaymentStatus.refunded:
         return 'Refunded';
+      case PaymentStatus.refundInitiated:
+        return 'Refund initiated';
+      case PaymentStatus.refundFailed:
+        return 'Refund Failed';
       case PaymentStatus.unknown:
         return 'Unknown';
     }
@@ -126,9 +142,39 @@ extension PaymentStatusX on PaymentStatus {
         return PaymentStatus.failed;
       case 'REFUNDED':
         return PaymentStatus.refunded;
+      case 'REFUND_INITIATED':
+      case 'REFUNDINITIATED':
+        return PaymentStatus.refundInitiated;
+      case 'REFUND_FAILED':
+      case 'REFUNDFAILED':
+        return PaymentStatus.refundFailed;
       default:
         return PaymentStatus.unknown;
     }
+  }
+}
+
+/// Labels for payment-status filter chips (API wire → short title).
+String paymentStatusWireChipLabel(String wire) {
+  switch (wire.toUpperCase().trim()) {
+    case 'ALL':
+      return 'All';
+    case 'PAID':
+      return 'Paid';
+    case 'PENDING':
+      return 'Pending';
+    case 'FAILED':
+      return 'Failed';
+    case 'REFUNDED':
+      return 'Refunded';
+    case 'REFUND_INITIATED':
+      return 'Refund initiate';
+    case 'REFUND_FAILED':
+      return 'Refund Failed';
+    default:
+      if (wire.isEmpty) return wire;
+      final u = wire.toUpperCase();
+      return u[0] + wire.substring(1).toLowerCase();
   }
 }
 
@@ -331,6 +377,9 @@ class AdminOrder {
   final String userEmail;
 
   bool get hasTracking => tracking?.hasTrackingNumber == true;
+
+  /// Paystack reported a successful charge; fulfilment actions apply.
+  bool get isPaymentPaid => paymentStatus == PaymentStatus.paid;
 
   /// Formatted currency string, e.g. `R 250` for ZAR or `R 250.50`.
   String get formattedTotal => _formatCurrency(totalAmount, currency);

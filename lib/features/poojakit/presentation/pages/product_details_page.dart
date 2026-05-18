@@ -156,7 +156,7 @@ class ProductDetailsPage extends StatelessWidget {
                                     size: 18, color: Colors.green),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '${item.itemName} (${item.quantity} ${item.unit})',
+                                  '${item.displayLabel} · ${item.quantity} unit(s)/kit',
                                   style: AppTypography.inter(fontSize: 14),
                                 ),
                               ],

@@ -16,7 +16,10 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_manage_
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_inventory_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {
@@ -74,6 +77,14 @@ class _CmsShellPageState extends State<CmsShellPage> {
         targetRoute,
         preventDuplicates: false,
       );
+    }
+    if (index == _NavIds.poojaKitRefunds &&
+        Get.isRegistered<AdminOrderRequestsController>()) {
+      Get.find<AdminOrderRequestsController>().refresh();
+    }
+    if (index == _NavIds.poojaKitInventory &&
+        Get.isRegistered<InventoryController>()) {
+      Get.find<InventoryController>().init();
     }
   }
 
@@ -972,6 +983,7 @@ class _NavIds {
   static const int shlokas = 8;
   static const int admins = 9;
   // Pooja Kit group children.
+  static const int poojaKitInventory = 16;
   static const int poojaKitManage = 10;
   static const int poojaKitOrders = 11;
   // Donations group children. `donations` (4) is kept as "Manage Donations"
@@ -986,7 +998,7 @@ class _NavIds {
   static const int poojaKitPayments = 15;
 }
 
-const String _poojaKitGroupLabel = 'Puja Kit';
+const String _poojaKitGroupLabel = 'Ecommerce';
 const String _donationsGroupLabel = 'Donations';
 
 List<_NavEntry> _navItems(bool isSuperAdmin) => [
@@ -1045,6 +1057,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     activeIcon: Icons.shopping_basket,
     children: [
       _NavEntry(
+        label: 'Manage Inventory',
+        icon: Icons.warehouse_outlined,
+        activeIcon: Icons.warehouse,
+        index: _NavIds.poojaKitInventory,
+      ),
+      _NavEntry(
         label: 'Manage Puja Kit',
         icon: Icons.inventory_2_outlined,
         activeIcon: Icons.inventory_2,
@@ -1057,7 +1075,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         index: _NavIds.poojaKitOrders,
       ),
       _NavEntry(
-        label: 'Replace & Cancel Requests',
+        label: 'Replace Requests',
         icon: Icons.assignment_return_outlined,
         activeIcon: Icons.assignment_return,
         index: _NavIds.poojaKitRefunds,
@@ -1111,6 +1129,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
 /// group when a child tab is selected.
 String? _groupLabelForIndex(int index) {
   switch (index) {
+    case _NavIds.poojaKitInventory:
     case _NavIds.poojaKitManage:
     case _NavIds.poojaKitOrders:
     case _NavIds.poojaKitRefunds:
@@ -1148,12 +1167,14 @@ String _pageTitle(int i) {
       return 'Shlokas';
     case _NavIds.admins:
       return 'Manage Admins';
+    case _NavIds.poojaKitInventory:
+      return 'Manage Inventory';
     case _NavIds.poojaKitManage:
       return 'Manage Puja Kit';
     case _NavIds.poojaKitOrders:
       return 'Puja Kit Orders';
     case _NavIds.poojaKitRefunds:
-      return 'Replace & Cancel Requests';
+      return 'Replace Requests';
     case _NavIds.poojaKitPayments:
       return 'Puja Kit Payments';
     case _NavIds.manageRituals:
@@ -1187,6 +1208,8 @@ Widget _buildContent(int i) {
       return const CmsShlokaContent();
     case _NavIds.admins:
       return const CmsAdminsContent();
+    case _NavIds.poojaKitInventory:
+      return const CmsPoojaKitInventoryContent();
     case _NavIds.poojaKitManage:
       return const CmsPoojaKitContent();
     case _NavIds.poojaKitOrders:
@@ -1221,6 +1244,8 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
       return _NavIds.users;
     case AppRoutes.cmsAnalytics:
       return _NavIds.analytics;
+    case AppRoutes.cmsPoojaKitInventory:
+      return _NavIds.poojaKitInventory;
     case AppRoutes.cmsPoojaKit:
       return _NavIds.poojaKitManage;
     case AppRoutes.cmsPoojaKitOrders:
@@ -1263,6 +1288,8 @@ String? _routeForIndex(int index, bool isSuperAdmin) {
       return AppRoutes.cmsUsers;
     case _NavIds.analytics:
       return AppRoutes.cmsAnalytics;
+    case _NavIds.poojaKitInventory:
+      return AppRoutes.cmsPoojaKitInventory;
     case _NavIds.poojaKitManage:
       return AppRoutes.cmsPoojaKit;
     case _NavIds.poojaKitOrders:

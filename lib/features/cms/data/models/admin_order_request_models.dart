@@ -6,7 +6,17 @@ import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.da
 
 enum OrderRequestType { cancellation, refund, replacement, unknown }
 
-enum OrderRequestStatus { pending, approved, rejected, completed, unknown }
+/// Replacement request lifecycle (`GET /admin/replacements`).
+enum OrderRequestStatus {
+  requested,
+  approved,
+  rejected,
+  processing,
+  shipped,
+  delivered,
+  cancelled,
+  unknown,
+}
 
 extension OrderRequestTypeX on OrderRequestType {
   String get wire {
@@ -55,29 +65,42 @@ extension OrderRequestTypeX on OrderRequestType {
 extension OrderRequestStatusX on OrderRequestStatus {
   String get wire {
     switch (this) {
-      case OrderRequestStatus.pending:
-        return 'PENDING';
+      case OrderRequestStatus.requested:
+        return 'REQUESTED';
       case OrderRequestStatus.approved:
         return 'APPROVED';
       case OrderRequestStatus.rejected:
         return 'REJECTED';
-      case OrderRequestStatus.completed:
-        return 'COMPLETED';
+      case OrderRequestStatus.processing:
+        return 'PROCESSING';
+      case OrderRequestStatus.shipped:
+        return 'SHIPPED';
+      case OrderRequestStatus.delivered:
+        return 'DELIVERED';
+      case OrderRequestStatus.cancelled:
+        return 'CANCELLED';
       case OrderRequestStatus.unknown:
         return 'UNKNOWN';
     }
   }
 
+  /// UI label; [OrderRequestStatus.delivered] shows as **Completed**.
   String get label {
     switch (this) {
-      case OrderRequestStatus.pending:
-        return 'Pending';
+      case OrderRequestStatus.requested:
+        return 'Requested';
       case OrderRequestStatus.approved:
         return 'Approved';
       case OrderRequestStatus.rejected:
         return 'Rejected';
-      case OrderRequestStatus.completed:
+      case OrderRequestStatus.processing:
+        return 'Processing';
+      case OrderRequestStatus.shipped:
+        return 'Shipped';
+      case OrderRequestStatus.delivered:
         return 'Completed';
+      case OrderRequestStatus.cancelled:
+        return 'Cancelled';
       case OrderRequestStatus.unknown:
         return 'Unknown';
     }
@@ -86,17 +109,51 @@ extension OrderRequestStatusX on OrderRequestStatus {
   static OrderRequestStatus parse(dynamic v) {
     final s = (v ?? '').toString().toUpperCase().trim();
     switch (s) {
+      case 'REQUESTED':
       case 'PENDING':
-        return OrderRequestStatus.pending;
+        return OrderRequestStatus.requested;
       case 'APPROVED':
         return OrderRequestStatus.approved;
       case 'REJECTED':
         return OrderRequestStatus.rejected;
+      case 'PROCESSING':
+        return OrderRequestStatus.processing;
+      case 'SHIPPED':
+        return OrderRequestStatus.shipped;
+      case 'DELIVERED':
       case 'COMPLETED':
-        return OrderRequestStatus.completed;
+        return OrderRequestStatus.delivered;
+      case 'CANCELLED':
+      case 'CANCELED':
+        return OrderRequestStatus.cancelled;
       default:
         return OrderRequestStatus.unknown;
     }
+  }
+}
+
+/// Filter chip labels for replacement status wires.
+String replacementRequestStatusFilterLabel(String wire) {
+  switch (wire.toUpperCase().trim()) {
+    case 'ALL':
+      return 'All';
+    case 'REQUESTED':
+      return 'Requested';
+    case 'APPROVED':
+      return 'Approved';
+    case 'REJECTED':
+      return 'Rejected';
+    case 'PROCESSING':
+      return 'Processing';
+    case 'SHIPPED':
+      return 'Shipped';
+    case 'DELIVERED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    default:
+      if (wire.isEmpty) return wire;
+      return wire[0] + wire.substring(1).toLowerCase();
   }
 }
 
@@ -133,7 +190,7 @@ class OrderRequest {
   final String userName;
   final String userEmail;
 
-  bool get isPending => status == OrderRequestStatus.pending;
+  bool get isPending => status == OrderRequestStatus.requested;
 
   String get formattedDate => createdAt == null
       ? '—'
@@ -168,8 +225,9 @@ class OrderRequest {
 
     AdminOrder? order;
     AdminOrder? replacementOrder;
-    if (json['order'] is Map<String, dynamic>) {
-      order = AdminOrder.fromJson(json['order'] as Map<String, dynamic>);
+    final orderJson = json['order'] ?? json['originalOrder'];
+    if (orderJson is Map<String, dynamic>) {
+      order = AdminOrder.fromJson(orderJson);
       if (userId.isEmpty) userId = order.userId;
       if (userName.isEmpty) userName = order.userName;
       if (userEmail.isEmpty) userEmail = order.userEmail;
@@ -182,7 +240,11 @@ class OrderRequest {
 
     return OrderRequest(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
-      requestNumber: (json['requestNumber'] ?? '').toString(),
+      requestNumber: (json['requestNumber'] ??
+              json['replacementNumber'] ??
+              json['number'] ??
+              '')
+          .toString(),
       type: OrderRequestTypeX.parse(json['type']),
       status: OrderRequestStatusX.parse(json['status']),
       reason: (json['reason'] ?? '').toString(),
@@ -196,6 +258,13 @@ class OrderRequest {
       userName: userName,
       userEmail: userEmail,
     );
+  }
+
+  /// Parses a document from `GET /admin/replacements`.
+  factory OrderRequest.fromReplacementJson(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized.putIfAbsent('type', () => 'REPLACEMENT');
+    return OrderRequest.fromJson(normalized);
   }
 }
 

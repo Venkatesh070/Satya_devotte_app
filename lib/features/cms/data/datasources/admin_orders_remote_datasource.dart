@@ -9,9 +9,10 @@
 //   • POST   /orders/:id/dispatch
 //   • POST   /orders/:id/cancel-paid
 //   • GET    /orders/requests
-//   • GET    /orders/requests/:id
-//   • POST   /orders/requests/:id/approve
-//   • POST   /orders/requests/:id/reject
+//   • GET    /admin/replacements
+//   • GET    /admin/replacements/:id
+//   • POST   /admin/replacements/:id/approve
+//   • POST   /admin/replacements/:id/reject
 //   • GET    /payments/verify/:reference   (re-used from donations flow)
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -194,32 +195,73 @@ class AdminOrdersRemoteDataSource {
     );
   }
 
-  /// `GET /orders/requests/:id`
-  Future<OrderRequest> getOrderRequest(String id) async {
-    final res = await _apiClient.dio.get(ApiEndpoints.orderRequest(id));
-    return OrderRequest.fromJson(_unwrapRequest(res.data));
+  /// `GET /admin/replacements` — paginated replacement requests.
+  Future<OrderRequestsPage> getReplacements({
+    int page = 1,
+    int limit = 20,
+    String? status,
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.adminReplacements,
+      queryParameters: query,
+    );
+    final body = _asMap(res.data);
+    final rawItems = _extractItems(body);
+    final requests = rawItems
+        .whereType<Map<String, dynamic>>()
+        .map(OrderRequest.fromReplacementJson)
+        .toList(growable: false);
+
+    final pagination = _extractPagination(body, page, limit, requests.length);
+
+    return OrderRequestsPage(
+      items: requests,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
   }
 
-  /// `POST /orders/requests/:id/approve`
-  Future<OrderRequest> approveRequest(String id, {String? adminNote}) async {
-    final res = await _apiClient.dio.post(
-      ApiEndpoints.approveOrderRequest(id),
+  /// `GET /admin/replacements/:id`
+  Future<OrderRequest> getReplacementRequest(String id) async {
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.orderReplacementRequest(id),
+    );
+    return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /admin/replacements/:id/approve`
+  Future<OrderRequest> approveReplacementRequest(
+    String id, {
+    String? adminNote,
+  }) async {
+    final res = await _apiClient.dio.put(
+      ApiEndpoints.approveReplacementRequest(id),
       data: {
         if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
       },
     );
-    return OrderRequest.fromJson(_unwrapRequest(res.data));
+    return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
   }
 
-  /// `POST /orders/requests/:id/reject`
-  Future<OrderRequest> rejectRequest(String id, {String? adminNote}) async {
-    final res = await _apiClient.dio.post(
-      ApiEndpoints.rejectOrderRequest(id),
+  /// `POST /admin/replacements/:id/reject`
+  Future<OrderRequest> rejectReplacementRequest(
+    String id, {
+    String? adminNote,
+  }) async {
+    final res = await _apiClient.dio.put(
+      ApiEndpoints.rejectReplacementRequest(id),
       data: {
         if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
       },
     );
-    return OrderRequest.fromJson(_unwrapRequest(res.data));
+    return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
   }
 
   // ────────────────────────────── Payments ────────────────────────────
@@ -252,8 +294,10 @@ class AdminOrdersRemoteDataSource {
   Map<String, dynamic> _unwrapOrder(dynamic raw) =>
       _peelSingleResource(raw, const ['order']);
 
-  Map<String, dynamic> _unwrapRequest(dynamic raw) =>
-      _peelSingleResource(raw, const ['request', 'orderRequest']);
+  Map<String, dynamic> _unwrapRequest(dynamic raw) => _peelSingleResource(
+        raw,
+        const ['request', 'orderRequest', 'replacement'],
+      );
 
   Map<String, dynamic> _peelSingleResource(
     dynamic raw,
@@ -288,9 +332,16 @@ class AdminOrdersRemoteDataSource {
       if (data['items'] is List) return data['items'] as List;
       if (data['orders'] is List) return data['orders'] as List;
       if (data['requests'] is List) return data['requests'] as List;
+      if (data['replacements'] is List) return data['replacements'] as List;
     }
     if (data is List) return data;
-    for (final k in const ['items', 'orders', 'requests', 'results']) {
+    for (final k in const [
+      'items',
+      'orders',
+      'requests',
+      'replacements',
+      'results',
+    ]) {
       if (body[k] is List) return body[k] as List;
     }
     return const <dynamic>[];

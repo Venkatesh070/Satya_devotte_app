@@ -1,7 +1,6 @@
-// Pooja Kit → Replace & Cancel Requests tab content for the CMS.
+// Pooja Kit → Replace Requests tab content for the CMS.
 //
-// Surfaces `GET /orders/requests` which carries cancellation, refund and
-// replacement requests raised by devotees. The flow:
+// Surfaces `GET /admin/replacements` for devotee replacement requests. The flow:
 //   • LIST   — paginated requests with status (default PENDING) + type filters.
 //   • DETAIL — request summary, reason, attachments, related order,
 //              replacement order link (if any), Approve / Reject with
@@ -16,7 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart'
-    show OrderStatusBadge, PaymentStatusBadge;
+    show CmsKitOrderDateCell, OrderStatusBadge, PaymentStatusBadge;
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -28,9 +27,7 @@ class CmsPoojaKitRefundsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.find<AdminOrderRequestsController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (c.items.isEmpty && !c.isLoading && c.error == null) {
-        c.refresh();
-      }
+      if (!c.isLoading) c.refresh();
     });
     return Obx(() {
       if (c.selectedId != null) {
@@ -53,10 +50,10 @@ class _RequestsListView extends StatelessWidget {
     return Column(
       children: [
         CmsPoojaKitSectionHeader(
-          title: 'Replace & Cancel Requests',
+          title: 'Replace Requests',
           subtitle:
-              'Review cancellations, refunds and replacement requests from '
-              'devotees. Approve to apply the action, or reject with a note.',
+              'Review replacement requests from devotees. Approve to create a '
+              'linked replacement order, or reject with a note.',
           trailing: IconButton(
             tooltip: 'Refresh',
             onPressed: controller.refresh,
@@ -100,15 +97,6 @@ class _FiltersBar extends StatelessWidget {
               onSelect: controller.setStatusFilter,
             ),
           ),
-          const SizedBox(height: 8),
-          Obx(
-            () => _Pills(
-              label: 'Type',
-              options: AdminOrderRequestsController.typeFilters,
-              selected: controller.type,
-              onSelect: controller.setTypeFilter,
-            ),
-          ),
         ],
       ),
     );
@@ -149,9 +137,7 @@ class _Pills extends StatelessWidget {
               children: [
                 for (final opt in options) ...[
                   _Pill(
-                    label: opt == 'ALL'
-                        ? 'All'
-                        : opt[0] + opt.substring(1).toLowerCase(),
+                    label: replacementRequestStatusFilterLabel(opt),
                     selected: opt == selected,
                     onTap: () => onSelect(opt),
                   ),
@@ -213,119 +199,233 @@ class _RequestsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading) {
+      if (controller.isLoading && controller.items.isEmpty) {
         return const Center(child: CircularProgressIndicator());
       }
-      if (controller.error != null) {
+      if (controller.error != null && controller.items.isEmpty) {
         return _ErrorBox(
           message: controller.error!,
           onRetry: controller.refresh,
         );
       }
-      if (controller.isEmpty) {
+      if (!controller.isLoading && controller.isEmpty) {
         return const CmsEmptyState(
           icon: Icons.assignment_return_outlined,
-          title: 'No requests',
+          title: 'No replacement requests',
           subtitle:
-              'Devotee-raised cancellations, refunds and replacements will '
-              'appear here once submitted.',
+              'When a devotee submits a replacement request it will appear '
+              'here for review.',
         );
       }
-      return ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: controller.items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, i) {
-          final r = controller.items[i];
-          return InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => controller.openRequest(r.id),
-            child: _RequestRowCard(request: r),
-          );
-        },
+      return _ReplacementsTable(
+        requests: controller.items,
+        controller: controller,
       );
     });
   }
 }
 
-class _RequestRowCard extends StatelessWidget {
-  const _RequestRowCard({required this.request});
+/// Column layout shared by header and data rows (flex = share of width).
+const _kReplacementTableColumns = <_ReqColSpec>[
+  _ReqColSpec('Request #', flex: 14),
+  _ReqColSpec('Order #', flex: 12),
+  _ReqColSpec('Customer', flex: 18),
+  _ReqColSpec('Reason', flex: 22),
+  _ReqColSpec('Status', flex: 10),
+  _ReqColSpec('Date', flex: 14),
+];
+
+class _ReplacementsTable extends StatelessWidget {
+  const _ReplacementsTable({
+    required this.requests,
+    required this.controller,
+  });
+  final List<OrderRequest> requests;
+  final AdminOrderRequestsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Column(
+          children: [
+            const _ReqTableHeader(columns: _kReplacementTableColumns),
+            const Divider(height: 1, color: CmsColors.border),
+            for (final r in requests)
+              InkWell(
+                onTap: () => controller.openRequest(r.id),
+                child: _ReplacementTableRow(
+                  request: r,
+                  columns: _kReplacementTableColumns,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReplacementTableRow extends StatelessWidget {
+  const _ReplacementTableRow({
+    required this.request,
+    required this.columns,
+  });
   final OrderRequest request;
+  final List<_ReqColSpec> columns;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CmsColors.border),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: CmsColors.border)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  request.requestNumber.isEmpty ? '—' : request.requestNumber,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
+          for (var i = 0; i < columns.length; i++)
+            Expanded(
+              flex: columns[i].flex,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2, right: 8),
+                child: _cellForColumn(columns[i].label),
               ),
-              _TypePill(type: request.type),
-              const SizedBox(width: 6),
-              RequestStatusBadge(status: request.status),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Order ${request.order?.orderNumber ?? '—'} · '
-            '${request.userName.isEmpty ? '—' : request.userName} · '
-            '${request.userEmail}',
-            style: const TextStyle(
-              fontSize: 11.5,
+            ),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
               color: CmsColors.textSecond,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          if (request.reason.isNotEmpty)
-            Text(
-              request.reason,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: CmsColors.textPrimary,
-              ),
-            ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                request.formattedDate,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: CmsColors.textSecond,
-                ),
-              ),
-              const Spacer(),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: CmsColors.textSecond,
-              ),
-            ],
           ),
         ],
       ),
     );
   }
+
+  Widget _cellForColumn(String label) {
+    switch (label) {
+      case 'Request #':
+        return Text(
+          request.requestNumber.isEmpty ? '—' : request.requestNumber,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textPrimary,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+      case 'Order #':
+        return Text(
+          request.order?.orderNumber.isEmpty != false
+              ? '—'
+              : request.order!.orderNumber,
+          style: const TextStyle(
+            fontSize: 12.5,
+            color: CmsColors.textPrimary,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+      case 'Customer':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              request.userName.isEmpty ? '—' : request.userName,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: CmsColors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (request.userEmail.isNotEmpty)
+              Text(
+                request.userEmail,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: CmsColors.textSecond,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        );
+      case 'Reason':
+        return Text(
+          request.reason.isEmpty ? '—' : request.reason,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 12,
+            color: CmsColors.textPrimary,
+          ),
+        );
+      case 'Status':
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: RequestStatusBadge(status: request.status),
+        );
+      case 'Date':
+        return CmsKitOrderDateCell(at: request.createdAt);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+class _ReqTableHeader extends StatelessWidget {
+  const _ReqTableHeader({required this.columns});
+  final List<_ReqColSpec> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final col in columns)
+            Expanded(
+              flex: col.flex,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  col.label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.textSecond,
+                    letterSpacing: 0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          const SizedBox(width: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReqColSpec {
+  const _ReqColSpec(this.label, {required this.flex});
+  final String label;
+  final int flex;
 }
 
 class _PaginationBar extends StatelessWidget {
@@ -938,6 +1038,8 @@ class RequestStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10.5,
           fontWeight: FontWeight.w700,
@@ -949,14 +1051,20 @@ class RequestStatusBadge extends StatelessWidget {
 
   static Color _color(OrderRequestStatus s) {
     switch (s) {
-      case OrderRequestStatus.pending:
+      case OrderRequestStatus.requested:
         return CmsColors.orange;
       case OrderRequestStatus.approved:
         return CmsColors.green;
       case OrderRequestStatus.rejected:
         return CmsColors.red;
-      case OrderRequestStatus.completed:
+      case OrderRequestStatus.processing:
+        return CmsColors.orangeDark;
+      case OrderRequestStatus.shipped:
+        return const Color(0xFF1976D2);
+      case OrderRequestStatus.delivered:
         return const Color(0xFF2E7D32);
+      case OrderRequestStatus.cancelled:
+        return Colors.grey;
       case OrderRequestStatus.unknown:
         return Colors.grey;
     }

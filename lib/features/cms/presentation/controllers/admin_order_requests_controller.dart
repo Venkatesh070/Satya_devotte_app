@@ -1,5 +1,5 @@
-// Order-requests inbox + detail controller (cancellations / refunds /
-// replacements). Backs the "Replace & Cancel Requests" tab under Pooja Kit.
+// Replacement-requests inbox + detail controller.
+// Backs the "Replace Requests" tab (`GET /admin/replacements`).
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
@@ -13,28 +13,23 @@ class AdminOrderRequestsController extends GetxController {
 
   static const statusFilters = <String>[
     'ALL',
-    'PENDING',
+    'REQUESTED',
     'APPROVED',
     'REJECTED',
-    'COMPLETED',
-  ];
-
-  static const typeFilters = <String>[
-    'ALL',
-    'CANCELLATION',
-    'REFUND',
-    'REPLACEMENT',
+    'PROCESSING',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED',
   ];
 
   final _items = <OrderRequest>[].obs;
   final _isLoading = false.obs;
   final _error = RxnString();
   final _page = 1.obs;
-  final _limit = 10.obs;
+  final _limit = 20.obs;
   final _total = 0.obs;
   final _totalPages = 1.obs;
-  final _status = 'PENDING'.obs; // PENDING is the most useful default
-  final _type = 'ALL'.obs;
+  final _status = 'ALL'.obs;
 
   final _selectedId = RxnString();
   final _detail = Rxn<OrderRequest>();
@@ -50,7 +45,6 @@ class AdminOrderRequestsController extends GetxController {
   int get total => _total.value;
   int get totalPages => _totalPages.value;
   String get status => _status.value;
-  String get type => _type.value;
   bool get isEmpty =>
       !_isLoading.value && _error.value == null && _items.isEmpty;
 
@@ -77,13 +71,6 @@ class AdminOrderRequestsController extends GetxController {
     _load(page: 1);
   }
 
-  void setTypeFilter(String v) {
-    final u = v.toUpperCase();
-    if (!typeFilters.contains(u) || _type.value == u) return;
-    _type.value = u;
-    _load(page: 1);
-  }
-
   void setLimit(int v) {
     if (v <= 0 || v == _limit.value) return;
     _limit.value = v;
@@ -94,11 +81,10 @@ class AdminOrderRequestsController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final res = await _ds.getOrderRequests(
+      final res = await _ds.getReplacements(
         page: page,
         limit: _limit.value,
         status: _status.value == 'ALL' ? null : _status.value,
-        type: _type.value == 'ALL' ? null : _type.value,
       );
       _items.assignAll(res.items);
       _page.value = res.page;
@@ -134,7 +120,7 @@ class AdminOrderRequestsController extends GetxController {
     _detailLoading.value = true;
     _detailError.value = null;
     try {
-      final fresh = await _ds.getOrderRequest(id);
+      final fresh = await _ds.getReplacementRequest(id);
       final current = _detail.value;
       final freshIsUsable =
           fresh.id.isNotEmpty || fresh.requestNumber.isNotEmpty;
@@ -156,9 +142,10 @@ class AdminOrderRequestsController extends GetxController {
     final id = _selectedId.value;
     if (id == null) return false;
     return _mutate(() async {
-      final updated = await _ds.approveRequest(id, adminNote: adminNote);
+      final updated =
+          await _ds.approveReplacementRequest(id, adminNote: adminNote);
       _replaceDetail(updated);
-      _ok('Request approved', _approveCopy(updated));
+      _ok('Request approved', 'Replacement order created and linked.');
       return true;
     });
   }
@@ -167,24 +154,12 @@ class AdminOrderRequestsController extends GetxController {
     final id = _selectedId.value;
     if (id == null) return false;
     return _mutate(() async {
-      final updated = await _ds.rejectRequest(id, adminNote: adminNote);
+      final updated =
+          await _ds.rejectReplacementRequest(id, adminNote: adminNote);
       _replaceDetail(updated);
       _ok('Request rejected', 'The devotee will be notified by email.');
       return true;
     });
-  }
-
-  String _approveCopy(OrderRequest r) {
-    switch (r.type) {
-      case OrderRequestType.cancellation:
-        return 'Order cancelled and restocked. Payment marked REFUNDED.';
-      case OrderRequestType.refund:
-        return 'Payment marked REFUNDED. Settle in the Paystack dashboard.';
-      case OrderRequestType.replacement:
-        return 'Replacement order created and linked.';
-      case OrderRequestType.unknown:
-        return 'Request approved.';
-    }
   }
 
   void _replaceDetail(OrderRequest updated) {
