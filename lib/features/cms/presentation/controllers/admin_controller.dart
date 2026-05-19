@@ -12,19 +12,25 @@ class AdminController extends GetxController {
 
   final _admins = <AdminModel>[].obs;
   final _regularUsers = <AdminModel>[].obs;
-  final _isLoading = false.obs;
+  final _isLoadingAdmins = false.obs;
+  final _isLoadingRegularUsers = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
   // Admin IDs that are currently mid-flight for the panel-access toggle.
   // The UI watches this set to disable / spin the corresponding switch.
   final _panelAccessPendingIds = <String>{}.obs;
+  final _passwordResetPendingIds = <String>{}.obs;
 
   List<AdminModel> get admins => _admins;
   List<AdminModel> get regularUsers => _regularUsers;
-  bool get isLoading => _isLoading.value;
+  bool get isLoadingAdmins => _isLoadingAdmins.value;
+  bool get isLoadingRegularUsers => _isLoadingRegularUsers.value;
+  bool get isLoading => _isLoadingAdmins.value || _isLoadingRegularUsers.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
   bool isPanelAccessPending(String id) => _panelAccessPendingIds.contains(id);
+  bool isPasswordResetPending(String id) =>
+      _passwordResetPendingIds.contains(id);
 
   @override
   void onInit() {
@@ -46,29 +52,36 @@ class AdminController extends GetxController {
 
   // ── Load both lists independently so one failure doesn't block the other ──
   Future<void> loadAll() async {
-    _isLoading.value = true;
     _error.value = null;
     await Future.wait([loadAdmins(), loadRegularUsers()]);
-    _isLoading.value = false;
   }
 
   Future<void> loadAdmins() async {
+    _isLoadingAdmins.value = true;
+    _error.value = null;
     try {
       final result = await _dataSource.getAdminUsers();
-      _admins.assignAll(result);
+      _admins.assignAll(
+        result.where((a) => a.role.toLowerCase() != 'superadmin'),
+      );
     } catch (e) {
       _error.value = _parseError(e);
       print('loadAdmins error: $e');
+    } finally {
+      _isLoadingAdmins.value = false;
     }
   }
 
   Future<void> loadRegularUsers() async {
+    _isLoadingRegularUsers.value = true;
     try {
       final result = await _dataSource.getRegularUsers();
       _regularUsers.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
       print('loadRegularUsers error: $e');
+    } finally {
+      _isLoadingRegularUsers.value = false;
     }
   }
 
@@ -120,6 +133,27 @@ class AdminController extends GetxController {
       return false;
     } finally {
       _isSubmitting.value = false;
+    }
+  }
+
+  /// Generates a new password reset link for an existing admin.
+  /// Returns the link on success, or `null` if the request failed.
+  Future<String?> resendPasswordResetLink(String id) async {
+    if (id.trim().isEmpty) {
+      _err('Cannot generate reset link: admin id is missing.');
+      return null;
+    }
+    _passwordResetPendingIds.add(id);
+    try {
+      final link = await _dataSource.resendPasswordResetLink(id);
+      _ok('Password reset link generated');
+      return link;
+    } catch (e) {
+      _error.value = _parseError(e);
+      _err(_error.value!);
+      return null;
+    } finally {
+      _passwordResetPendingIds.remove(id);
     }
   }
 

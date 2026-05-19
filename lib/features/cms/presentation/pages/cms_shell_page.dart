@@ -18,6 +18,7 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_inventory_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
@@ -86,6 +87,9 @@ class _CmsShellPageState extends State<CmsShellPage> {
         Get.isRegistered<InventoryController>()) {
       Get.find<InventoryController>().init();
     }
+    if (index == _NavIds.admins && Get.isRegistered<AdminController>()) {
+      Get.find<AdminController>().loadAdmins();
+    }
   }
 
   void _onToggleGroup(String label) {
@@ -101,6 +105,18 @@ class _CmsShellPageState extends State<CmsShellPage> {
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
+    final auth = Get.find<AuthController>();
+    final routeIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
+    if (routeIndex != _selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || routeIndex == _selectedIndex) return;
+        setState(() {
+          _selectedIndex = routeIndex;
+          final group = _groupLabelForIndex(routeIndex);
+          if (group != null) _expandedGroups.add(group);
+        });
+      });
+    }
     return WillPopScope(
       onWillPop: () async {
         final isDashboardRoute = Get.currentRoute == AppRoutes.cms;

@@ -9,8 +9,11 @@ class AdminRemoteDataSource {
   AdminRemoteDataSource(this._apiClient);
   final ApiClient _apiClient;
 
-  List<dynamic> _list(Map<String, dynamic> body) {
-    final d = body['data'];
+  List<dynamic> _list(dynamic body) {
+    if (body is List) return body;
+    if (body is! Map) return [];
+    final map = Map<String, dynamic>.from(body);
+    final d = map['data'];
     if (d is List) return d;
     if (d is Map) {
       for (final k in ['users', 'admins', 'data', 'items', 'results']) {
@@ -18,7 +21,7 @@ class AdminRemoteDataSource {
       }
     }
     for (final k in ['users', 'admins', 'data', 'items', 'results']) {
-      if (body[k] is List) return body[k] as List;
+      if (map[k] is List) return map[k] as List;
     }
     return [];
   }
@@ -34,12 +37,36 @@ class AdminRemoteDataSource {
     return body;
   }
 
-  // ── GET /admin/users — all admin users ────────────────────────
+  // ── GET /superadmin/admins — all admin users (super admin) ───
   Future<List<AdminModel>> getAdminUsers() async {
-    final res = await _apiClient.dio.get('/api/v1/admin/users');
-    return _list(
-      res.data as Map<String, dynamic>,
-    ).map((e) => AdminModel.fromJson(e as Map<String, dynamic>)).toList();
+    try {
+      final res = await _apiClient.dio.get<Map<String, dynamic>>(
+        ApiEndpoints.superadminAdmins,
+      );
+      final body = res.data;
+      if (body == null) {
+        throw Exception('Empty response from server.');
+      }
+      if (body['success'] == false) {
+        throw Exception(
+          body['message']?.toString() ?? 'Could not load admins.',
+        );
+      }
+      return _parseAdminList(_list(body));
+    } on DioException catch (e) {
+      final raw = e.response?.data;
+      if (raw is Map && raw['message'] != null) {
+        throw Exception(raw['message'].toString());
+      }
+      rethrow;
+    }
+  }
+
+  List<AdminModel> _parseAdminList(List<dynamic> raw) {
+    return raw
+        .whereType<Map>()
+        .map((e) => AdminModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   // ── GET /admin/regular-users — all users with role=user ───────
@@ -113,6 +140,44 @@ class AdminRemoteDataSource {
   Future<AdminModel> removeAdmin(String id) async {
     final res = await _apiClient.dio.patch('/api/v1/admin/remove-admin/$id');
     return AdminModel.fromJson(_single(res.data as Map<String, dynamic>));
+  }
+
+  /// POST `/api/v1/superadmin/admins/:id/password-reset-link` — generate a
+  /// password reset link for an existing admin.
+  Future<String> resendPasswordResetLink(String id) async {
+    if (id.trim().isEmpty) {
+      throw Exception('Cannot generate reset link: admin id is missing.');
+    }
+    final path = ApiEndpoints.superadminAdminPasswordResetLink(id);
+    try {
+      final res = await _apiClient.dio.post<Map<String, dynamic>>(path);
+      final body = res.data;
+      if (body == null) {
+        throw Exception('Empty response from server.');
+      }
+      if (body['success'] == false) {
+        throw Exception(
+          body['message']?.toString() ??
+              'Could not generate password reset link.',
+        );
+      }
+      final data = body['data'];
+      String? link;
+      if (data is Map) {
+        link = data['passwordResetLink']?.toString();
+      }
+      link ??= body['passwordResetLink']?.toString();
+      if (link == null || link.trim().isEmpty) {
+        throw Exception('No password reset link was returned.');
+      }
+      return link.trim();
+    } on DioException catch (e) {
+      final raw = e.response?.data;
+      if (raw is Map && raw['message'] != null) {
+        throw Exception(raw['message'].toString());
+      }
+      rethrow;
+    }
   }
 
   /// PATCH `/api/v1/superadmin/admins/:id/panel-access` — toggle whether the

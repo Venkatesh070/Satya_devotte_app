@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 
 class CmsDashboardContent extends StatefulWidget {
@@ -269,7 +270,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                               label: 'Manage Admins',
                               icon: Icons.admin_panel_settings_outlined,
                               color: CmsColors.orange,
-                              onTap: () {},
+                              onTap: () => Get.offNamed(AppRoutes.cmsAdmins),
                             ),
                           )
                         : const SizedBox.shrink(),

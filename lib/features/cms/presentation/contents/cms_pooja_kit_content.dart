@@ -163,7 +163,7 @@ class _ProductList extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               CmsPrimaryButton(
-                label: isTablet ? '+ Add Product' : 'Add',
+                label: isTablet ? '+ Add Puja Kit' : 'Add',
                 onTap: onAdd,
               ),
             ],
@@ -258,7 +258,7 @@ class _ProductList extends StatelessWidget {
                     ? 'No Puja Kits Yet'
                     : 'No matching Puja Kits',
                 subtitle:
-                    'Puja Kits you create will appear here. Tap "+ Add Product" '
+                    'Puja Kits you create will appear here. Tap "+ Add Puja Kit" '
                     'to create your first kit.',
                 actionLabel:
                     (ctrl.filter == 'All' && ctrl.search.isEmpty)
@@ -2241,6 +2241,7 @@ class _ProductFormState extends State<_ProductForm> {
         clearSalePrice: salePriceText.isEmpty,
         currency: _currency,
         category: _categoryCtrl.text.trim(),
+        isFeatured: _isFeatured,
         image: _image,
       );
     } else {
@@ -2506,6 +2507,8 @@ class _ProductFormState extends State<_ProductForm> {
                   'inventory sale prices when any component is on sale.',
                   style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
                 ),
+                const SizedBox(height: 16),
+                _buildFeaturedToggle(),
               ],
             ),
 
@@ -2565,6 +2568,47 @@ class _ProductFormState extends State<_ProductForm> {
         ),
       );
     });
+  }
+
+  Widget _buildFeaturedToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.star_outline, size: 18, color: CmsColors.orange),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Featured',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Show this kit in featured listings on the app home.',
+                  style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isFeatured,
+            onChanged: (v) => setState(() => _isFeatured = v),
+            activeThumbColor: CmsColors.orange,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _formHeader() => Row(

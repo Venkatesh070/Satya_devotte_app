@@ -47,7 +47,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
               ),
               const SizedBox(width: 12),
               Obx(
-                () => _ctrl.isLoading
+                () => _ctrl.isLoadingRegularUsers
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -82,7 +82,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
         Expanded(
           child: Obx(() {
             // Loading
-            if (_ctrl.isLoading && _ctrl.regularUsers.isEmpty) {
+            if (_ctrl.isLoadingRegularUsers && _ctrl.regularUsers.isEmpty) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

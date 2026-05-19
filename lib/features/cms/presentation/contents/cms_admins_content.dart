@@ -51,7 +51,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               ),
               const SizedBox(width: 12),
               Obx(
-                () => _ctrl.isLoading
+                () => _ctrl.isLoadingAdmins
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -80,7 +80,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               const SizedBox(width: 10),
               // Promote button
               CmsPrimaryButton(
-                label: isWeb ? 'Promote to Admin' : 'Promote',
+                label: isWeb ? 'Create Admin' : 'Create',
                 icon: Icons.person_add_outlined,
                 onTap: () => _showPromoteDialog(context),
               ),
@@ -93,7 +93,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
         // ── Content ───────────────────────────────────────────────
         Expanded(
           child: Obx(() {
-            if (_ctrl.isLoading) {
+            if (_ctrl.isLoadingAdmins && _ctrl.admins.isEmpty) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -156,6 +156,9 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               onTogglePanelAccess: (user, value) =>
                   _ctrl.setPanelAccess(id: user.id, canLoginAdminPanel: value),
               isPanelAccessPending: _ctrl.isPanelAccessPending,
+              onResendPasswordReset: (user) =>
+                  _resendPasswordResetLink(context, user),
+              isPasswordResetPending: _ctrl.isPasswordResetPending,
             );
           }),
         ),
@@ -174,7 +177,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
       builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Promote to Admin',
+          'Create Admin',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: CmsColors.textPrimary,
@@ -313,14 +316,37 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
     });
   }
 
-  void _showPasswordResetLinkDialog(BuildContext ctx, String resetLink) {
+  Future<void> _resendPasswordResetLink(
+    BuildContext ctx,
+    AdminModel user,
+  ) async {
+    final link = await _ctrl.resendPasswordResetLink(user.id);
+    if (!ctx.mounted) return;
+    if (link == null || link.isEmpty) return;
+
+    _showPasswordResetLinkDialog(
+      ctx,
+      link,
+      title: 'Password reset link',
+      subtitle:
+          'Copy this link and share it securely with ${user.displayName}.',
+    );
+  }
+
+  void _showPasswordResetLinkDialog(
+    BuildContext ctx,
+    String resetLink, {
+    String title = 'Invitation email sent',
+    String subtitle =
+        'Copy this password reset link and share it securely with the new admin.',
+  }) {
     showDialog<void>(
       context: ctx,
       builder: (dCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Invitation email not sent',
-          style: TextStyle(
+        title: Text(
+          title,
+          style: const TextStyle(
             fontWeight: FontWeight.w700,
             color: CmsColors.textPrimary,
           ),
@@ -329,9 +355,9 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Copy this password reset link and share it securely with the new admin.',
-              style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
+            Text(
+              subtitle,
+              style: const TextStyle(color: CmsColors.textSecond, fontSize: 13),
             ),
             const SizedBox(height: 12),
             SelectableText(
@@ -473,6 +499,8 @@ class _UserList extends StatelessWidget {
     this.showPanelAccessToggle = false,
     this.onTogglePanelAccess,
     this.isPanelAccessPending,
+    this.onResendPasswordReset,
+    this.isPasswordResetPending,
   });
 
   final List<AdminModel> users;
@@ -487,6 +515,8 @@ class _UserList extends StatelessWidget {
   final bool showPanelAccessToggle;
   final Future<bool> Function(AdminModel user, bool value)? onTogglePanelAccess;
   final bool Function(String id)? isPanelAccessPending;
+  final Future<void> Function(AdminModel user)? onResendPasswordReset;
+  final bool Function(String id)? isPasswordResetPending;
 
   @override
   Widget build(BuildContext context) {
@@ -520,6 +550,12 @@ class _UserList extends StatelessWidget {
           isPanelAccessPending: isPanelAccessPending == null
               ? null
               : () => isPanelAccessPending!(users[i].id),
+          onResendPasswordReset: onResendPasswordReset == null
+              ? null
+              : () => onResendPasswordReset!(users[i]),
+          isPasswordResetPending: isPasswordResetPending == null
+              ? null
+              : () => isPasswordResetPending!(users[i].id),
         ),
       ),
     );
@@ -539,6 +575,8 @@ class _UserCard extends StatelessWidget {
     this.showPanelAccessToggle = false,
     this.onTogglePanelAccess,
     this.isPanelAccessPending,
+    this.onResendPasswordReset,
+    this.isPasswordResetPending,
   });
 
   final AdminModel user;
@@ -549,6 +587,8 @@ class _UserCard extends StatelessWidget {
   final bool showPanelAccessToggle;
   final Future<bool> Function(bool value)? onTogglePanelAccess;
   final bool Function()? isPanelAccessPending;
+  final Future<void> Function()? onResendPasswordReset;
+  final bool Function()? isPasswordResetPending;
 
   Color get _roleColor {
     switch (user.role.toLowerCase()) {
@@ -563,6 +603,8 @@ class _UserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -677,6 +719,64 @@ class _UserCard extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
+
+          if (onResendPasswordReset != null &&
+              user.role.toLowerCase() != 'superadmin')
+            Obx(() {
+              final resendPending = isPasswordResetPending?.call() ?? false;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: resendPending ? null : onResendPasswordReset,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CmsColors.orange.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: CmsColors.orange.withOpacity(0.3),
+                        ),
+                      ),
+                      child: resendPending
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: CmsColors.orange,
+                              ),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.link_outlined,
+                                  size: 14,
+                                  color: CmsColors.orange,
+                                ),
+                                if (isWeb) ...[
+                                  const SizedBox(width: 5),
+                                  const Text(
+                                    'Resend Password reset link',
+                                    style: TextStyle(
+                                      color: CmsColors.orange,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              );
+            }),
 
           // Action button
           GestureDetector(
