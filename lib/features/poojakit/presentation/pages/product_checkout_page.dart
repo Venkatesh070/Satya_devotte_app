@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/core/services/location_service.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 
 class ProductCheckoutPage extends StatefulWidget {
@@ -21,7 +22,7 @@ class ProductCheckoutPage extends StatefulWidget {
 }
 
 class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
-  late final ProductModel _product;
+  ProductModel? _product;
   int _quantity = 1;
   final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -35,12 +36,17 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   bool _isLocating = false;
 
   late final PoojaKitCheckoutController _checkoutCtrl;
+  late final CartController _cartCtrl;
 
   @override
   void initState() {
     super.initState();
-    _product = Get.arguments as ProductModel;
+    final arg = Get.arguments;
+    if (arg is ProductModel) {
+      _product = arg;
+    }
     _checkoutCtrl = Get.find<PoojaKitCheckoutController>();
+    _cartCtrl = Get.find<CartController>();
     _checkoutCtrl.reset();
   }
 
@@ -92,7 +98,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   void _increment() {
-    if (_quantity < _product.stockQuantity) {
+    if (_product != null && _quantity < _product!.stockQuantity) {
       setState(() => _quantity++);
     }
   }
@@ -129,14 +135,26 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       country: _countryCtrl.text.trim(),
     );
 
-    final init = await _checkoutCtrl.initiate(
-      productId: _product.id,
-      quantity: _quantity,
-      shippingAddress: shippingAddress,
-      notes: _notesCtrl.text.trim(),
-    );
+    dynamic init;
+    if (_product != null) {
+      init = await _checkoutCtrl.initiate(
+        productId: _product!.id,
+        quantity: _quantity,
+        shippingAddress: shippingAddress,
+        notes: _notesCtrl.text.trim(),
+      );
+    } else {
+      init = await _checkoutCtrl.initiateCartCheckout(
+        shippingAddress: shippingAddress,
+        notes: _notesCtrl.text.trim(),
+      );
+    }
 
     if (init != null) {
+      if (_product == null) {
+        // Clear cart after successful cart checkout initiation
+        _cartCtrl.clearCart();
+      }
       Get.toNamed(AppRoutes.poojaKitPayment, arguments: init);
     } else {
       Get.snackbar(
@@ -149,7 +167,13 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalPrice = _product.effectivePrice * _quantity;
+    final bool isSingleProduct = _product != null;
+    final String currency = isSingleProduct
+        ? _product!.currency
+        : (_cartCtrl.cart?.currency ?? 'ZAR');
+    final num totalPrice = isSingleProduct
+        ? (_product!.effectivePrice * _quantity)
+        : (_cartCtrl.cart?.totalAmount ?? 0);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -171,7 +195,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       onPressed: () => Get.back(),
                     ),
                     Text(
-                      'Checkout',
+                      isSingleProduct ? 'Checkout' : 'Cart Checkout',
                       style: AppTypography.lora(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -190,92 +214,150 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Product Summary Card
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                    if (isSingleProduct)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: SizedBox(
+                                width: 80,
+                                height: 80,
+                                child: _product!.imageUrl != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: _product!.imageUrl!,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(color: Colors.grey[200]),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _product!.title,
+                                    style: AppTypography.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_product!.currency} ${_product!.effectivePrice}',
+                                    style: AppTypography.inter(
+                                      fontSize: 14,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Cart items summary
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Order Summary (${_cartCtrl.itemCount} items)',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Divider(color: Colors.white24),
+                            ...(_cartCtrl.cart?.items.map(
+                                  (item) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${item.product.title} x ${item.quantity}',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 13,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${item.product.currency} ${item.lineTotal}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ) ??
+                                []),
+                          ],
+                        ),
                       ),
-                      child: Row(
+
+                    const SizedBox(height: 24),
+
+                    // Quantity Selector (only for single product)
+                    if (isSingleProduct) ...[
+                      Text(
+                        'Quantity',
+                        style: AppTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
-                              width: 80,
-                              height: 80,
-                              child: _product.imageUrl != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: _product.imageUrl!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(color: Colors.grey[200]),
+                          _quantityBtn(Icons.remove, _decrement),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Text(
+                              '$_quantity',
+                              style: AppTypography.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
+                          _quantityBtn(Icons.add, _increment),
                           const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _product.title,
-                                  style: AppTypography.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${_product.currency} ${_product.effectivePrice}',
-                                  style: AppTypography.inter(
-                                    fontSize: 14,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            '(${_product!.stockQuantity} in stock)',
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              color: Colors.white70,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Quantity Selector
-                    Text(
-                      'Quantity',
-                      style: AppTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _quantityBtn(Icons.remove, _decrement),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Text(
-                            '$_quantity',
-                            style: AppTypography.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        _quantityBtn(Icons.add, _increment),
-                        const SizedBox(width: 16),
-                        Text(
-                          '(${_product.stockQuantity} in stock)',
-                          style: AppTypography.inter(
-                            fontSize: 12,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Shipping Address
                     Row(
@@ -394,15 +476,16 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                           'Total Amount',
                           style: AppTypography.inter(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                         Text(
-                          '${_product.currency} $totalPrice',
-                          style: AppTypography.inter(
-                            fontSize: 20,
+                          '$currency $totalPrice',
+                          style: AppTypography.lora(
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textColor,
+                            color: const Color(0xFFFFD180),
                           ),
                         ),
                       ],

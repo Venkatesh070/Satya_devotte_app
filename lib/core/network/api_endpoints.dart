@@ -1,7 +1,7 @@
 class ApiEndpoints {
   static const String authLogin = '/api/v1/auth/login';
   static const String authAdminLogin = '/api/v1/auth/admin/login';
-  
+
   static const String authLogout = '/api/v1/auth/logout';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
@@ -29,30 +29,44 @@ class ApiEndpoints {
   static const String home = '/api/v1/user-home';
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
+
+  /// Super Admin — list / invite admin users.
+  static const String superadminAdmins = '/api/v1/superadmin/admins';
+
   /// Super Admin — invite/create admin user (POST JSON body).
-  static const String superadminCreateAdmin = '/api/v1/superadmin/admins';
+  static const String superadminCreateAdmin = superadminAdmins;
 
   /// Super Admin — toggle admin panel access (PATCH).
   /// Body: `{ "canLoginAdminPanel": bool }`.
   static String superadminAdminPanelAccess(String id) =>
       '/api/v1/superadmin/admins/$id/panel-access';
 
+  /// Super Admin — generate a password reset link for an admin (POST).
+  static String superadminAdminPasswordResetLink(String id) =>
+      '/api/v1/superadmin/admins/$id/password-reset-link';
+
   // ── Pooja Kit Products ────────────────────────────────────────
   /// POST — create a new Pooja Kit product (multipart/form-data).
   static const String createProduct = '/api/v1/products/create-product';
+
   /// GET — list products (public).
   static const String products = '/api/v1/products';
+
   /// GET — list all products including inactive (super-admin).
   static const String allProducts = '/api/v1/products/all';
   static const String featuredProducts = '/api/v1/products/featured';
   static String product(String id) => '/api/v1/products/$id';
+
   /// PATCH — update product fields (multipart/form-data; same fields as create).
   static String updateProduct(String id) => '/api/v1/products/$id';
+
   /// DELETE — remove a product.
   static String deleteProduct(String id) => '/api/v1/products/$id';
+
   /// PUT — super-admin review (APPROVED / REJECTED / QUEUED) with optional
   /// reason. Body: `{ status, reason? }`.
   static String reviewProduct(String id) => '/api/v1/products/review/$id';
+
   /// PATCH — flip lifecycle (`productStatus`: ACTIVE | INACTIVE).
   static String productStatus(String id) => '/api/v1/products/$id/status';
 
@@ -73,14 +87,34 @@ class ApiEndpoints {
   /// POST — adjust stock. Body: `{ delta, reason }`.
   static String inventoryAdjustStock(String id) =>
       '/api/v1/inventory/$id/adjust-stock';
+  // ── Orders (user flow) ────────────────────────────────────────
+  /// POST — place an order (from explicit items or cart).
+  /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
+
+  /// POST — initialize a Paystack transaction for a specific order.
+  static String initializeOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/initialize';
+
+  /// POST — manually verify a Paystack transaction for an order.
+  static String verifyOrderPayment(String id) =>
+      '/api/v1/orders/$id/payments/paystack/verify';
+
+  /// GET — paginated history of the signed-in user's orders.
+  static const String myOrders = '/api/v1/orders/my';
+  static String order(String id) => '/api/v1/orders/$id';
+
+  /// POST — cancel my order (only allowed while PENDING).
+  static String cancelOrder(String id) => '/api/v1/orders/$id/cancel';
+
+  /// POST — customer confirms delivery.
+  /// Body: `{ satisfied: boolean, feedback?: string }`.
+  static String confirmDelivery(String id) =>
+      '/api/v1/orders/$id/confirm-delivery';
 
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
   /// `orderStatus`, `paymentStatus`, `user`, `search` (order # substring).
   static const String allOrders = '/api/v1/orders/all';
-
-  /// GET — single order by Mongo `_id`.
-  static String order(String id) => '/api/v1/orders/$id';
 
   /// PATCH — fulfilment status. Body: `{ status, note? }`.
   /// `SHIPPED` requires `tracking.trackingNumber` already set.
@@ -125,14 +159,50 @@ class ApiEndpoints {
   /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
   static const String createOrder = '/api/v1/orders';
   /// POST — initialize a Paystack transaction for a specific order.
-  static String initializeOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/initialize';
-  /// POST — manually verify a Paystack transaction for an order.
-  static String verifyOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/verify';
-  /// GET — paginated history of the signed-in user's orders.
-  static const String myOrders = '/api/v1/orders/my';
+  // ── Cart (authenticated) ───────────────────────────────────
+  /// GET — get the current user's cart.
+  static const String cart = '/api/v1/cart';
 
+  /// POST — add a product line to the cart. Body: `{ productId, quantity }`.
+  static const String cartAdd = '/api/v1/cart/add';
+
+  /// POST — remove a product from the cart. Body: `{ productId }`.
+  static const String cartRemove = '/api/v1/cart/remove';
+
+  /// DELETE — remove one product line from the cart.
+  static String cartRemoveItem(String productId) =>
+      '/api/v1/cart/items/$productId';
+
+  /// PUT — set line quantity for a product in the cart. Body: `{ productId, quantity }`.
+  static const String cartUpdate = '/api/v1/cart/update';
+
+  /// DELETE — remove all items from the cart.
+  static const String cartClear = '/api/v1/cart/clear';
+
+  // ── Rituals (Admin) ──────────────────────────────────────────
+  /// POST — create a ritual (admin only).
+  static const String createRitual = '/api/v1/rituals/create-ritual';
+
+  /// GET — get rituals.
+  static const String rituals = '/api/v1/rituals';
+
+  /// GET — get current user's (admin) rituals.
+  static const String myRituals = '/api/v1/rituals/my';
+
+  /// GET — get all rituals (superadmin).
+  static const String allRituals = '/api/v1/rituals/all';
+
+  /// GET — get single ritual by id.
+  static String ritual(String id) => '/api/v1/rituals/$id';
+
+  /// PATCH — update ritual by id.
+  static String updateRitual(String id) => '/api/v1/rituals/$id';
+
+  /// DELETE — delete ritual by id.
+  static String deleteRitual(String id) => '/api/v1/rituals/$id';
+
+  /// PUT — review ritual by id (superadmin).
+  static String reviewRitual(String id) => '/api/v1/rituals/review/$id';
 
   // ── Donations (user flow) ─────────────────────────────────────
   /// GET — list approved + visible donations for users.

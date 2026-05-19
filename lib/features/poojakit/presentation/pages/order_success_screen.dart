@@ -27,7 +27,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     // Automatically navigate to My Orders after 2 seconds
     Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        Get.offNamed(AppRoutes.userOrders);
+        // Clear stack up to home and then show orders
+        Get.offAllNamed(AppRoutes.home);
+        Get.toNamed(AppRoutes.userOrders);
       }
     });
   }

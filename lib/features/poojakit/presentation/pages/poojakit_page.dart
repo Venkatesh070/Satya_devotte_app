@@ -4,6 +4,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 
@@ -48,32 +49,29 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
   @override
   Widget build(BuildContext context) {
+    final cartCtrl = Get.find<CartController>();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text(
+          'Pooja Kit',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [_CartBadge(controller: cartCtrl)],
+      ),
       body: AppBackground(
         child: Column(
           children: [
-            // Header
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Puja Kit Store',
-                      style: AppTypography.lora(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSearchField(),
-                  ],
-                ),
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: _buildSearchField(),
             ),
 
             Expanded(
@@ -153,17 +151,60 @@ class PoojaKitPage extends GetView<PoojaKitController> {
   }
 }
 
+class _CartBadge extends StatelessWidget {
+  const _CartBadge({required this.controller});
+  final CartController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+          onPressed: () => Get.toNamed(AppRoutes.poojaKitCart),
+        ),
+        Positioned(
+          right: 8,
+          top: 8,
+          child: Obx(() {
+            final count = controller.itemCount;
+            if (count == 0) return const SizedBox.shrink();
+            return Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
 class _GridProductCard extends StatelessWidget {
   const _GridProductCard({required this.product});
   final dynamic product;
 
   @override
   Widget build(BuildContext context) {
+    final cartCtrl = Get.find<CartController>();
     return ProductCard(
       product: product,
       onTap: () => Get.toNamed(AppRoutes.poojaKitDetails, arguments: product),
-      onDonateTap: () =>
-          Get.toNamed(AppRoutes.poojaKitCheckout, arguments: product),
+      onAddToCartTap: () => cartCtrl.addToCart(product.id),
     );
   }
 }

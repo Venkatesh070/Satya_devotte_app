@@ -4,10 +4,13 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
-import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum CalendarFilterTab { festivals, lunarCycle, events }
 
 class MoonPhaseModel {
   final String date;
@@ -23,6 +26,22 @@ class MoonPhaseModel {
   }
 }
 
+class _CalendarEventFields {
+  const _CalendarEventFields({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.date,
+    required this.reminderType,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final DateTime date;
+  final String reminderType;
+}
+
 class CalendarController extends GetxController {
   final ApiClient _apiClient = Get.find<ApiClient>();
   final NotificationService _notificationService =
@@ -31,9 +50,13 @@ class CalendarController extends GetxController {
   final RxList<FestivalModel> festivals = <FestivalModel>[].obs;
   final RxList<PoojaView> poojas = <PoojaView>[].obs;
   final RxList<MoonPhaseModel> moonPhases = <MoonPhaseModel>[].obs;
+  final RxList<UserCalendarEvent> userEvents = <UserCalendarEvent>[].obs;
   final RxBool isLoading = false.obs;
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final Rx<DateTime> focusedDate = DateTime.now().obs;
+  final Rx<CalendarFilterTab> activeTab = CalendarFilterTab.festivals.obs;
+
+  static const _userEventsKey = 'user_calendar_events';
 
   final RxSet<String> remindedEventIds = <String>{}.obs;
   final RxSet<String> addedToCalendarIds = <String>{}.obs;
@@ -43,10 +66,91 @@ class CalendarController extends GetxController {
     super.onInit();
     _loadReminders();
     _loadCalendarStatus();
+    _loadUserEvents();
     fetchData();
 
     // Re-fetch data whenever the focused month/year changes
     ever(focusedDate, (_) => fetchData());
+  }
+
+  void setActiveTab(CalendarFilterTab tab) => activeTab.value = tab;
+
+  Future<void> _loadUserEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_userEventsKey);
+    userEvents.assignAll(UserCalendarEvent.listFromPrefs(raw));
+  }
+
+  Future<void> addUserEvent({
+    required String name,
+    required String description,
+    required DateTime date,
+  }) async {
+    final event = UserCalendarEvent(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      description: description,
+      date: DateTime(date.year, date.month, date.day),
+    );
+    userEvents.add(event);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userEventsKey, UserCalendarEvent.encodeList(userEvents));
+  }
+
+  bool _isInFocusedMonth(DateTime date) {
+    return date.year == focusedDate.value.year &&
+        date.month == focusedDate.value.month;
+  }
+
+  List<FestivalModel> get festivalsInMonth {
+    return festivals.where((f) {
+      final d = _parseDate(f.date);
+      return d != null && _isInFocusedMonth(d);
+    }).toList()
+      ..sort((a, b) {
+        final da = _parseDate(a.date) ?? DateTime(2100);
+        final db = _parseDate(b.date) ?? DateTime(2100);
+        return da.compareTo(db);
+      });
+  }
+
+  List<MoonPhaseModel> get moonPhasesInMonth {
+    return moonPhases.where((m) {
+      final d = _parseDate(m.date);
+      return d != null && _isInFocusedMonth(d);
+    }).toList()
+      ..sort((a, b) {
+        final da = _parseDate(a.date) ?? DateTime(2100);
+        final db = _parseDate(b.date) ?? DateTime(2100);
+        return da.compareTo(db);
+      });
+  }
+
+  List<dynamic> get eventsInMonth {
+    final list = <dynamic>[];
+    list.addAll(
+      poojas.where((p) {
+        final d = _parseDate(p.date);
+        return d != null && _isInFocusedMonth(d);
+      }),
+    );
+    list.addAll(
+      userEvents.where((e) => _isInFocusedMonth(e.date)),
+    );
+    list.sort((a, b) {
+      final da = a is PoojaView
+          ? _parseDate(a.date)
+          : a is UserCalendarEvent
+              ? a.date
+              : null;
+      final db = b is PoojaView
+          ? _parseDate(b.date)
+          : b is UserCalendarEvent
+              ? b.date
+              : null;
+      return (da ?? DateTime(2100)).compareTo(db ?? DateTime(2100));
+    });
+    return list;
   }
 
   Future<void> _loadReminders() async {
@@ -74,102 +178,163 @@ class CalendarController extends GetxController {
   bool isReminded(String id) => remindedEventIds.contains(id);
   bool isAddedToCalendar(String id) => addedToCalendarIds.contains(id);
 
-  Future<void> toggleReminder(dynamic event) async {
-    String id = '';
-    String title = '';
-    String type = '';
-    DateTime? date;
+  String eventIdFor(dynamic event) => _fieldsFor(event)?.id ?? '';
 
-    if (event is FestivalModel) {
-      id = event.id;
-      title = event.title;
-      type = 'festival';
-      date = _parseDate(event.date);
-    } else if (event is PoojaView) {
-      id = event.title; // Using title as ID if no ID
-      title = event.title;
-      type = 'pooja';
-      date = _parseDate(event.date);
+  Future<void> toggleReminder(dynamic event) async {
+    final fields = _fieldsFor(event);
+    if (fields == null) {
+      Get.snackbar(
+        'Reminder unavailable',
+        'This event does not have a valid date.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
     }
 
-    if (id.isEmpty || date == null) return;
-
+    final id = fields.id;
     debugPrint(
-      'CalendarController: Toggling reminder for $title, id: $id, date: $date',
+      'CalendarController: Toggling reminder for ${fields.title}, id: $id',
     );
 
     if (remindedEventIds.contains(id)) {
       remindedEventIds.remove(id);
+      remindedEventIds.refresh();
       await _notificationService.unsubscribeFromEventNotification(id);
       Get.snackbar(
-        'Reminder Removed',
-        'You will no longer receive notifications for $title',
+        'Reminder removed',
+        'You will no longer receive notifications for ${fields.title}',
+        snackPosition: SnackPosition.BOTTOM,
       );
     } else {
       remindedEventIds.add(id);
+      remindedEventIds.refresh();
       try {
-        debugPrint(
-          'CalendarController: Requesting notification subscription for $title',
-        );
         await _notificationService.subscribeToEventNotification(
           id,
-          title,
-          type,
-          date,
+          fields.title,
+          fields.reminderType,
+          fields.date,
         );
       } catch (e) {
         debugPrint('CalendarController: Failed to subscribe: $e');
         remindedEventIds.remove(id);
-        Get.snackbar('Error', 'Failed to set reminder. Please try again.');
+        remindedEventIds.refresh();
+        Get.snackbar(
+          'Error',
+          'Failed to set reminder. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       }
     }
     await _saveReminders();
   }
 
   Future<void> addToDeviceCalendar(dynamic event) async {
-    String id = '';
-    String title = '';
-    String desc = '';
-    DateTime? date;
-
-    if (event is FestivalModel) {
-      id = event.id;
-      title = event.title;
-      desc = event.description;
-      date = _parseDate(event.date);
-    } else if (event is PoojaView) {
-      id = event.title;
-      title = event.title;
-      desc = event.description;
-      date = _parseDate(event.date);
-    }
-
-    if (date == null || id.isEmpty) return;
-
-    if (addedToCalendarIds.contains(id)) {
-      addedToCalendarIds.remove(id);
-      await _saveCalendarStatus();
+    final fields = _fieldsFor(event);
+    if (fields == null) {
       Get.snackbar(
-        'Calendar Status',
-        'Event marked as removed from your plans',
+        'Unable to add',
+        'This event does not have a valid date.',
+        snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
 
-    final ev = Event(
-      title: title,
-      description: desc,
-      location: 'Sathya App',
-      startDate: date,
-      endDate: date.add(const Duration(hours: 1)),
-      allDay: true,
-    );
-
-    final success = await Add2Calendar.addEvent2Cal(ev);
-    if (success) {
-      addedToCalendarIds.add(id);
+    if (addedToCalendarIds.contains(fields.id)) {
+      addedToCalendarIds.remove(fields.id);
+      addedToCalendarIds.refresh();
       await _saveCalendarStatus();
+      Get.snackbar(
+        'Calendar',
+        'Removed from your saved calendar list',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
     }
+
+    try {
+      final start = fields.date;
+      final end = DateTime(start.year, start.month, start.day)
+          .add(const Duration(days: 1));
+      final success = await addEventToCalendar(
+        title: fields.title,
+        description: fields.description,
+        startDate: start,
+        endDate: end,
+      );
+      if (success) {
+        addedToCalendarIds.add(fields.id);
+        addedToCalendarIds.refresh();
+        await _saveCalendarStatus();
+        Get.snackbar(
+          'Calendar',
+          'Confirm save in your calendar app',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Calendar',
+          'Could not open your calendar app. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      debugPrint('CalendarController: addToDeviceCalendar failed: $e');
+      Get.snackbar(
+        'Calendar',
+        'Could not add this event. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  _CalendarEventFields? _fieldsFor(dynamic event) {
+    if (event is FestivalModel) {
+      final date = _parseDate(event.date);
+      if (date == null || event.id.isEmpty) return null;
+      return _CalendarEventFields(
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: DateTime(date.year, date.month, date.day),
+        reminderType: 'festival',
+      );
+    }
+    if (event is PoojaView) {
+      final date = _parseDate(event.date);
+      if (date == null || event.title.isEmpty) return null;
+      return _CalendarEventFields(
+        id: 'pooja_${event.title}_${event.date}',
+        title: event.title,
+        description: event.description,
+        date: DateTime(date.year, date.month, date.day),
+        reminderType: 'pooja',
+      );
+    }
+    if (event is UserCalendarEvent) {
+      return _CalendarEventFields(
+        id: event.id,
+        title: event.name,
+        description: event.description,
+        date: DateTime(event.date.year, event.date.month, event.date.day),
+        reminderType: 'user_event',
+      );
+    }
+    if (event is MoonPhaseModel) {
+      final date = _parseDate(event.date);
+      if (date == null) return null;
+      final isFull = event.type.toUpperCase().contains('FULL');
+      return _CalendarEventFields(
+        id: 'moon_${event.type}_${event.date}',
+        title: isFull ? 'Full moon' : 'New moon',
+        description: isFull
+            ? 'Purnima — full moon.'
+            : 'Amavasya — new moon.',
+        date: DateTime(date.year, date.month, date.day),
+        reminderType: 'moon',
+      );
+    }
+    return null;
   }
 
   Future<void> fetchData() async {
@@ -298,13 +463,21 @@ class CalendarController extends GetxController {
   }
 
   DateTime? _parseDate(String dateStr) {
+    final trimmed = dateStr.trim();
+    if (trimmed.isEmpty) return null;
     try {
-      return DateTime.parse(dateStr);
+      return DateTime.parse(trimmed);
     } catch (_) {
       try {
-        final parts = dateStr.split('-');
+        final parts = trimmed.split('-');
         if (parts.length == 3) {
-          // Assuming DD-MM-YYYY
+          if (parts[0].length == 4) {
+            return DateTime(
+              int.parse(parts[0]),
+              int.parse(parts[1]),
+              int.parse(parts[2]),
+            );
+          }
           return DateTime(
             int.parse(parts[2]),
             int.parse(parts[1]),
@@ -353,6 +526,13 @@ class CalendarController extends GetxController {
             mDate.month == dayOnly.month &&
             mDate.day == dayOnly.day;
       }),
+    );
+
+    events.addAll(
+      userEvents.where((e) =>
+          e.date.year == dayOnly.year &&
+          e.date.month == dayOnly.month &&
+          e.date.day == dayOnly.day),
     );
 
     return events;

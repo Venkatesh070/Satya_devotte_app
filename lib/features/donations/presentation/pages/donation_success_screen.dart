@@ -1,12 +1,13 @@
-// Terminal "success" screen after verify confirms a paid contribution.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
+import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
+import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class DonationSuccessScreen extends StatelessWidget {
   const DonationSuccessScreen({super.key});
@@ -26,9 +27,10 @@ class DonationSuccessScreen extends StatelessWidget {
           ).format(amount);
     final title = r?.contribution?.donationTitle ?? 'Donation';
     final number = r?.contribution?.contributionNumber ?? '';
+    final date = r?.contribution?.formattedDate ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF1DD),
+      backgroundColor: DonationUi.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -36,114 +38,103 @@ class DonationSuccessScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 22),
-                child: Center(
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE7F6EC),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Color(0xFF1F8A4C),
-                      size: 56,
-                    ),
+              Center(
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE7F6EC),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: DonationUi.successGreen,
+                    size: 56,
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
               Text(
                 'Thank you for your donation!',
                 textAlign: TextAlign.center,
                 style: AppTypography.lora(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textColor,
+                  color: DonationUi.textPrimary,
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: AppTypography.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF4A1C00),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: DonationUi.cardFill,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: DonationUi.cardBorder),
+                ),
+                child: Column(
+                  children: [
+                    _Row('Purpose', title),
+                    if (amountText != null) ...[
+                      const SizedBox(height: 12),
+                      _Row('Amount', amountText),
+                    ],
+                    if (number.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _Row('Receipt', '#$number'),
+                    ],
+                    if (date.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _Row('Date', date),
+                    ],
+                  ],
                 ),
               ),
-              if (amountText != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  amountText,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.lora(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFB10F33),
-                  ),
-                ),
-              ],
-              if (number.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Receipt #$number',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF7F6C53),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
               const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () =>
-                      Get.offAllNamed(AppRoutes.userDonations),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB10F33),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Done',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: () =>
-                      Get.toNamed(AppRoutes.userContributions),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textColor,
-                    side: const BorderSide(color: Color(0xFFE3D9C2)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'View receipt',
-                    style:
-                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
+              CustomButton(
+                label: 'Back to Home',
+                textColor: Colors.white,
+                gradientColors: kFigmaActionGradient,
+                borderRadius: 14,
+                onTap: () => Get.offAllNamed(AppRoutes.home),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Row extends StatelessWidget {
+  const _Row(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.inter(
+            fontSize: 13,
+            color: DonationUi.textMuted,
+          ),
+        ),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: AppTypography.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: DonationUi.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

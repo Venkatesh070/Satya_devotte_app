@@ -1,82 +1,114 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
-import 'package:satya_devotte_app/features/donations/presentation/widgets/status_badge.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 
 class ContributionTile extends StatelessWidget {
-  const ContributionTile({super.key, required this.contribution});
+  const ContributionTile({
+    super.key,
+    required this.contribution,
+  });
 
   final DonationContribution contribution;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEAE3D2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  contribution.donationTitle.isEmpty
-                      ? 'Donation'
-                      : contribution.donationTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.lora(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textColor,
-                  ),
+    return RecordDonationTile(
+      contribution: contribution,
+      onTap: contribution.status == ContributionStatus.paid &&
+              contribution.contributionNumber.isNotEmpty
+          ? () => _showReceiptSheet(context, contribution)
+          : null,
+    );
+  }
+
+  void _showReceiptSheet(
+    BuildContext context,
+    DonationContribution contribution,
+  ) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DonationUi.cardBorder,
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              ),
-              const SizedBox(width: 8),
-              StatusBadge(status: contribution.status),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                contribution.formattedAmount,
-                style: AppTypography.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textColor,
-                ),
-              ),
-              const Spacer(),
-              if (contribution.contributionNumber.isNotEmpty)
-                Text(
-                  '#${contribution.contributionNumber}',
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF7F6C53),
-                  ),
-                ),
-            ],
-          ),
-          if (contribution.formattedDate.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              contribution.formattedDate,
-              style: AppTypography.inter(
-                fontSize: 11,
-                color: const Color(0xFF8C7A60),
               ),
             ),
+            const SizedBox(height: 20),
+            Text(
+              'Receipt',
+              style: AppTypography.lora(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: DonationUi.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _ReceiptRow('Amount', contribution.formattedAmount),
+            if (contribution.donationTitle.isNotEmpty)
+              _ReceiptRow('Purpose', contribution.donationTitle),
+            if (contribution.formattedDate.isNotEmpty)
+              _ReceiptRow('Date', contribution.formattedDate),
+            if (contribution.contributionNumber.isNotEmpty)
+              _ReceiptRow('Receipt #', contribution.contributionNumber),
+            const SizedBox(height: 20),
+            DonationOrangeButton(label: 'Close', onPressed: Get.back),
           ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+}
+
+class _ReceiptRow extends StatelessWidget {
+  const _ReceiptRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 13,
+                color: DonationUi.textMuted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTypography.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: DonationUi.textPrimary,
+              ),
+            ),
+          ),
         ],
       ),
     );

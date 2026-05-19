@@ -41,6 +41,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   Map<String, dynamic>? _pooja;
   Map<String, dynamic>? _selectedDeity;
   List<Map<String, dynamic>> _deityPoojas = const [];
+  List<Map<String, dynamic>> _deityRituals = const [];
   Map<String, String> _festivalNames = const {};
 
   late final TabController _tabController;
@@ -120,12 +121,24 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       }
     }
 
+    List<Map<String, dynamic>> rituals = const [];
+    try {
+      final res = await Get.find<ApiClient>().dio.get<dynamic>(
+        ApiEndpoints.rituals,
+        queryParameters: {'deity': deityId, 'limit': 50},
+      );
+      rituals = _extractList(res.data);
+    } catch (e) {
+      debugPrint('Associated rituals fetch failed: $e');
+    }
+
     if (!mounted) return;
     setState(() {
       _selectedDeity = deity;
       _deityPoojas = poojas
           .map((p) => _mergeDeityIntoPooja(p, deity))
           .toList(growable: false);
+      _deityRituals = rituals;
       _pooja = _deityPoojas.isNotEmpty
           ? _deityPoojas.first
           : _deityShellPooja(deity ?? <String, dynamic>{'_id': deityId});
@@ -205,6 +218,8 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             data['items'] ??
             data['docs'] ??
             data['data'] ??
+            data['rituals'] ??
+            data['ritual'] ??
             data;
       }
       if (data is Map) {
@@ -212,12 +227,19 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             data['poojas'] ??
             data['results'] ??
             data['items'] ??
+            data['rituals'] ??
+            data['ritual'] ??
             payload['poojas'] ??
             payload['results'] ??
-            payload['items'];
+            payload['items'] ??
+            payload['rituals'] ??
+            payload['ritual'];
       }
     }
-    if (data is! List) return const [];
+    if (data is! List) {
+      if (data is Map) return [Map<String, dynamic>.from(data)];
+      return const [];
+    }
     return data
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
@@ -390,6 +412,22 @@ class _RitualDetailPageState extends State<RitualDetailPage>
           current['deity'] = mergedDeity;
           _pooja = current;
         });
+
+        // Also fetch rituals for this deity
+        try {
+          final ritRes = await Get.find<ApiClient>().dio.get<dynamic>(
+            ApiEndpoints.rituals,
+            queryParameters: {'deity': id, 'limit': 50},
+          );
+          final rituals = _extractList(ritRes.data);
+          if (mounted) {
+            setState(() {
+              _deityRituals = rituals;
+            });
+          }
+        } catch (e) {
+          debugPrint('Hydration: rituals fetch failed: $e');
+        }
       }
     } catch (e) {
       debugPrint('Hydration via deity endpoint failed: $e');
@@ -506,7 +544,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   },
                 ),
                 _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
-                _RitualsTab(key: ValueKey('rit_${p.title}'), pooja: p),
+                _RitualsTab(
+                  key: ValueKey('rit_${p.title}'),
+                  pooja: p,
+                  rituals: _deityRituals,
+                ),
                 _StoriesTab(
                   key: ValueKey(
                     'story_${p.deityName}_${p.deityStories.length}',
@@ -1209,48 +1251,33 @@ class _LabeledTitleDescriptionList extends StatelessWidget {
 //  Tab: Rituals & Remedies
 // ════════════════════════════════════════════════════════════════
 class _RitualsTab extends StatelessWidget {
-  const _RitualsTab({super.key, required this.pooja});
+  const _RitualsTab({super.key, required this.pooja, this.rituals = const []});
   final PoojaView pooja;
+  final List<Map<String, dynamic>> rituals;
 
   @override
   Widget build(BuildContext context) {
-    final deityDoc = pooja.deityDoc;
-    final sections = pooja.deitySections;
-    final stories = pooja.deityStories;
-
-    final storySections = sections.where((m) {
-      final key = (m['key'] ?? '').toString().toLowerCase();
-      final title = (m['title'] is Map)
-          ? (m['title']['value'] ?? '').toString().toLowerCase()
-          : (m['title'] ?? '').toString().toLowerCase();
-      return key.contains('story') ||
-          key.contains('legend') ||
-          key.contains('lineage') ||
-          key.contains('origin') ||
-          title.contains('story') ||
-          title.contains('legend') ||
-          title.contains('lineage') ||
-          title.contains('origin');
-    }).toList();
-
-    final fallbackStory =
-        (deityDoc?['story'] ??
-                deityDoc?['legend'] ??
-                deityDoc?['origin'] ??
-                deityDoc?['description'] ??
-                pooja.deitySummary['about'] ??
-                '')
-            .toString();
-
-    final hasAnyStory =
-        fallbackStory.isNotEmpty ||
-        storySections.isNotEmpty ||
-        stories.isNotEmpty;
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
-        if (pooja.purpose.isNotEmpty)
+        if (rituals.isNotEmpty) ...[
+          Text(
+            'Deity Information',
+            style: AppTypography.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF4A1C00),
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final rit in rituals) ...[
+            _RitualCard(ritual: rit),
+            const SizedBox(height: 16),
+          ],
+        ],
+
+        if (pooja.purpose.isNotEmpty) ...[
+          if (rituals.isNotEmpty) const SizedBox(height: 12),
           _SectionCard(
             icon: Icons.auto_awesome,
             title: 'Purpose',
@@ -1276,33 +1303,7 @@ class _RitualsTab extends StatelessWidget {
               ],
             ),
           ),
-
-        // if (hasAnyStory) ...[
-        //   const SizedBox(height: 12),
-        //   _SectionCard(
-        //     icon: Icons.menu_book_outlined,
-        //     title: 'Deity Story',
-        //     child: Column(
-        //       crossAxisAlignment: CrossAxisAlignment.start,
-        //       children: [
-        //         if (fallbackStory.isNotEmpty) ...[
-        //           Text(
-        //             fallbackStory,
-        //             style: AppTypography.inter(
-        //               fontSize: 13.5,
-        //               height: 1.55,
-        //               color: const Color(0xFF4A1C00),
-        //             ),
-        //           ),
-        //           if (stories.isNotEmpty || storySections.isNotEmpty)
-        //             const SizedBox(height: 12),
-        //         ],
-        //         for (final s in stories) DeitySectionCard(section: s),
-        //         for (final s in storySections) DeitySectionCard(section: s),
-        //       ],
-        //     ),
-        //   ),
-        // ],
+        ],
       ],
     );
   }
@@ -2423,6 +2424,409 @@ class _EmptyView extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RitualCard extends StatelessWidget {
+  const _RitualCard({required this.ritual});
+  final Map<String, dynamic> ritual;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = (ritual['title'] ?? '').toString();
+    final description = (ritual['description'] ?? '').toString();
+    final imageUrl = (ritual['imageUrl'] ?? ritual['image'] ?? '').toString();
+    final List<dynamic> days = ritual['days'] is List ? ritual['days'] : [];
+    final List<dynamic> sections = ritual['sections'] is List
+        ? ritual['sections']
+        : [];
+
+    final List<String> tags = [];
+    if (ritual['difficulty'] != null) tags.add(ritual['difficulty'].toString());
+    if (ritual['accessType'] != null) tags.add(ritual['accessType'].toString());
+    if (ritual['ritualDays'] != null) {
+      tags.add('${ritual['ritualDays']} Days');
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (imageUrl.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: Image.network(
+                imageUrl,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 180,
+                  color: const Color(0xFFFAECD2),
+                  child: const Icon(
+                    Icons.image_outlined,
+                    color: Color(0xFFB07A3A),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFAECD2),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_outlined,
+                size: 48,
+                color: Color(0xFFB07A3A),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF3B1E08),
+                  ),
+                ),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                ],
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: tags.map((tag) => _TagChip(label: tag)).toList(),
+                  ),
+                ],
+                if (sections.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    'Remedies & Additional Info',
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF7A4621),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...sections.map((sec) {
+                    final label = (sec['label'] ?? sec['title'] ?? '')
+                        .toString();
+                    final contents = sec['contents'] is List
+                        ? sec['contents'] as List
+                        : [];
+                    final description =
+                        contents.isNotEmpty && contents.first is Map
+                        ? (contents.first['description'] ??
+                                  contents.first['content'] ??
+                                  '')
+                              .toString()
+                        : '';
+
+                    if (label.isEmpty && description.isEmpty)
+                      return const SizedBox.shrink();
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDF7F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF3E5D0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (label.isNotEmpty)
+                            Text(
+                              label,
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF3B1E08),
+                              ),
+                            ),
+                          if (description.isNotEmpty) ...[
+                            if (label.isNotEmpty) const SizedBox(height: 6),
+                            Text(
+                              description,
+                              style: AppTypography.inter(
+                                fontSize: 12.5,
+                                height: 1.45,
+                                color: const Color(0xFF4A1C00),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+                if (days.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    'Ritual Plan',
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF7A4621),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...days.map((day) => _DayItem(day: day)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayItem extends StatefulWidget {
+  const _DayItem({required this.day});
+  final Map<dynamic, dynamic> day;
+
+  @override
+  State<_DayItem> createState() => _DayItemState();
+}
+
+class _DayItemState extends State<_DayItem> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = widget.day;
+    final dayNumber = day['dayNumber'] ?? 0;
+    final title = (day['title'] ?? '').toString();
+    final mantra = (day['mantra'] ?? '').toString();
+    final affirmation = (day['affirmation'] ?? '').toString();
+    final List<dynamic> activities = day['activities'] is List
+        ? day['activities']
+        : [];
+
+    return GestureDetector(
+      onTap: () => setState(() => _isExpanded = !_isExpanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBF2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF3E5D0)),
+          boxShadow: _isExpanded
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFB07A3A),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$dayNumber',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3B1E08),
+                    ),
+                  ),
+                ),
+                Icon(
+                  _isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: const Color(0xFF8A6B4A),
+                ),
+              ],
+            ),
+            if (mantra.isNotEmpty || affirmation.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              if (mantra.isNotEmpty)
+                _DaySubInfo(label: 'Mantra', content: mantra, icon: Icons.mic),
+              if (affirmation.isNotEmpty)
+                _DaySubInfo(
+                  label: 'Affirmation',
+                  content: affirmation,
+                  icon: Icons.favorite_border,
+                ),
+            ],
+            if (_isExpanded && activities.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: Color(0xFFF3E5D0)),
+              const SizedBox(height: 12),
+              Text(
+                'Steps / Activities',
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF7A4621),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...activities.asMap().entries.map((entry) {
+                final idx = entry.key + 1;
+                final activity = entry.value.toString();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6, left: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$idx.',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFB07A3A),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          activity,
+                          style: AppTypography.inter(
+                            fontSize: 12.5,
+                            height: 1.4,
+                            color: const Color(0xFF4A1C00),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DaySubInfo extends StatelessWidget {
+  const _DaySubInfo({
+    required this.label,
+    required this.content,
+    required this.icon,
+  });
+  final String label;
+  final String content;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF8A6B4A)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: const Color(0xFF6A4423),
+                ),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: content),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3E5D0)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFF8A6B4A),
         ),
       ),
     );

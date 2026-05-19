@@ -1,11 +1,14 @@
-import 'package:flutter/foundation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
-import 'package:satya_devotte_app/core/theme/app_typography.dart';
-import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_add_event_page.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 
 class CalendarPage extends StatelessWidget {
@@ -13,242 +16,272 @@ class CalendarPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(CalendarController());
+    if (!Get.isRegistered<CalendarController>()) {
+      Get.put(CalendarController());
+    }
+    final controller = Get.find<CalendarController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2EBDC),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CalendarView(),
-                    const SizedBox(height: 24),
-                    _UpcomingFestivals(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: CalendarUi.background,
+      body: Column(
         children: [
-          Text(
-            'Calendar',
-            style: AppTypography.lora(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
-            ),
+          _CalendarOrangeHeader(controller: controller),
+          Obx(() {
+            final tab = controller.activeTab.value;
+            return Material(
+              color: CalendarUi.background,
+              child: CalendarFilterTabs(
+                labels: const ['Festivals', 'Lunar cycle', 'Events'],
+                selectedIndex: tab.index,
+                onSelected: (i) =>
+                    controller.setActiveTab(CalendarFilterTab.values[i]),
+              ),
+            );
+          }),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              // Read observables here so GetX tracks them (not in child widgets).
+              controller.focusedDate.value;
+              controller.festivals.length;
+              controller.poojas.length;
+              controller.moonPhases.length;
+              controller.userEvents.length;
+              final tab = controller.activeTab.value;
+              switch (tab) {
+                case CalendarFilterTab.festivals:
+                  return _FestivalsList(controller: controller);
+                case CalendarFilterTab.lunarCycle:
+                  return _LunarList(controller: controller);
+                case CalendarFilterTab.events:
+                  return _EventsList(controller: controller);
+              }
+            }),
           ),
-          // ElevatedButton.icon(
-          //   onPressed: () {},
-          //   icon: const Icon(Icons.add, size: 18),
-          //   label: const Text(''),
-          //   style: ElevatedButton.styleFrom(
-          //     backgroundColor: Colors.white,
-          //     foregroundColor: const Color(0xFF3B1E08),
-          //     shape: RoundedRectangleBorder(
-          //       borderRadius: BorderRadius.circular(20),
-          //       side: const BorderSide(color: Color(0xFFEAD9BC)),
-          //     ),
-          //     elevation: 0,
-          //   ),
-          // ),
         ],
       ),
     );
   }
 }
 
-class _CalendarView extends StatelessWidget {
+class _CalendarOrangeHeader extends StatelessWidget {
+  const _CalendarOrangeHeader({required this.controller});
+
+  final CalendarController controller;
+
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<CalendarController>();
-
-    return Obx(() {
-      final focusedDate = controller.focusedDate.value;
-      final daysInMonth = _getDaysInMonth(focusedDate.year, focusedDate.month);
-      final firstDayOfMonth = DateTime(focusedDate.year, focusedDate.month, 1);
-      final firstWeekday = firstDayOfMonth.weekday % 7; // 0 for Sunday
-
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return ClipRect(
+      child: CalendarAppHeader(
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Calendar',
+                        style: AppTypography.lora(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () =>
+                          Get.to(() => const CalendarAddEventPage()),
+                      icon: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: CalendarUi.headerOrange,
+                      ),
+                      label: Text(
+                        'New Event',
+                        style: AppTypography.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: CalendarUi.headerOrange,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Obx(() {
+                  final focused = controller.focusedDate.value;
+                  final selected = controller.selectedDate.value;
+                  controller.festivals.length;
+                  controller.poojas.length;
+                  controller.moonPhases.length;
+                  controller.userEvents.length;
+                  return _MonthGrid(
+                    controller: controller,
+                    focused: focused,
+                    selected: selected,
+                  );
+                }),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            _buildMonthSelector(focusedDate, controller),
-            const SizedBox(height: 16),
-            _buildWeekdayHeaders(),
-            const SizedBox(height: 8),
-            _buildDaysGrid(
-              daysInMonth,
-              firstWeekday,
-              focusedDate,
-              controller,
-              context,
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Widget _buildMonthSelector(DateTime date, CalendarController controller) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () {
-            controller.focusedDate.value = DateTime(date.year, date.month - 1);
-          },
-        ),
-        Text(
-          DateFormat('MMMM yyyy').format(date),
-          style: AppTypography.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF3B1E08),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () {
-            controller.focusedDate.value = DateTime(date.year, date.month + 1);
-          },
+      ),
+    );
+  }
+}
+
+class _MonthGrid extends StatelessWidget {
+  const _MonthGrid({
+    required this.controller,
+    required this.focused,
+    required this.selected,
+  });
+
+  final CalendarController controller;
+  final DateTime focused;
+  final DateTime selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateTime(focused.year, focused.month + 1, 0).day;
+    final firstWeekday = DateTime(focused.year, focused.month, 1).weekday % 7;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: Colors.white),
+              onPressed: () {
+                controller.focusedDate.value = DateTime(
+                  focused.year,
+                  focused.month - 1,
+                );
+              },
+            ),
+            Text(
+              DateFormat('MMMM yyyy').format(focused),
+              style: AppTypography.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, color: Colors.white),
+              onPressed: () {
+                controller.focusedDate.value = DateTime(
+                  focused.year,
+                  focused.month + 1,
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+              .map(
+                (d) => Expanded(
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 6),
+        ..._buildWeekRows(
+          daysInMonth: daysInMonth,
+          firstWeekday: firstWeekday,
+          focused: focused,
+          selected: selected,
         ),
       ],
     );
   }
 
-  Widget _buildWeekdayHeaders() {
-    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: weekdays
-          .map(
-            (day) => Expanded(
-              child: Center(
-                child: Text(
-                  day,
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8A6B4A),
-                  ),
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildDaysGrid(
-    int daysInMonth,
-    int firstWeekday,
-    DateTime focusedDate,
-    CalendarController controller,
-    BuildContext context,
-  ) {
-    final List<Widget> dayWidgets = [];
-
-    // Empty cells for days before the first day of the month
-    for (int i = 0; i < firstWeekday; i++) {
-      dayWidgets.add(const Expanded(child: SizedBox()));
+  List<Widget> _buildWeekRows({
+    required int daysInMonth,
+    required int firstWeekday,
+    required DateTime focused,
+    required DateTime selected,
+  }) {
+    final dayWidgets = <Widget>[];
+    for (var i = 0; i < firstWeekday; i++) {
+      dayWidgets.add(const Expanded(child: SizedBox(height: 36)));
     }
-
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(focusedDate.year, focusedDate.month, day);
+    for (var day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(focused.year, focused.month, day);
       final events = controller.getEventsForDay(date);
       final isSelected =
-          controller.selectedDate.value.year == date.year &&
-          controller.selectedDate.value.month == date.month &&
-          controller.selectedDate.value.day == date.day;
-      final isToday =
-          DateTime.now().year == date.year &&
-          DateTime.now().month == date.month &&
-          DateTime.now().day == date.day;
+          selected.year == date.year &&
+          selected.month == date.month &&
+          selected.day == date.day;
 
       dayWidgets.add(
         Expanded(
           child: GestureDetector(
-            onTap: () {
-              controller.onDateSelected(date, date);
-              if (events.isNotEmpty) {
-                _showEventBottomSheet(context, events);
-              }
-            },
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF3B1E08)
-                    : Colors.transparent,
-                shape: BoxShape.circle,
-                border: isToday && !isSelected
-                    ? Border.all(color: const Color(0xFF3B1E08), width: 1)
-                    : null,
-              ),
+            onTap: () => controller.onDateSelected(date, date),
+            child: SizedBox(
+              height: 36,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
+                  if (isSelected)
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   Text(
                     '$day',
                     style: AppTypography.inter(
-                      fontSize: 14,
-                      fontWeight: isSelected || isToday
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       color: isSelected
-                          ? Colors.white
-                          : (isToday ? const Color(0xFF3B1E08) : Colors.black),
+                          ? CalendarUi.headerOrange
+                          : Colors.white,
                     ),
                   ),
-                  if (events.isNotEmpty)
+                  if (events.isNotEmpty && !isSelected)
                     Positioned(
-                      bottom: 4,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: events.map((e) {
-                          Color dotColor = const Color(0xFFE0884A);
-                          if (e is MoonPhaseModel) {
-                            dotColor = Colors.grey;
-                          }
-                          return Container(
-                            width: 4,
-                            height: 4,
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white : dotColor,
-                              shape: BoxShape.circle,
-                            ),
-                          );
-                        }).toList(),
+                      bottom: 2,
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Colors.white70,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
                 ],
@@ -257,386 +290,237 @@ class _CalendarView extends StatelessWidget {
           ),
         ),
       );
-
-      if ((firstWeekday + day) % 7 == 0 || day == daysInMonth) {
-        // End of week, add remaining empty cells if it's the last day
-        if (day == daysInMonth) {
-          int remaining = 7 - ((firstWeekday + day) % 7);
-          if (remaining < 7) {
-            for (int i = 0; i < remaining; i++) {
-              dayWidgets.add(const Expanded(child: SizedBox()));
-            }
-          }
-        }
+    }
+    final trailing = (firstWeekday + daysInMonth) % 7;
+    if (trailing != 0) {
+      for (var i = 0; i < 7 - trailing; i++) {
+        dayWidgets.add(const Expanded(child: SizedBox(height: 36)));
       }
     }
-
-    // Chunk into rows of 7
-    final List<Widget> rows = [];
-    for (int i = 0; i < dayWidgets.length; i += 7) {
+    final rows = <Widget>[];
+    for (var i = 0; i < dayWidgets.length; i += 7) {
       rows.add(Row(children: dayWidgets.sublist(i, i + 7)));
     }
-
-    return Column(children: rows);
+    return rows;
   }
+}
 
-  int _getDaysInMonth(int year, int month) {
-    return DateTime(year, month + 1, 0).day;
-  }
+class _FestivalsList extends StatelessWidget {
+  const _FestivalsList({required this.controller});
 
-  void _showEventBottomSheet(BuildContext context, List<dynamic> events) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _EventBottomSheet(events: events),
+  final CalendarController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = controller.festivalsInMonth;
+    if (list.isEmpty) {
+      return _empty('No festivals this month');
+    }
+    return ListView.separated(
+      padding: CalendarUi.listScrollPadding(context),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _FestivalCard(
+        festival: list[i],
+        onTap: () => CalendarEventDetailPage.show(context, event: list[i]),
+      ),
     );
   }
 }
 
-class _EventBottomSheet extends StatelessWidget {
-  final List<dynamic> events;
+class _FestivalCard extends StatelessWidget {
+  const _FestivalCard({required this.festival, required this.onTap});
 
-  const _EventBottomSheet({required this.events});
+  final FestivalModel festival;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+    final date = _parseDate(festival.date);
+    final dateStr = date != null
+        ? DateFormat('EEEE, MMMM do').format(date)
+        : festival.date;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: CalendarUi.cardBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Events on this day',
-            style: AppTypography.lora(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...events.map((e) {
-            if (e is FestivalModel) {
-              return _buildEventItem(
-                event: e,
-                title: e.title,
-                description: e.description,
-                icon: Icons.celebration,
-                color: const Color(0xFFE0884A),
-                bgColor: const Color(0xFFFFF1DD),
-              );
-            } else if (e is PoojaView) {
-              return _buildEventItem(
-                event: e,
-                title: e.title,
-                description: e.description,
-                icon: Icons.temple_hindu,
-                color: const Color(0xFF3B1E08),
-                bgColor: const Color(0xFFF2EBDC),
-              );
-            } else if (e is MoonPhaseModel) {
-              return _buildEventItem(
-                event: e,
-                title: e.type.replaceAll('_', ' '),
-                description: e.type == 'FULL_MOON' ? 'Purnima' : 'Amavasya',
-                icon: e.type == 'FULL_MOON'
-                    ? Icons.brightness_high
-                    : Icons.brightness_2,
-                color: Colors.blueGrey,
-                bgColor: Colors.blueGrey.withOpacity(0.1),
-              );
-            }
-            return const SizedBox.shrink();
-          }).toList(),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEventItem({
-    required dynamic event,
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-  }) {
-    final controller = Get.find<CalendarController>();
-    final String id = event is FestivalModel
-        ? event.id
-        : event is PoojaView
-        ? event.title
-        : '';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        children: [
-          Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: _FestivalImage(url: festival.imageUrl),
                 ),
-                child: Icon(icon, color: color),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      festival.title,
                       style: AppTypography.inter(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3B1E08),
+                        color: CalendarUi.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      dateStr,
                       style: AppTypography.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                        fontSize: 12,
+                        color: CalendarUi.textMuted,
                       ),
                     ),
+                    if (festival.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        festival.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: CalendarUi.textMuted,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
-          if (event is! MoonPhaseModel) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() {
-                    final isAdded = controller.isAddedToCalendar(id);
-                    return OutlinedButton.icon(
-                      onPressed: () => controller.addToDeviceCalendar(event),
-                      icon: Icon(
-                        isAdded
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.calendar_today,
-                        size: 16,
-                      ),
-                      label: Text(
-                        isAdded ? 'Remove from Cal' : 'Add to Calendar',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        foregroundColor: isAdded
-                            ? const Color(0xFF8E2A12)
-                            : const Color(0xFF3B1E08),
-                        side: BorderSide(
-                          color: isAdded
-                              ? const Color(0xFF8E2A12)
-                              : const Color(0xFFEAD9BC),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Obx(() {
-                    final isReminded = controller.isReminded(id);
-                    return ElevatedButton.icon(
-                      onPressed: () => controller.toggleReminder(event),
-                      icon: Icon(
-                        isReminded
-                            ? Icons.notifications_active
-                            : Icons.notifications_none,
-                        size: 16,
-                      ),
-                      label: Text(
-                        isReminded ? 'Reminded' : 'Notify Me',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        backgroundColor: isReminded
-                            ? const Color(0xFFE0884A)
-                            : Colors.white,
-                        foregroundColor: isReminded
-                            ? Colors.white
-                            : const Color(0xFF3B1E08),
-                        elevation: 0,
-                        side: BorderSide(
-                          color: isReminded
-                              ? Colors.transparent
-                              : const Color(0xFFEAD9BC),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ],
-          const Divider(height: 32, color: Color(0xFFF2EBDC)),
-        ],
-      ),
-    );
-  }
-}
-
-class _UpcomingFestivals extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<CalendarController>();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            'Upcoming Festivals & Rituals',
-            style: AppTypography.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
-            ),
-          ),
         ),
-        const SizedBox(height: 16),
-        Obx(() {
-          if (controller.isLoading.value) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final events = controller.upcomingEvents;
-          if (events.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No upcoming events'),
-            );
-          }
-          return ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: events.length,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              return _EventCard(event: events[index]);
-            },
-          );
-        }),
-      ],
+      ),
     );
   }
 }
 
-class _EventCard extends StatelessWidget {
-  final dynamic event;
-
-  const _EventCard({required this.event});
+class _FestivalImage extends StatelessWidget {
+  const _FestivalImage({this.url});
+  final String? url;
 
   @override
   Widget build(BuildContext context) {
-    String title = '';
-    String dateStr = '';
-
-    if (event is FestivalModel) {
-      title = (event as FestivalModel).title;
-      dateStr = (event as FestivalModel).date;
-    } else if (event is PoojaView) {
-      title = (event as PoojaView).title;
-      dateStr = (event as PoojaView).date;
-    } else if (event is MoonPhaseModel) {
-      final m = event as MoonPhaseModel;
-      title = m.type.replaceAll('_', ' ');
-      dateStr = m.date;
+    final ph = Container(
+      color: const Color(0xFFEADCC3),
+      child: const Icon(Icons.temple_hindu, color: Color(0xFF8C5A2A)),
+    );
+    if (url == null || url!.isEmpty) return ph;
+    if (url!.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: url!,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => ph,
+        errorWidget: (_, __, ___) => ph,
+      );
     }
+    return Image.asset(
+      url!,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => ph,
+    );
+  }
+}
 
-    final date = _parseDate(dateStr);
-    final daysToGo = _calculateDaysToGo(dateStr);
+class _LunarList extends StatelessWidget {
+  const _LunarList({required this.controller});
 
-    final day = date != null ? DateFormat('dd').format(date) : '--';
-    final month = date != null
-        ? DateFormat('MMM').format(date).toUpperCase()
-        : '---';
+  final CalendarController controller;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+  @override
+  Widget build(BuildContext context) {
+    final list = controller.moonPhasesInMonth;
+    if (list.isEmpty) {
+      return _empty('No lunar events this month');
+    }
+    return ListView.separated(
+      padding: CalendarUi.listScrollPadding(context),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) {
+        final m = list[i];
+        final isFull = m.type.toUpperCase().contains('FULL');
+        return _LunarCard(
+          title: isFull ? 'Full moon' : 'New moon',
+          subtitle: isFull ? 'Purnima' : 'Amavasya',
+          date: m.date,
+          onTap: () => CalendarEventDetailPage.show(context, event: m),
+        );
+      },
+    );
+  }
+}
+
+class _LunarCard extends StatelessWidget {
+  const _LunarCard({
+    required this.title,
+    required this.subtitle,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final String date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = _parseDate(date);
+    final dateStr = parsed != null
+        ? DateFormat('EEEE, MMMM do').format(parsed)
+        : date;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: CalendarUi.cardBorder),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
+          child: Row(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2EBDC),
+                  color: const Color(0xFFE8EEF8),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      day,
-                      style: AppTypography.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF3B1E08),
-                      ),
-                    ),
-                    Text(
-                      month,
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF8A6B4A),
-                      ),
-                    ),
-                  ],
+                child: Icon(
+                  title.contains('Full')
+                      ? Icons.brightness_high_outlined
+                      : Icons.brightness_2_outlined,
+                  color: CalendarUi.tabSelected,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,128 +530,195 @@ class _EventCard extends StatelessWidget {
                       style: AppTypography.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3B1E08),
+                        color: CalendarUi.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
-                      date != null
-                          ? '${DateFormat('EEEE').format(date)}, ${DateFormat('MMMM dd').format(date)}'
-                          : 'Unknown Date',
+                      dateStr,
                       style: AppTypography.inter(
                         fontSize: 12,
-                        color: const Color(0xFF8A6B4A),
+                        color: CalendarUi.textMuted,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        color: CalendarUi.textMuted,
                       ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EventsList extends StatelessWidget {
+  const _EventsList({required this.controller});
+
+  final CalendarController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = controller.eventsInMonth;
+    if (list.isEmpty) {
+      return _empty('No events this month');
+    }
+    return ListView.separated(
+      padding: CalendarUi.listScrollPadding(context),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) {
+        final e = list[i];
+        if (e is UserCalendarEvent) {
+          return _GenericEventCard(
+            title: e.name,
+            description: e.description,
+            date: e.date,
+            onTap: () => CalendarEventDetailPage.show(context, event: e),
+          );
+        }
+        if (e is PoojaView) {
+          return _GenericEventCard(
+            title: e.title,
+            description: e.description,
+            date: _parseDate(e.date),
+            onTap: () => CalendarEventDetailPage.show(context, event: e),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+}
+
+class _GenericEventCard extends StatelessWidget {
+  const _GenericEventCard({
+    required this.title,
+    required this.description,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String title;
+  final String description;
+  final DateTime? date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = date != null ? DateFormat('dd').format(date!) : '--';
+    final month = date != null
+        ? DateFormat('MMM').format(date!).toUpperCase()
+        : '---';
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: CalendarUi.cardBorder),
+          ),
+          child: Row(
+            children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1DD),
-                  borderRadius: BorderRadius.circular(20),
+                  color: const Color(0xFFF2EBDC),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  '$daysToGo Days To Go',
-                  style: AppTypography.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFE0884A),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      day,
+                      style: AppTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: CalendarUi.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      month,
+                      style: AppTypography.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: CalendarUi.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: CalendarUi.textPrimary,
+                      ),
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          color: CalendarUi.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: () => _addEventToDeviceCalendar(title, date),
-              icon: const Icon(Icons.event_available_outlined, size: 16),
-              label: const Text('Add to Calendar'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF3B1E08),
-                side: const BorderSide(color: Color(0xFFEAD9BC)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  int _calculateDaysToGo(String dateStr) {
-    final date = _parseDate(dateStr);
-    if (date == null) return 0;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return date.difference(today).inDays;
-  }
+Widget _empty(String message) {
+  return Center(
+    child: Text(
+      message,
+      style: AppTypography.inter(color: CalendarUi.textMuted),
+    ),
+  );
+}
 
-  DateTime? _parseDate(String dateStr) {
+DateTime? _parseDate(String dateStr) {
+  try {
+    return DateTime.parse(dateStr);
+  } catch (_) {
     try {
-      return DateTime.parse(dateStr);
-    } catch (_) {
-      try {
-        final parts = dateStr.split('-');
-        if (parts.length == 3) {
-          return DateTime(
-            int.parse(parts[2]),
-            int.parse(parts[1]),
-            int.parse(parts[0]),
-          );
-        }
-      } catch (_) {}
-    }
-    return null;
-  }
-
-  Future<void> _addEventToDeviceCalendar(String title, DateTime? date) async {
-    if (date == null) {
-      Get.snackbar(
-        'Calendar',
-        'Unable to add event because date is missing.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    final start = DateTime(date.year, date.month, date.day, 10, 0);
-    final end = DateTime(date.year, date.month, date.day, 11, 0);
-
-    try {
-      final opened = await addEventToCalendar(
-        title: title,
-        description: 'Perform ritual',
-        startDate: start,
-        endDate: end,
-      );
-      if (opened) {
-        Get.snackbar(
-          'Calendar',
-          kIsWeb
-              ? 'Calendar opened in browser. Save event there.'
-              : 'Calendar opened. Tap Save to add "$title".',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      } else {
-        Get.snackbar(
-          'Calendar',
-          'Could not open calendar app on this device.',
-          snackPosition: SnackPosition.BOTTOM,
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        return DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
         );
       }
-    } catch (_) {
-      Get.snackbar(
-        'Calendar',
-        'Failed to sync event to device calendar.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
+    } catch (_) {}
   }
+  return null;
 }

@@ -20,8 +20,12 @@ class MyContributionsController extends GetxController {
   final _page = 1.obs;
   final _totalPages = 1.obs;
   final _filter = 'ALL'.obs;
+  final _summaryTotal = 0.0.obs;
+  final _summaryCount = 0.obs;
 
   List<DonationContribution> get items => _items;
+  double get summaryTotal => _summaryTotal.value;
+  int get summaryCount => _summaryCount.value;
   bool get isLoading => _isLoading.value;
   bool get isLoadingMore => _isLoadingMore.value;
   String? get error => _error.value;
@@ -35,6 +39,24 @@ class MyContributionsController extends GetxController {
   void onInit() {
     super.onInit();
     refreshContributions();
+    fetchSummary();
+  }
+
+  Future<void> fetchSummary() async {
+    try {
+      final res = await _repo.listMyContributions(
+        page: 1,
+        limit: 100,
+        paymentStatus: 'PAID',
+      );
+      _summaryTotal.value = res.items.fold(
+        0.0,
+        (sum, c) => sum + c.amount.toDouble(),
+      );
+      _summaryCount.value = res.items.length;
+    } catch (_) {
+      // Summary is optional; the list still works without it.
+    }
   }
 
   String? get _paymentStatusFilter =>
@@ -59,6 +81,7 @@ class MyContributionsController extends GetxController {
     } finally {
       _isLoading.value = false;
     }
+    fetchSummary();
   }
 
   Future<void> loadMore() async {

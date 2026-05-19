@@ -9,13 +9,13 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     this.onTap,
-    this.onDonateTap,
+    this.onAddToCartTap,
     this.width,
   });
 
   final ProductModel product;
   final VoidCallback? onTap;
-  final VoidCallback? onDonateTap;
+  final VoidCallback? onAddToCartTap;
   final double? width;
 
   @override
@@ -154,7 +154,7 @@ class ProductCard extends StatelessWidget {
                       width: double.infinity,
                       height: 32,
                       child: ElevatedButton(
-                        onPressed: product.inStock ? onDonateTap : null,
+                        onPressed: product.inStock ? onAddToCartTap : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: product.inStock
                               ? AppColors.primary
@@ -167,7 +167,7 @@ class ProductCard extends StatelessWidget {
                           elevation: 0,
                         ),
                         child: Text(
-                          product.inStock ? 'Buy Now' : 'Out of Stock',
+                          product.inStock ? 'Add to Cart' : 'Out of Stock',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

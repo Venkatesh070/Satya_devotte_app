@@ -16,6 +16,8 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/services/auth_service.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/festival_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/deity_remote_datasource.dart';
@@ -41,6 +43,8 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/inventor
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/donations/data/donations_repository.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
@@ -110,6 +114,18 @@ class InitialBinding extends Bindings {
     );
     Get.put<PoojaController>(
       PoojaController(Get.find<PoojaRemoteDataSource>()),
+      permanent: true,
+    );
+    // ── CMS Rituals ──────────────────────────────────────────────
+    Get.put<RitualRemoteDataSource>(
+      RitualRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<RitualController>(
+      RitualController(
+        Get.find<RitualRemoteDataSource>(),
+        Get.find<PoojaRemoteDataSource>(),
+      ),
       permanent: true,
     );
     // ── CMS Festivals ────────────────────────────────────────────
@@ -187,20 +203,19 @@ class InitialBinding extends Bindings {
       fenix: true,
     );
     Get.lazyPut<AdminOrderRequestsController>(
-      () => AdminOrderRequestsController(
-        Get.find<AdminOrdersRemoteDataSource>(),
-      ),
+      () =>
+          AdminOrderRequestsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
     Get.lazyPut<AdminPaymentsController>(
       () => AdminPaymentsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
-    // ── User-facing Pooja Kit (browse + checkout) ────────────────
     Get.put<PoojaKitController>(
       PoojaKitController(Get.find<ProductRemoteDataSource>()),
       permanent: true,
     );
+    // ── Pooja Kit Checkout flow ──────────────────────────────────
     Get.put<PoojaKitRepository>(
       PoojaKitRepository(Get.find<ApiClient>()),
       permanent: true,
@@ -208,6 +223,10 @@ class InitialBinding extends Bindings {
     Get.lazyPut<PoojaKitCheckoutController>(
       () => PoojaKitCheckoutController(Get.find<PoojaKitRepository>()),
       fenix: true,
+    );
+    Get.put<CartController>(
+      CartController(Get.find<PoojaKitRepository>()),
+      permanent: true,
     );
     // ── User-facing donations flow ────────────────────────────────
     Get.put<DonationsRepository>(
