@@ -18,7 +18,6 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_inventory_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
-import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
@@ -49,10 +48,12 @@ class _CmsShellPageState extends State<CmsShellPage> {
   // the currently selected leaf are always treated as expanded regardless
   // of this set.
   final Set<String> _expandedGroups = <String>{};
+  final ScrollController _sidebarScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    CmsShellNavigation.attach(this);
     final auth = Get.find<AuthController>();
     _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
     // Auto-expand any group that owns the resolved selected index so the
@@ -61,24 +62,24 @@ class _CmsShellPageState extends State<CmsShellPage> {
     if (group != null) _expandedGroups.add(group);
   }
 
+  @override
+  void dispose() {
+    CmsShellNavigation.detach(this);
+    _sidebarScrollController.dispose();
+    super.dispose();
+  }
+
+  /// Switches CMS tabs without recreating [CmsShellPage] (preserves sidebar scroll).
+  void navigateToTab(int index) => _onSelect(index);
+
   void _onSelect(int index) {
-    final auth = Get.find<AuthController>();
     setState(() {
       _selectedIndex = index;
       final group = _groupLabelForIndex(index);
       if (group != null) _expandedGroups.add(group);
     });
-    final targetRoute = _routeForIndex(index, auth.isSuperAdmin);
-    if (targetRoute != null && targetRoute != Get.currentRoute) {
-      // Use offNamed so the back stack does not grow each time the user
-      // clicks a sidebar tab (every CMS route maps to the same shell).
-      // Also force noTransition so Flutter web does not play the default
-      // page-scale animation that looks like the screen "shrinks".
-      Get.offNamed(
-        targetRoute,
-        preventDuplicates: false,
-      );
-    }
+    // Tab switches only update local state so the shell (and sidebar scroll
+    // position) are not recreated via Get.offNamed on every menu click.
     if (index == _NavIds.poojaKitRefunds &&
         Get.isRegistered<AdminOrderRequestsController>()) {
       Get.find<AdminOrderRequestsController>().refresh();
@@ -86,9 +87,6 @@ class _CmsShellPageState extends State<CmsShellPage> {
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
       Get.find<InventoryController>().init();
-    }
-    if (index == _NavIds.admins && Get.isRegistered<AdminController>()) {
-      Get.find<AdminController>().loadAdmins();
     }
   }
 
@@ -105,18 +103,6 @@ class _CmsShellPageState extends State<CmsShellPage> {
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    final auth = Get.find<AuthController>();
-    final routeIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
-    if (routeIndex != _selectedIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || routeIndex == _selectedIndex) return;
-        setState(() {
-          _selectedIndex = routeIndex;
-          final group = _groupLabelForIndex(routeIndex);
-          if (group != null) _expandedGroups.add(group);
-        });
-      });
-    }
     return WillPopScope(
       onWillPop: () async {
         final isDashboardRoute = Get.currentRoute == AppRoutes.cms;
@@ -136,6 +122,7 @@ class _CmsShellPageState extends State<CmsShellPage> {
               onSelect: _onSelect,
               expandedGroups: _expandedGroups,
               onToggleGroup: _onToggleGroup,
+              sidebarScrollController: _sidebarScrollController,
             )
           : _MobileLayout(
               selectedIndex: _selectedIndex,
@@ -156,11 +143,13 @@ class _WebLayout extends StatelessWidget {
     required this.onSelect,
     required this.expandedGroups,
     required this.onToggleGroup,
+    required this.sidebarScrollController,
   });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
   final Set<String> expandedGroups;
   final ValueChanged<String> onToggleGroup;
+  final ScrollController sidebarScrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +162,7 @@ class _WebLayout extends StatelessWidget {
             onSelect: onSelect,
             expandedGroups: expandedGroups,
             onToggleGroup: onToggleGroup,
+            scrollController: sidebarScrollController,
           ),
           Expanded(
             child: Column(
@@ -266,11 +256,13 @@ class _Sidebar extends StatelessWidget {
     required this.onSelect,
     required this.expandedGroups,
     required this.onToggleGroup,
+    required this.scrollController,
   });
   final int selectedIndex;
   final ValueChanged<int> onSelect;
   final Set<String> expandedGroups;
   final ValueChanged<String> onToggleGroup;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -375,6 +367,8 @@ class _Sidebar extends StatelessWidget {
             child: Obx(() {
               final items = _navItems(auth.isSuperAdmin);
               return ListView(
+                key: const PageStorageKey<String>('cms-sidebar-nav'),
+                controller: scrollController,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 4,
@@ -985,7 +979,7 @@ class _NavEntry {
 }
 
 /// Stable index assignments. Keep these in sync with `_pageTitle`,
-/// `_buildContent`, `_indexFromRoute` and `_routeForIndex` below.
+/// `_buildContent` and `_indexFromRoute` below.
 class _NavIds {
   static const int dashboard = 0;
   static const int deities = 1;
@@ -1288,43 +1282,21 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
   }
 }
 
-String? _routeForIndex(int index, bool isSuperAdmin) {
-  switch (index) {
-    case _NavIds.dashboard:
-      return AppRoutes.cms;
-    case _NavIds.deities:
-      return AppRoutes.cmsDeities;
-    case _NavIds.pujas:
-      return AppRoutes.cmsRituals;
-    case _NavIds.festivals:
-      return AppRoutes.cmsFestivals;
-    case _NavIds.notifications:
-      return AppRoutes.cmsNotifications;
-    case _NavIds.users:
-      return AppRoutes.cmsUsers;
-    case _NavIds.analytics:
-      return AppRoutes.cmsAnalytics;
-    case _NavIds.poojaKitInventory:
-      return AppRoutes.cmsPoojaKitInventory;
-    case _NavIds.poojaKitManage:
-      return AppRoutes.cmsPoojaKit;
-    case _NavIds.poojaKitOrders:
-      return AppRoutes.cmsPoojaKitOrders;
-    case _NavIds.poojaKitRefunds:
-      return AppRoutes.cmsPoojaKitRefunds;
-    case _NavIds.poojaKitPayments:
-      return AppRoutes.cmsPoojaKitPayments;
-    case _NavIds.manageRituals:
-      return AppRoutes.cmsManageRituals;
-    case _NavIds.donations:
-      return AppRoutes.cmsDonations;
-    case _NavIds.donationsAll:
-      return AppRoutes.cmsDonationsAll;
-    case _NavIds.shlokas:
-      return isSuperAdmin ? AppRoutes.cmsShlokas : AppRoutes.cms;
-    case _NavIds.admins:
-      return isSuperAdmin ? AppRoutes.cmsAdmins : AppRoutes.cms;
-    default:
-      return null;
+/// In-shell tab navigation without `Get.offNamed` (keeps sidebar scroll position).
+class CmsShellNavigation {
+  static _CmsShellPageState? _shell;
+
+  static void attach(_CmsShellPageState shell) => _shell = shell;
+
+  static void detach(_CmsShellPageState shell) {
+    if (_shell == shell) _shell = null;
+  }
+
+  /// Returns `true` when the CMS shell is active and the tab was switched.
+  static bool openManageAdmins() {
+    final shell = _shell;
+    if (shell == null) return false;
+    shell.navigateToTab(_NavIds.admins);
+    return true;
   }
 }

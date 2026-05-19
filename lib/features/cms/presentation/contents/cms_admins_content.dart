@@ -16,16 +16,24 @@ class CmsAdminsContent extends StatefulWidget {
 
 class _CmsAdminsContentState extends State<CmsAdminsContent> {
   late final AdminController _ctrl;
+  final ScrollController _listScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _ctrl = Get.find<AdminController>();
-    // Reload admins every time the screen is opened so the list stays
-    // in sync after promotions / demotions performed elsewhere.
+    // Reload when this tab is shown; skip full-screen loading if list exists.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _ctrl.loadAdmins();
+      if (mounted) {
+        _ctrl.loadAdmins(showLoadingIndicator: _ctrl.admins.isEmpty);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _listScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -143,6 +151,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
             }
 
             return _UserList(
+              scrollController: _listScrollController,
               users: _ctrl.admins,
               emptyIcon: Icons.admin_panel_settings_outlined,
               emptyTitle: 'No Admins Yet',
@@ -151,7 +160,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
               actionLabel: 'Remove',
               actionColor: Colors.red,
               actionIcon: Icons.remove_moderator_outlined,
-              onRefresh: _ctrl.loadAdmins,
+              onRefresh: () => _ctrl.loadAdmins(showLoadingIndicator: false),
               showPanelAccessToggle: true,
               onTogglePanelAccess: (user, value) =>
                   _ctrl.setPanelAccess(id: user.id, canLoginAdminPanel: value),
@@ -296,7 +305,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                       ),
                     )
                   : const Icon(Icons.person_add_outlined, size: 18),
-              label: const Text('Promote'),
+              label: const Text('Create'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
                 foregroundColor: Colors.white,
@@ -487,6 +496,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
 // ════════════════════════════════════════════════════════════════
 class _UserList extends StatelessWidget {
   const _UserList({
+    required this.scrollController,
     required this.users,
     required this.emptyIcon,
     required this.emptyTitle,
@@ -503,6 +513,7 @@ class _UserList extends StatelessWidget {
     this.isPasswordResetPending,
   });
 
+  final ScrollController scrollController;
   final List<AdminModel> users;
   final IconData emptyIcon;
   final String emptyTitle;
@@ -534,6 +545,7 @@ class _UserList extends StatelessWidget {
       color: CmsColors.orange,
       onRefresh: onRefresh,
       child: ListView.separated(
+        controller: scrollController,
         padding: EdgeInsets.all(isWeb ? 24 : 16),
         itemCount: users.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),

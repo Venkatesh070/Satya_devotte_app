@@ -270,7 +270,11 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                               label: 'Manage Admins',
                               icon: Icons.admin_panel_settings_outlined,
                               color: CmsColors.orange,
-                              onTap: () => Get.offNamed(AppRoutes.cmsAdmins),
+                              onTap: () {
+                                if (!CmsShellNavigation.openManageAdmins()) {
+                                  Get.offNamed(AppRoutes.cmsAdmins);
+                                }
+                              },
                             ),
                           )
                         : const SizedBox.shrink(),

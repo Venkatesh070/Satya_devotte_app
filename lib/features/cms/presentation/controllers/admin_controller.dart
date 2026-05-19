@@ -56,8 +56,11 @@ class AdminController extends GetxController {
     await Future.wait([loadAdmins(), loadRegularUsers()]);
   }
 
-  Future<void> loadAdmins() async {
-    _isLoadingAdmins.value = true;
+  Future<void> loadAdmins({bool showLoadingIndicator = true}) async {
+    final hadData = _admins.isNotEmpty;
+    if (showLoadingIndicator && !hadData) {
+      _isLoadingAdmins.value = true;
+    }
     _error.value = null;
     try {
       final result = await _dataSource.getAdminUsers();
