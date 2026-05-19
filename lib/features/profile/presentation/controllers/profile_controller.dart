@@ -20,6 +20,11 @@ class ProfileController extends GetxController {
   String? get error => _error.value;
   Map<String, dynamic>? get sessionUser => _sessionUser.value;
 
+  String get userName {
+    final userData = _sessionUser.value ?? _profile.value?['user'] as Map<String, dynamic>? ?? _profile.value;
+    return (userData?['name'] ?? userData?['fullName'] ?? 'Devotee').toString();
+  }
+
   @override
   void onInit() {
     super.onInit();

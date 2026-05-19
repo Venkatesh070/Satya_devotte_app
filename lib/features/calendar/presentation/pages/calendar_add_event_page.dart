@@ -81,8 +81,8 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
                   Text(
                     'Name of the event',
                     style: AppTypography.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                       color: CalendarUi.textPrimary,
                     ),
                   ),
@@ -202,7 +202,10 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: CalendarUi.headerOrange, width: 1.5),
+        borderSide: const BorderSide(
+          color: CalendarUi.headerOrange,
+          width: 1.5,
+        ),
       ),
     );
   }

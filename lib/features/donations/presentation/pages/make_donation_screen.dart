@@ -8,8 +8,6 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
-import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
-import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 /// Figma "Make a Donation" bottom sheet.
 class MakeDonationScreen extends StatefulWidget {
@@ -19,10 +17,7 @@ class MakeDonationScreen extends StatefulWidget {
 
   static const _presetAmounts = <int>[100, 250, 500, 1000, 2000, 5000];
 
-  static Future<void> show(
-    BuildContext context, {
-    required Donation donation,
-  }) {
+  static Future<void> show(BuildContext context, {required Donation donation}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -100,8 +95,10 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
 
     if (!mounted) return;
     if (init == null) {
-      setState(() =>
-          _inlineError = _donateCtrl.lastError ?? 'Could not start donation.');
+      setState(
+        () =>
+            _inlineError = _donateCtrl.lastError ?? 'Could not start donation.',
+      );
       return;
     }
     Navigator.of(context).pop();
@@ -157,8 +154,8 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                   Text(
                     'Make a Donation',
                     style: AppTypography.lora(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                       color: DonationUi.textPrimary,
                     ),
                   ),
@@ -166,8 +163,9 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                   Text(
                     'Your contribution can make a difference.',
                     style: AppTypography.inter(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: DonationUi.textMuted,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -176,9 +174,9 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                   Text(
                     'Select Amount',
                     style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: DonationUi.textMuted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: DonationUi.text,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -186,14 +184,13 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     crossAxisCount: 3,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 2.35,
+                    mainAxisSpacing: 30,
+                    crossAxisSpacing: 30,
+                    childAspectRatio: 1.9,
                     children: MakeDonationScreen._presetAmounts.map((v) {
-                      final selected = _selectedPreset == v;
                       return _AmountPresetTile(
                         label: 'R $v',
-                        selected: selected,
+                        selected: _selectedPreset == v,
                         onTap: () => _selectPreset(v),
                       );
                     }).toList(),
@@ -202,16 +199,17 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                   Text(
                     'Or Enter Custom Amount',
                     style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: DonationUi.textMuted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: DonationUi.text,
                     ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _amountCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],
@@ -221,8 +219,8 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       setState(() {
                         _selectedPreset =
                             MakeDonationScreen._presetAmounts.contains(parsed)
-                                ? parsed
-                                : null;
+                            ? parsed
+                            : null;
                         _inlineError = null;
                       });
                     },
@@ -247,13 +245,41 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Obx(
-                () => CustomButton(
-                  label: 'Make Donation',
-                  textColor: Colors.white,
-                  gradientColors: kFigmaActionGradient,
-                  borderRadius: 14,
-                  isLoading: _donateCtrl.isInitiating,
-                  onTap: _submit,
+                () => SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: _donateCtrl.isInitiating
+                        ? null
+                        : () => _submit(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: DonationUi.amountBlue,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: DonationUi.amountBlue.withValues(
+                        alpha: 0.55,
+                      ),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _donateCtrl.isInitiating
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Make Donation',
+                            style: AppTypography.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -296,7 +322,7 @@ class _SelectedCauseCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DonationUi.cardFill,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: DonationUi.cardBorder),
       ),
@@ -312,15 +338,31 @@ class _SelectedCauseCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              donation.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: DonationUi.textPrimary,
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  donation.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: DonationUi.text,
+                  ),
+                ),
+                Text(
+                  donation.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: DonationUi.text,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -370,26 +412,29 @@ class _AmountPresetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: DonationUi.cardFill,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          alignment: Alignment.center,
+        child: Ink(
+          height: 46,
           decoration: BoxDecoration(
+            color: DonationUi.cardFill,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? DonationUi.amountBlue : DonationUi.cardBorder,
               width: selected ? 1.5 : 1,
             ),
           ),
-          child: Text(
-            label,
-            style: AppTypography.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: DonationUi.textPrimary,
+          child: Center(
+            child: Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: DonationUi.textPrimary,
+              ),
             ),
           ),
         ),

@@ -43,21 +43,22 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF9F3),
+      backgroundColor: DonationUi.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFEF9F3),
+        backgroundColor: DonationUi.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF3B1E08)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: DonationUi.textPrimary,
           onPressed: () => Get.back(),
         ),
         title: Text(
           'History of Donations',
           style: AppTypography.lora(
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF3B1E08),
+            color: DonationUi.textPrimary,
           ),
         ),
         centerTitle: false,
@@ -84,7 +85,24 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
               else ...[
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (_, i) => ContributionTile(contribution: _ctrl.items[i]),
+                    (context, i) {
+                      final item = _ctrl.items[i];
+                      final isLast = i == _ctrl.items.length - 1;
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ContributionTile(contribution: item),
+                          if (!isLast)
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: DonationUi.cardBorder,
+                              indent: 20,
+                              endIndent: 20,
+                            ),
+                        ],
+                      );
+                    },
                     childCount: _ctrl.items.length,
                   ),
                 ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
@@ -24,11 +25,13 @@ class AuthController extends GetxController {
   final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
   final _userRole = RxString('user');
+  final _isAuthLoading = false.obs;
   bool _authApiInFlight = false;
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
   bool get isEmailSignInLoading => _isEmailSignInLoading.value;
+  bool get isAuthLoading => _isAuthLoading.value;
   String? get lastAuthError => _lastAuthError.value;
 
   // ─── Role getters ─────────────────────────────────────────────
@@ -347,28 +350,81 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
-    // ── Unregister this device's push token BEFORE clearing the session
-    //    so the auth interceptor can still attach a valid bearer to the
-    //    DELETE /fcm/unregister request. ──
+    // ── 1. Unregister FCM while the session still has a valid access token ──
     await _unregisterDeviceFromPush();
 
-    // ── Clear local state so route guards see unauthenticated immediately ──
+    final refreshToken = _authSessionService.refreshToken;
+
+    // ── 2. Backend logout while session is intact (Bearer on the request) ──
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _authRepository.logout(refreshToken);
+      } catch (e) {
+        debugPrint('AuthController.signOut: logout API failed: $e');
+      }
+    }
+
+    // ── 3. Local session + Firebase ─────────────────────────────────
     _isAuthenticated.value = false;
     _userRole.value = 'user';
-
-    // ── Clear persisted session ──────────────────────────────────
-    final refreshToken = _authSessionService.refreshToken;
     await _authSessionService.clear();
 
-    // ── Firebase sign-out ────────────────────────────────────────
     try {
       await _firebaseService.signOut();
     } catch (_) {}
+  }
 
-    // ── Invalidate refresh token on server (best-effort, non-blocking) ──
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      _authRepository.logout(refreshToken).catchError((_) {});
+  /// Deletes the account on the backend, then clears session and signs out of Firebase.
+  Future<bool> deleteAccount() async {
+    _isAuthLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      final refreshToken = _authSessionService.refreshToken;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        _lastAuthError.value = 'Session expired. Please sign in again.';
+        return false;
+      }
+
+      await _unregisterDeviceFromPush();
+      await _authRepository.deleteAccount(refreshToken);
+
+      _isAuthenticated.value = false;
+      _userRole.value = 'user';
+      await _authSessionService.clear();
+
+      try {
+        await _firebaseService.signOut();
+      } catch (_) {}
+
+      return true;
+    } catch (e) {
+      debugPrint('AuthController.deleteAccount failed: $e');
+      _lastAuthError.value = _mapDeleteAccountError(e);
+      return false;
+    } finally {
+      _isAuthLoading.value = false;
     }
+  }
+
+  String _mapDeleteAccountError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final msg = data['message'] ?? data['error'];
+        if (msg != null && msg.toString().trim().isNotEmpty) {
+          return msg.toString();
+        }
+      }
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout) {
+        return 'Unable to reach the server. Check your connection.';
+      }
+      final code = error.response?.statusCode;
+      if (code == 401 || code == 403) {
+        return 'You are not allowed to delete this account. Try signing in again.';
+      }
+    }
+    return 'Could not delete account. Please try again.';
   }
 
   // ─── Error mappers ────────────────────────────────────────────

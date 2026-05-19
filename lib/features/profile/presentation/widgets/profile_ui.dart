@@ -6,10 +6,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 /// Blue → orange gradient used on Figma action buttons.
-const kFigmaActionGradient = [
-  AppColors.gradientStart,
-  AppColors.gradientEnd,
-];
+const kFigmaActionGradient = [AppColors.gradientStart, AppColors.gradientEnd];
 
 class ProfileLinkTile extends StatelessWidget {
   const ProfileLinkTile({
@@ -30,7 +27,7 @@ class ProfileLinkTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: DonationUi.cardFill,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
@@ -44,40 +41,31 @@ class ProfileLinkTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDestructive
-                        ? const Color(0xFFFFF1F0)
-                        : const Color(0xFFFAF7F5),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.appBgColor,
+                    borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: isDestructive
-                        ? const Color(0xFFB10F1A)
-                        : DonationUi.headerOrange,
-                  ),
+                  child: Icon(icon, size: 20, color: DonationUi.textMuted),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     label,
                     style: AppTypography.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isDestructive
-                          ? const Color(0xFFB10F1A)
-                          : DonationUi.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1C1917),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.chevron_right,
                   size: 20,
-                  color: isDestructive
-                      ? const Color(0xFFE8C4C4)
-                      : DonationUi.chevron,
+                  color: const Color(0xFF78716C),
                 ),
               ],
             ),
@@ -99,10 +87,10 @@ class ProfileSectionHeading extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: AppTypography.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          color: DonationUi.textMuted,
+        style: AppTypography.lora(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0XFF1C1917),
         ),
       ),
     );
@@ -130,10 +118,11 @@ Future<void> showProfileLogoutSheet({
 
 /// Delete account bottom sheet — Figma modal with text field + gradient button.
 Future<void> showProfileDeleteAccountSheet({
+  required String userName,
   required Future<void> Function() onConfirm,
 }) {
   return Get.bottomSheet<void>(
-    _DeleteAccountSheet(onConfirm: onConfirm),
+    _DeleteAccountSheet(userName: userName, onConfirm: onConfirm),
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
   );
@@ -157,50 +146,73 @@ class _ProfileConfirmSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFEF9F3),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DonationUi.cardBorder,
-                  borderRadius: BorderRadius.circular(999),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: DonationUi.cardBorder,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: AppTypography.lora(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: DonationUi.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: DonationUi.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                CustomButton(
+                  label: confirmLabel,
+                  textColor: Colors.white,
+                  gradientColors: kFigmaActionGradient,
+                  borderRadius: 14,
+                  onTap: onConfirm,
+                ),
+              ],
+            ),
+            Positioned(
+              right: 0,
+              top: 10,
+              child: GestureDetector(
+                onTap: () => Get.back(),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3E5D0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF3B1E08),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: AppTypography.lora(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: DonationUi.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              style: AppTypography.inter(
-                fontSize: 14,
-                height: 1.45,
-                color: DonationUi.textMuted,
-              ),
-            ),
-            const SizedBox(height: 24),
-            CustomButton(
-              label: confirmLabel,
-              textColor: Colors.white,
-              gradientColors: kFigmaActionGradient,
-              borderRadius: 14,
-              onTap: onConfirm,
             ),
           ],
         ),
@@ -210,8 +222,9 @@ class _ProfileConfirmSheet extends StatelessWidget {
 }
 
 class _DeleteAccountSheet extends StatefulWidget {
-  const _DeleteAccountSheet({required this.onConfirm});
+  const _DeleteAccountSheet({required this.userName, required this.onConfirm});
 
+  final String userName;
   final Future<void> Function() onConfirm;
 
   @override
@@ -242,71 +255,115 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFEF9F3),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: DonationUi.cardBorder,
-                  borderRadius: BorderRadius.circular(999),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: DonationUi.cardBorder,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Delete Account',
+                  style: AppTypography.lora(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: DonationUi.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Hey ${widget.userName}, Are you sure you want to delete your account?',
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: DonationUi.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _ctrl,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: DonationUi.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter your reason for deletion',
+                    hintStyle: AppTypography.inter(
+                      fontSize: 14,
+                      color: DonationUi.textMuted.withOpacity(0.5),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: DonationUi.cardBorder,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: DonationUi.cardBorder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFED5A00)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  label: 'Yes, Delete',
+                  textColor: Colors.white,
+                  gradientColors: kFigmaActionGradient,
+                  borderRadius: 14,
+                  enabled: _canDelete,
+                  onTap: () async {
+                    Get.back();
+                    await widget.onConfirm();
+                  },
+                ),
+              ],
+            ),
+            Positioned(
+              right: 0,
+              top: 10,
+              child: GestureDetector(
+                onTap: () => Get.back(),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3E5D0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF3B1E08),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Delete Account',
-              style: AppTypography.lora(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: DonationUi.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Are you sure you want to delete your account? This action cannot be undone.',
-              style: AppTypography.inter(
-                fontSize: 14,
-                height: 1.45,
-                color: DonationUi.textMuted,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _ctrl,
-              decoration: InputDecoration(
-                hintText: 'Type DELETE to confirm',
-                filled: true,
-                fillColor: DonationUi.cardFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: DonationUi.cardBorder),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: DonationUi.cardBorder),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            CustomButton(
-              label: 'Yes, delete',
-              textColor: Colors.white,
-              gradientColors: kFigmaActionGradient,
-              borderRadius: 14,
-              enabled: _canDelete,
-              onTap: () async {
-                Get.back();
-                await widget.onConfirm();
-              },
             ),
           ],
         ),

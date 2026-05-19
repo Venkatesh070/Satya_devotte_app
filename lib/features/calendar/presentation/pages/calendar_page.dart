@@ -88,8 +88,8 @@ class _CalendarOrangeHeader extends StatelessWidget {
                       child: Text(
                         'Calendar',
                         style: AppTypography.lora(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w400,
                           color: Colors.white,
                         ),
                       ),
@@ -97,27 +97,42 @@ class _CalendarOrangeHeader extends StatelessWidget {
                     TextButton.icon(
                       onPressed: () =>
                           Get.to(() => const CalendarAddEventPage()),
-                      icon: const Icon(
-                        Icons.add,
-                        size: 18,
-                        color: CalendarUi.headerOrange,
+                      icon: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds),
+                        blendMode: BlendMode.srcIn,
+                        child: const Icon(
+                          Icons.add,
+                          size: 18,
+                          color: Color(0XFFFFF4E0),
+                        ),
                       ),
-                      label: Text(
-                        'New Event',
-                        style: AppTypography.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: CalendarUi.headerOrange,
+                      label: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds),
+                        blendMode: BlendMode.srcIn,
+                        child: Text(
+                          'New Event',
+                          style: AppTypography.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Color(0XFFFFF4E0),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 8,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
@@ -342,7 +357,6 @@ class _FestivalCard extends StatelessWidget {
         : festival.date;
 
     return Material(
-      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -378,10 +392,10 @@ class _FestivalCard extends StatelessWidget {
                   children: [
                     Text(
                       festival.title,
-                      style: AppTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: CalendarUi.textPrimary,
+                      style: AppTypography.lora(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: CalendarUi.text,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -389,7 +403,8 @@ class _FestivalCard extends StatelessWidget {
                       dateStr,
                       style: AppTypography.inter(
                         fontSize: 12,
-                        color: CalendarUi.textMuted,
+                        fontWeight: FontWeight.w400,
+                        color: CalendarUi.subText,
                       ),
                     ),
                     if (festival.description.isNotEmpty) ...[
@@ -401,7 +416,7 @@ class _FestivalCard extends StatelessWidget {
                         style: AppTypography.inter(
                           fontSize: 12,
                           height: 1.4,
-                          color: CalendarUi.textMuted,
+                          color: CalendarUi.subText,
                         ),
                       ),
                     ],
@@ -488,72 +503,11 @@ class _LunarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parsed = _parseDate(date);
-    final dateStr = parsed != null
-        ? DateFormat('EEEE, MMMM do').format(parsed)
-        : date;
-
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: CalendarUi.cardBorder),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8EEF8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  title.contains('Full')
-                      ? Icons.brightness_high_outlined
-                      : Icons.brightness_2_outlined,
-                  color: CalendarUi.tabSelected,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: CalendarUi.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      dateStr,
-                      style: AppTypography.inter(
-                        fontSize: 12,
-                        color: CalendarUi.textMuted,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: AppTypography.inter(
-                        fontSize: 12,
-                        color: CalendarUi.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _CalendarEntryCard(
+      title: title,
+      date: parsed,
+      subtitle: subtitle,
+      onTap: onTap,
     );
   }
 }
@@ -612,14 +566,46 @@ class _GenericEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _CalendarEntryCard(
+      title: title,
+      date: date,
+      subtitle: description,
+      onTap: onTap,
+    );
+  }
+}
+
+/// Shared list row — lunar + events: gradient day/month badge, title, date, subtitle.
+class _CalendarEntryCard extends StatelessWidget {
+  const _CalendarEntryCard({
+    required this.title,
+    required this.date,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final DateTime? date;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  static const _dateGradient = LinearGradient(
+    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  @override
+  Widget build(BuildContext context) {
     final day = date != null ? DateFormat('dd').format(date!) : '--';
     final month = date != null
         ? DateFormat('MMM').format(date!).toUpperCase()
         : '---';
+    final dateLine = date != null
+        ? DateFormat('EEEE, MMMM do').format(date!)
+        : '';
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -632,29 +618,39 @@ class _GenericEventCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2EBDC),
+                  color: const Color(0xFFE8EEF8),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      day,
-                      style: AppTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: CalendarUi.textPrimary,
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          _dateGradient.createShader(bounds),
+                      blendMode: BlendMode.srcIn,
+                      child: Text(
+                        day,
+                        style: AppTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: CalendarUi.textPrimary,
+                        ),
                       ),
                     ),
-                    Text(
-                      month,
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: CalendarUi.textMuted,
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          _dateGradient.createShader(bounds),
+                      blendMode: BlendMode.srcIn,
+                      child: Text(
+                        month,
+                        style: AppTypography.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: CalendarUi.textMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -667,24 +663,30 @@ class _GenericEventCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: CalendarUi.textPrimary,
+                      style: AppTypography.lora(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: CalendarUi.text,
                       ),
                     ),
-                    if (description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                    if (dateLine.isNotEmpty)
                       Text(
-                        description,
+                        dateLine,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          color: CalendarUi.subText,
+                        ),
+                      ),
+                    if (subtitle.trim().isNotEmpty)
+                      Text(
+                        subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.inter(
                           fontSize: 12,
-                          color: CalendarUi.textMuted,
+                          color: CalendarUi.subText,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),

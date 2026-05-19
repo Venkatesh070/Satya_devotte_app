@@ -9,16 +9,21 @@ class AuthRemoteDataSource {
   final ApiClient _apiClient;
 
   /// Invalidates the stored refresh token on the server.
-  /// Matches Swagger: POST /auth/logout  { "refreshToken": "string" }
+  /// POST `/api/v1/auth/logout` with `{ "refreshToken": "..." }`.
   Future<void> logout(String refreshToken) async {
-    try {
-      await _apiClient.dio.post<dynamic>(
-        ApiEndpoints.authLogout,
-        data: {'refreshToken': refreshToken},
-      );
-    } catch (_) {
-      // Best-effort: even if the server call fails, local session is cleared.
-    }
+    await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.authLogout,
+      data: {'refreshToken': refreshToken},
+    );
+  }
+
+  /// Soft-deletes the account on the server.
+  /// DELETE `/api/v1/auth/account` with body `{ "refreshToken": "..." }`.
+  Future<void> deleteAccount(String refreshToken) async {
+    await _apiClient.dio.delete<dynamic>(
+      ApiEndpoints.authDeleteAccount,
+      data: {'refreshToken': refreshToken},
+    );
   }
 
   /// Web admin sign-in. POSTs to `/auth/admin-login` with the Firebase ID token

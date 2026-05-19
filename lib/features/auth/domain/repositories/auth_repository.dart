@@ -15,4 +15,7 @@ abstract class AuthRepository {
   });
 
   Future<void> logout(String refreshToken);
+
+  /// Permanently (soft) deletes the user account on the backend.
+  Future<void> deleteAccount(String refreshToken);
 }
