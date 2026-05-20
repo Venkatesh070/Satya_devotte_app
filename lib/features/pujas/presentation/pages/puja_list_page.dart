@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RitualListPage extends StatefulWidget {
@@ -18,6 +19,8 @@ class RitualListPage extends StatefulWidget {
 class _RitualListPageState extends State<RitualListPage> {
   static const _favoritesPrefsKey = 'favorite_deity_ids';
 
+  late final FavoriteDeitiesRemoteDataSource _favoriteDeitiesApi;
+
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = false;
@@ -26,11 +29,14 @@ class _RitualListPageState extends State<RitualListPage> {
   String _searchQuery = '';
   String _selectedCategory = 'All Deities';
   Set<String> _favoriteIds = <String>{};
+  /// Full deity payloads from GET `/auth/favorite-deities` (for favourites tab).
+  List<DeityListItem> _favoriteDeityDocs = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    _favoriteDeitiesApi = FavoriteDeitiesRemoteDataSource(Get.find<ApiClient>());
+    _loadFavoritesFromApi();
     _loadDeities();
   }
 
@@ -85,7 +91,7 @@ class _RitualListPageState extends State<RitualListPage> {
     }
   }
 
-  Future<void> _loadFavorites() async {
+  Future<void> _loadFavoritesFromPrefsOnly() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
@@ -94,19 +100,98 @@ class _RitualListPageState extends State<RitualListPage> {
     });
   }
 
+  Future<void> _persistFavoritesPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_favoritesPrefsKey, _favoriteIds.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _loadFavoritesFromApi() async {
+    try {
+      final raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+      if (!mounted) return;
+      final ids = <String>{};
+      final docs = <DeityListItem>[];
+      for (final m in raw) {
+        final item = DeityListItem.fromJson(m);
+        if (item.id.isEmpty) continue;
+        ids.add(item.id);
+        docs.add(item);
+      }
+      setState(() {
+        _favoriteIds = ids;
+        _favoriteDeityDocs = docs;
+      });
+      await _persistFavoritesPrefs();
+    } on DioException {
+      await _loadFavoritesFromPrefsOnly();
+    } catch (_) {
+      await _loadFavoritesFromPrefsOnly();
+    }
+  }
+
   Future<void> _toggleFavorite(DeityListItem item) async {
-    final next = {..._favoriteIds};
-    final added = next.add(item.id);
-    if (!added) next.remove(item.id);
+    final id = item.id.trim();
+    if (id.isEmpty) return;
 
-    setState(() => _favoriteIds = next);
+    final wasFavorite = _favoriteIds.contains(id);
+    try {
+      if (wasFavorite) {
+        await _favoriteDeitiesApi.removeFavorite(id);
+      } else {
+        await _favoriteDeitiesApi.addFavorite(id);
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final code = e.response?.statusCode;
+      final msg = code == 404
+          ? 'Deity is not available to favourite.'
+          : (e.response?.data is Map
+                ? (e.response!.data['message'] ?? e.message)?.toString()
+                : null) ??
+              e.message ??
+              'Could not update favourites.';
+      Get.snackbar(
+        'Favourites',
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: const Duration(milliseconds: 2200),
+      );
+      rethrow;
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Favourites',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      );
+      rethrow;
+    }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_favoritesPrefsKey, next.toList());
+    if (!mounted) return;
+    setState(() {
+      final next = {..._favoriteIds};
+      final nextDocs = [..._favoriteDeityDocs];
+      if (wasFavorite) {
+        next.remove(id);
+        nextDocs.removeWhere((e) => e.id == id);
+      } else {
+        next.add(id);
+        if (!nextDocs.any((e) => e.id == id)) {
+          nextDocs.add(item);
+        }
+      }
+      _favoriteIds = next;
+      _favoriteDeityDocs = nextDocs;
+    });
+    await _persistFavoritesPrefs();
 
     if (!mounted) return;
     Get.snackbar(
-      added ? 'Added to favorites' : 'Removed from favorites',
+      wasFavorite ? 'Removed from favourites' : 'Added to favourites',
       item.name,
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -115,9 +200,15 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   void _openFavorites() {
-    final favoriteItems = _items
-        .where((item) => _favoriteIds.contains(item.id))
+    final byId = <String, DeityListItem>{
+      for (final e in _favoriteDeityDocs) e.id: e,
+      for (final e in _items) e.id: e,
+    };
+    final favoriteItems = _favoriteIds
+        .map((id) => byId[id])
+        .whereType<DeityListItem>()
         .toList();
+
     Get.to(
       () => _FavoriteDeitiesPage(
         items: favoriteItems,
@@ -180,7 +271,12 @@ class _RitualListPageState extends State<RitualListPage> {
         bottom: false,
         child: RefreshIndicator(
           color: AppColors.gradientEnd,
-          onRefresh: _loadDeities,
+          onRefresh: () async {
+            await Future.wait<void>([
+              _loadFavoritesFromApi(),
+              _loadDeities(),
+            ]);
+          },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -663,7 +759,11 @@ class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
   }
 
   Future<void> _toggleFavorite(DeityListItem item) async {
-    await widget.onToggleFavorite(item);
+    try {
+      await widget.onToggleFavorite(item);
+    } catch (_) {
+      return;
+    }
     if (!mounted) return;
     setState(() {
       if (_favoriteIds.contains(item.id)) {

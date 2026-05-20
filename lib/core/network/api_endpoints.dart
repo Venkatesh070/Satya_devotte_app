@@ -8,6 +8,14 @@ class ApiEndpoints {
   static const String authDeleteAccount = '/api/v1/auth/account';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
+
+  /// GET — list current user's favourite deities (full APPROVED deity docs).
+  static const String favoriteDeities = '/api/v1/auth/favorite-deities';
+
+  /// POST — add favourite (201, idempotent). DELETE — remove favourite (200).
+  static String favoriteDeity(String deityId) =>
+      '/api/v1/auth/favorite-deities/$deityId';
+
   // ── Poojas ────────────────────────────────────────────────
   static const String poojas = '/api/v1/poojas'; // GET — all poojas (public)
   static const String festivals =
