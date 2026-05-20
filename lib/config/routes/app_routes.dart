@@ -6,6 +6,7 @@ class AppRoutes {
   static const String home = '/home';
   static const String rituals = '/rituals';
   static const String ritualDetail = '/ritual-detail';
+  static const String editProfile = '/edit-profile';
 
   // ─── User-facing donations flow ───────────────────────────────
   /// All approved donations (full list).

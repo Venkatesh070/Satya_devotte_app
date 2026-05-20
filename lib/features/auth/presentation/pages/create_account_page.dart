@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -29,6 +33,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _formStepOneKey = GlobalKey<FormState>();
   final _formStepTwoKey = GlobalKey<FormState>();
 
+  PickedFile? _pickedImage;
   DateTime? _dateOfBirth;
   TimeOfDay? _timeOfBirth;
   String _selectedGender = 'MALE';
@@ -37,6 +42,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   bool _hideConfirmPassword = true;
 
   AuthController get _authController => Get.find<AuthController>();
+  MediaUploadService get _mediaService => Get.find<MediaUploadService>();
 
   @override
   void dispose() {
@@ -77,38 +83,61 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     setState(() => _step = 1);
   }
 
-  Future<void> _submit() async {
-    if (_formStepTwoKey.currentState?.validate() != true) return;
-    final dob = _dateOfBirth;
-    if (dob == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select date of birth.')),
-      );
-      return;
+  Future<void> _pickImage() async {
+    final picked = await _mediaService.pickFile(type: PickMediaType.image);
+    if (picked != null) {
+      setState(() => _pickedImage = picked);
     }
-    final tob = _timeOfBirth;
-    if (tob == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select time of birth.')),
-      );
-      return;
-    }
-    final hh = tob.hour.toString().padLeft(2, '0');
-    final mm = tob.minute.toString().padLeft(2, '0');
+  }
 
-    final profilePayload = <String, dynamic>{
-      'fullName': _fullNameController.text.trim(),
-      'gender': _selectedGender,
-      'dateOfBirth': DateFormat('yyyy-MM-dd').format(dob),
-      'timeOfBirth': '$hh:$mm',
-      'phone': _phoneController.text.trim(),
-      'placeOfBirth': _birthPlaceController.text.trim().isEmpty
-          ? 'Unknown'
-          : _birthPlaceController.text.trim(),
-      'countryCode': '+91',
-      'timeZone': DateTime.now().timeZoneName,
-      'preferredLanguage': 'en',
-    };
+  Future<void> _submit({bool skipProfile = false}) async {
+    if (!skipProfile && _formStepTwoKey.currentState?.validate() != true)
+      return;
+
+    Map<String, dynamic>? profilePayload;
+
+    if (!skipProfile) {
+      if (_pickedImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please upload a profile image.')),
+        );
+        return;
+      }
+
+      final dob = _dateOfBirth;
+      if (dob == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select date of birth.')),
+        );
+        return;
+      }
+      final tob = _timeOfBirth;
+      if (tob == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select time of birth.')),
+        );
+        return;
+      }
+
+      profilePayload = {
+        'fullName': _fullNameController.text.trim(),
+        'gender': _selectedGender,
+        'dateOfBirth': DateFormat('yyyy-MM-dd').format(dob),
+        'phone': _phoneController.text.trim(),
+        'placeOfBirth': _birthPlaceController.text.trim(),
+        'countryCode': '+91',
+        'timeZone': DateTime.now().timeZoneName,
+        'preferredLanguage': 'en',
+        'image': dio.MultipartFile.fromBytes(
+          _pickedImage!.bytes,
+          filename: _pickedImage!.filename,
+        ),
+      };
+
+      final hh = tob.hour.toString().padLeft(2, '0');
+      final mm = tob.minute.toString().padLeft(2, '0');
+      profilePayload['timeOfBirth'] = '$hh:$mm';
+    }
 
     final isSuccess = await _authController.signUpAndCreateProfile(
       email: _emailController.text.trim(),
@@ -190,14 +219,33 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  _step == 0 ? 'Signup with email' : 'Your details',
-                  style: const TextStyle(
-                    color: _titleColor,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'serif',
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _step == 0 ? 'Signup with email' : 'Your details',
+                      style: const TextStyle(
+                        color: _titleColor,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'serif',
+                      ),
+                    ),
+                    if (_step == 1)
+                      TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => _submit(skipProfile: true),
+                        child: const Text(
+                          'Skip',
+                          style: TextStyle(
+                            color: Color(0xFF6B5730),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -224,8 +272,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   decoration: _inputDecoration('Email'),
                                   validator: (v) {
                                     final value = v?.trim() ?? '';
-                                    if (value.isEmpty) return 'Email is required';
-                                    if (!value.contains('@')) return 'Invalid email';
+                                    if (value.isEmpty)
+                                      return 'Email is required';
+                                    if (!value.contains('@'))
+                                      return 'Invalid email';
                                     return null;
                                   },
                                 ),
@@ -249,7 +299,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                 TextFormField(
                                   controller: _confirmPasswordController,
                                   obscureText: _hideConfirmPassword,
-                                  decoration: _inputDecoration('Confirm Password'),
+                                  decoration: _inputDecoration(
+                                    'Confirm Password',
+                                  ),
                                   validator: (v) {
                                     if (v == null || v.isEmpty) {
                                       return 'Please confirm password';
@@ -268,6 +320,50 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             key: _formStepTwoKey,
                             child: Column(
                               children: [
+                                Center(
+                                  child: Stack(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 45,
+                                        backgroundColor: _fieldBorder,
+                                        backgroundImage: _pickedImage != null
+                                            ? MemoryImage(
+                                                Uint8List.fromList(
+                                                  _pickedImage!.bytes,
+                                                ),
+                                              )
+                                            : null,
+                                        child: _pickedImage == null
+                                            ? const Icon(
+                                                Icons.person,
+                                                size: 45,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: InkWell(
+                                          onTap: isLoading ? null : _pickImage,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.gradientStart,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
                                 TextFormField(
                                   controller: _fullNameController,
                                   decoration: _inputDecoration('Full Name'),
@@ -298,7 +394,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       ? null
                                       : (value) {
                                           if (value == null) return;
-                                          setState(() => _selectedGender = value);
+                                          setState(
+                                            () => _selectedGender = value,
+                                          );
                                         },
                                 ),
                                 const SizedBox(height: 10),
@@ -306,9 +404,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   label: 'Date of Birth',
                                   value: _dateOfBirth == null
                                       ? null
-                                      : DateFormat('dd MMM yyyy').format(
-                                          _dateOfBirth!,
-                                        ),
+                                      : DateFormat(
+                                          'dd MMM yyyy',
+                                        ).format(_dateOfBirth!),
                                   icon: Icons.calendar_today,
                                   onTap: isLoading ? null : _pickDob,
                                 ),
@@ -320,6 +418,17 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       : _timeOfBirth!.format(context),
                                   icon: Icons.access_time,
                                   onTap: isLoading ? null : _pickTob,
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  controller: _birthPlaceController,
+                                  decoration: _inputDecoration(
+                                    'Place of Birth',
+                                  ),
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                      ? 'Place of birth is required'
+                                      : null,
                                 ),
                                 const SizedBox(height: 10),
                                 TextFormField(
@@ -347,7 +456,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     AppColors.gradientEnd,
                   ],
                   textColor: Colors.white,
-                  onTap: _step == 0 ? _goNext : _submit,
+                  onTap: _step == 0 ? _goNext : () => _submit(),
                 ),
               ],
             ),
@@ -385,9 +494,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 if (isPassword) {
                   setState(() => _hidePassword = !_hidePassword);
                 } else {
-                  setState(
-                    () => _hideConfirmPassword = !_hideConfirmPassword,
-                  );
+                  setState(() => _hideConfirmPassword = !_hideConfirmPassword);
                 }
               },
               icon: Icon(
@@ -435,7 +542,10 @@ class _PickerField extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
           suffixIcon: Icon(icon, size: 18),
         ),
         child: Text(

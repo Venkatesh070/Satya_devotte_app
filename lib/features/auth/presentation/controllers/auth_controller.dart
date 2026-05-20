@@ -133,7 +133,9 @@ class AuthController extends GetxController {
 
   // ─── Google Sign-In ──────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -219,11 +221,13 @@ class AuthController extends GetxController {
         userProfile: adminProfile,
       );
       // Server flag: explicit gate for the admin panel.
-      final canAccessAdminPanel = loginResult.user['canLoginAdminPanel'] == true;
+      final canAccessAdminPanel =
+          loginResult.user['canLoginAdminPanel'] == true;
       final rawRole = (loginResult.user['role'] as String? ?? '')
           .trim()
           .toLowerCase();
-      final hasAdminRole = rawRole == 'admin' ||
+      final hasAdminRole =
+          rawRole == 'admin' ||
           rawRole == 'superadmin' ||
           loginResult.user['isSuperAdmin'] == true;
       if (!canAccessAdminPanel || !hasAdminRole) {
@@ -260,7 +264,9 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -319,7 +325,9 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -376,7 +384,7 @@ class AuthController extends GetxController {
   Future<bool> signUpAndCreateProfile({
     required String email,
     required String password,
-    required Map<String, dynamic> profileData,
+    Map<String, dynamic>? profileData,
   }) async {
     if (_authApiInFlight ||
         _isGoogleSignInLoading.value ||
@@ -408,7 +416,9 @@ class AuthController extends GetxController {
         refreshToken: loginResult.refreshToken,
         userData: loginResult.user,
       );
-      await _authRepository.upsertProfile(profileData);
+      if (profileData != null && profileData.isNotEmpty) {
+        await _authRepository.upsertProfile(profileData);
+      }
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();

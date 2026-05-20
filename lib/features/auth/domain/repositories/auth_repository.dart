@@ -21,4 +21,7 @@ abstract class AuthRepository {
 
   /// Creates/updates the authenticated user's profile details.
   Future<void> upsertProfile(Map<String, dynamic> profileData);
+
+  /// Partially updates the authenticated user's profile details.
+  Future<void> updateProfile(Map<String, dynamic> profileData);
 }

@@ -43,4 +43,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> upsertProfile(Map<String, dynamic> profileData) {
     return _remoteDataSource.upsertProfile(profileData);
   }
+
+  @override
+  Future<void> updateProfile(Map<String, dynamic> profileData) {
+    return _remoteDataSource.updateProfile(profileData);
+  }
 }

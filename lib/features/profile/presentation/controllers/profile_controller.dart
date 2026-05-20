@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
+import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
 
 class ProfileController extends GetxController {
@@ -44,8 +45,8 @@ class ProfileController extends GetxController {
       return email.substring(0, at);
     }
 
-    return t(u['name']) ??
-        t(u['fullName']) ??
+    return t(u['fullName']) ??
+        t(u['name']) ??
         t(u['displayName']) ??
         fromFirstLast() ??
         fromEmail() ??
@@ -83,7 +84,8 @@ class ProfileController extends GetxController {
     }
     final merged = <String, dynamic>{};
     if (session != null && session.isNotEmpty) merged.addAll(session);
-    if (fromProfile != null && fromProfile.isNotEmpty) merged.addAll(fromProfile);
+    if (fromProfile != null && fromProfile.isNotEmpty)
+      merged.addAll(fromProfile);
     return merged.isEmpty ? null : merged;
   }
 
@@ -136,6 +138,24 @@ class ProfileController extends GetxController {
       } else {
         _error.value = 'Failed to load profile.';
       }
+    } finally {
+      _isLoading.value = false;
+      update();
+    }
+  }
+
+  Future<bool> updateProfile(Map<String, dynamic> profileData) async {
+    _isLoading.value = true;
+    _error.value = null;
+    try {
+      // Find the repository and call update
+      final authRepo = Get.find<AuthRepository>();
+      await authRepo.updateProfile(profileData);
+      await loadProfile(); // Refresh
+      return true;
+    } catch (error) {
+      _error.value = 'Failed to update profile.';
+      return false;
     } finally {
       _isLoading.value = false;
       update();
