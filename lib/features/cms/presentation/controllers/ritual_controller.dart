@@ -19,6 +19,7 @@ class RitualController extends GetxController {
   final _isSubmitting = false.obs;
   final _error = RxnString();
   final _filter = 'All'.obs;
+  final _search = ''.obs;
   final _deities = <Map<String, String>>[].obs;
 
   List<RitualModel> get rituals => _rituals;
@@ -26,13 +27,31 @@ class RitualController extends GetxController {
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
   String get filter => _filter.value;
+  String get search => _search.value;
   List<Map<String, String>> get deities => _deities;
 
+  void setSearch(String q) => _search.value = q.trim().toLowerCase();
+
   List<RitualModel> get filteredRituals {
-    if (_filter.value == 'All') return _rituals.toList();
-    return _rituals
-        .where((r) => r.status == _filter.value.toUpperCase())
-        .toList();
+    var list = _rituals.toList();
+    if (_filter.value != 'All') {
+      list = list
+          .where((r) => r.status == _filter.value.toUpperCase())
+          .toList();
+    }
+    final q = _search.value;
+    if (q.isNotEmpty) {
+      list = list
+          .where(
+            (r) =>
+                r.title.toLowerCase().contains(q) ||
+                (r.slug ?? '').toLowerCase().contains(q) ||
+                (r.category ?? '').toLowerCase().contains(q) ||
+                (r.purpose ?? '').toLowerCase().contains(q),
+          )
+          .toList();
+    }
+    return list;
   }
 
   @override
@@ -85,16 +104,18 @@ class RitualController extends GetxController {
     required String description,
     required List<RitualDay> days,
     required List<RitualSection> sections,
+    String? slug,
     String? category,
     String? purpose,
     String? startingDay,
-    String? recommendedDuration,
+    int? ritualDays,
     String? bestDayTime,
     String accessType = 'FREE',
     num price = 0,
+    String currency = 'ZAR',
     String difficulty = 'BEGINNER',
     bool isFeatured = false,
-    String status = 'DRAFT',
+    String status = 'PENDING',
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
@@ -105,6 +126,7 @@ class RitualController extends GetxController {
       final ritual = RitualModel(
         id: '',
         title: title,
+        slug: slug,
         deity: deity,
         description: description,
         days: days,
@@ -112,10 +134,11 @@ class RitualController extends GetxController {
         category: category,
         purpose: purpose,
         startingDay: startingDay,
-        recommendedDuration: recommendedDuration,
+        ritualDays: ritualDays ?? days.length,
         bestDayTime: bestDayTime,
         accessType: accessType,
         price: price,
+        currency: currency,
         difficulty: difficulty,
         isFeatured: isFeatured,
         status: status,

@@ -28,6 +28,7 @@ class InventoryController extends GetxController {
   final _isCategoriesLoading = false.obs;
   final _statusPendingIds = <String>{}.obs;
   Future<void>? _initFuture;
+  Future<void>? _categoriesLoadFuture;
 
   List<InventoryCategory> get categories => _categories;
   List<InventoryItem> get items => _items;
@@ -89,8 +90,12 @@ class InventoryController extends GetxController {
     return null;
   }
 
-  Future<void> loadCategories() async {
-    if (_isCategoriesLoading.value) return;
+  Future<void> loadCategories() {
+    if (_categories.isNotEmpty) return Future.value();
+    return _categoriesLoadFuture ??= _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
     _isCategoriesLoading.value = true;
     try {
       final list = await _ds.getCategories();
@@ -99,6 +104,7 @@ class InventoryController extends GetxController {
       // Categories are optional for listing; form will show codes only.
     } finally {
       _isCategoriesLoading.value = false;
+      _categoriesLoadFuture = null;
     }
   }
 

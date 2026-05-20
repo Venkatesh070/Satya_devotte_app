@@ -9,7 +9,7 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_donatio
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_festivals_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_notifications_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_users_content.dart';
-import 'package:satya_devotte_app/features/cms/presentation/contents/cms_analytics_content.dart';
+// import 'package:satya_devotte_app/features/cms/presentation/contents/cms_analytics_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_shlokas_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_admins_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_manage_rituals_content.dart';
@@ -988,7 +988,8 @@ class _NavIds {
   static const int donations = 4;
   static const int notifications = 5;
   static const int users = 6;
-  static const int analytics = 7;
+  // Hidden from side menu for now.
+  // static const int analytics = 7;
   // Super admin only.
   static const int shlokas = 8;
   static const int admins = 9;
@@ -1110,12 +1111,13 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     activeIcon: Icons.people,
     index: _NavIds.users,
   ),
-  const _NavEntry(
-    label: 'Analytics',
-    icon: Icons.bar_chart_outlined,
-    activeIcon: Icons.bar_chart,
-    index: _NavIds.analytics,
-  ),
+  // Analytics — hidden from side menu for now.
+  // const _NavEntry(
+  //   label: 'Analytics',
+  //   icon: Icons.bar_chart_outlined,
+  //   activeIcon: Icons.bar_chart,
+  //   index: _NavIds.analytics,
+  // ),
   if (isSuperAdmin) ...[
     const _NavEntry(
       label: 'Shlokas',
@@ -1171,8 +1173,8 @@ String _pageTitle(int i) {
       return 'Notifications';
     case _NavIds.users:
       return 'Users';
-    case _NavIds.analytics:
-      return 'Analytics';
+    // case _NavIds.analytics:
+    //   return 'Analytics';
     case _NavIds.shlokas:
       return 'Shlokas';
     case _NavIds.admins:
@@ -1212,8 +1214,8 @@ Widget _buildContent(int i) {
       return const CmsNotificationsContent();
     case _NavIds.users:
       return const CmsUsersContent();
-    case _NavIds.analytics:
-      return const CmsAnalyticsContent();
+    // case _NavIds.analytics:
+    //   return const CmsAnalyticsContent();
     case _NavIds.shlokas:
       return const CmsShlokaContent();
     case _NavIds.admins:
@@ -1253,7 +1255,7 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
     case AppRoutes.cmsUsers:
       return _NavIds.users;
     case AppRoutes.cmsAnalytics:
-      return _NavIds.analytics;
+      return _NavIds.dashboard;
     case AppRoutes.cmsPoojaKitInventory:
       return _NavIds.poojaKitInventory;
     case AppRoutes.cmsPoojaKit:

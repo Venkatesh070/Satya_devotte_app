@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/data/models/inventory_models.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -102,6 +101,7 @@ class _InventoryListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 768;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: EdgeInsets.symmetric(
@@ -164,22 +164,21 @@ class _InventoryListView extends StatelessWidget {
             ],
           ),
         ),
-        Obx(() {
-          final auth = Get.find<AuthController>();
-          return _FilterStrip(
-            categories: ctrl.categories,
-            isCategoriesLoading: ctrl.isCategoriesLoading,
-            categoryFilter: ctrl.categoryFilter,
-            statusFilter: ctrl.statusFilter,
-            stockFilter: ctrl.stockFilter,
-            showSeedCategories: auth.isSuperAdmin,
-            isSeeding: ctrl.isSubmitting,
-            onCategory: ctrl.setCategoryFilter,
-            onStatus: ctrl.setStatusFilter,
-            onStock: ctrl.setStockFilter,
-            onSeedCategories: ctrl.seedCategories,
-          );
-        }),
+        Obx(
+          () {
+            // Subscribe to category list changes (assignAll after async load).
+            final _ = ctrl.categories.length;
+            return _FilterStrip(
+              ctrl: ctrl,
+              categoryFilter: ctrl.categoryFilter,
+              statusFilter: ctrl.statusFilter,
+              stockFilter: ctrl.stockFilter,
+              onCategory: ctrl.setCategoryFilter,
+              onStatus: ctrl.setStatusFilter,
+              onStock: ctrl.setStockFilter,
+            );
+          },
+        ),
         const Divider(height: 1, color: CmsColors.border),
         Expanded(child: _InventoryBody(ctrl: ctrl, onEdit: onEdit)),
         Obx(() {
@@ -214,142 +213,65 @@ class _InventoryListView extends StatelessWidget {
 
 class _FilterStrip extends StatelessWidget {
   const _FilterStrip({
-    required this.categories,
-    required this.isCategoriesLoading,
+    required this.ctrl,
     required this.categoryFilter,
     required this.statusFilter,
     required this.stockFilter,
-    required this.showSeedCategories,
-    required this.isSeeding,
     required this.onCategory,
     required this.onStatus,
     required this.onStock,
-    required this.onSeedCategories,
   });
 
-  final List<InventoryCategory> categories;
-  final bool isCategoriesLoading;
+  final InventoryController ctrl;
   final String categoryFilter;
   final String statusFilter;
   final String stockFilter;
-  final bool showSeedCategories;
-  final bool isSeeding;
   final ValueChanged<String> onCategory;
   final ValueChanged<String> onStatus;
   final ValueChanged<String> onStock;
-  final VoidCallback onSeedCategories;
 
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 768;
-    return Container(
-      color: CmsColors.white,
+    return Padding(
       padding: EdgeInsets.only(
-        left: isTablet ? 24 : 16,
-        right: isTablet ? 24 : 16,
+        top: 12,
         bottom: 12,
+        left: isTablet ? 24 : 16,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isCategoriesLoading) ...[
-            const Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: CmsColors.orange,
-                  ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final s in _InventoryListView._statusFilters) ...[
+                _FilterChip(
+                  label: s == 'ALL'
+                      ? 'All status'
+                      : s[0] + s.substring(1).toLowerCase(),
+                  selected: statusFilter == s,
+                  onTap: () => onStatus(s),
                 ),
-                SizedBox(width: 10),
-                Text(
-                  'Loading categories…',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: CmsColors.textSecond,
-                  ),
-                ),
+                const SizedBox(width: 6),
               ],
-            ),
-            const SizedBox(height: 8),
-          ] else if (categories.isEmpty && showSeedCategories) ...[
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'No categories loaded. Reload to use category filters.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: CmsColors.textSecond,
-                    ),
-                  ),
+              for (final f in _InventoryListView._stockFilters) ...[
+                _FilterChip(
+                  label: f,
+                  selected: stockFilter == f,
+                  onTap: () => onStock(f),
                 ),
-                TextButton(
-                  onPressed: isSeeding ? null : onSeedCategories,
-                  child: Text(isSeeding ? 'Reloading...' : 'Reload categories'),
-                ),
+                const SizedBox(width: 6),
               ],
-            ),
-            const SizedBox(height: 8),
-          ] else if (categories.isNotEmpty) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'All categories',
-                    selected: categoryFilter == 'ALL',
-                    onTap: () => onCategory('ALL'),
-                  ),
-                  for (final c in categories) ...[
-                    const SizedBox(width: 6),
-                    _FilterChip(
-                      label: c.label,
-                      selected: categoryFilter == c.code,
-                      onTap: () => onCategory(c.code),
-                    ),
-                  ],
-                  if (showSeedCategories) ...[
-                    const SizedBox(width: 12),
-                    TextButton(
-                      onPressed: isSeeding ? null : onSeedCategories,
-                      child: Text(
-                        isSeeding ? 'Reloading...' : 'Reload categories',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ],
+              _CategoryFilterButton(
+                ctrl: ctrl,
+                categoryFilter: categoryFilter,
+                onApply: onCategory,
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final s in _InventoryListView._statusFilters) ...[
-                  _FilterChip(
-                    label: s == 'ALL' ? 'All status' : s[0] + s.substring(1).toLowerCase(),
-                    selected: statusFilter == s,
-                    onTap: () => onStatus(s),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                for (final f in _InventoryListView._stockFilters) ...[
-                  _FilterChip(
-                    label: f,
-                    selected: stockFilter == f,
-                    onTap: () => onStock(f),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -372,7 +294,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? CmsColors.orange : CmsColors.bg,
+          color: selected ? CmsColors.orange : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? CmsColors.orange : CmsColors.border,
@@ -385,6 +307,341 @@ class _FilterChip extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: selected ? Colors.white : CmsColors.orangeDark,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens a category dropdown with Apply / Cancel (does not filter until Apply).
+class _CategoryFilterButton extends StatelessWidget {
+  const _CategoryFilterButton({
+    required this.ctrl,
+    required this.categoryFilter,
+    required this.onApply,
+  });
+
+  final InventoryController ctrl;
+  final String categoryFilter;
+  final ValueChanged<String> onApply;
+
+  String _labelFor(String code) {
+    if (code == 'ALL') return 'All categories';
+    for (final c in ctrl.categories) {
+      if (c.code == code) return c.label;
+    }
+    return code;
+  }
+
+  Future<void> _openFilter(BuildContext context) async {
+    await ctrl.loadCategories();
+    if (!context.mounted) return;
+    final applied = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _CategoryFilterDialog(
+        categories: ctrl.categories,
+        initialCode: categoryFilter,
+      ),
+    );
+    if (applied != null) onApply(applied);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = categoryFilter != 'ALL';
+    final label = isActive ? _labelFor(categoryFilter) : 'Category';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openFilter(context),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive
+                ? CmsColors.orange.withOpacity(0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isActive ? CmsColors.orange : CmsColors.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.filter_list_rounded,
+                size: 14,
+                color: isActive ? CmsColors.orange : CmsColors.textSecond,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? CmsColors.orangeDark : CmsColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: isActive ? CmsColors.orange : CmsColors.textSecond,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryFilterDialog extends StatefulWidget {
+  const _CategoryFilterDialog({
+    required this.categories,
+    required this.initialCode,
+  });
+
+  final List<InventoryCategory> categories;
+  final String initialCode;
+
+  @override
+  State<_CategoryFilterDialog> createState() => _CategoryFilterDialogState();
+}
+
+class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
+  late String _draft;
+  late final TextEditingController _searchCtrl;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = _safeCode(widget.initialCode);
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  String _safeCode(String code) {
+    if (code == 'ALL') return 'ALL';
+    for (final c in widget.categories) {
+      if (c.code == code) return c.code;
+    }
+    return 'ALL';
+  }
+
+  bool get _showAllOption {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return 'all categories'.contains(q);
+  }
+
+  List<InventoryCategory> get _filteredCategories {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.categories;
+    return widget.categories.where((c) {
+      return c.label.toLowerCase().contains(q) ||
+          c.code.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  int get _listItemCount {
+    var n = _filteredCategories.length;
+    if (_showAllOption) n += 1;
+    return n;
+  }
+
+  String _codeAt(int index) {
+    if (_showAllOption) {
+      if (index == 0) return 'ALL';
+      return _filteredCategories[index - 1].code;
+    }
+    return _filteredCategories[index].code;
+  }
+
+  String _labelAt(int index) {
+    if (_showAllOption) {
+      if (index == 0) return 'All categories';
+      return _filteredCategories[index - 1].label;
+    }
+    return _filteredCategories[index].label;
+  }
+
+  String? _subtitleAt(int index) {
+    if (_showAllOption && index == 0) return null;
+    final cat = _showAllOption
+        ? _filteredCategories[index - 1]
+        : _filteredCategories[index];
+    return cat.code;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final empty = _listItemCount == 0;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 560),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Filter by category',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search categories…',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: CmsColors.bg,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.orange),
+                  ),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: empty
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'No categories match your search.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: CmsColors.textSecond,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: _listItemCount,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final code = _codeAt(index);
+                        final isSelected = code == _draft;
+                        final subtitle = _subtitleAt(index);
+                        return InkWell(
+                          onTap: () => setState(() => _draft = code),
+                          child: Container(
+                            color: isSelected
+                                ? CmsColors.orange.withOpacity(0.06)
+                                : null,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _labelAt(index),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? CmsColors.orange
+                                              : CmsColors.textPrimary,
+                                        ),
+                                      ),
+                                      if (subtitle != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          subtitle,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: CmsColors.textSecond,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    size: 18,
+                                    color: CmsColors.orange,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, _draft),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: CmsColors.orange,
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

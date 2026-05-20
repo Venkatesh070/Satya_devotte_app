@@ -1,13 +1,4 @@
-// Placeholder content for the top-level "Manage Rituals" sidebar tab.
-//
-// Note: the existing "Manage Pujas" tab is rendered by `CmsRitualsContent`
-// (historical naming). This new screen is reserved for a real CMS rituals
-// module (e.g. independent of pujas) and is intentionally a placeholder
-// until the API is wired up — mirrors the placeholder style used by the
-// Pooja Kit Orders / Replace Requests tabs.
-import 'package:flutter/material.dart';
 // lib/features/cms/presentation/contents/cms_manage_rituals_content.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
@@ -27,53 +18,48 @@ class CmsManageRitualsContent extends StatefulWidget {
 }
 
 class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
-  final RitualController _controller = Get.find<RitualController>();
-  bool _showAddForm = false;
-  RitualModel? _editingRitual;
+  late final RitualController _controller;
+  bool _showForm = false;
+  RitualModel? _editing;
 
   @override
   void initState() {
     super.initState();
+    _controller = Get.find<RitualController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _controller.loadRituals(showErrorSnackbar: false);
     });
   }
 
+  void _closeForm() => setState(() {
+        _showForm = false;
+        _editing = null;
+      });
+
   @override
   Widget build(BuildContext context) {
-    if (_showAddForm) {
-      return Container(
-        color: CmsColors.bg,
-        child: _RitualForm(
-          ritual: _editingRitual,
-          controller: _controller,
-          onCancel: () => setState(() {
-            _showAddForm = false;
-            _editingRitual = null;
-          }),
-          onSaved: () {
-            _controller.loadRituals();
-            setState(() {
-              _showAddForm = false;
-              _editingRitual = null;
-            });
-          },
-        ),
+    if (_showForm) {
+      return _RitualForm(
+        ritual: _editing,
+        controller: _controller,
+        onCancel: _closeForm,
+        onSaved: () {
+          _closeForm();
+          _controller.loadRituals();
+        },
       );
     }
-    return Container(
-      color: CmsColors.bg,
-      child: _RitualList(
-        controller: _controller,
-        onAdd: () => setState(() {
-          _editingRitual = null;
-          _showAddForm = true;
-        }),
-        onEdit: (r) => setState(() {
-          _editingRitual = r;
-          _showAddForm = true;
-        }),
-      ),
+    return _RitualList(
+      controller: _controller,
+      onAdd: () => setState(() {
+        _editing = null;
+        _showForm = true;
+      }),
+      onEdit: (r) => setState(() {
+        _editing = r;
+        _showForm = true;
+      }),
     );
   }
 }
@@ -92,18 +78,74 @@ class _RitualList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWeb = MediaQuery.of(context).size.width >= 768;
+    final isTablet = MediaQuery.of(context).size.width >= 768;
 
     return Column(
       children: [
-        _ManageRitualsHeader(
-          onAdd: onAdd,
-          isWeb: isWeb,
-          controller: controller,
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 24 : 16,
+            vertical: 14,
+          ),
+          color: CmsColors.white,
+          child: Row(
+            children: [
+              if (isTablet) ...[
+                const Text(
+                  'Rituals',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 20),
+              ],
+              Expanded(
+                child: CmsSearchBar(
+                  hint: 'Search rituals...',
+                  onChanged: controller.setSearch,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Obx(
+                () => controller.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: CmsColors.orange,
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: controller.loadRituals,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: CmsColors.bg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: CmsColors.border),
+                          ),
+                          child: const Icon(
+                            Icons.refresh,
+                            size: 18,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 10),
+              CmsPrimaryButton(
+                label: isTablet ? '+ Add Ritual' : 'Add',
+                onTap: onAdd,
+              ),
+            ],
+          ),
         ),
         Container(
           color: CmsColors.white,
-          padding: EdgeInsets.only(left: isWeb ? 24 : 16, bottom: 12),
+          padding: EdgeInsets.only(left: isTablet ? 24 : 16, bottom: 12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Obx(
@@ -155,93 +197,49 @@ class _RitualList extends StatelessWidget {
             if (list.isEmpty) {
               return CmsEmptyState(
                 icon: Icons.local_fire_department_outlined,
-                title: 'No Rituals Found',
-                subtitle: 'Try adjusting your filters or add a new ritual.',
-                actionLabel: controller.filter == 'All' ? 'Add Ritual' : null,
-                onAction: controller.filter == 'All' ? onAdd : null,
+                title: (controller.filter == 'All' && controller.search.isEmpty)
+                    ? 'No Rituals Yet'
+                    : 'No matching rituals',
+                subtitle:
+                    'Rituals you create will appear here. Tap "+ Add Ritual" '
+                    'to create your first ritual.',
+                actionLabel:
+                    (controller.filter == 'All' && controller.search.isEmpty)
+                        ? 'Add Ritual'
+                        : null,
+                onAction:
+                    (controller.filter == 'All' && controller.search.isEmpty)
+                        ? onAdd
+                        : null,
               );
             }
-            return ListView.separated(
-              padding: EdgeInsets.all(isWeb ? 24 : 16),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (ctx, i) => _RitualCard(
-                ritual: list[i],
-                onEdit: () => onEdit(list[i]),
-                onDelete: () async {
-                  final ok = await showCmsDeleteDialog(
-                    ctx,
-                    itemName: list[i].title,
-                  );
-                  if (ok == true) await controller.deleteRitual(list[i].id);
-                },
-                onApprove: () => controller.approveRitual(list[i].id),
-                onReject: () =>
-                    controller.rejectRitual(list[i].id, 'Rejected by admin'),
+            return RefreshIndicator(
+              color: CmsColors.orange,
+              onRefresh: () => controller.loadRituals(),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(isTablet ? 24 : 16),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (ctx, i) => _RitualCard(
+                  ritual: list[i],
+                  onEdit: () => onEdit(list[i]),
+                  onDelete: () async {
+                    final ok = await showCmsDeleteDialog(
+                      ctx,
+                      itemName: list[i].title,
+                    );
+                    if (ok == true) await controller.deleteRitual(list[i].id);
+                  },
+                  onApprove: () => controller.approveRitual(list[i].id),
+                  onReject: () =>
+                      controller.rejectRitual(list[i].id, 'Rejected by admin'),
+                ),
               ),
             );
           }),
         ),
       ],
-    );
-  }
-}
-
-class _ManageRitualsHeader extends StatelessWidget {
-  const _ManageRitualsHeader({
-    required this.onAdd,
-    required this.isWeb,
-    required this.controller,
-  });
-  final VoidCallback onAdd;
-  final bool isWeb;
-  final RitualController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: 14),
-      color: CmsColors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Manage Rituals',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Add and update ritual entries for devotees.',
-                  style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              size: 20,
-              color: CmsColors.textSecond,
-            ),
-            onPressed: controller.loadRituals,
-          ),
-          const SizedBox(width: 8),
-          CmsPrimaryButton(
-            label: isWeb ? 'Add Ritual' : 'Add',
-            icon: Icons.add,
-            onTap: onAdd,
-          ),
-        ],
-      ),
     );
   }
 }
@@ -300,6 +298,15 @@ class _RitualCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
+                if (ritual.category != null && ritual.category!.isNotEmpty)
+                  Text(
+                    ritual.category!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     CmsStatusBadge(status: ritual.status),
@@ -311,6 +318,20 @@ class _RitualCard extends StatelessWidget {
                         color: CmsColors.textSecond,
                       ),
                     ),
+                    if ((ritual.ritualDays ?? ritual.days.length) > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${ritual.ritualDays ?? ritual.days.length} days',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: CmsColors.textSecond,
+                        ),
+                      ),
+                    ],
+                    if (ritual.isFeatured) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.star, size: 12, color: CmsColors.orange),
+                    ],
                   ],
                 ),
               ],
@@ -388,16 +409,17 @@ class _RitualFormState extends State<_RitualForm> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
   late final TextEditingController _descCtrl;
+  late final TextEditingController _categoryCtrl;
   late final TextEditingController _purposeCtrl;
   late final TextEditingController _startingDayCtrl;
-  late final TextEditingController _durationCtrl;
+  late final TextEditingController _ritualDaysCtrl;
   late final TextEditingController _bestTimeCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _currencyCtrl;
   String? _selectedDeityId;
   String _difficulty = 'BEGINNER';
   String _accessType = 'FREE';
-  String _status = 'DRAFT';
+  String _status = 'PENDING';
   bool _isFeatured = false;
 
   List<RitualDay> _days = [];
@@ -406,6 +428,33 @@ class _RitualFormState extends State<_RitualForm> {
   PickedFile? _pickedImage;
   String? _imageUrl;
 
+  bool get _isEdit => widget.ritual != null;
+
+  static List<RitualSection> _defaultSections() => [
+    const RitualSection(
+      key: 'overview',
+      label: 'Overview',
+      contents: [
+        RitualSectionContent(
+          title: 'What you will need',
+          description: '',
+          imageUrl: '',
+        ),
+      ],
+    ),
+    const RitualSection(
+      key: 'preparation',
+      label: 'Preparation',
+      contents: [
+        RitualSectionContent(
+          title: 'Space setup',
+          description: '',
+          imageUrl: '',
+        ),
+      ],
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -413,20 +462,55 @@ class _RitualFormState extends State<_RitualForm> {
     _titleCtrl = TextEditingController(text: r?.title ?? '');
     _slugCtrl = TextEditingController(text: r?.slug ?? '');
     _descCtrl = TextEditingController(text: r?.description ?? '');
+    _categoryCtrl = TextEditingController(text: r?.category ?? '');
     _purposeCtrl = TextEditingController(text: r?.purpose ?? '');
     _startingDayCtrl = TextEditingController(text: r?.startingDay ?? '');
-    _durationCtrl = TextEditingController(text: r?.recommendedDuration ?? '');
+    final dayCount = r?.ritualDays ?? r?.days.length ?? 0;
+    _ritualDaysCtrl = TextEditingController(
+      text: dayCount > 0 ? dayCount.toString() : '',
+    );
     _bestTimeCtrl = TextEditingController(text: r?.bestDayTime ?? '');
     _priceCtrl = TextEditingController(text: (r?.price ?? 0).toString());
     _currencyCtrl = TextEditingController(text: r?.currency ?? 'ZAR');
     _selectedDeityId = r?.deity;
     _difficulty = r?.difficulty ?? 'BEGINNER';
     _accessType = r?.accessType ?? 'FREE';
-    _status = r?.status ?? 'DRAFT';
+    _status = r?.status ?? 'PENDING';
     _isFeatured = r?.isFeatured ?? false;
     _days = List.from(r?.days ?? []);
-    _sections = List.from(r?.sections ?? []);
+    _sections = r != null && r.sections.isNotEmpty
+        ? List.from(r.sections)
+        : _defaultSections();
     _imageUrl = r?.imageUrl;
+    _titleCtrl.addListener(_syncSlugFromTitle);
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.removeListener(_syncSlugFromTitle);
+    _titleCtrl.dispose();
+    _slugCtrl.dispose();
+    _descCtrl.dispose();
+    _categoryCtrl.dispose();
+    _purposeCtrl.dispose();
+    _startingDayCtrl.dispose();
+    _ritualDaysCtrl.dispose();
+    _bestTimeCtrl.dispose();
+    _priceCtrl.dispose();
+    _currencyCtrl.dispose();
+    super.dispose();
+  }
+
+  void _syncSlugFromTitle() {
+    if (_slugCtrl.text.trim().isNotEmpty && widget.ritual != null) return;
+    final slug = _titleCtrl.text
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+    if (_slugCtrl.text != slug) {
+      _slugCtrl.text = slug;
+    }
   }
 
   Future<void> _submit() async {
@@ -444,11 +528,30 @@ class _RitualFormState extends State<_RitualForm> {
       return;
     }
 
-    final cleanDays = _days.map((d) {
+    final ritualDays = int.tryParse(_ritualDaysCtrl.text.trim());
+    final cleanDays = _days.asMap().entries.map((e) {
+      final d = e.value;
       return d.copyWith(
+        dayNumber: e.key + 1,
         activities: d.activities.where((a) => a.trim().isNotEmpty).toList(),
       );
     }).toList();
+
+    final cleanSections = _sections
+        .where((s) => s.label.trim().isNotEmpty)
+        .map(
+          (s) => s.copyWith(
+            contents: s.contents
+                .where(
+                  (c) =>
+                      c.title.trim().isNotEmpty ||
+                      c.description.trim().isNotEmpty,
+                )
+                .toList(),
+          ),
+        )
+        .where((s) => s.contents.isNotEmpty)
+        .toList();
 
     final ritualData = RitualModel(
       id: widget.ritual?.id ?? '',
@@ -456,11 +559,12 @@ class _RitualFormState extends State<_RitualForm> {
       slug: _slugCtrl.text.trim().isEmpty ? null : _slugCtrl.text.trim(),
       deity: _selectedDeityId!,
       description: _descCtrl.text.trim(),
+      category: _categoryCtrl.text.trim(),
       days: cleanDays,
-      sections: _sections,
+      sections: cleanSections,
       purpose: _purposeCtrl.text.trim(),
       startingDay: _startingDayCtrl.text.trim(),
-      recommendedDuration: _durationCtrl.text.trim(),
+      ritualDays: ritualDays ?? cleanDays.length,
       bestDayTime: _bestTimeCtrl.text.trim(),
       accessType: _accessType,
       price: num.tryParse(_priceCtrl.text) ?? 0,
@@ -474,16 +578,19 @@ class _RitualFormState extends State<_RitualForm> {
     final success = widget.ritual == null
         ? await widget.controller.createRitual(
             title: ritualData.title,
+            slug: ritualData.slug,
             deity: ritualData.deity,
             description: ritualData.description ?? '',
             days: ritualData.days,
             sections: ritualData.sections,
+            category: ritualData.category,
             purpose: ritualData.purpose,
             startingDay: ritualData.startingDay,
-            recommendedDuration: ritualData.recommendedDuration,
+            ritualDays: ritualData.ritualDays,
             bestDayTime: ritualData.bestDayTime,
             accessType: ritualData.accessType,
             price: ritualData.price,
+            currency: ritualData.currency,
             difficulty: ritualData.difficulty,
             isFeatured: ritualData.isFeatured,
             status: ritualData.status,
@@ -500,152 +607,288 @@ class _RitualFormState extends State<_RitualForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: CmsColors.bg,
-      appBar: AppBar(
-        title: Text(widget.ritual == null ? 'Add Ritual' : 'Edit Ritual'),
-        backgroundColor: CmsColors.white,
-        foregroundColor: CmsColors.textPrimary,
-        elevation: 0,
-        actions: [
-          Obx(
-            () => widget.controller.isSubmitting
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : TextButton(
-                    onPressed: _submit,
-                    child: const Text(
-                      'SAVE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: CmsColors.orange,
+    final isWeb = MediaQuery.of(context).size.width >= 768;
+    return Obx(() {
+      final loading = widget.controller.isSubmitting;
+      return Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isWeb ? 24 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _formHeader(),
+              const SizedBox(height: 20),
+              if (isWeb)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildBasicDetailsCard()),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildCoverImageCard()),
+                  ],
+                )
+              else ...[
+                _buildBasicDetailsCard(),
+                const SizedBox(height: 16),
+                _buildCoverImageCard(),
+              ],
+              const SizedBox(height: 16),
+              _buildScheduleCard(),
+              const SizedBox(height: 16),
+              _buildAccessCard(),
+              const SizedBox(height: 16),
+              _buildSectionsCard(),
+              const SizedBox(height: 16),
+              _buildDaysSection(),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: loading ? null : widget.onCancel,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: CmsColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: CmsColors.textSecond),
                       ),
                     ),
                   ),
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            CmsUploadBox(
-              label: 'Ritual Image',
-              icon: Icons.image_outlined,
-              accept: 'JPG, PNG up to 5MB',
-              mediaType: PickMediaType.image,
-              initialUrl: _imageUrl,
-              onPicked: (f) => setState(() => _pickedImage = f),
-              onRemoved: () => setState(() {
-                _pickedImage = null;
-                _imageUrl = null;
-              }),
-            ),
-            const SizedBox(height: 20),
-            _buildField(
-              'Ritual Title*',
-              _titleCtrl,
-              'e.g. 7-Day Financial Prosperity Ritual',
-            ),
-            const SizedBox(height: 16),
-            _buildField(
-              'Slug (optional)',
-              _slugCtrl,
-              'e.g. 7-day-prosperity-ritual',
-            ),
-            const SizedBox(height: 16),
-            _buildDeityDropdown(),
-            const SizedBox(height: 16),
-            _buildField(
-              'Description',
-              _descCtrl,
-              'General overview...',
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            _buildField(
-              'Purpose',
-              _purposeCtrl,
-              'Why is this performed?',
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildField(
-                    'Starting Day',
-                    _startingDayCtrl,
-                    'e.g. Monday',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildField('Duration', _durationCtrl, 'e.g. 7 Days'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildField('Best Day/Time', _bestTimeCtrl, 'e.g. Friday mornings'),
-            const SizedBox(height: 16),
-            _buildDifficultyAccessStatus(),
-            if (_accessType == 'PAID') ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildField('Price', _priceCtrl, '0.00')),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildField('Currency', _currencyCtrl, 'ZAR'),
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CmsColors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              _isEdit ? 'Save Changes' : 'Create Ritual',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 16),
-            _buildFeaturedToggle(),
-            const SizedBox(height: 24),
-            _buildDaysSection(),
-            const SizedBox(height: 24),
-            _buildExtraSections(),
-            const SizedBox(height: 40),
-          ],
+          ),
         ),
-      ),
+      );
+    });
+  }
+
+  Widget _formHeader() => Row(
+        children: [
+          GestureDetector(
+            onTap: widget.onCancel,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: CmsColors.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: CmsColors.border),
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                size: 18,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _isEdit ? 'Edit Ritual' : 'Add Ritual',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildBasicDetailsCard() {
+    return CmsFormCard(
+      title: 'Basic details',
+      children: [
+        CmsFormField(
+          label: 'Title *',
+          hint: 'e.g. 7-Day Lakshmi Abundance Ritual',
+          controller: _titleCtrl,
+        ),
+        const SizedBox(height: 12),
+        CmsFormField(
+          label: 'Slug *',
+          hint: 'e.g. 7-day-lakshmi-abundance-ritual',
+          controller: _slugCtrl,
+        ),
+        const SizedBox(height: 12),
+        CmsFormField(
+          label: 'Description',
+          hint: 'A guided week-long ritual for prosperity and gratitude.',
+          controller: _descCtrl,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 12),
+        _buildDeityDropdown(),
+        const SizedBox(height: 12),
+        CmsFormField(
+          label: 'Category',
+          hint: 'e.g. Wealth & Prosperity',
+          controller: _categoryCtrl,
+        ),
+        const SizedBox(height: 12),
+        CmsFormField(
+          label: 'Purpose',
+          hint: 'Invite abundance and clear financial blocks.',
+          controller: _purposeCtrl,
+          maxLines: 2,
+        ),
+      ],
     );
   }
 
-  Widget _buildField(
-    String label,
-    TextEditingController ctrl,
-    String hint, {
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildCoverImageCard() {
+    return CmsFormCard(
+      title: 'Cover image',
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        CmsUploadBox(
+          label: _isEdit ? 'Ritual image' : 'Ritual image *',
+          icon: Icons.image_outlined,
+          accept: 'JPG, PNG up to 5MB',
+          mediaType: PickMediaType.image,
+          initialUrl: _imageUrl,
+          onPicked: (f) => setState(() => _pickedImage = f),
+          onRemoved: () => setState(() {
+            _pickedImage = null;
+            _imageUrl = null;
+          }),
         ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: ctrl,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: CmsColors.border),
+      ],
+    );
+  }
+
+  Widget _buildScheduleCard() {
+    return CmsFormCard(
+      title: 'Schedule & difficulty',
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: CmsFormField(
+                label: 'Ritual days',
+                hint: '7',
+                controller: _ritualDaysCtrl,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CmsFormField(
+                label: 'Starting day',
+                hint: 'Friday',
+                controller: _startingDayCtrl,
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: 12),
+        CmsFormField(
+          label: 'Best day / time',
+          hint: 'Friday morning after sunrise',
+          controller: _bestTimeCtrl,
+        ),
+        const SizedBox(height: 12),
+        CmsDropdownField(
+          label: 'Difficulty',
+          items: const ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
+          initialValue: _difficulty,
+          onChanged: (v) {
+            if (v != null) setState(() => _difficulty = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccessCard() {
+    return CmsFormCard(
+      title: 'Access & publishing',
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: CmsDropdownField(
+                label: 'Access type',
+                items: const ['FREE', 'PAID'],
+                initialValue: _accessType,
+                onChanged: (v) {
+                  if (v != null) setState(() => _accessType = v);
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CmsDropdownField(
+                label: 'Status',
+                items: const ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'],
+                initialValue: _status,
+                onChanged: (v) {
+                  if (v != null) setState(() => _status = v);
+                },
+              ),
+            ),
+          ],
+        ),
+        if (_accessType == 'PAID') ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: CmsFormField(
+                  label: 'Price',
+                  hint: '0',
+                  controller: _priceCtrl,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CmsFormField(
+                  label: 'Currency',
+                  hint: 'ZAR',
+                  controller: _currencyCtrl,
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 16),
+        _buildFeaturedToggle(),
       ],
     );
   }
@@ -653,149 +896,117 @@ class _RitualFormState extends State<_RitualForm> {
   Widget _buildDeityDropdown() {
     return Obx(() {
       final deities = widget.controller.deities;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Associated Deity*',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      if (deities.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Loading deities...',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
           ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            value: _selectedDeityId,
-            items: deities
-                .map(
-                  (d) =>
-                      DropdownMenuItem(value: d['id'], child: Text(d['name']!)),
-                )
-                .toList(),
-            onChanged: (v) => setState(() => _selectedDeityId = v),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: CmsColors.border),
-              ),
+        );
+      }
+      final ids = deities.map((d) => d['id']!).toList();
+      final value =
+          _selectedDeityId != null && ids.contains(_selectedDeityId)
+          ? _selectedDeityId
+          : null;
+      return _RitualLabeled(
+        label: 'Deity *',
+        child: DropdownButtonFormField<String>(
+          value: value,
+          items: deities
+              .map(
+                (d) => DropdownMenuItem(
+                  value: d['id'],
+                  child: Text(
+                    d['name'] ?? '',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _selectedDeityId = v),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: CmsColors.bg,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.orange),
             ),
           ),
-        ],
+        ),
       );
     });
   }
 
-  Widget _buildDifficultyAccessStatus() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Difficulty',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: _difficulty,
-                    items: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _difficulty = v!),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Access',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: _accessType,
-                    items: ['FREE', 'PAID']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _accessType = v!),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Status',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-            DropdownButtonFormField<String>(
-              value: _status,
-              items: [
-                'DRAFT',
-                'PENDING',
-                'APPROVED',
-                'REJECTED',
-              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (v) => setState(() => _status = v!),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildFeaturedToggle() {
-    return Row(
-      children: [
-        const Text(
-          'Featured Ritual',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        ),
-        const Spacer(),
-        Switch(
-          value: _isFeatured,
-          onChanged: (v) => setState(() => _isFeatured = v),
-          activeColor: CmsColors.orange,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Featured',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Highlight on home featured rituals.',
+                  style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isFeatured,
+            onChanged: (v) => setState(() => _isFeatured = v),
+            activeThumbColor: CmsColors.orange,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildDaysSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return CmsFormCard(
+      title: 'Daily program',
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            RichText(
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: CmsColors.textPrimary,
-                ),
-                children: [
-                  TextSpan(text: 'Daily Instructions'),
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ],
-              ),
-            ),
             TextButton.icon(
               onPressed: _addDay,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add Day'),
+              icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
+              label: const Text(
+                'Add day',
+                style: TextStyle(
+                  color: CmsColors.orange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -826,7 +1037,10 @@ class _RitualFormState extends State<_RitualForm> {
           (e) => _DayTile(
             index: e.key,
             day: e.value,
-            onRemove: () => setState(() => _days.removeAt(e.key)),
+            onRemove: () => setState(() {
+              _days.removeAt(e.key);
+              _ritualDaysCtrl.text = _days.length.toString();
+            }),
             onUpdate: (updated) => setState(() => _days[e.key] = updated),
           ),
         ),
@@ -836,37 +1050,48 @@ class _RitualFormState extends State<_RitualForm> {
 
   void _addDay() {
     setState(() {
+      final n = _days.length + 1;
       _days.add(
         RitualDay(
-          dayNumber: _days.length + 1,
-          title: 'Day ${_days.length + 1}',
+          dayNumber: n,
+          title: 'Day $n — ',
           activities: [''],
+          mantra: '',
+          affirmation: '',
         ),
       );
+      _ritualDaysCtrl.text = n.toString();
     });
   }
 
-  Widget _buildExtraSections() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSectionsCard() {
+    return CmsFormCard(
+      title: 'Content sections',
       children: [
+        const Text(
+          'Structured blocks such as Overview and Preparation. Each section '
+          'has a label and one or more content items.',
+          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+        const SizedBox(height: 12),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            const Text(
-              'Extra Sections',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
             TextButton.icon(
               onPressed: _addSection,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add Section'),
+              icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
+              label: const Text(
+                'Add section',
+                style: TextStyle(
+                  color: CmsColors.orange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
         ..._sections.asMap().entries.map(
-          (e) => _SectionTile(
+          (e) => _SectionEditorTile(
             index: e.key,
             section: e.value,
             onRemove: () => setState(() => _sections.removeAt(e.key)),
@@ -879,7 +1104,14 @@ class _RitualFormState extends State<_RitualForm> {
 
   void _addSection() {
     setState(() {
-      _sections.add(const RitualSection(title: 'New Section', content: ''));
+      final n = _sections.length + 1;
+      _sections.add(
+        RitualSection(
+          key: '',
+          label: 'Section $n',
+          contents: const [RitualSectionContent()],
+        ),
+      );
     });
   }
 }
@@ -922,7 +1154,12 @@ class _DayTile extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   initialValue: day.title,
-                  decoration: const InputDecoration(hintText: 'Day Title'),
+                  style: const TextStyle(fontSize: 13),
+                  decoration: const InputDecoration(
+                    hintText: 'Day 1 — Invocation',
+                    filled: true,
+                    fillColor: CmsColors.bg,
+                  ),
                   onChanged: (v) => onUpdate(day.copyWith(title: v)),
                 ),
               ),
@@ -937,18 +1174,25 @@ class _DayTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Activities (one per line)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 4),
           TextFormField(
             initialValue: day.activities.join('\n'),
-            maxLines: 3,
+            maxLines: 4,
             decoration: const InputDecoration(
-              hintText: 'Instructions (one per line)',
+              hintText: 'Light the lamp\nChant opening mantra',
+              filled: true,
+              fillColor: CmsColors.bg,
             ),
             onChanged: (v) => onUpdate(
               day.copyWith(
-                activities: v
-                    .split('\n')
-                    .where((s) => s.trim().isNotEmpty)
-                    .toList(),
+                activities: v.split('\n').map((s) => s.trim()).toList(),
               ),
             ),
           ),
@@ -958,8 +1202,11 @@ class _DayTile extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   initialValue: day.mantra,
+                  style: const TextStyle(fontSize: 13),
                   decoration: const InputDecoration(
                     hintText: 'Mantra (optional)',
+                    filled: true,
+                    fillColor: CmsColors.bg,
                   ),
                   onChanged: (v) => onUpdate(day.copyWith(mantra: v)),
                 ),
@@ -968,8 +1215,11 @@ class _DayTile extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   initialValue: day.affirmation,
+                  style: const TextStyle(fontSize: 13),
                   decoration: const InputDecoration(
                     hintText: 'Affirmation (optional)',
+                    filled: true,
+                    fillColor: CmsColors.bg,
                   ),
                   onChanged: (v) => onUpdate(day.copyWith(affirmation: v)),
                 ),
@@ -982,30 +1232,14 @@ class _DayTile extends StatelessWidget {
   }
 }
 
-extension on RitualDay {
-  RitualDay copyWith({
-    String? title,
-    List<String>? activities,
-    String? mantra,
-    String? affirmation,
-  }) {
-    return RitualDay(
-      dayNumber: dayNumber,
-      title: title ?? this.title,
-      activities: activities ?? this.activities,
-      mantra: mantra ?? this.mantra,
-      affirmation: affirmation ?? this.affirmation,
-    );
-  }
-}
-
-class _SectionTile extends StatelessWidget {
-  const _SectionTile({
+class _SectionEditorTile extends StatelessWidget {
+  const _SectionEditorTile({
     required this.index,
     required this.section,
     required this.onRemove,
     required this.onUpdate,
   });
+
   final int index;
   final RitualSection section;
   final VoidCallback onRemove;
@@ -1017,40 +1251,113 @@ class _SectionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CmsColors.bg,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: CmsColors.border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: section.title,
-                  decoration: const InputDecoration(hintText: 'Section Title'),
-                  onChanged: (v) => onUpdate(
-                    RitualSection(title: v, content: section.content),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: CmsColors.orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Section ${index + 1}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.orange,
                   ),
                 ),
               ),
+              const Spacer(),
               IconButton(
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.red,
-                ),
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                 onPressed: onRemove,
               ),
             ],
           ),
           const SizedBox(height: 8),
           TextFormField(
-            initialValue: section.content,
-            maxLines: 4,
-            decoration: const InputDecoration(hintText: 'Section Content'),
-            onChanged: (v) =>
-                onUpdate(RitualSection(title: section.title, content: v)),
+            initialValue: section.label,
+            style: const TextStyle(fontSize: 13),
+            decoration: const InputDecoration(
+              labelText: 'Section label',
+              hintText: 'Overview',
+              filled: true,
+              fillColor: CmsColors.white,
+            ),
+            onChanged: (v) => onUpdate(
+              section.copyWith(label: v, key: ''),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...section.contents.asMap().entries.map((e) {
+            final content = e.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: CmsColors.border),
+                ),
+                child: Column(
+                  children: [
+                    TextFormField(
+                      initialValue: content.title,
+                      decoration: const InputDecoration(
+                        labelText: 'Content title',
+                        hintText: 'What you will need',
+                        isDense: true,
+                      ),
+                      onChanged: (v) {
+                        final list = List<RitualSectionContent>.from(
+                          section.contents,
+                        );
+                        list[e.key] = content.copyWith(title: v);
+                        onUpdate(section.copyWith(contents: list));
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      initialValue: content.description,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'Lamp, ghee, flowers, coins, red cloth.',
+                        isDense: true,
+                      ),
+                      onChanged: (v) {
+                        final list = List<RitualSectionContent>.from(
+                          section.contents,
+                        );
+                        list[e.key] = content.copyWith(description: v);
+                        onUpdate(section.copyWith(contents: list));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          TextButton.icon(
+            onPressed: () {
+              final list = List<RitualSectionContent>.from(section.contents)
+                ..add(const RitualSectionContent());
+              onUpdate(section.copyWith(contents: list));
+            },
+            icon: const Icon(Icons.add, size: 16, color: CmsColors.orange),
+            label: const Text(
+              'Add content item',
+              style: TextStyle(color: CmsColors.orange, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -1073,3 +1380,27 @@ Widget _SmBtn(String label, Color color, VoidCallback onTap) => GestureDetector(
     ),
   ),
 );
+
+class _RitualLabeled extends StatelessWidget {
+  const _RitualLabeled({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          child,
+        ],
+      );
+}

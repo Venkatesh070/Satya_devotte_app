@@ -1987,12 +1987,16 @@ class _ProductFormState extends State<_ProductForm> {
     _salePriceCtrl.addListener(_onPricingFieldsChanged);
 
     if (p != null && p.items.isNotEmpty) {
+      final seen = <String>{};
       for (final item in p.items) {
+        if (item.inventoryItem.isEmpty) continue;
+        if (!seen.add(item.inventoryItem)) continue;
         _kitLines.add(_newKitLine(
           inventoryItemId: item.inventoryItem,
           quantityText: item.quantity.toString(),
         ));
       }
+      if (_kitLines.isEmpty) _addKitLine();
     } else {
       _addKitLine();
     }
@@ -2040,9 +2044,37 @@ class _ProductFormState extends State<_ProductForm> {
   }
 
   void _addKitLine() {
+    if (!_canAddKitLine) return;
     setState(() {
       _kitLines.add(_newKitLine());
     });
+  }
+
+  /// Inventory IDs already picked on other kit lines (optionally skip one row).
+  Set<String> _usedInventoryIdsExcept(int? lineIndex) {
+    final used = <String>{};
+    for (var i = 0; i < _kitLines.length; i++) {
+      if (lineIndex != null && i == lineIndex) continue;
+      final id = _kitLines[i].inventoryItemId;
+      if (id.isNotEmpty) used.add(id);
+    }
+    return used;
+  }
+
+  bool get _canAddKitLine => _pickerOptions.isNotEmpty;
+
+  String? _duplicateInventoryId() {
+    final seen = <String>{};
+    for (final line in _kitLines) {
+      final id = line.inventoryItemId;
+      if (id.isEmpty) continue;
+      if (!seen.add(id)) return id;
+    }
+    return null;
+  }
+
+  void _onInventoryItemSelected(int lineIndex, String id) {
+    setState(() => _kitLines[lineIndex].inventoryItemId = id);
   }
 
   InventoryItem? _inventoryForId(String id) {
@@ -2121,10 +2153,12 @@ class _ProductFormState extends State<_ProductForm> {
 
   List<ProductItem> _collectItems() {
     final out = <ProductItem>[];
+    final seen = <String>{};
     for (final line in _kitLines) {
       if (line.inventoryItemId.isEmpty) continue;
       final qty = num.tryParse(line.quantityCtrl.text.trim());
       if (qty == null || qty <= 0) continue;
+      if (!seen.add(line.inventoryItemId)) continue;
       out.add(ProductItem(inventoryItem: line.inventoryItemId, quantity: qty));
     }
     return out;
@@ -2212,6 +2246,19 @@ class _ProductFormState extends State<_ProductForm> {
       showCmsSnackbar(
         title: 'Invalid sale price',
         message: 'Sale price cannot exceed list price.',
+        isError: true,
+      );
+      return;
+    }
+
+    final dupId = _duplicateInventoryId();
+    if (dupId != null) {
+      final dupName = _inventoryForId(dupId)?.name ?? dupId;
+      showCmsSnackbar(
+        title: 'Duplicate component',
+        message:
+            'Each inventory item can only be added once per kit. '
+            'Remove the duplicate "$dupName" line.',
         isError: true,
       );
       return;
@@ -2412,18 +2459,18 @@ class _ProductFormState extends State<_ProductForm> {
                         child: _KitInventoryLineRow(
                           line: e.value,
                           inventoryOptions: _pickerOptions,
+                          usedInventoryIds: _usedInventoryIdsExcept(e.key),
                           canRemove: _kitLines.length > 1,
                           onRemove: () => _removeKitLine(e.key),
-                          onInventoryChanged: (id) => setState(
-                            () => e.value.inventoryItemId = id,
-                          ),
+                          onInventoryChanged: (id) =>
+                              _onInventoryItemSelected(e.key, id),
                         ),
                       ),
                     ),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: _pickerOptions.isEmpty ? null : _addKitLine,
+                    onPressed: _canAddKitLine ? _addKitLine : null,
                     icon: const Icon(
                       Icons.add,
                       size: 16,
@@ -2760,6 +2807,7 @@ class _KitInventoryLineRow extends StatelessWidget {
   const _KitInventoryLineRow({
     required this.line,
     required this.inventoryOptions,
+    required this.usedInventoryIds,
     required this.canRemove,
     required this.onRemove,
     required this.onInventoryChanged,
@@ -2767,16 +2815,14 @@ class _KitInventoryLineRow extends StatelessWidget {
 
   final _KitLineEditor line;
   final List<InventoryItem> inventoryOptions;
+  final Set<String> usedInventoryIds;
   final bool canRemove;
   final VoidCallback onRemove;
   final ValueChanged<String> onInventoryChanged;
 
   @override
   Widget build(BuildContext context) {
-    final selected = line.inventoryItemId.isNotEmpty &&
-            inventoryOptions.any((i) => i.id == line.inventoryItemId)
-        ? line.inventoryItemId
-        : '';
+    final selected = line.inventoryItemId;
 
     InventoryItem? inv;
     if (selected.isNotEmpty) {
@@ -2808,6 +2854,7 @@ class _KitInventoryLineRow extends StatelessWidget {
                   child: _InventoryPickerField(
                     value: selected,
                     items: inventoryOptions,
+                    usedInventoryIds: usedInventoryIds,
                     onChanged: onInventoryChanged,
                   ),
                 ),
@@ -2857,11 +2904,13 @@ class _InventoryPickerField extends StatelessWidget {
   const _InventoryPickerField({
     required this.value,
     required this.items,
+    required this.usedInventoryIds,
     required this.onChanged,
   });
 
   final String value;
   final List<InventoryItem> items;
+  final Set<String> usedInventoryIds;
   final ValueChanged<String> onChanged;
 
   InventoryItem? get _selected {
@@ -2878,6 +2927,7 @@ class _InventoryPickerField extends StatelessWidget {
       builder: (ctx) => _InventoryPickerDialog(
         items: items,
         selectedId: value.isNotEmpty ? value : null,
+        usedInventoryIds: usedInventoryIds,
       ),
     );
     if (id != null) onChanged(id);
@@ -2958,10 +3008,12 @@ class _InventoryPickerField extends StatelessWidget {
 class _InventoryPickerDialog extends StatefulWidget {
   const _InventoryPickerDialog({
     required this.items,
+    required this.usedInventoryIds,
     this.selectedId,
   });
 
   final List<InventoryItem> items;
+  final Set<String> usedInventoryIds;
   final String? selectedId;
 
   @override
@@ -3079,12 +3131,27 @@ class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
                       itemBuilder: (context, index) {
                         final item = filtered[index];
                         final isSelected = item.id == widget.selectedId;
+                        final alreadyInKit =
+                            widget.usedInventoryIds.contains(item.id);
                         return InkWell(
-                          onTap: () => Navigator.pop(context, item.id),
+                          onTap: () {
+                            if (alreadyInKit) {
+                              showCmsSnackbar(
+                                title: 'Item already added',
+                                message:
+                                    '"${item.name}" is already in this kit.',
+                                isError: true,
+                              );
+                              return;
+                            }
+                            Navigator.pop(context, item.id);
+                          },
                           child: Container(
                             color: isSelected
                                 ? CmsColors.orange.withOpacity(0.06)
-                                : null,
+                                : alreadyInKit
+                                    ? CmsColors.bg
+                                    : null,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
                               vertical: 10,
@@ -3104,12 +3171,16 @@ class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
                                           fontWeight: FontWeight.w600,
                                           color: isSelected
                                               ? CmsColors.orange
-                                              : CmsColors.textPrimary,
+                                              : alreadyInKit
+                                                  ? CmsColors.textSecond
+                                                  : CmsColors.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${item.itemSizeLabel} · ${item.stockQuantity} in stock',
+                                        alreadyInKit
+                                            ? 'Already in kit'
+                                            : '${item.itemSizeLabel} · ${item.stockQuantity} in stock',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           color: CmsColors.textSecond,
