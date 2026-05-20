@@ -5,6 +5,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -162,38 +163,9 @@ class _LoginPageState extends State<LoginPage>
                   OutlinedButton(
                     onPressed: isLoading
                         ? null
-                        : () async {
-                            final email = _emailController.text.trim();
-                            final password = _passwordController.text;
-                            if (email.isEmpty || password.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter email and password.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-                            final isSuccess = await controller
-                                .signUpWithEmailPassword(
-                                  email: email,
-                                  password: password,
-                                );
-                            if (!mounted) return;
-                            if (isSuccess) {
-                              Navigator.of(context).pop();
-                              _navigateByRole();
-                              return;
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  controller.lastAuthError ??
-                                      'Email sign up failed. Please try again.',
-                                ),
-                              ),
-                            );
+                        : () {
+                            Navigator.of(context).pop();
+                            Get.to(() => const CreateAccountPage());
                           },
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),

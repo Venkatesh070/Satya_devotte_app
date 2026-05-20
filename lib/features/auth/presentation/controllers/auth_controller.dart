@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 
 class AuthController extends GetxController {
   AuthController(
@@ -63,7 +64,28 @@ class AuthController extends GetxController {
       // Re-register the device with the backend on a cold start so any
       // tokens that rotated while the app was closed get reconciled.
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
     }
+  }
+
+  /// Keeps [ProfileController] in sync after login / cold-start restore so
+  /// home greeting and profile UI see the latest `user` map (e.g. `fullName`).
+  void _refreshProfileControllerAfterAuth() {
+    try {
+      if (!Get.isRegistered<ProfileController>()) return;
+      final pc = Get.find<ProfileController>();
+      unawaited(() async {
+        await pc.loadSessionUser();
+        await pc.loadProfile();
+      }());
+    } catch (_) {}
+  }
+
+  void _clearProfileControllerCache() {
+    try {
+      if (!Get.isRegistered<ProfileController>()) return;
+      Get.find<ProfileController>().clearCachedUser();
+    } catch (_) {}
   }
 
   /// Best-effort register the device FCM token with the backend.
@@ -139,6 +161,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -150,6 +173,7 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapGoogleSignInError(error);
@@ -216,9 +240,11 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignInError(error);
@@ -265,6 +291,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -276,6 +303,7 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignInError(error);
@@ -322,6 +350,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -333,9 +362,64 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignUpError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
+  }
+
+  Future<bool> signUpAndCreateProfile({
+    required String email,
+    required String password,
+    required Map<String, dynamic> profileData,
+  }) async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after email sign up.');
+      }
+      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+        userProfile: emailProfile,
+      );
+      await _authSessionService.setSession(
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+        userData: loginResult.user,
+      );
+      await _authRepository.upsertProfile(profileData);
+      _applyRole(loginResult.user);
+      _isAuthenticated.value = true;
+      await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
+      return true;
+    } catch (error) {
+      await _authSessionService.clear();
+      _clearProfileControllerCache();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapCreateAccountError(error);
       return false;
     } finally {
       _isEmailSignInLoading.value = false;
@@ -368,6 +452,7 @@ class AuthController extends GetxController {
     _isAuthenticated.value = false;
     _userRole.value = 'user';
     await _authSessionService.clear();
+    _clearProfileControllerCache();
 
     try {
       await _firebaseService.signOut();
@@ -391,6 +476,7 @@ class AuthController extends GetxController {
       _isAuthenticated.value = false;
       _userRole.value = 'user';
       await _authSessionService.clear();
+      _clearProfileControllerCache();
 
       try {
         await _firebaseService.signOut();
@@ -547,5 +633,24 @@ class AuthController extends GetxController {
       }
     }
     return 'Email sign up failed. Please try again.';
+  }
+
+  String _mapCreateAccountError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final msg = data['message'] ?? data['error'];
+        if (msg != null && msg.toString().trim().isNotEmpty) {
+          return msg.toString();
+        }
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach server. Check your internet and try again.';
+      }
+    }
+    return _mapEmailSignUpError(error);
   }
 }

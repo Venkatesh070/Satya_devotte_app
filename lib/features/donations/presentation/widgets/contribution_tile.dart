@@ -6,10 +6,7 @@ import 'package:satya_devotte_app/features/donations/data/models/donation_contri
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 
 class ContributionTile extends StatelessWidget {
-  const ContributionTile({
-    super.key,
-    required this.contribution,
-  });
+  const ContributionTile({super.key, required this.contribution});
 
   final DonationContribution contribution;
 
@@ -17,7 +14,8 @@ class ContributionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return RecordDonationTile(
       contribution: contribution,
-      onTap: contribution.status == ContributionStatus.paid &&
+      onTap:
+          contribution.status == ContributionStatus.paid &&
               contribution.contributionNumber.isNotEmpty
           ? () => _showReceiptSheet(context, contribution)
           : null,
@@ -45,7 +43,8 @@ class ContributionTile extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: DonationUi.cardBorder,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: DonationUi.cardBorder, width: 0.5),
                 ),
               ),
             ),
@@ -95,7 +94,8 @@ class _ReceiptRow extends StatelessWidget {
               label,
               style: AppTypography.inter(
                 fontSize: 13,
-                color: DonationUi.textMuted,
+                color: DonationUi.text,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

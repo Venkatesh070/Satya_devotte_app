@@ -26,6 +26,30 @@ class AuthRemoteDataSource {
     );
   }
 
+  /// Creates or updates the signed-in user's profile.
+  /// POST `/api/v1/auth/profile` as multipart/form-data.
+  Future<void> upsertProfile(Map<String, dynamic> profileData) async {
+    final cleaned = <String, dynamic>{};
+    profileData.forEach((key, value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isEmpty) return;
+      cleaned[key] = text;
+    });
+    final response = await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.profile,
+      data: FormData.fromMap(cleaned),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Profile upsert API failed with status ${response.statusCode}.',
+      );
+    }
+  }
+
   /// Web admin sign-in. POSTs to `/auth/admin-login` with the Firebase ID token
   /// in the Authorization header. The backend verifies the token AND ensures
   /// the user has admin (or superadmin) privileges.

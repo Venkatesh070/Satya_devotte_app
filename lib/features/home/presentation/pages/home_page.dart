@@ -11,8 +11,9 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donate_amount_sheet.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
@@ -20,16 +21,8 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/prof
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/features/cms/models/product_model.dart';
-import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
-import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
-import 'package:satya_devotte_app/features/cms/models/product_model.dart';
-import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
-import 'package:satya_devotte_app/shared/components/section_title.dart';
-import 'package:satya_devotte_app/shared/widgets/app_background.dart';
-import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -235,13 +228,13 @@ class _HomePageState extends State<HomePage> {
           final title = item['title']?.toString().trim();
 
           // Clean URL: remove spaces and backticks
-          String? _clean(dynamic v) {
+          String? clean(dynamic v) {
             final s = v?.toString().trim() ?? '';
             if (s.isEmpty) return null;
             return s.replaceAll('`', '').trim();
           }
 
-          final image = _clean(item['imageUrl']) ?? _clean(item['image']);
+          final image = clean(item['imageUrl']) ?? clean(item['image']);
 
           final resolvedImagePath = (image != null && image.isNotEmpty)
               ? image
@@ -305,6 +298,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           _HomeTabContent(
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
+            onOpenTab: _onTabSelected,
             dailySloka: _dailySloka,
             slokaAuthor: _slokaAuthor,
             slokaMeaning: _slokaMeaning,
@@ -353,9 +347,10 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeTabContent extends StatelessWidget {
+class _HomeTabContent extends StatefulWidget {
   const _HomeTabContent({
     required this.onScrollDirectionChanged,
+    required this.onOpenTab,
     required this.dailySloka,
     required this.slokaAuthor,
     required this.slokaMeaning,
@@ -371,6 +366,7 @@ class _HomeTabContent extends StatelessWidget {
   });
 
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
+  final Future<void> Function(int index) onOpenTab;
   final String dailySloka;
   final String slokaAuthor;
   final String slokaMeaning;
@@ -385,10 +381,186 @@ class _HomeTabContent extends StatelessWidget {
   final Future<void> Function() onDonationsViewMore;
 
   @override
+  State<_HomeTabContent> createState() => _HomeTabContentState();
+}
+
+class _HomeTabContentState extends State<_HomeTabContent> {
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  bool _isSearching = false;
+  bool _hasSearched = false;
+  String? _searchError;
+  List<_GlobalSearchResult> _searchResults = const [];
+
+  bool get _isSearchMode =>
+      _searchController.text.trim().length >= 2 ||
+      _isSearching ||
+      _hasSearched ||
+      _searchError != null;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    final q = value.trim();
+    if (q.length < 2) {
+      setState(() {
+        _isSearching = false;
+        _hasSearched = false;
+        _searchError = null;
+        _searchResults = const [];
+      });
+      return;
+    }
+    setState(() {
+      _isSearching = true;
+      _hasSearched = false;
+      _searchError = null;
+      _searchResults = const [];
+    });
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 320),
+      () => _search(q),
+    );
+  }
+
+  Future<void> _search(String q) async {
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+    });
+    try {
+      final response = await Get.find<ApiClient>().dio.get<dynamic>(
+        ApiEndpoints.search,
+        queryParameters: {'q': q, 'limit': 8, 'maxTotal': 20},
+      );
+      if (!mounted || _searchController.text.trim() != q) return;
+      setState(() {
+        _hasSearched = true;
+        _searchResults = _extractResults(response.data);
+      });
+    } on DioException catch (error) {
+      if (!mounted || _searchController.text.trim() != q) return;
+      setState(() {
+        _hasSearched = true;
+        _searchResults = const [];
+        _searchError = _messageForSearchError(error);
+      });
+    } catch (_) {
+      if (!mounted || _searchController.text.trim() != q) return;
+      setState(() {
+        _hasSearched = true;
+        _searchResults = const [];
+        _searchError = 'Search failed.';
+      });
+    } finally {
+      if (mounted && _searchController.text.trim() == q) {
+        setState(() => _isSearching = false);
+      }
+    }
+  }
+
+  List<_GlobalSearchResult> _extractResults(dynamic payload) {
+    dynamic data = payload;
+    if (payload is Map) {
+      data = payload['data'] ?? payload;
+      if (data is Map) {
+        data =
+            data['results'] ??
+            data['items'] ??
+            data['docs'] ??
+            data['data'] ??
+            data;
+      }
+    }
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((raw) => _GlobalSearchResult.fromJson(raw))
+        .where((result) => result.title.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  String _messageForSearchError(DioException error) {
+    final code = error.response?.statusCode;
+    if (code == 404) {
+      return 'Search is not available. Check that the app uses the latest API.';
+    }
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return 'No connection. Check your network and try again.';
+    }
+    final data = error.response?.data;
+    if (data is Map) {
+      final msg = data['message'] ?? data['error'];
+      if (msg != null && msg.toString().trim().isNotEmpty) {
+        return msg.toString();
+      }
+    }
+    return 'Search failed. Please try again.';
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _isSearching = false;
+      _hasSearched = false;
+      _searchError = null;
+      _searchResults = const [];
+    });
+  }
+
+  Future<void> _openSearchResult(_GlobalSearchResult result) async {
+    FocusScope.of(context).unfocus();
+    switch (result.type) {
+      case 'pooja':
+        if (result.id.isEmpty) return;
+        await Get.toNamed<dynamic>(
+          AppRoutes.ritualDetail,
+          arguments: result.toDetailArgs(),
+        );
+        return;
+      case 'deity':
+        if (result.id.isEmpty) return;
+        await Get.toNamed<dynamic>(
+          AppRoutes.ritualDetail,
+          arguments: result.toDeityArgs(),
+        );
+        return;
+      case 'donation':
+        if (result.id.isEmpty) return;
+        await Get.toNamed<dynamic>(
+          AppRoutes.userDonationDetails,
+          arguments: Donation(
+            id: result.id,
+            title: result.title,
+            description: result.description,
+            imageUrl: result.imageUrl,
+          ),
+        );
+        return;
+      case 'festival':
+        await widget.onOpenTab(3);
+        return;
+      case 'ritual':
+      default:
+        await widget.onOpenTab(2);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return NotificationListener<UserScrollNotification>(
       onNotification: (notification) {
-        onScrollDirectionChanged(notification.direction);
+        widget.onScrollDirectionChanged(notification.direction);
         return false;
       },
       child: SingleChildScrollView(
@@ -396,23 +568,38 @@ class _HomeTabContent extends StatelessWidget {
         child: Column(
           children: [
             _HomeHeader(
-              dailySloka: dailySloka,
-              slokaAuthor: slokaAuthor,
-              slokaMeaning: slokaMeaning,
-              slokaContemplation: slokaContemplation,
-              slokaPrayer: slokaPrayer,
+              isSearchMode: _isSearchMode,
+              searchController: _searchController,
+              onSearchChanged: _onSearchChanged,
+              onSearchSubmitted: (value) {
+                final q = value.trim();
+                if (q.length >= 2) _search(q);
+              },
+              onClearSearch: _clearSearch,
+              dailySloka: widget.dailySloka,
+              slokaAuthor: widget.slokaAuthor,
+              slokaMeaning: widget.slokaMeaning,
+              slokaContemplation: widget.slokaContemplation,
+              slokaPrayer: widget.slokaPrayer,
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-              child: _HomeBodySections(
-                poojas: poojas,
-                festivals: festivals,
-                donations: donations,
-                featuredProducts: featuredProducts,
-                onPoojasViewMore: onPoojasViewMore,
-                onDonationTap: onDonationTap,
-                onDonationsViewMore: onDonationsViewMore,
-              ),
+              child: _isSearchMode
+                  ? _GlobalSearchResultsSection(
+                      isSearching: _isSearching,
+                      error: _searchError,
+                      results: _searchResults,
+                      onResultTap: _openSearchResult,
+                    )
+                  : _HomeBodySections(
+                      poojas: widget.poojas,
+                      festivals: widget.festivals,
+                      donations: widget.donations,
+                      featuredProducts: widget.featuredProducts,
+                      onPoojasViewMore: widget.onPoojasViewMore,
+                      onDonationTap: widget.onDonationTap,
+                      onDonationsViewMore: widget.onDonationsViewMore,
+                    ),
             ),
           ],
         ),
@@ -896,6 +1083,11 @@ class _BottomNavBarState extends State<_BottomNavBar> {
 
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
+    required this.isSearchMode,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onSearchSubmitted,
+    required this.onClearSearch,
     required this.dailySloka,
     required this.slokaAuthor,
     required this.slokaMeaning,
@@ -903,6 +1095,11 @@ class _HomeHeader extends StatelessWidget {
     required this.slokaPrayer,
   });
 
+  final bool isSearchMode;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String> onSearchSubmitted;
+  final VoidCallback onClearSearch;
   final String dailySloka;
   final String slokaAuthor;
   final String slokaMeaning;
@@ -911,20 +1108,18 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profileController = Get.find<ProfileController>();
+    return GetBuilder<ProfileController>(
+      builder: (profileController) {
+        final displayName = ProfileController.displayNameFromUserMap(
+          profileController.resolvedUser,
+        );
+        final topInset = MediaQuery.paddingOf(context).top;
+        // Search mode: content height + safe area; a fixed 240 caused Column overflow.
+        final headerHeight = isSearchMode ? topInset + 250 : 500.0;
 
-    final sessionUser = profileController.sessionUser;
-    final profile = profileController.profile;
-
-    final userData =
-        sessionUser ?? profile?['user'] as Map<String, dynamic>? ?? profile;
-    debugPrint('HomeHeader userData: $userData');
-    final userName = userData?['name'] ?? userData?['email'] ?? 'User';
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return SizedBox(
+        return SizedBox(
       width: double.infinity,
-      height: 500,
+      height: headerHeight,
       child: Stack(
         children: [
           const Positioned.fill(
@@ -980,7 +1175,7 @@ class _HomeHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 10),
                 Text(
                   'Namaste',
                   style: AppTypography.inter(
@@ -991,7 +1186,7 @@ class _HomeHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  userName.split('@')[0],
+                  displayName,
                   style: AppTypography.lora(
                     color: Colors.white,
                     fontSize: 28,
@@ -999,23 +1194,34 @@ class _HomeHeader extends StatelessWidget {
                     height: 1.15,
                   ),
                 ),
-                const SizedBox(height: 20),
-                const _HeaderDivider(),
-                const SizedBox(height: 12),
-                _QuoteCard(
-                  quote: dailySloka,
-                  author: slokaAuthor,
-                  meaning: slokaMeaning,
-                  contemplation: slokaContemplation,
-                  prayer: slokaPrayer,
+                const SizedBox(height: 18),
+                _GlobalSearchField(
+                  controller: searchController,
+                  onChanged: onSearchChanged,
+                  onSubmitted: onSearchSubmitted,
+                  onClear: onClearSearch,
                 ),
-                const SizedBox(height: 12),
-                const _HeaderDivider(),
+                if (!isSearchMode) ...[
+                  const SizedBox(height: 18),
+                  const _HeaderDivider(),
+                  const SizedBox(height: 12),
+                  _QuoteCard(
+                    quote: dailySloka,
+                    author: slokaAuthor,
+                    meaning: slokaMeaning,
+                    contemplation: slokaContemplation,
+                    prayer: slokaPrayer,
+                  ),
+                  const SizedBox(height: 12),
+                  const _HeaderDivider(),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+      },
     );
   }
 }
@@ -1033,6 +1239,360 @@ class _HeaderDivider extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GlobalSearchField extends StatelessWidget {
+  const _GlobalSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onSubmitted,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasQuery = controller.text.trim().isNotEmpty;
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: const Color(0x22000000),
+      borderRadius: BorderRadius.circular(16),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textInputAction: TextInputAction.search,
+        style: AppTypography.inter(
+          fontSize: 14,
+          color: const Color(0xFF3D2B1F),
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Search pujas, deities, festivals...',
+          hintStyle: AppTypography.inter(
+            fontSize: 13,
+            color: const Color(0xFF9B8B7B),
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF8E5C25),
+            size: 22,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 48,
+          ),
+          suffixIcon: hasQuery
+              ? IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF8A7A6A),
+                    size: 20,
+                  ),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlobalSearchResultsSection extends StatelessWidget {
+  const _GlobalSearchResultsSection({
+    required this.isSearching,
+    required this.error,
+    required this.results,
+    required this.onResultTap,
+  });
+
+  final bool isSearching;
+  final String? error;
+  final List<_GlobalSearchResult> results;
+  final Future<void> Function(_GlobalSearchResult result) onResultTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 118),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Search Results',
+            style: AppTypography.lora(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (isSearching && results.isEmpty)
+            const SizedBox(
+              height: 220,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                ),
+              ),
+            )
+          else if (error != null)
+            _SearchMessage(text: error!, height: 180)
+          else if (results.isEmpty)
+            const _SearchMessage(text: 'No results found.', height: 180)
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: results.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final result = results[index];
+                return _GlobalSearchResultTile(
+                  result: result,
+                  onTap: () => onResultTap(result),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchMessage extends StatelessWidget {
+  const _SearchMessage({required this.text, this.height = 64});
+  final String text;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: Text(
+          text,
+          style: AppTypography.inter(
+            color: const Color(0xFF7A5A3D),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlobalSearchResultTile extends StatelessWidget {
+  const _GlobalSearchResultTile({required this.result, required this.onTap});
+  final _GlobalSearchResult result;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              _SearchResultImage(result: result),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      result.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF332218),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (result.description.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        result.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 11,
+                          height: 1.25,
+                          color: const Color(0xFF7B6A5A),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _SearchTypePill(type: result.typeLabel),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchResultImage extends StatelessWidget {
+  const _SearchResultImage({required this.result});
+  final _GlobalSearchResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = result.imageUrl?.trim() ?? '';
+    final placeholder = Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3E2C3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(result.icon, size: 22, color: const Color(0xFF8E5C25)),
+    );
+    if (imageUrl.isEmpty) return placeholder;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUrl,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => placeholder,
+      ),
+    );
+  }
+}
+
+class _SearchTypePill extends StatelessWidget {
+  const _SearchTypePill({required this.type});
+  final String type;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4E6CC),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        type,
+        style: AppTypography.inter(
+          fontSize: 10,
+          color: const Color(0xFF8E5C25),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _GlobalSearchResult {
+  const _GlobalSearchResult({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.raw,
+  });
+
+  factory _GlobalSearchResult.fromJson(Map<dynamic, dynamic> json) {
+    final normalized = json.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+    String valueOf(List<String> keys) {
+      for (final key in keys) {
+        final value = normalized[key];
+        if (value == null || value is Map || value is List) continue;
+        final text = value.toString().trim();
+        if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    return _GlobalSearchResult(
+      id: valueOf(['id', '_id']),
+      type: valueOf(['type']).toLowerCase(),
+      title: valueOf(['title', 'name']),
+      description: valueOf(['description']),
+      imageUrl: valueOf(['imageUrl', 'image']).isEmpty
+          ? null
+          : valueOf(['imageUrl', 'image']),
+      raw: Map<String, dynamic>.from(normalized),
+    );
+  }
+
+  final String id;
+  final String type;
+  final String title;
+  final String description;
+  final String? imageUrl;
+  final Map<String, dynamic> raw;
+
+  String get typeLabel {
+    if (type.isEmpty) return 'result';
+    return type[0].toUpperCase() + type.substring(1);
+  }
+
+  IconData get icon {
+    switch (type) {
+      case 'donation':
+        return Icons.volunteer_activism_outlined;
+      case 'festival':
+        return Icons.event_available_outlined;
+      case 'ritual':
+        return Icons.local_fire_department_outlined;
+      case 'deity':
+        return Icons.temple_hindu_outlined;
+      case 'pooja':
+      default:
+        return Icons.spa_outlined;
+    }
+  }
+
+  Map<String, dynamic> toDetailArgs() => {
+    ...raw,
+    '_id': id,
+    'id': id,
+    'title': title,
+    'description': description,
+    if (imageUrl != null) 'imageUrl': imageUrl,
+  };
+
+  Map<String, dynamic> toDeityArgs() => {
+    'type': 'deity',
+    ...toDetailArgs(),
+    'name': title,
+    if (imageUrl != null)
+      'media': {
+        'images': [imageUrl],
+      },
+  };
 }
 
 class _QuoteCard extends StatefulWidget {

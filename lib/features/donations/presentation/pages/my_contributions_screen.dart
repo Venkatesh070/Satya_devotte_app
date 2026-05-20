@@ -56,8 +56,8 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
         title: Text(
           'History of Donations',
           style: AppTypography.lora(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
             color: DonationUi.textPrimary,
           ),
         ),
@@ -84,27 +84,24 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
                 const SliverFillRemaining(child: _EmptyState())
               else ...[
                 SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) {
-                      final item = _ctrl.items[i];
-                      final isLast = i == _ctrl.items.length - 1;
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ContributionTile(contribution: item),
-                          if (!isLast)
-                            const Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: DonationUi.cardBorder,
-                              indent: 20,
-                              endIndent: 20,
-                            ),
-                        ],
-                      );
-                    },
-                    childCount: _ctrl.items.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, i) {
+                    final item = _ctrl.items[i];
+                    final isLast = i == _ctrl.items.length - 1;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ContributionTile(contribution: item),
+                        if (!isLast)
+                          const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: DonationUi.cardBorder,
+                            indent: 20,
+                            endIndent: 20,
+                          ),
+                      ],
+                    );
+                  }, childCount: _ctrl.items.length),
                 ),
                 if (_ctrl.isLoadingMore)
                   const SliverToBoxAdapter(

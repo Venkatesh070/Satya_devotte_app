@@ -20,9 +20,77 @@ class ProfileController extends GetxController {
   String? get error => _error.value;
   Map<String, dynamic>? get sessionUser => _sessionUser.value;
 
+  /// Best-effort display name from login/session user or GET /profile payload.
+  static String displayNameFromUserMap(Map<String, dynamic>? u) {
+    if (u == null || u.isEmpty) return 'User';
+    String? t(dynamic v) {
+      final s = v?.toString().trim();
+      if (s == null || s.isEmpty) return null;
+      return s;
+    }
+
+    String? fromFirstLast() {
+      final fn = t(u['firstName']);
+      final ln = t(u['lastName']);
+      if (fn == null && ln == null) return null;
+      return '${fn ?? ''} ${ln ?? ''}'.trim();
+    }
+
+    String? fromEmail() {
+      final email = t(u['email']);
+      if (email == null) return null;
+      final at = email.indexOf('@');
+      if (at <= 0) return email;
+      return email.substring(0, at);
+    }
+
+    return t(u['name']) ??
+        t(u['fullName']) ??
+        t(u['displayName']) ??
+        fromFirstLast() ??
+        fromEmail() ??
+        'User';
+  }
+
+  /// Session user merged with GET /profile user (profile wins on duplicate keys).
+  Map<String, dynamic>? get resolvedUser => _mergedUserPayload;
+
+  Map<String, dynamic>? get _mergedUserPayload {
+    final session = _sessionUser.value;
+    final root = _profile.value;
+    Map<String, dynamic>? fromProfile;
+    if (root != null) {
+      final u = root['user'];
+      if (u is Map<String, dynamic>) {
+        fromProfile = u;
+      } else {
+        final data = root['data'];
+        if (data is Map<String, dynamic>) {
+          final du = data['user'];
+          if (du is Map<String, dynamic>) {
+            fromProfile = du;
+          } else {
+            fromProfile = data;
+          }
+        } else {
+          fromProfile = root;
+        }
+      }
+    }
+    if ((session == null || session.isEmpty) &&
+        (fromProfile == null || fromProfile.isEmpty)) {
+      return null;
+    }
+    final merged = <String, dynamic>{};
+    if (session != null && session.isNotEmpty) merged.addAll(session);
+    if (fromProfile != null && fromProfile.isNotEmpty) merged.addAll(fromProfile);
+    return merged.isEmpty ? null : merged;
+  }
+
   String get userName {
-    final userData = _sessionUser.value ?? _profile.value?['user'] as Map<String, dynamic>? ?? _profile.value;
-    return (userData?['name'] ?? userData?['fullName'] ?? 'Devotee').toString();
+    final name = displayNameFromUserMap(_mergedUserPayload);
+    if (name != 'User') return name;
+    return 'Devotee';
   }
 
   @override
@@ -35,6 +103,15 @@ class ProfileController extends GetxController {
   Future<void> loadSessionUser() async {
     final user = await _authSessionService.getUserData();
     _sessionUser.value = user;
+    update();
+  }
+
+  /// Clears cached user after logout so UI (e.g. home greeting) resets.
+  void clearCachedUser() {
+    _sessionUser.value = null;
+    _profile.value = null;
+    _error.value = null;
+    update();
   }
 
   Future<void> loadProfile() async {
@@ -61,6 +138,7 @@ class ProfileController extends GetxController {
       }
     } finally {
       _isLoading.value = false;
+      update();
     }
   }
 }

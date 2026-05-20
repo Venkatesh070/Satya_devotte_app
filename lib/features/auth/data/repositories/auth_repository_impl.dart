@@ -38,4 +38,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> deleteAccount(String refreshToken) {
     return _remoteDataSource.deleteAccount(refreshToken);
   }
+
+  @override
+  Future<void> upsertProfile(Map<String, dynamic> profileData) {
+    return _remoteDataSource.upsertProfile(profileData);
+  }
 }
