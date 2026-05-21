@@ -36,7 +36,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       title: 'Never Miss a Festival',
       subtitle: 'Get reminded about auspicious days and\nupcoming celebrations',
     ),
-    
   ];
 
   @override
@@ -103,14 +102,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                         animation: _rotationController,
                         builder: (context, child) {
                           final spin = _rotationController.value * 2 * math.pi;
-                          return Transform.rotate(
-                            angle: spin,
-                            child: child,
-                          );
+                          return Transform.rotate(angle: spin, child: child);
                         },
-                        child: Image.asset(
-                          'assets/images/flowerImg.png',
-                        ),
+                        child: Image.asset('assets/images/flowerImg.png'),
                       ),
                     ),
                   ),
@@ -118,9 +112,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                     top: 0,
                     right: 0,
                     child: Opacity(
-                      opacity:1,
+                      opacity: 1,
                       child: ImageFiltered(
-                        imageFilter: ui.ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+                        imageFilter: ui.ImageFilter.blur(
+                          sigmaX: 64,
+                          sigmaY: 64,
+                        ),
                         child: SizedBox(
                           width: 294.69,
                           height: 294.69,
@@ -160,7 +157,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   ),
                                 ),
                               ),
-                         Transform.rotate(
+                              Transform.rotate(
                                 angle: spin,
                                 child: Transform.scale(
                                   scale: 0.80,
@@ -171,12 +168,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                         'assets/images/chakra3.png',
                                         filterQuality: FilterQuality.high,
                                       ),
-
                                     ],
                                   ),
                                 ),
                               ),
-                             Transform.rotate(
+                              Transform.rotate(
                                 angle: -spin,
                                 child: Transform.scale(
                                   scale: 0.53,
@@ -191,13 +187,13 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   ),
                                 ),
                               ),
-                             Opacity(
-                                          opacity: 0.8,
-                                          child:  Image.asset(
-                                            'assets/images/onBoardBgOverlay.png',
-                                            filterQuality: FilterQuality.high,
-                                          ),
-                                        ),
+                              Opacity(
+                                opacity: 0.8,
+                                child: Image.asset(
+                                  'assets/images/onBoardBgOverlay.png',
+                                  filterQuality: FilterQuality.high,
+                                ),
+                              ),
                             ],
                           );
                         },
@@ -261,58 +257,87 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
             ),
             Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.36 + 132,
+              top: MediaQuery.sizeOf(context).height * 0.6 + 50,
               left: 0,
               right: 0,
-              child: SizedBox(
-                height: 230,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _slides.length,
-                  onPageChanged: (index) =>
-                      setState(() => _currentIndex = index),
-                  itemBuilder: (context, index) {
-                    final slide = _slides[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            slide.title,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  height: 32 / 24,
-                                  shadows: [
-                                    Shadow(
-                                      color: const Color.fromARGB(255, 242, 237, 237).withValues(alpha: 0.25),
-                                      offset: const Offset(0, 1),
-                                      blurRadius: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 90, // Reduced height to fit text and dots below
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _slides.length,
+                      onPageChanged: (index) =>
+                          setState(() => _currentIndex = index),
+                      itemBuilder: (context, index) {
+                        final slide = _slides[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                slide.title,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      height: 32 / 24,
+                                      shadows: [
+                                        Shadow(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            242,
+                                            237,
+                                            237,
+                                          ).withValues(alpha: 0.25),
+                                          offset: const Offset(0, 1),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ],
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              ),
+                              const SizedBox(height: 15),
+                              Text(
+                                slide.subtitle,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.35,
+                                    ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 15),
-                          Text(
-                            slide.subtitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.35,
-                                ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_slides.length, (i) {
+                      final isActive = i == _currentIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 6,
+                        width: isActive ? 18 : 6,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ),
             Positioned(
@@ -336,28 +361,6 @@ class _OnboardingPageState extends State<OnboardingPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Transform.translate(
-                        offset: const Offset(0, -120),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(_slides.length, (i) {
-                            final isActive = i == _currentIndex;
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              height: 6,
-                              width: isActive ? 18 : 6,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(999),
-                                color: isActive
-                                    ? AppColors.white
-                                    : AppColors.white.withValues(alpha: 0.4),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
                       CustomButton(
                         gradientColors: [AppColors.white, AppColors.white],
                         textColor: AppColors.black,

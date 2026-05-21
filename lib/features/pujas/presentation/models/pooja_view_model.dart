@@ -10,6 +10,8 @@ class PoojaView {
 
   Map<String, dynamic> get raw => _raw;
 
+  String get id => (_raw['_id'] ?? _raw['id'] ?? '').toString();
+
   String get title => (_raw['title'] ?? '').toString();
   String get category => (_raw['category'] ?? '').toString();
   String get difficulty => (_raw['difficulty'] ?? '').toString();

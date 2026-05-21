@@ -86,12 +86,12 @@ class ProfilePage extends StatelessWidget {
                             onTap: () =>
                                 Get.to(() => const ProfilePoojaHistoryPage()),
                           ),
-                          ProfileLinkTile(
-                            icon: Icons.emoji_events_outlined,
-                            label: 'Achievements',
-                            onTap: () =>
-                                Get.to(() => const ProfileAchievementsPage()),
-                          ),
+                          // ProfileLinkTile(
+                          //   icon: Icons.emoji_events_outlined,
+                          //   label: 'Achievements',
+                          //   onTap: () =>
+                          //       Get.to(() => const ProfileAchievementsPage()),
+                          // ),
                           const SizedBox(height: 30),
                           const ProfileSectionHeading('Settings'),
                           ProfileLinkTile(

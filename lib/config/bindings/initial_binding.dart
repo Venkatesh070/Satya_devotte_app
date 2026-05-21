@@ -50,9 +50,12 @@ import 'package:satya_devotte_app/features/donations/state/donate_controller.dar
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/my_contributions_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
+import 'package:satya_devotte_app/features/profile/data/datasources/pooja_history_remote_datasource.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
+import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -106,6 +109,18 @@ class InitialBinding extends Bindings {
         Get.find<ProfileRepository>(),
         Get.find<AuthSessionService>(),
       ),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryRemoteDataSource>(
+      PoojaHistoryRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryRepository>(
+      PoojaHistoryRepository(Get.find<PoojaHistoryRemoteDataSource>()),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryController>(
+      PoojaHistoryController(Get.find<PoojaHistoryRepository>()),
       permanent: true,
     );
     Get.put<PoojaRemoteDataSource>(

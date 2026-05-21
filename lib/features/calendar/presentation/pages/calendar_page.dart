@@ -353,7 +353,7 @@ class _FestivalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = _parseDate(festival.date);
     final dateStr = date != null
-        ? DateFormat('EEEE, MMMM do').format(date)
+        ? DateFormat('EEEE, MMMM dd').format(date)
         : festival.date;
 
     return Material(
@@ -602,7 +602,7 @@ class _CalendarEntryCard extends StatelessWidget {
         ? DateFormat('MMM').format(date!).toUpperCase()
         : '---';
     final dateLine = date != null
-        ? DateFormat('EEEE, MMMM do').format(date!)
+        ? DateFormat('EEEE, MMMM dd').format(date!)
         : '';
 
     return Material(

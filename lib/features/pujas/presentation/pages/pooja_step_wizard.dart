@@ -3,12 +3,21 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 
 class PoojaStepWizard extends StatefulWidget {
-  const PoojaStepWizard({super.key, required this.pooja});
+  const PoojaStepWizard({
+    super.key,
+    required this.pooja,
+    this.initialStep,
+    this.sessionId,
+  });
   final PoojaView pooja;
+  final int? initialStep;
+  final String? sessionId;
 
   @override
   State<PoojaStepWizard> createState() => _PoojaStepWizardState();
@@ -16,14 +25,69 @@ class PoojaStepWizard extends StatefulWidget {
 
 class _PoojaStepWizardState extends State<PoojaStepWizard> {
   late final PageController _pageController;
-  int _currentPage = 0;
-  late final List<Widget> _screens;
+  late int _currentPage;
+  List<Widget> _screens = [];
+  String? _sessionId;
+  bool _isLoadingFullPooja = false;
+  late PoojaView _currentPooja;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _screens = _buildScreens();
+    _currentPooja = widget.pooja;
+    _currentPage = widget.initialStep ?? 0;
+    _sessionId = widget.sessionId;
+    _pageController = PageController(initialPage: _currentPage);
+
+    if (_currentPooja.preparation.isEmpty) {
+      _loadFullPooja();
+    } else {
+      _screens = _buildScreens();
+    }
+
+    if (_sessionId == null) {
+      _startSession();
+    }
+  }
+
+  Future<void> _loadFullPooja() async {
+    setState(() => _isLoadingFullPooja = true);
+    try {
+      final ritualRepo = Get.find<RitualRepository>();
+      final fullRitual = await ritualRepo.getRitualDetail(_currentPooja.id);
+      if (fullRitual != null) {
+        // Assume ritualRepo.getRitualDetail returns a PoojaEntity that can be mapped
+        // For now, let's update _currentPooja if the structure allows
+        // If your RitualEntity has a toModel/toMap method:
+        // _currentPooja = PoojaView(fullRitual.toMap());
+      }
+    } catch (e) {
+      debugPrint('Error loading full pooja: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _screens = _buildScreens();
+          _isLoadingFullPooja = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _startSession() async {
+    final historyCtrl = Get.find<PoojaHistoryController>();
+    final result = await historyCtrl.startPooja(widget.pooja.id);
+    if (result != null) {
+      setState(() {
+        _sessionId = result['_id'] ?? result['id'];
+        if (widget.initialStep == null) {
+          final step = result['currentStep'] as int? ?? 0;
+          if (step > 0 && step < _screens.length) {
+            _currentPage = step;
+            _pageController.jumpToPage(step);
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -139,28 +203,46 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
   void _nextPage() {
     if (_currentPage < _screens.length - 1) {
+      final nextIdx = _currentPage + 1;
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() => _currentPage++);
+      setState(() => _currentPage = nextIdx);
+
+      // Update progress if we have a session
+      if (_sessionId != null) {
+        print('DEBUG: Wizard updating progress to NEXT index: $nextIdx');
+        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, nextIdx);
+      }
     }
   }
 
   // ← NEW: go to previous wizard page, or pop if on first page
   void _previousPage() {
     if (_currentPage > 0) {
+      final prevIdx = _currentPage - 1;
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() => _currentPage--);
+      setState(() => _currentPage = prevIdx);
+
+      if (_sessionId != null) {
+        print('DEBUG: Wizard updating progress to PREVIOUS index: $prevIdx');
+        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, prevIdx);
+      }
     } else {
-      Get.back();
+      Get.offAllNamed(AppRoutes.home);
     }
   }
 
   void _finish() {
+    if (_sessionId != null) {
+      Get.find<PoojaHistoryController>().finishPoojaBySession(_sessionId!);
+    } else {
+      Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
+    }
     Get.back();
   }
 
@@ -240,6 +322,16 @@ class _BaseWizardScreen extends StatelessWidget {
                             color: Colors.white,
                             size: 18,
                           ),
+                        ),
+                      ),
+
+                      // Logo
+                      GestureDetector(
+                        onTap: () => Get.offAllNamed(AppRoutes.home),
+                        child: Image.asset(
+                          'assets/images/logoWhite.png',
+                          height: 32,
+                          fit: BoxFit.contain,
                         ),
                       ),
 
