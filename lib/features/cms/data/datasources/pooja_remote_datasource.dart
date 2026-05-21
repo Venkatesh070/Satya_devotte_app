@@ -35,9 +35,9 @@ class PoojaRemoteDataSource {
         .toList();
   }
 
-  // ── GET /poojas/my — admin's own poojas (requires admin role) ──
+  // ── GET /poojas/all — admin's own poojas (requires admin role) ──
   Future<List<PoojaModel>> getMyPoojas() async {
-    final response = await _apiClient.dio.get(ApiEndpoints.myPoojas);
+    final response = await _apiClient.dio.get(ApiEndpoints.allPoojas);
     final body = response.data as Map<String, dynamic>;
     final list = _extractList(body);
     return list

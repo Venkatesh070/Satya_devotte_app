@@ -12,11 +12,13 @@
 // Mirrors the section structure described in
 // `Flutter-cms-refund&orders&payments.plan` §4.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -33,6 +35,17 @@ class CmsPoojaKitOrdersContent extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (c.items.isEmpty && !c.isLoading && c.error == null) {
         c.refresh();
+      }
+      if (kIsWeb) {
+        final fragment = Uri.base.fragment;
+        if (fragment.isNotEmpty) {
+          final route =
+              fragment.startsWith('/') ? fragment : '/$fragment';
+          final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(route);
+          if (orderId != null && c.selectedOrderId != orderId) {
+            c.openOrder(orderId, syncUrl: false);
+          }
+        }
       }
     });
     return Obx(() {

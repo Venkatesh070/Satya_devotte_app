@@ -72,22 +72,16 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   Future<void> _save(
     Map<String, dynamic> payload, {
     PickedFile? image,
-    PickedFile? audio,
-    PickedFile? video,
   }) async {
     final ok = _editing != null
         ? await _controller.updateDeity(
             _editing!.id,
             payload,
             image: image,
-            audio: audio,
-            video: video,
           )
         : await _controller.createDeity(
             payload,
             image: image,
-            audio: audio,
-            video: video,
           );
 
     if (!ok) return;
@@ -459,12 +453,7 @@ class _SmBtn extends StatelessWidget {
 }
 
 typedef _DeitySaveCallback =
-    void Function(
-      Map<String, dynamic> payload, {
-      PickedFile? image,
-      PickedFile? audio,
-      PickedFile? video,
-    });
+    void Function(Map<String, dynamic> payload, {PickedFile? image});
 
 class _DeityForm extends StatefulWidget {
   const _DeityForm({
@@ -512,8 +501,6 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _storiesDescCtrl;
   String _status = 'PENDING';
   late final TextEditingController _imageUrlsCtrl;
-  late final TextEditingController _audioUrlsCtrl;
-  late final TextEditingController _videoUrlsCtrl;
   final List<Map<String, String>> _lineageFormsEntries =
       <Map<String, String>>[];
   final List<Map<String, String>> _appearanceEntries = <Map<String, String>>[];
@@ -548,8 +535,6 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _lineageFormsTitleCtrl;
   late final TextEditingController _lineageFormsDescCtrl;
   PickedFile? _pickedImage;
-  PickedFile? _pickedAudio;
-  PickedFile? _pickedVideo;
 
   @override
   void initState() {
@@ -610,12 +595,6 @@ class _DeityFormState extends State<_DeityForm> {
     _storiesTitleCtrl = TextEditingController();
     _storiesDescCtrl = TextEditingController();
     _imageUrlsCtrl = TextEditingController(text: initial?.imageUrl ?? '');
-    _audioUrlsCtrl = TextEditingController(
-      text: initial == null ? '' : initial.audioUrls.join(', '),
-    );
-    _videoUrlsCtrl = TextEditingController(
-      text: initial == null ? '' : initial.videoUrls.join(', '),
-    );
     _lineageFormsTitleCtrl = TextEditingController();
     _lineageFormsDescCtrl = TextEditingController();
     if (initial != null) {
@@ -678,8 +657,6 @@ class _DeityFormState extends State<_DeityForm> {
     _storiesTitleCtrl.dispose();
     _storiesDescCtrl.dispose();
     _imageUrlsCtrl.dispose();
-    _audioUrlsCtrl.dispose();
-    _videoUrlsCtrl.dispose();
     _lineageFormsTitleCtrl.dispose();
     _lineageFormsDescCtrl.dispose();
     super.dispose();
@@ -1102,36 +1079,6 @@ class _DeityFormState extends State<_DeityForm> {
             _imageUrlsCtrl.clear();
           }),
         ),
-        const SizedBox(height: 12),
-        CmsUploadBox(
-          label: 'Audio Mantra',
-          icon: Icons.music_note_outlined,
-          accept: 'MP3, AAC up to 20MB',
-          mediaType: PickMediaType.audio,
-          initialUrl: widget.initial?.audioUrls.isNotEmpty == true
-              ? widget.initial!.audioUrls.first
-              : null,
-          onPicked: (file) => setState(() => _pickedAudio = file),
-          onRemoved: () => setState(() {
-            _pickedAudio = null;
-            _audioUrlsCtrl.clear();
-          }),
-        ),
-        const SizedBox(height: 12),
-        CmsUploadBox(
-          label: 'Video',
-          icon: Icons.videocam_outlined,
-          accept: 'MP4, MOV up to 20MB',
-          mediaType: PickMediaType.video,
-          initialUrl: widget.initial?.videoUrls.isNotEmpty == true
-              ? widget.initial!.videoUrls.first
-              : null,
-          onPicked: (file) => setState(() => _pickedVideo = file),
-          onRemoved: () => setState(() {
-            _pickedVideo = null;
-            _videoUrlsCtrl.clear();
-          }),
-        ),
       ],
     );
 
@@ -1308,14 +1255,10 @@ class _DeityFormState extends State<_DeityForm> {
                       'pujas': List<String>.from(_ritualIds),
                       'media': {
                         'images': _csv(_imageUrlsCtrl.text),
-                        'audio': _csv(_audioUrlsCtrl.text),
-                        'videos': _csv(_videoUrlsCtrl.text),
                       },
                       'status': _status,
                     },
                       image: _pickedImage,
-                      audio: _pickedAudio,
-                      video: _pickedVideo,
                     );
                   },
                   style: ElevatedButton.styleFrom(

@@ -227,6 +227,13 @@ class AppPages {
       transitionDuration: Duration.zero,
     ),
     GetPage(
+      name: AppRoutes.cmsPoojaKitOrderDetail,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
       name: AppRoutes.cmsPoojaKitRefunds,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],

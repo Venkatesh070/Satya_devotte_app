@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
+import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
@@ -49,21 +53,76 @@ class _CmsShellPageState extends State<CmsShellPage> {
   // of this set.
   final Set<String> _expandedGroups = <String>{};
   final ScrollController _sidebarScrollController = ScrollController();
+  void Function()? _cancelHashListener;
+
+  String _initialCmsRoute() {
+    if (kIsWeb) {
+      final fragment = Uri.base.fragment;
+      if (fragment.isNotEmpty) {
+        return fragment.startsWith('/') ? fragment : '/$fragment';
+      }
+    }
+    return Get.currentRoute;
+  }
 
   @override
   void initState() {
     super.initState();
     CmsShellNavigation.attach(this);
     final auth = Get.find<AuthController>();
-    _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
+    _selectedIndex = _indexFromRoute(_initialCmsRoute(), auth.isSuperAdmin);
     // Auto-expand any group that owns the resolved selected index so the
     // sidebar reflects the deep-linked tab on first paint.
     final group = _groupLabelForIndex(_selectedIndex);
     if (group != null) _expandedGroups.add(group);
+
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyCmsRouteEffects(_initialCmsRoute());
+        final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(_initialCmsRoute());
+        if (orderId == null) {
+          updateCmsHashRoute(_routeFromIndex(_selectedIndex));
+        }
+      });
+      _cancelHashListener = listenCmsHashRoute((route) {
+        if (!mounted) return;
+        final idx = _indexFromRoute(route, auth.isSuperAdmin);
+        if (idx != _selectedIndex) {
+          setState(() {
+            _selectedIndex = idx;
+            final g = _groupLabelForIndex(idx);
+            if (g != null) _expandedGroups.add(g);
+          });
+        }
+        _applyCmsRouteEffects(route);
+      });
+    }
+  }
+
+  /// Opens/closes in-shell drill-downs based on the hash (e.g. order detail id).
+  void _applyCmsRouteEffects(String route) {
+    final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(route);
+    if (orderId != null) {
+      if (Get.isRegistered<AdminOrdersController>()) {
+        final orders = Get.find<AdminOrdersController>();
+        if (orders.selectedOrderId != orderId) {
+          orders.openOrder(orderId, syncUrl: false);
+        }
+      }
+      return;
+    }
+    if (route == AppRoutes.cmsPoojaKitOrders &&
+        Get.isRegistered<AdminOrdersController>()) {
+      final orders = Get.find<AdminOrdersController>();
+      if (orders.selectedOrderId != null) {
+        orders.closeDetail(syncUrl: false);
+      }
+    }
   }
 
   @override
   void dispose() {
+    _cancelHashListener?.call();
     CmsShellNavigation.detach(this);
     _sidebarScrollController.dispose();
     super.dispose();
@@ -78,6 +137,13 @@ class _CmsShellPageState extends State<CmsShellPage> {
       final group = _groupLabelForIndex(index);
       if (group != null) _expandedGroups.add(group);
     });
+    // Sync browser hash on web without remounting the shell (sidebar scroll).
+    if (index == _NavIds.poojaKitOrders &&
+        Get.isRegistered<AdminOrdersController>() &&
+        Get.find<AdminOrdersController>().selectedOrderId != null) {
+      Get.find<AdminOrdersController>().closeDetail(syncUrl: false);
+    }
+    updateCmsHashRoute(_routeFromIndex(index));
     // Tab switches only update local state so the shell (and sidebar scroll
     // position) are not recreated via Get.offNamed on every menu click.
     if (index == _NavIds.poojaKitRefunds &&
@@ -105,12 +171,8 @@ class _CmsShellPageState extends State<CmsShellPage> {
     final w = MediaQuery.of(context).size.width;
     return WillPopScope(
       onWillPop: () async {
-        final isDashboardRoute = Get.currentRoute == AppRoutes.cms;
-        if (_selectedIndex != 0 || !isDashboardRoute) {
-          setState(() => _selectedIndex = 0);
-          if (!isDashboardRoute) {
-            Get.offNamed(AppRoutes.cms);
-          }
+        if (_selectedIndex != 0) {
+          _onSelect(_NavIds.dashboard);
           return false;
         }
         // Already on dashboard: consume browser back and stay on CMS.
@@ -1237,6 +1299,44 @@ Widget _buildContent(int i) {
   }
 }
 
+String _routeFromIndex(int index) {
+  switch (index) {
+    case _NavIds.deities:
+      return AppRoutes.cmsDeities;
+    case _NavIds.pujas:
+      return AppRoutes.cmsRituals;
+    case _NavIds.festivals:
+      return AppRoutes.cmsFestivals;
+    case _NavIds.donations:
+      return AppRoutes.cmsDonations;
+    case _NavIds.donationsAll:
+      return AppRoutes.cmsDonationsAll;
+    case _NavIds.notifications:
+      return AppRoutes.cmsNotifications;
+    case _NavIds.users:
+      return AppRoutes.cmsUsers;
+    case _NavIds.shlokas:
+      return AppRoutes.cmsShlokas;
+    case _NavIds.admins:
+      return AppRoutes.cmsAdmins;
+    case _NavIds.poojaKitInventory:
+      return AppRoutes.cmsPoojaKitInventory;
+    case _NavIds.poojaKitManage:
+      return AppRoutes.cmsPoojaKit;
+    case _NavIds.poojaKitOrders:
+      return AppRoutes.cmsPoojaKitOrders;
+    case _NavIds.poojaKitRefunds:
+      return AppRoutes.cmsPoojaKitRefunds;
+    case _NavIds.poojaKitPayments:
+      return AppRoutes.cmsPoojaKitPayments;
+    case _NavIds.manageRituals:
+      return AppRoutes.cmsManageRituals;
+    case _NavIds.dashboard:
+    default:
+      return AppRoutes.cms;
+  }
+}
+
 int _indexFromRoute(String route, bool isSuperAdmin) {
   switch (route) {
     case AppRoutes.cmsDeities:
@@ -1279,7 +1379,11 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
     case AppRoutes.cmsApproval:
       return _NavIds.dashboard;
     case AppRoutes.cms:
+      return _NavIds.dashboard;
     default:
+      if (CmsRoutePaths.poojaKitOrderIdFromRoute(route) != null) {
+        return _NavIds.poojaKitOrders;
+      }
       return _NavIds.dashboard;
   }
 }

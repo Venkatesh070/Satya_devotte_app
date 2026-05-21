@@ -74,7 +74,7 @@ class RitualController extends GetxController {
       if (auth.isSuperAdmin) {
         result = await _dataSource.getAllRitualsSuperAdmin();
       } else {
-        result = await _dataSource.getMyRituals();
+         result = await _dataSource.getAllRitualsSuperAdmin();
       }
       _rituals.assignAll(result);
     } catch (e) {

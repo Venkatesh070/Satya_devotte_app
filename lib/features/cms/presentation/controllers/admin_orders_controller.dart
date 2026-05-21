@@ -6,8 +6,12 @@
 //   • All admin mutations (status / tracking / dispatch / cancel / payment /
 //     verify) with success+error snackbar feedback.
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
+import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -141,16 +145,22 @@ class AdminOrdersController extends GetxController {
   }
 
   // ── detail actions ────────────────────────────────────────────────
-  void openOrder(String id) {
+  void openOrder(String id, {bool syncUrl = true}) {
     _selectedOrderId.value = id;
     _detail.value = _items.firstWhereOrNull((o) => o.id == id);
     fetchDetail();
+    if (syncUrl && kIsWeb) {
+      updateCmsHashRoute(CmsRoutePaths.poojaKitOrderDetail(id));
+    }
   }
 
-  void closeDetail() {
+  void closeDetail({bool syncUrl = true}) {
     _selectedOrderId.value = null;
     _detail.value = null;
     _detailError.value = null;
+    if (syncUrl && kIsWeb) {
+      updateCmsHashRoute(AppRoutes.cmsPoojaKitOrders);
+    }
     // Re-fetch the current list page so status / payment / totals reflect any
     // changes made on the detail screen (and so GET /orders/all runs again).
     _load(page: _page.value);

@@ -752,22 +752,6 @@ class _PoojaCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (pooja.audioUrl != null) ...[
-                      const SizedBox(width: 6),
-                      const Icon(
-                        Icons.music_note,
-                        size: 12,
-                        color: CmsColors.textSecond,
-                      ),
-                    ],
-                    if (pooja.videoUrl != null) ...[
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.videocam,
-                        size: 12,
-                        color: CmsColors.textSecond,
-                      ),
-                    ],
                   ],
                 ),
               ],
@@ -944,12 +928,8 @@ class _PoojaFormState extends State<_PoojaForm> {
       )
       .toList();
   PickedFile? _pickedImage;
-  PickedFile? _pickedAudio;
-  PickedFile? _pickedVideo;
   // existing URLs (editing mode)
   String? _imageUrl;
-  String? _audioUrl;
-  String? _videoUrl;
 
   static const _diffs = ['Beginner', 'Intermediate', 'Advanced'];
   static const _cats = [
@@ -1031,8 +1011,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     _actionsMeaningEntries = List.from(p?.spiritualActionsMeaning ?? const []);
     _otherSymbolismEntries = List.from(p?.spiritualOtherSymbolism ?? const []);
     _imageUrl = _trimMediaUrl(p?.imageUrl);
-    _audioUrl = _trimMediaUrl(p?.audioUrl);
-    _videoUrl = _trimMediaUrl(p?.videoUrl);
     if (_festivalCtrl.festivals.isEmpty) {
       Future.microtask(_festivalCtrl.loadFestivals);
     }
@@ -1370,8 +1348,6 @@ class _PoojaFormState extends State<_PoojaForm> {
       ok = await widget.controller.updatePooja(
         widget.pooja!.id,
         pickedImage: _pickedImage,
-        pickedAudio: _pickedAudio,
-        pickedVideo: _pickedVideo,
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
           deity: _selectedDeityId ?? '',
@@ -1381,8 +1357,6 @@ class _PoojaFormState extends State<_PoojaForm> {
           description: _descCtrl.text.trim(),
           status: status,
           imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
-          audioUrl: _pickedAudio != null ? null : _trimMediaUrl(_audioUrl),
-          videoUrl: _pickedVideo != null ? null : _trimMediaUrl(_videoUrl),
           steps: _serializedSteps(),
           requiredItems: _items,
           purposeWhy: _purposeWhyCtrl.text.trim(),
@@ -1412,8 +1386,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     } else {
       ok = await widget.controller.createPooja(
         pickedImage: _pickedImage,
-        pickedAudio: _pickedAudio,
-        pickedVideo: _pickedVideo,
         title: _titleCtrl.text.trim(),
         deity: _selectedDeityId ?? '',
         category: _category,
@@ -1422,8 +1394,6 @@ class _PoojaFormState extends State<_PoojaForm> {
         description: _descCtrl.text.trim(),
         status: status,
         imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
-        audioUrl: _pickedAudio != null ? null : _trimMediaUrl(_audioUrl),
-        videoUrl: _pickedVideo != null ? null : _trimMediaUrl(_videoUrl),
         steps: _serializedSteps(),
         requiredItems: _items,
         purposeWhy: _purposeWhyCtrl.text.trim(),
@@ -1971,38 +1941,6 @@ class _PoojaFormState extends State<_PoojaForm> {
                 _pickedImage = null;
               } else {
                 _imageUrl = null;
-              }
-            }),
-          ),
-          const SizedBox(height: 10),
-          CmsUploadBox(
-            label: 'Audio Mantra',
-            icon: Icons.music_note_outlined,
-            accept: 'MP3, AAC up to 20MB',
-            mediaType: PickMediaType.audio,
-            initialUrl: _audioUrl,
-            onPicked: (f) => setState(() => _pickedAudio = f),
-            onRemoved: () => setState(() {
-              if (_pickedAudio != null) {
-                _pickedAudio = null;
-              } else {
-                _audioUrl = null;
-              }
-            }),
-          ),
-          const SizedBox(height: 10),
-          CmsUploadBox(
-            label: 'Ritual Video (optional)',
-            icon: Icons.videocam_outlined,
-            accept: 'MP4, MOV up to 200MB',
-            mediaType: PickMediaType.video,
-            initialUrl: _videoUrl,
-            onPicked: (f) => setState(() => _pickedVideo = f),
-            onRemoved: () => setState(() {
-              if (_pickedVideo != null) {
-                _pickedVideo = null;
-              } else {
-                _videoUrl = null;
               }
             }),
           ),

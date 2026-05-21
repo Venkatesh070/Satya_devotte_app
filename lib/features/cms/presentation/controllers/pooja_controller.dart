@@ -66,7 +66,7 @@ class PoojaController extends GetxController {
         // SuperAdmin: GET /poojas/all — sees every pooja from all admins
         result = await _dataSource.getAllPoojasSuperAdmin();
       } else {
-        // Admin: GET /poojas/my — sees only their own poojas
+        // Admin: GET /poojas/all — sees only their own poojas
         result = await _dataSource.getMyPoojas();
       }
       _poojas.assignAll(result);

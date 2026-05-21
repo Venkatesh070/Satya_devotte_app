@@ -76,6 +76,12 @@ class AppRoutes {
   /// Pooja Kit orders placed by devotees.
   static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
 
+  /// In-shell order detail (web hash). Use [cmsPoojaKitOrderPath] for URLs.
+  static const String cmsPoojaKitOrderDetail = '/cms/pooja-kit/orders/:orderId';
+
+  static String cmsPoojaKitOrderPath(String orderId) =>
+      '$cmsPoojaKitOrders/$orderId';
+
   /// Pooja Kit refund requests / processed refunds.
   static const String cmsPoojaKitRefunds = '/cms/pooja-kit/refunds';
 

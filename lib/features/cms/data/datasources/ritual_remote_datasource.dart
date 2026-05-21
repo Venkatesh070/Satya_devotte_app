@@ -37,7 +37,7 @@ class RitualRemoteDataSource {
   }
 
   Future<List<RitualModel>> getMyRituals() async {
-    final response = await _apiClient.dio.get(ApiEndpoints.myRituals);
+    final response = await _apiClient.dio.get(ApiEndpoints.allRituals);
     final body = response.data as Map<String, dynamic>;
     final list = _extractList(body);
     return list

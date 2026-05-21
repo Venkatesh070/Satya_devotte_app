@@ -44,7 +44,7 @@ class FestivalRemoteDataSource {
 
   // ── GET /festivals/my — admin's own ──────────────────────────
   Future<List<FestivalModel>> getMyFestivals() async {
-    final res = await _apiClient.dio.get('/api/v1/festivals/my');
+    final res = await _apiClient.dio.get('/api/v1/festivals/all');
     return _list(
       res.data as Map<String, dynamic>,
     ).map((e) => FestivalModel.fromJson(e as Map<String, dynamic>)).toList();
