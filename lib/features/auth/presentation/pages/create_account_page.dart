@@ -1,22 +1,15 @@
-import 'dart:typed_data';
-
-import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
-import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class CreateAccountPage extends StatefulWidget {
-  const CreateAccountPage({
-    super.key,
-    this.completeProfileOnly = false,
-  });
+  const CreateAccountPage({super.key, this.completeProfileOnly = false});
 
-  /// User already signed in (e.g. Google) but `isRegistered` was false on login.
   final bool completeProfileOnly;
 
   @override
@@ -24,7 +17,6 @@ class CreateAccountPage extends StatefulWidget {
 }
 
 class _CreateAccountPageState extends State<CreateAccountPage> {
-  static const Color _bgColor = Color(0xFFF2EBDC);
   static const Color _fieldColor = Color(0xFFFFFBF3);
   static const Color _fieldBorder = Color(0xFFE0D6C2);
   static const Color _titleColor = Color(0xFF1F1F1F);
@@ -39,7 +31,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _formStepOneKey = GlobalKey<FormState>();
   final _formStepTwoKey = GlobalKey<FormState>();
 
-  PickedFile? _pickedImage;
   DateTime? _dateOfBirth;
   TimeOfDay? _timeOfBirth;
   String _selectedGender = 'MALE';
@@ -48,14 +39,15 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   bool _hideConfirmPassword = true;
 
   AuthController get _authController => Get.find<AuthController>();
-  MediaUploadService get _mediaService => Get.find<MediaUploadService>();
 
   @override
   void initState() {
     super.initState();
     if (widget.completeProfileOnly) {
       _step = 1;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _prefillFromSession());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _prefillFromSession(),
+      );
     }
   }
 
@@ -88,9 +80,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       lastDate: now,
       initialDate: DateTime(now.year - 21, now.month, now.day),
     );
-    if (picked != null) {
-      setState(() => _dateOfBirth = picked);
-    }
+    if (picked != null) setState(() => _dateOfBirth = picked);
   }
 
   Future<void> _pickTob() async {
@@ -98,21 +88,12 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       context: context,
       initialTime: _timeOfBirth ?? const TimeOfDay(hour: 6, minute: 0),
     );
-    if (picked != null) {
-      setState(() => _timeOfBirth = picked);
-    }
+    if (picked != null) setState(() => _timeOfBirth = picked);
   }
 
   void _goNext() {
     if (_formStepOneKey.currentState?.validate() != true) return;
     setState(() => _step = 1);
-  }
-
-  Future<void> _pickImage() async {
-    final picked = await _mediaService.pickFile(type: PickMediaType.image);
-    if (picked != null) {
-      setState(() => _pickedImage = picked);
-    }
   }
 
   Future<void> _submit({bool skipProfile = false}) async {
@@ -122,13 +103,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     Map<String, dynamic>? profilePayload;
 
     if (!skipProfile) {
-      if (_pickedImage == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload a profile image.')),
-        );
-        return;
-      }
-
       final dob = _dateOfBirth;
       if (dob == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -144,6 +118,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         return;
       }
 
+      final hh = tob.hour.toString().padLeft(2, '0');
+      final mm = tob.minute.toString().padLeft(2, '0');
+
+      // Fix: assign to outer variable, don't redeclare with `final`
       profilePayload = {
         'fullName': _fullNameController.text.trim(),
         'gender': _selectedGender,
@@ -153,15 +131,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         'countryCode': '+91',
         'timeZone': DateTime.now().timeZoneName,
         'preferredLanguage': 'en',
-        'image': dio.MultipartFile.fromBytes(
-          _pickedImage!.bytes,
-          filename: _pickedImage!.filename,
-        ),
+        'timeOfBirth': '$hh:$mm',
       };
-
-      final hh = tob.hour.toString().padLeft(2, '0');
-      final mm = tob.minute.toString().padLeft(2, '0');
-      profilePayload['timeOfBirth'] = '$hh:$mm';
     }
 
     final bool isSuccess;
@@ -177,6 +148,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         profileData: profilePayload,
       );
     }
+
     if (!mounted) return;
 
     if (!isSuccess) {
@@ -196,7 +168,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: AppColors.appBgColor,
       body: SafeArea(
         child: Obx(() {
           final isLoading = _authController.isEmailSignInLoading;
@@ -205,15 +177,18 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top Bar
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                   children: [
                     IconButton(
                       onPressed: () {
-                        if (_step == 1) {
+                        if (_step == 1 && !widget.completeProfileOnly) {
                           setState(() => _step = 0);
                           return;
                         }
-                        Get.back<void>();
+                        Get.back();
                       },
                       icon: const Icon(
                         Icons.arrow_back_ios_new,
@@ -228,21 +203,29 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'Sign up with your mobile no to continue',
-                      style: TextStyle(
-                        color: Colors.black.withOpacity(0.65),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Text(
-                      'Login now',
-                      style: TextStyle(
-                        color: Color(0xFF6B5730),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
+
+                    GestureDetector(
+                      onTap: () => Get.to(() => const CreateAccountPage()),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Already have an account?',
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.58),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            '  Login now!',
+                            style: TextStyle(
+                              color: const Color(0xFF4A1C00),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -255,27 +238,12 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       widget.completeProfileOnly
                           ? 'Complete your profile'
                           : (_step == 0 ? 'Signup with email' : 'Your details'),
-                      style: const TextStyle(
-                        color: _titleColor,
-                        fontSize: 27,
+                      style: AppTypography.lora(
+                        color: const Color(0xFF4A1C00),
+                        fontSize: 24,
                         fontWeight: FontWeight.w500,
-                        fontFamily: 'serif',
                       ),
                     ),
-                    if (_step == 1)
-                      TextButton(
-                        onPressed: isLoading
-                            ? null
-                            : () => _submit(skipProfile: true),
-                        child: const Text(
-                          'Skip',
-                          style: TextStyle(
-                            color: Color(0xFF6B5730),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -283,12 +251,12 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   widget.completeProfileOnly
                       ? 'Add your details to finish setting up your account'
                       : (_step == 0
-                          ? 'Sign up with your email and set a secure password'
-                          : 'Enter your details with us'),
-                  style: TextStyle(
-                    color: Colors.black.withOpacity(0.58),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
+                            ? 'Sign up with your email and set a secure password'
+                            : 'Enter the below details to continue'),
+                  style: AppTypography.inter(
+                    color: const Color(0xFF4A1C00),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -298,11 +266,19 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         ? Form(
                             key: _formStepOneKey,
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+
                               children: [
+                                const SizedBox(height: 20),
+
+                                _buildLabel('Email ID'),
+                                const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
-                                  decoration: _inputDecoration('Email'),
+                                  decoration: _inputDecoration(
+                                    'Enter your email address',
+                                  ),
                                   validator: (v) {
                                     final value = v?.trim() ?? '';
                                     if (value.isEmpty)
@@ -313,38 +289,67 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   },
                                 ),
                                 const SizedBox(height: 10),
+                                _buildLabel('Password'),
+                                const SizedBox(height: 6),
+
                                 TextFormField(
                                   controller: _passwordController,
                                   obscureText: _hidePassword,
-                                  decoration: _inputDecoration('Password'),
+                                  decoration: _inputDecoration('*******')
+                                      .copyWith(
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _hidePassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: const Color(0xFF8F8574),
+                                          ),
+                                          onPressed: () => setState(
+                                            () =>
+                                                _hidePassword = !_hidePassword,
+                                          ),
+                                        ),
+                                      ),
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) {
+                                    if (v == null || v.isEmpty)
                                       return 'Password is required';
-                                    }
-                                    if (v.length < 6) {
+                                    if (v.length < 6)
                                       return 'Password must be at least 6 characters';
-                                    }
                                     return null;
                                   },
                                   onChanged: (_) => setState(() {}),
                                 ),
                                 const SizedBox(height: 10),
+                                _buildLabel('Confirm Password'),
+
+                                const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _confirmPasswordController,
                                   obscureText: _hideConfirmPassword,
-                                  decoration: _inputDecoration(
-                                    'Confirm Password',
-                                  ),
+                                  decoration: _inputDecoration('*******')
+                                      .copyWith(
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _hideConfirmPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: const Color(0xFF8F8574),
+                                          ),
+                                          onPressed: () => setState(
+                                            () => _hideConfirmPassword =
+                                                !_hideConfirmPassword,
+                                          ),
+                                        ),
+                                      ),
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) {
+                                    if (v == null || v.isEmpty)
                                       return 'Please confirm password';
-                                    }
-                                    if (v != _passwordController.text) {
+                                    if (v != _passwordController.text)
                                       return 'Passwords do not match';
-                                    }
                                     return null;
                                   },
-                                  onChanged: (_) => setState(() {}),
                                 ),
                               ],
                             ),
@@ -352,60 +357,24 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         : Form(
                             key: _formStepTwoKey,
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Center(
-                                  child: Stack(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 45,
-                                        backgroundColor: _fieldBorder,
-                                        backgroundImage: _pickedImage != null
-                                            ? MemoryImage(
-                                                Uint8List.fromList(
-                                                  _pickedImage!.bytes,
-                                                ),
-                                              )
-                                            : null,
-                                        child: _pickedImage == null
-                                            ? const Icon(
-                                                Icons.person,
-                                                size: 45,
-                                                color: Colors.white,
-                                              )
-                                            : null,
-                                      ),
-                                      Positioned(
-                                        bottom: 0,
-                                        right: 0,
-                                        child: InkWell(
-                                          onTap: isLoading ? null : _pickImage,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.gradientStart,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.camera_alt,
-                                              size: 18,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
+                                _buildLabel('Full name'),
+                                const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _fullNameController,
-                                  decoration: _inputDecoration('Full Name'),
+                                  enabled: !isLoading,
+                                  decoration: _inputDecoration(
+                                    'Enter your name',
+                                  ),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Full name is required'
                                       : null,
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
+                                _buildLabel('Gender'),
+                                const SizedBox(height: 6),
                                 DropdownButtonFormField<String>(
                                   value: _selectedGender,
                                   items: const [
@@ -422,7 +391,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       child: Text('Other'),
                                     ),
                                   ],
-                                  decoration: _inputDecoration('Gender'),
+                                  decoration: _inputDecoration('Select gender'),
                                   onChanged: isLoading
                                       ? null
                                       : (value) {
@@ -432,42 +401,52 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                           );
                                         },
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
+                                _buildLabel('Select Date of Birth'),
+                                const SizedBox(height: 6),
                                 _PickerField(
-                                  label: 'Date of Birth',
                                   value: _dateOfBirth == null
                                       ? null
                                       : DateFormat(
                                           'dd MMM yyyy',
                                         ).format(_dateOfBirth!),
-                                  icon: Icons.calendar_today,
+                                  icon: Icons.calendar_today_outlined,
                                   onTap: isLoading ? null : _pickDob,
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
+                                _buildLabel('Select Time of Birth'),
+                                const SizedBox(height: 6),
                                 _PickerField(
-                                  label: 'Time of Birth',
                                   value: _timeOfBirth == null
                                       ? null
                                       : _timeOfBirth!.format(context),
                                   icon: Icons.access_time,
                                   onTap: isLoading ? null : _pickTob,
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
+                                _buildLabel('Place of Birth'),
+                                const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _birthPlaceController,
+                                  enabled: !isLoading,
                                   decoration: _inputDecoration(
-                                    'Place of Birth',
+                                    'Enter place of birth',
                                   ),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Place of birth is required'
                                       : null,
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
+                                _buildLabel('Mobile Number'),
+                                const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _phoneController,
                                   keyboardType: TextInputType.phone,
-                                  decoration: _inputDecoration('Phone Number'),
+                                  enabled: !isLoading,
+                                  decoration: _inputDecoration(
+                                    'Enter mobile number',
+                                  ),
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Phone number is required'
@@ -489,7 +468,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     AppColors.gradientEnd,
                   ],
                   textColor: Colors.white,
-                  onTap: _step == 0 ? _goNext : () => _submit(),
+                  onTap: _step == 0 ? _goNext : _submit,
                 ),
               ],
             ),
@@ -497,17 +476,30 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         }),
       ),
     );
+  } // ← build() closes here
+
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: Color(0xFF4A1C00),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+    );
   }
 
-  InputDecoration _inputDecoration(String label) {
-    final isPassword = label == 'Password';
-    final isConfirmPassword = label == 'Confirm Password';
+  InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
-      labelText: label,
+      hintText: hint,
+      hintStyle: AppTypography.inter(
+        color: Colors.black.withOpacity(0.25),
+        fontSize: 12,
+      ),
       isDense: true,
       filled: true,
       fillColor: _fieldColor,
-      labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 11),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _fieldBorder),
@@ -520,38 +512,17 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.gradientStart),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-      suffixIcon: isPassword || isConfirmPassword
-          ? IconButton(
-              onPressed: () {
-                if (isPassword) {
-                  setState(() => _hidePassword = !_hidePassword);
-                } else {
-                  setState(() => _hideConfirmPassword = !_hideConfirmPassword);
-                }
-              },
-              icon: Icon(
-                (isPassword ? _hidePassword : _hideConfirmPassword)
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                size: 18,
-                color: const Color(0xFF8F8574),
-              ),
-            )
-          : null,
     );
   }
 }
 
 class _PickerField extends StatelessWidget {
   const _PickerField({
-    required this.label,
     required this.value,
     required this.icon,
     required this.onTap,
   });
 
-  final String label;
   final String? value;
   final IconData icon;
   final VoidCallback? onTap;
@@ -560,32 +531,29 @@ class _PickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          isDense: true,
-          filled: true,
-          fillColor: const Color(0xFFF8F4EA),
-          labelStyle: const TextStyle(color: Color(0xFF7D7466), fontSize: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          suffixIcon: Icon(icon, size: 18),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBF3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE0D6C2)),
         ),
-        child: Text(
-          value ?? 'Select',
-          style: TextStyle(
-            color: value == null ? Colors.black54 : const Color(0xFF1F1F1F),
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value ?? 'Select',
+                style: TextStyle(
+                  color: value == null
+                      ? Colors.black.withOpacity(0.25)
+                      : const Color(0xFF1F1F1F),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Icon(icon, size: 18, color: const Color(0xFF8F8574)),
+          ],
         ),
       ),
     );
