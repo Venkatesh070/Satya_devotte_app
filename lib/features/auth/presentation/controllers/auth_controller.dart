@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
+import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/auth/domain/entities/auth_login_result.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
@@ -63,6 +64,7 @@ class AuthController extends GetxController {
     if (isAdmin) {
       Get.offAllNamed(AppRoutes.cms);
       _startCmsBackgroundMusic();
+      _refreshAdminActivityBadge();
       return;
     }
     if (!isProfileRegistrationComplete) {
@@ -107,6 +109,15 @@ class AuthController extends GetxController {
     Future.microtask(() => unawaited(music.startOnAdminLogin()));
   }
 
+  void _refreshAdminActivityBadge() {
+    if (!isAdmin || !Get.isRegistered<CmsAdminNotificationsController>()) {
+      return;
+    }
+    unawaited(
+      Get.find<CmsAdminNotificationsController>().refreshUnreadCount(),
+    );
+  }
+
   void _refreshProfileControllerAfterAuth() {
     try {
       if (!Get.isRegistered<ProfileController>()) return;
@@ -134,6 +145,7 @@ class AuthController extends GetxController {
       if (!Get.isRegistered<FcmBootstrap>()) return;
       // Fire and forget on purpose: callers do not await this.
       unawaited(Get.find<FcmBootstrap>().registerWithBackend());
+      _refreshAdminActivityBadge();
     } catch (_) {}
   }
 

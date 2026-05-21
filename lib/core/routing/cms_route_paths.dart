@@ -20,6 +20,12 @@ class CmsRoutePaths {
     return _poojaKitOrderDetail.firstMatch(normalized)?.group(1);
   }
 
+  static bool isActivitySection(String route) {
+    final normalized =
+        route.trim().startsWith('/') ? route.trim() : '/${route.trim()}';
+    return normalized == AppRoutes.cmsActivity;
+  }
+
   static bool isPoojaKitOrdersSection(String route) {
     final normalized =
         route.trim().startsWith('/') ? route.trim() : '/${route.trim()}';

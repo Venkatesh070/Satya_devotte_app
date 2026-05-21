@@ -64,6 +64,10 @@ class AppRoutes {
   static const String cmsFestivalCreate = '/cms/festivals/create';
   static const String cmsUsers = '/cms/users';
   static const String cmsNotifications = '/cms/notifications';
+
+  /// Operational alerts inbox (orders, donations, refund requests).
+  static const String cmsActivity = '/cms/activity';
+
   static const String cmsAnalytics = '/cms/analytics';
 
   // ─── Pooja Kit (admin + superadmin) ──────────────────────────

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +10,9 @@ import 'package:get/get.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:satya_devotte_app/core/notifications/admin_notification_router.dart';
 import 'package:satya_devotte_app/core/notifications/push_router.dart';
+import 'package:satya_devotte_app/core/services/notification_platform.dart';
 
 /// Top-level FCM background isolate handler.
 ///
@@ -20,9 +22,7 @@ import 'package:satya_devotte_app/core/notifications/push_router.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
-    debugPrint(
-      '[fcm bg] id=${message.messageId} type=${message.data['type']}',
-    );
+    debugPrint('[fcm bg] id=${message.messageId} type=${message.data['type']}');
   }
 }
 
@@ -49,6 +49,11 @@ class NotificationService {
 
   Future<void> initialize() async {
     try {
+      if (kIsWeb) {
+        await _initializeWebFcm();
+        return;
+      }
+
       // 1. Timezones must be ready before any zoned schedule call.
       tz.initializeTimeZones();
       final String timeZoneName = await FlutterTimezone.getLocalTimezone();
@@ -67,10 +72,10 @@ class NotificationService {
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosSettings =
           DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
-      );
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          );
       const InitializationSettings initSettings = InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
@@ -82,7 +87,7 @@ class NotificationService {
 
       // 4. Create the three Android channels we use. The plan-mandated
       // `satya_default` channel is the one server-sent broadcasts target.
-      if (Platform.isAndroid) {
+      if (notificationPlatformIsAndroid) {
         final androidPlugin = _localNotifications
             .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin
@@ -125,7 +130,7 @@ class NotificationService {
       }
 
       // 5. iOS / macOS notification permission.
-      if (Platform.isIOS || Platform.isMacOS) {
+      if (notificationPlatformIsIOS || notificationPlatformIsMacOS) {
         await _fcm.requestPermission(alert: true, badge: true, sound: true);
         // Make sure foreground pushes don't sneak past us silently on
         // iOS — disable native presentation since we render ourselves.
@@ -151,6 +156,17 @@ class NotificationService {
     }
   }
 
+  Future<void> _initializeWebFcm() async {
+    await _fcm.requestPermission(alert: true, badge: true, sound: true);
+    FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+    FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
+    if (kDebugMode) {
+      debugPrint(
+        '[fcm] web listeners attached (service worker: firebase-messaging-sw.js)',
+      );
+    }
+  }
+
   /// Call once after Firebase + GetX bindings are ready. Handles the
   /// "user tapped a tray notification while the app was terminated"
   /// case — `getInitialMessage()` returns the `RemoteMessage` that
@@ -173,15 +189,26 @@ class NotificationService {
   // ── FCM message handlers ───────────────────────────────────────
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    final data = _dataAsMap(message.data);
+    if (AdminNotificationRouter.tryHandleData(
+      data,
+      fromTap: false,
+      message: message,
+    )) {
+      // Web: sound + inbox refresh in [AdminNotificationRouter]; no extra tray here.
+      if (kIsWeb) return;
+      // Mobile admin: still show a heads-up below.
+    }
+
     final notification = message.notification;
     if (notification == null) {
-      // Data-only message — nothing to render, but the data may still
-      // matter for routing on a later tap.
       return;
     }
     if (kDebugMode) {
-      debugPrint('[fcm fg] type=${message.data['type']} '
-          'title=${notification.title}');
+      debugPrint(
+        '[fcm fg] type=${message.data['type']} '
+        'title=${notification.title}',
+      );
     }
     final payload = jsonEncode(_dataAsMap(message.data));
     final details = NotificationDetails(
@@ -222,9 +249,11 @@ class NotificationService {
     try {
       final decoded = jsonDecode(payload);
       if (decoded is Map) {
-        PushRouter.navigateFromData(
-          decoded.map((k, v) => MapEntry(k.toString(), v)),
-        );
+        final data = decoded.map((k, v) => MapEntry(k.toString(), v));
+        if (AdminNotificationRouter.tryHandleData(data, fromTap: true)) {
+          return;
+        }
+        PushRouter.navigateFromData(data);
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[fcm tap-fg] payload decode failed: $e');

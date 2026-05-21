@@ -33,6 +33,9 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_pa
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_notifications_controller.dart';
+import 'package:satya_devotte_app/features/admin_notifications/data/admin_notifications_api.dart';
+import 'package:satya_devotte_app/features/admin_notifications/data/admin_notifications_repository.dart';
+import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/notifications/data/notifications_repository.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
@@ -254,6 +257,21 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<CmsNotificationsController>(
       () => CmsNotificationsController(Get.find<NotificationsRepository>()),
+      fenix: true,
+    );
+    // ── Admin system notifications (Activity inbox) ────────────
+    Get.put<AdminNotificationsApi>(
+      AdminNotificationsApi(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<AdminNotificationsRepository>(
+      AdminNotificationsRepository(Get.find<AdminNotificationsApi>()),
+      permanent: true,
+    );
+    Get.lazyPut<CmsAdminNotificationsController>(
+      () => CmsAdminNotificationsController(
+        Get.find<AdminNotificationsRepository>(),
+      ),
       fenix: true,
     );
     // ── Shared media uploader (used by CMS create/edit forms) ────

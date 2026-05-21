@@ -166,6 +166,22 @@ class ApiEndpoints {
   static String rejectReplacementRequest(String id) =>
       '/api/v1/admin/replacements/$id/reject';
 
+  // ── Admin system notifications (operational inbox) ─────────────
+  /// GET — paginated inbox. Query: `page`, `limit`, `unreadOnly`, `type`.
+  static const String adminNotifications = '/api/v1/admin/notifications';
+
+  static const String adminNotificationsUnreadCount =
+      '/api/v1/admin/notifications/unread-count';
+
+  static const String adminNotificationsReadAll =
+      '/api/v1/admin/notifications/read-all';
+
+  static String adminNotification(String id) =>
+      '/api/v1/admin/notifications/$id';
+
+  static String adminNotificationRead(String id) =>
+      '/api/v1/admin/notifications/$id/read';
+
   /// Legacy combined requests inbox (cancel / refund / replacement).
   static const String orderRequests = '/api/v1/orders/requests';
   // ── Orders (user flow) ────────────────────────────────────────

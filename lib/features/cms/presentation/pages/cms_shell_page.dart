@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
-import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/admin_notifications/data/models/admin_notification_item.dart';
+import 'package:satya_devotte_app/features/admin_notifications/presentation/contents/cms_admin_notifications_content.dart';
+import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
+import 'package:satya_devotte_app/features/admin_notifications/presentation/widgets/cms_activity_bell_button.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_puja_content.dart';
@@ -24,8 +29,6 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
-import 'package:satya_devotte_app/core/services/app_music_service.dart';
-import 'package:satya_devotte_app/shared/widgets/app_music_control_button.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {
@@ -55,77 +58,31 @@ class _CmsShellPageState extends State<CmsShellPage> {
   // of this set.
   final Set<String> _expandedGroups = <String>{};
   final ScrollController _sidebarScrollController = ScrollController();
-  void Function()? _cancelHashListener;
-
-  String _initialCmsRoute() {
-    if (kIsWeb) {
-      final fragment = Uri.base.fragment;
-      if (fragment.isNotEmpty) {
-        return fragment.startsWith('/') ? fragment : '/$fragment';
-      }
-    }
-    return Get.currentRoute;
-  }
+  Timer? _notificationsPollTimer;
 
   @override
   void initState() {
     super.initState();
     CmsShellNavigation.attach(this);
     final auth = Get.find<AuthController>();
-    _selectedIndex = _indexFromRoute(_initialCmsRoute(), auth.isSuperAdmin);
+    _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
+    if (Get.isRegistered<CmsAdminNotificationsController>()) {
+      final ctrl = Get.find<CmsAdminNotificationsController>();
+      unawaited(ctrl.refreshUnreadCount());
+      _notificationsPollTimer = Timer.periodic(
+        const Duration(seconds: 60),
+        (_) => unawaited(ctrl.refreshUnreadCount()),
+      );
+    }
     // Auto-expand any group that owns the resolved selected index so the
     // sidebar reflects the deep-linked tab on first paint.
     final group = _groupLabelForIndex(_selectedIndex);
     if (group != null) _expandedGroups.add(group);
-
-    if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.find<AppMusicService>().startOnAdminLogin();
-        _applyCmsRouteEffects(_initialCmsRoute());
-        final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(_initialCmsRoute());
-        if (orderId == null) {
-          updateCmsHashRoute(_routeFromIndex(_selectedIndex));
-        }
-      });
-      _cancelHashListener = listenCmsHashRoute((route) {
-        if (!mounted) return;
-        final idx = _indexFromRoute(route, auth.isSuperAdmin);
-        if (idx != _selectedIndex) {
-          setState(() {
-            _selectedIndex = idx;
-            final g = _groupLabelForIndex(idx);
-            if (g != null) _expandedGroups.add(g);
-          });
-        }
-        _applyCmsRouteEffects(route);
-      });
-    }
-  }
-
-  /// Opens/closes in-shell drill-downs based on the hash (e.g. order detail id).
-  void _applyCmsRouteEffects(String route) {
-    final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(route);
-    if (orderId != null) {
-      if (Get.isRegistered<AdminOrdersController>()) {
-        final orders = Get.find<AdminOrdersController>();
-        if (orders.selectedOrderId != orderId) {
-          orders.openOrder(orderId, syncUrl: false);
-        }
-      }
-      return;
-    }
-    if (route == AppRoutes.cmsPoojaKitOrders &&
-        Get.isRegistered<AdminOrdersController>()) {
-      final orders = Get.find<AdminOrdersController>();
-      if (orders.selectedOrderId != null) {
-        orders.closeDetail(syncUrl: false);
-      }
-    }
   }
 
   @override
   void dispose() {
-    _cancelHashListener?.call();
+    _notificationsPollTimer?.cancel();
     CmsShellNavigation.detach(this);
     _sidebarScrollController.dispose();
     super.dispose();
@@ -140,13 +97,6 @@ class _CmsShellPageState extends State<CmsShellPage> {
       final group = _groupLabelForIndex(index);
       if (group != null) _expandedGroups.add(group);
     });
-    // Sync browser hash on web without remounting the shell (sidebar scroll).
-    if (index == _NavIds.poojaKitOrders &&
-        Get.isRegistered<AdminOrdersController>() &&
-        Get.find<AdminOrdersController>().selectedOrderId != null) {
-      Get.find<AdminOrdersController>().closeDetail(syncUrl: false);
-    }
-    updateCmsHashRoute(_routeFromIndex(index));
     // Tab switches only update local state so the shell (and sidebar scroll
     // position) are not recreated via Get.offNamed on every menu click.
     if (index == _NavIds.poojaKitRefunds &&
@@ -156,6 +106,53 @@ class _CmsShellPageState extends State<CmsShellPage> {
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
       Get.find<InventoryController>().init();
+    }
+    if (index == _NavIds.activity &&
+        Get.isRegistered<CmsAdminNotificationsController>()) {
+      unawaited(Get.find<CmsAdminNotificationsController>().loadFirstPage());
+    }
+    if (kIsWeb) {
+      updateCmsHashRoute(_routeFromIndex(index));
+    }
+  }
+
+  String _routeFromIndex(int index) {
+    switch (index) {
+      case _NavIds.deities:
+        return AppRoutes.cmsDeities;
+      case _NavIds.pujas:
+        return AppRoutes.cmsRituals;
+      case _NavIds.festivals:
+        return AppRoutes.cmsFestivals;
+      case _NavIds.donations:
+        return AppRoutes.cmsDonations;
+      case _NavIds.donationsAll:
+        return AppRoutes.cmsDonationsAll;
+      case _NavIds.notifications:
+        return AppRoutes.cmsNotifications;
+      case _NavIds.activity:
+        return AppRoutes.cmsActivity;
+      case _NavIds.users:
+        return AppRoutes.cmsUsers;
+      case _NavIds.shlokas:
+        return AppRoutes.cmsShlokas;
+      case _NavIds.admins:
+        return AppRoutes.cmsAdmins;
+      case _NavIds.poojaKitInventory:
+        return AppRoutes.cmsPoojaKitInventory;
+      case _NavIds.poojaKitManage:
+        return AppRoutes.cmsPoojaKit;
+      case _NavIds.poojaKitOrders:
+        return AppRoutes.cmsPoojaKitOrders;
+      case _NavIds.poojaKitRefunds:
+        return AppRoutes.cmsPoojaKitRefunds;
+      case _NavIds.poojaKitPayments:
+        return AppRoutes.cmsPoojaKitPayments;
+      case _NavIds.manageRituals:
+        return AppRoutes.cmsManageRituals;
+      case _NavIds.dashboard:
+      default:
+        return AppRoutes.cms;
     }
   }
 
@@ -174,8 +171,12 @@ class _CmsShellPageState extends State<CmsShellPage> {
     final w = MediaQuery.of(context).size.width;
     return WillPopScope(
       onWillPop: () async {
-        if (_selectedIndex != 0) {
-          _onSelect(_NavIds.dashboard);
+        final isDashboardRoute = Get.currentRoute == AppRoutes.cms;
+        if (_selectedIndex != 0 || !isDashboardRoute) {
+          setState(() => _selectedIndex = 0);
+          if (!isDashboardRoute) {
+            Get.offNamed(AppRoutes.cms);
+          }
           return false;
         }
         // Already on dashboard: consume browser back and stay on CMS.
@@ -232,7 +233,10 @@ class _WebLayout extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _WebTopBar(selectedIndex: selectedIndex),
+                _WebTopBar(
+                  selectedIndex: selectedIndex,
+                  onActivityBellTap: () => onSelect(_NavIds.activity),
+                ),
                 Expanded(child: _buildContent(selectedIndex)),
               ],
             ),
@@ -572,6 +576,7 @@ class _SidebarItem extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (item.index == _NavIds.activity) const CmsActivitySidebarBadge(),
               ],
             ),
           ),
@@ -917,8 +922,12 @@ class _MobileDrawer extends StatelessWidget {
 // WEB TOP BAR
 // ════════════════════════════════════════════════════════════════
 class _WebTopBar extends StatelessWidget {
-  const _WebTopBar({required this.selectedIndex});
+  const _WebTopBar({
+    required this.selectedIndex,
+    required this.onActivityBellTap,
+  });
   final int selectedIndex;
+  final VoidCallback onActivityBellTap;
 
   @override
   Widget build(BuildContext context) {
@@ -963,28 +972,7 @@ class _WebTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const AppMusicControlButton(
-            size: 36,
-            borderRadius: 8,
-            iconSize: 18,
-            enableTooltip: true,
-          ),
-          const SizedBox(width: 12),
-          // Notification bell
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: CmsColors.bg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: CmsColors.border),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              size: 18,
-              color: CmsColors.textSecond,
-            ),
-          ),
+          CmsActivityBellButton(onTap: onActivityBellTap),
           const SizedBox(width: 12),
           // Avatar
           Obx(
@@ -1079,6 +1067,7 @@ class _NavIds {
   static const int poojaKitRefunds = 14;
   // Pooja Kit group child for payments.
   static const int poojaKitPayments = 15;
+  static const int activity = 17;
 }
 
 const String _poojaKitGroupLabel = 'Ecommerce';
@@ -1178,6 +1167,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     index: _NavIds.notifications,
   ),
   const _NavEntry(
+    label: 'Activity',
+    icon: Icons.notifications_active_outlined,
+    activeIcon: Icons.notifications_active,
+    index: _NavIds.activity,
+  ),
+  const _NavEntry(
     label: 'Users',
     icon: Icons.people_outline,
     activeIcon: Icons.people,
@@ -1243,6 +1238,8 @@ String _pageTitle(int i) {
       return 'All Donations';
     case _NavIds.notifications:
       return 'Notifications';
+    case _NavIds.activity:
+      return 'Activity';
     case _NavIds.users:
       return 'Users';
     // case _NavIds.analytics:
@@ -1284,6 +1281,8 @@ Widget _buildContent(int i) {
       return const CmsDonationsAllContent();
     case _NavIds.notifications:
       return const CmsNotificationsContent();
+    case _NavIds.activity:
+      return const CmsAdminNotificationsContent();
     case _NavIds.users:
       return const CmsUsersContent();
     // case _NavIds.analytics:
@@ -1309,44 +1308,6 @@ Widget _buildContent(int i) {
   }
 }
 
-String _routeFromIndex(int index) {
-  switch (index) {
-    case _NavIds.deities:
-      return AppRoutes.cmsDeities;
-    case _NavIds.pujas:
-      return AppRoutes.cmsRituals;
-    case _NavIds.festivals:
-      return AppRoutes.cmsFestivals;
-    case _NavIds.donations:
-      return AppRoutes.cmsDonations;
-    case _NavIds.donationsAll:
-      return AppRoutes.cmsDonationsAll;
-    case _NavIds.notifications:
-      return AppRoutes.cmsNotifications;
-    case _NavIds.users:
-      return AppRoutes.cmsUsers;
-    case _NavIds.shlokas:
-      return AppRoutes.cmsShlokas;
-    case _NavIds.admins:
-      return AppRoutes.cmsAdmins;
-    case _NavIds.poojaKitInventory:
-      return AppRoutes.cmsPoojaKitInventory;
-    case _NavIds.poojaKitManage:
-      return AppRoutes.cmsPoojaKit;
-    case _NavIds.poojaKitOrders:
-      return AppRoutes.cmsPoojaKitOrders;
-    case _NavIds.poojaKitRefunds:
-      return AppRoutes.cmsPoojaKitRefunds;
-    case _NavIds.poojaKitPayments:
-      return AppRoutes.cmsPoojaKitPayments;
-    case _NavIds.manageRituals:
-      return AppRoutes.cmsManageRituals;
-    case _NavIds.dashboard:
-    default:
-      return AppRoutes.cms;
-  }
-}
-
 int _indexFromRoute(String route, bool isSuperAdmin) {
   switch (route) {
     case AppRoutes.cmsDeities:
@@ -1362,6 +1323,8 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
       return _NavIds.festivals;
     case AppRoutes.cmsNotifications:
       return _NavIds.notifications;
+    case AppRoutes.cmsActivity:
+      return _NavIds.activity;
     case AppRoutes.cmsUsers:
       return _NavIds.users;
     case AppRoutes.cmsAnalytics:
@@ -1389,11 +1352,7 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
     case AppRoutes.cmsApproval:
       return _NavIds.dashboard;
     case AppRoutes.cms:
-      return _NavIds.dashboard;
     default:
-      if (CmsRoutePaths.poojaKitOrderIdFromRoute(route) != null) {
-        return _NavIds.poojaKitOrders;
-      }
       return _NavIds.dashboard;
   }
 }
@@ -1401,12 +1360,6 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
 /// In-shell tab navigation without `Get.offNamed` (keeps sidebar scroll position).
 class CmsShellNavigation {
   static _CmsShellPageState? _shell;
-
-  /// Notifies [CmsPujaContent] to open the add-pooja form after tab switch.
-  static final ValueNotifier<int> openAddPujaTick = ValueNotifier<int>(0);
-
-  /// Notifies [CmsFestivalsContent] to open the add-festival form after tab switch.
-  static final ValueNotifier<int> openAddFestivalTick = ValueNotifier<int>(0);
 
   static void attach(_CmsShellPageState shell) => _shell = shell;
 
@@ -1422,25 +1375,42 @@ class CmsShellNavigation {
     return true;
   }
 
-  /// Switches to Manage Poojas and signals the add form to open in-shell.
-  static bool openAddPuja() {
+  static bool selectTab(int index) {
     final shell = _shell;
     if (shell == null) return false;
-    shell.navigateToTab(_NavIds.pujas);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      openAddPujaTick.value++;
-    });
+    shell.navigateToTab(index);
     return true;
   }
 
-  /// Switches to Festivals and signals the add form to open in-shell.
-  static bool openAddFestival() {
+  static void openFromNotification(AdminNotificationItem n) {
     final shell = _shell;
-    if (shell == null) return false;
-    shell.navigateToTab(_NavIds.festivals);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      openAddFestivalTick.value++;
-    });
-    return true;
+    if (shell == null) return;
+    switch (n.type) {
+      case 'NEW_ORDER':
+        final id = n.orderId;
+        shell.navigateToTab(_NavIds.poojaKitOrders);
+        if (id != null && id.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (Get.isRegistered<AdminOrdersController>()) {
+              Get.find<AdminOrdersController>().openOrder(id);
+            }
+          });
+        } else if (kIsWeb) {
+          updateCmsHashRoute(AppRoutes.cmsPoojaKitOrders);
+        }
+        break;
+      case 'PAYMENT_SUCCESS':
+        shell.navigateToTab(_NavIds.donationsAll);
+        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsDonationsAll);
+        break;
+      case 'REFUND_REQUEST':
+      case 'REPLACEMENT_REQUEST':
+        shell.navigateToTab(_NavIds.poojaKitRefunds);
+        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsPoojaKitRefunds);
+        break;
+      default:
+        shell.navigateToTab(_NavIds.activity);
+        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsActivity);
+    }
   }
 }
