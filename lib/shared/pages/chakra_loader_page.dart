@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class ChakraLoaderPage extends StatefulWidget {
-  const ChakraLoaderPage({
-    super.key,
-    this.asOverlay = false,
-  });
+  const ChakraLoaderPage({super.key, this.asOverlay = false});
 
   final bool asOverlay;
 
@@ -37,7 +34,7 @@ class _ChakraLoaderPageState extends State<ChakraLoaderPage>
   @override
   Widget build(BuildContext context) {
     final overlayColor = widget.asOverlay
-        ? Colors.black.withValues(alpha: 0.45)
+        ? Colors.black.withValues(alpha: 0.7)
         : Colors.transparent;
     const loaderSize = 150.0;
     final loaderBody = ColoredBox(
@@ -119,16 +116,9 @@ class _ChakraLoaderPageState extends State<ChakraLoaderPage>
     );
 
     if (widget.asOverlay) {
-      return Positioned.fill(
-        child: AbsorbPointer(
-          child: loaderBody,
-        ),
-      );
+      return Positioned.fill(child: AbsorbPointer(child: loaderBody));
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: loaderBody,
-    );
+    return Scaffold(backgroundColor: Colors.transparent, body: loaderBody);
   }
 }

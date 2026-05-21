@@ -501,6 +501,30 @@ class _IntroScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 180),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => Get.to(() => _PoojaKnowMoreScreen(pooja: pooja)),
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    'Know more about the puja →',
+                    style:
+                        AppTypography.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ).copyWith(
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.white,
+                          decorationThickness: 2.0,
+                        ),
+                  ),
+                ),
+              ),
+            ),
             const Spacer(),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 240),
@@ -512,6 +536,219 @@ class _IntroScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PoojaKnowMoreScreen extends StatelessWidget {
+  const _PoojaKnowMoreScreen({required this.pooja});
+
+  final PoojaView pooja;
+
+  String get _whyPerformed {
+    final why = pooja.purpose['why']?.toString().trim() ?? '';
+    if (why.isNotEmpty) return why;
+    return pooja.description.trim();
+  }
+
+  List<String> get _expectedOutcomes =>
+      _poojaStringList(pooja.purpose['benefits']);
+
+  String get _deityAbout {
+    final summary = pooja.deitySummary['about']?.toString().trim() ?? '';
+    if (summary.isNotEmpty) return summary;
+    final doc = pooja.deityDoc;
+    if (doc == null) return '';
+    return (doc['about'] ??
+            doc['description'] ??
+            doc['who'] ??
+            doc['summary'] ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  List<String> get _coreBlessings {
+    final fromSummary = _poojaStringList(pooja.deitySummary['blessings']);
+    if (fromSummary.isNotEmpty) return fromSummary;
+    return pooja.blessings;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = <Widget>[];
+
+    final why = _whyPerformed;
+    if (why.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(title: 'Why is this ritual performed?', body: why),
+      );
+    }
+
+    final outcomes = _expectedOutcomes;
+    if (outcomes.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'What outcomes can be expected?',
+          bullets: outcomes,
+        ),
+      );
+    }
+
+    final deityAbout = _deityAbout;
+    if (deityAbout.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(title: 'Who is the Deity?', body: deityAbout),
+      );
+    }
+
+    final blessings = _coreBlessings;
+    if (blessings.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Core Blessings of this Deity',
+          bullets: blessings,
+        ),
+      );
+    }
+
+    if (sections.isEmpty) {
+      sections.add(
+        const _KnowMoreInfoCard(
+          title: 'About this puja',
+          body: 'More information will be available soon.',
+        ),
+      );
+    }
+
+    return _BaseWizardScreen(
+      showPattern: true,
+      onBack: () => Get.back(),
+      child: DefaultTextStyle(
+        style: const TextStyle(decoration: TextDecoration.none),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text(
+                'Know More about the Puja',
+                style: AppTypography.lora(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFFFD180),
+                  height: 1.2,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: sections.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (_, index) => sections[index],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KnowMoreInfoCard extends StatelessWidget {
+  const _KnowMoreInfoCard({required this.title, this.body, this.bullets});
+
+  final String title;
+  final String? body;
+  final List<String>? bullets;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(0XFFEAE1D5).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.lora(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFFFD180),
+              decoration: TextDecoration.none,
+            ),
+          ),
+          if (body != null && body!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              body!,
+              style: AppTypography.inter(
+                fontSize: 14,
+                height: 1.55,
+                color: Colors.white.withOpacity(0.92),
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
+          if (bullets != null && bullets!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final item in bullets!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.92),
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: AppTypography.inter(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Colors.white.withOpacity(0.92),
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+List<String> _poojaStringList(dynamic raw) {
+  if (raw is List) {
+    return raw
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+  if (raw is String && raw.trim().isNotEmpty) {
+    return raw
+        .split(RegExp(r'[,;\n]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+  return const [];
 }
 
 class _SimpleInfoScreen extends StatelessWidget {
@@ -1089,6 +1326,7 @@ class _WizardGradientTitle extends StatelessWidget {
           text,
           textAlign: textAlign,
           style: baseStyle.copyWith(
+            decoration: TextDecoration.none,
             foreground: Paint()
               ..shader = _wizardTitleGradient.createShader(
                 Rect.fromLTWH(0, 0, painter.width, painter.height),
