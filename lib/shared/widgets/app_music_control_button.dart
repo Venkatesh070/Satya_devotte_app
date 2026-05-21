@@ -11,6 +11,8 @@ class AppMusicControlButton extends StatelessWidget {
     this.borderRadius = 24,
     this.iconSize = 26,
     this.showShadow = true,
+    this.enableTooltip = false,
+    this.tooltipMessage,
   });
 
   final double size;
@@ -19,6 +21,12 @@ class AppMusicControlButton extends StatelessWidget {
 
   /// Floating FAB uses gradient only (no shadow).
   final bool showShadow;
+
+  /// Shows hover tooltip (web CMS). Uses [tooltipMessage] or play/pause text.
+  final bool enableTooltip;
+
+  /// Optional fixed tooltip; when null and [enableTooltip], toggles with playback.
+  final String? tooltipMessage;
 
   static const _gradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -52,8 +60,9 @@ class AppMusicControlButton extends StatelessWidget {
         size: iconSize,
       );
 
+      final Widget button;
       if (showShadow) {
-        return Material(
+        button = Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: music.toggle,
@@ -66,16 +75,29 @@ class AppMusicControlButton extends StatelessWidget {
             ),
           ),
         );
+      } else {
+        button = GestureDetector(
+          onTap: music.toggle,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: decoration,
+            child: Center(child: icon),
+          ),
+        );
       }
 
-      return GestureDetector(
-        onTap: music.toggle,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: decoration,
-          child: Center(child: icon),
-        ),
+      if (!enableTooltip) return button;
+
+      final message = tooltipMessage ??
+          (playing
+              ? 'Pause background music'
+              : 'Play background music');
+
+      return Tooltip(
+        message: message,
+        waitDuration: const Duration(milliseconds: 350),
+        child: button,
       );
     });
   }

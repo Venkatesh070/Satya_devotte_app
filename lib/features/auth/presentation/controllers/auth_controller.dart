@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/auth/domain/entities/auth_login_result.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
@@ -61,6 +62,7 @@ class AuthController extends GetxController {
   void navigateAfterLogin() {
     if (isAdmin) {
       Get.offAllNamed(AppRoutes.cms);
+      _startCmsBackgroundMusic();
       return;
     }
     if (!isProfileRegistrationComplete) {
@@ -99,6 +101,12 @@ class AuthController extends GetxController {
 
   /// Keeps [ProfileController] in sync after login / cold-start restore so
   /// home greeting and profile UI see the latest `user` map (e.g. `fullName`).
+  void _startCmsBackgroundMusic() {
+    if (!Get.isRegistered<AppMusicService>()) return;
+    final music = Get.find<AppMusicService>();
+    Future.microtask(() => unawaited(music.startOnAdminLogin()));
+  }
+
   void _refreshProfileControllerAfterAuth() {
     try {
       if (!Get.isRegistered<ProfileController>()) return;

@@ -27,13 +27,7 @@ class _WebLoginPageState extends State<WebLoginPage>
 
   AuthController get controller => Get.find<AuthController>();
 
-  void _navigateByRole() {
-    if (controller.isAdmin) {
-      Get.offAllNamed(AppRoutes.cms);
-    } else {
-      Get.offAllNamed(AppRoutes.home);
-    }
-  }
+  void _navigateByRole() => controller.navigateAfterLogin();
 
   void _openForgotPassword() {
     final forgotCtrl = Get.find<ForgotPasswordController>();

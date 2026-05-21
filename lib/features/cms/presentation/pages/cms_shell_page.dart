@@ -80,7 +80,7 @@ class _CmsShellPageState extends State<CmsShellPage> {
 
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.find<AppMusicService>().start();
+        Get.find<AppMusicService>().startOnAdminLogin();
         _applyCmsRouteEffects(_initialCmsRoute());
         final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(_initialCmsRoute());
         if (orderId == null) {
@@ -967,6 +967,7 @@ class _WebTopBar extends StatelessWidget {
             size: 36,
             borderRadius: 8,
             iconSize: 18,
+            enableTooltip: true,
           ),
           const SizedBox(width: 12),
           // Notification bell

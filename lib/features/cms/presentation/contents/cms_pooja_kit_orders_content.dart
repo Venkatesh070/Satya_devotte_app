@@ -1056,33 +1056,45 @@ class _SummaryCard extends StatelessWidget {
     return CmsFormCard(
       title: 'Summary',
       children: [
-        Wrap(
-          spacing: 28,
-          runSpacing: 12,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MetaPair(label: 'Order #', value: order.orderNumber.isEmpty ? '—' : order.orderNumber),
-            _MetaPair(label: 'Total', value: order.formattedTotal),
-            _MetaPair(label: 'Subtotal', value: order.formattedSubtotal),
-            _MetaPair(label: 'Shipping', value: order.formattedShipping),
-            _MetaPair(label: 'Tax', value: order.formattedTax),
-            _MetaPair(label: 'Currency', value: order.currency),
-            _MetaPair(
-              label: 'Method',
-              value: order.paymentMethod.isEmpty ? '—' : order.paymentMethod,
+            Expanded(
+              child: _MetaPair(
+                label: 'Order #',
+                value: order.orderNumber.isEmpty ? '—' : order.orderNumber,
+              ),
             ),
-            _MetaPair(
-              label: 'Reference',
-              value: order.paystackReference.isEmpty
-                  ? '—'
-                  : order.paystackReference,
+            const SizedBox(width: 16),
+            Expanded(
+              child: _MetaPair(label: 'Total', value: order.formattedTotal),
             ),
-            _MetaPair(
-              label: 'Customer',
-              value: order.userName.isEmpty
-                  ? (order.userEmail.isEmpty ? '—' : order.userEmail)
-                  : '${order.userName}\n${order.userEmail}',
+            const SizedBox(width: 16),
+            Expanded(
+              child: _MetaPair(label: 'Currency', value: order.currency),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _MetaPair(
+                label: 'Method',
+                value: order.paymentMethod.isEmpty ? '—' : order.paymentMethod,
+              ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _MetaPair(
+          label: 'Reference',
+          value: order.paystackReference.isEmpty
+              ? '—'
+              : order.paystackReference,
+        ),
+        const SizedBox(height: 12),
+        _MetaPair(
+          label: 'Customer',
+          value: order.userName.isEmpty
+              ? (order.userEmail.isEmpty ? '—' : order.userEmail)
+              : '${order.userName}\n${order.userEmail}',
         ),
         const SizedBox(height: 14),
         Row(
@@ -1885,31 +1897,28 @@ class _MetaPair extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 220,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: CmsColors.textSecond,
-              letterSpacing: 0.2,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textSecond,
+            letterSpacing: 0.2,
           ),
-          const SizedBox(height: 2),
-          SelectableText(
-            value,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: CmsColors.textPrimary,
-            ),
+        ),
+        const SizedBox(height: 2),
+        SelectableText(
+          value,
+          style: const TextStyle(
+            fontSize: 12.5,
+            color: CmsColors.textPrimary,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
