@@ -1,7 +1,7 @@
 class AppEnv {
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'test',
+    defaultValue: 'prod',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',

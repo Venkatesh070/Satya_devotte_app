@@ -10,6 +10,8 @@ class CustomButton extends StatefulWidget {
     this.enabled = true,
     this.textColor = Colors.black,
     this.gradientColors = const [AppColors.white, AppColors.white],
+    this.gradientBegin = Alignment.topLeft,
+    this.gradientEnd = Alignment.bottomRight,
     this.borderRadius = 20,
   });
 
@@ -18,6 +20,8 @@ class CustomButton extends StatefulWidget {
   final bool isLoading;
   final bool enabled;
   final List<Color> gradientColors;
+  final AlignmentGeometry gradientBegin;
+  final AlignmentGeometry gradientEnd;
   final Color textColor;
   final double borderRadius;
   @override
@@ -46,6 +50,8 @@ class _CustomButtonState extends State<CustomButton> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(widget.borderRadius),
               gradient: LinearGradient(
+                begin: widget.gradientBegin,
+                end: widget.gradientEnd,
                 colors: widget.gradientColors,
               ),
               boxShadow: const [
