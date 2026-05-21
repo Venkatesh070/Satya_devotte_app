@@ -19,7 +19,7 @@ Implement a complete **Donations + Paystack flow** in this Flutter app, integrat
 
 ## Backend contract (locked, do not change)
 
-Base URL: `https://satya-server-app-2.onrender.com/api/v1`
+Base URL: ``
 All endpoints require `Authorization: Bearer <Firebase ID token>`.
 
 Set this once for the curls below:

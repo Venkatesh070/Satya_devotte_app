@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
-import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
 
 class ProfileController extends GetxController {
@@ -23,8 +27,28 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadSessionUser();
-    loadProfile();
+    unawaited(loadSessionUser());
+    unawaited(_maybeLoadProfile());
+  }
+
+  /// Admin/superadmin CMS on web uses login session data only — not `/auth/profile`.
+  Future<bool> _shouldSkipProfileApi() async {
+    if (!kIsWeb) return false;
+
+    await _authSessionService.getUserData();
+    if (_authSessionService.isAdmin) return true;
+
+    if (Get.isRegistered<AuthController>() && Get.find<AuthController>().isAdmin) {
+      return true;
+    }
+
+    final route = Get.currentRoute;
+    return route == AppRoutes.cms || route.startsWith('${AppRoutes.cms}/');
+  }
+
+  Future<void> _maybeLoadProfile() async {
+    if (await _shouldSkipProfileApi()) return;
+    await loadProfile();
   }
 
   Future<void> loadSessionUser() async {
@@ -33,6 +57,8 @@ class ProfileController extends GetxController {
   }
 
   Future<void> loadProfile() async {
+    if (await _shouldSkipProfileApi()) return;
+
     // ── DEBUG: Print Bearer Token for manual API testing ──
     if (kDebugMode) {
       final token = await _authSessionService.getAccessToken();

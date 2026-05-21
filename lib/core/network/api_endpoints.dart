@@ -114,8 +114,8 @@ class ApiEndpoints {
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
   /// `orderStatus`, `paymentStatus`, `user`, `search` (order # substring).
+  static const String allPayments = '/api/v1/orders/all';
   static const String allOrders = '/api/v1/orders/all';
-
   /// PATCH — fulfilment status. Body: `{ status, note? }`.
   /// `SHIPPED` requires `tracking.trackingNumber` already set.
   static String orderStatus(String id) => '/api/v1/orders/$id/status';
@@ -211,6 +211,9 @@ class ApiEndpoints {
   /// POST — initiate a Paystack payment for the given donation.
   /// Body: `{ amount, currency?, note?, callbackUrl? }`.
   static String donate(String id) => '/api/v1/donations/$id/donate';
+
+  /// GET — list all payments. Query: `page`, `limit`, `search` (order # or reference).
+  // static const String allPayments = '/api/v1/payments/all';
 
   /// GET — idempotent verification by Paystack reference.
   static String verifyPayment(String reference) =>

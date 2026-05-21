@@ -1,12 +1,11 @@
 // Pooja Kit → Payments tab content for the CMS.
 //
-// Shares the same `GET /orders/all` endpoint as the Orders tab but views the
-// data through a payment-status lens:
+// Uses `GET /payments/all` (not orders/all) with payment-status filters:
 //   • Default `paymentStatus` filter chip set: ALL / PAID / PENDING / FAILED /
 //     REFUNDED.
 //   • Each row exposes a "Verify now" action that calls
 //     `GET /payments/verify/:reference` and refreshes the row in-place.
-//   • Search by order number (server-side `search`).
+//   • Search by order number or Paystack reference (server-side `search`).
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -152,7 +151,7 @@ class _FiltersBarState extends State<_FiltersBar> {
                     onSubmitted: widget.controller.setSearch,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Search by order number…',
+                      hintText: 'Search by order number or reference…',
                       hintStyle: const TextStyle(
                         color: Color(0xFFAAAAAA),
                         fontSize: 13,

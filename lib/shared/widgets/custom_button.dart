@@ -29,54 +29,52 @@ class _CustomButtonState extends State<CustomButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: widget.enabled && !widget.isLoading
-          ? (_) => setState(() => _isPressed = true)
-          : null,
-      onTapUp: widget.enabled && !widget.isLoading
-          ? (_) => setState(() => _isPressed = false)
-          : null,
-      onTapCancel: widget.enabled && !widget.isLoading
-          ? () => setState(() => _isPressed = false)
-          : null,
-      onTap: widget.enabled && !widget.isLoading ? widget.onTap : null,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          height: 50,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            gradient: LinearGradient(
-              colors: widget.gradientColors,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 20,
-                offset: Offset(0, 4),
+    final canTap = widget.enabled && !widget.isLoading;
+    return MouseRegion(
+      cursor: canTap ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTapDown: canTap ? (_) => setState(() => _isPressed = true) : null,
+        onTapUp: canTap ? (_) => setState(() => _isPressed = false) : null,
+        onTapCancel: canTap ? () => setState(() => _isPressed = false) : null,
+        onTap: canTap ? widget.onTap : null,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.96 : 1,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              gradient: LinearGradient(
+                colors: widget.gradientColors,
               ),
-            ],
-          ),
-          child: Center(
-            child: widget.isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 20,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: widget.isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: widget.textColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                : Text(
-                    widget.label,
-                    style: TextStyle(
-                      color: widget.textColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+            ),
           ),
         ),
       ),

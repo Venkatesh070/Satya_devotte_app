@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
@@ -28,14 +29,34 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
   bool _showAddForm = false;
   PoojaModel? _editingPooja;
 
+  void _openAddForm() {
+    if (!mounted) return;
+    _festivalController.loadFestivals();
+    setState(() {
+      _editingPooja = null;
+      _showAddForm = true;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     // Always reload with correct filter when entering Manage Poojas.
     // This clears any stale data left by loadAllPoojas() from the Approvals tab.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _controller.resetAndLoad();
+      if (Get.currentRoute == AppRoutes.cmsRitualCreate) {
+        _openAddForm();
+      }
     });
+    CmsShellNavigation.openAddPujaTick.addListener(_openAddForm);
+  }
+
+  @override
+  void dispose() {
+    CmsShellNavigation.openAddPujaTick.removeListener(_openAddForm);
+    super.dispose();
   }
 
   @override

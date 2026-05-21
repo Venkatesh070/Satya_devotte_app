@@ -6,7 +6,7 @@ import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
-import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
+import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class LoginPage extends StatefulWidget {
@@ -50,13 +50,6 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  void _openForgotPassword() {
-    final forgotCtrl = Get.find<ForgotPasswordController>();
-    forgotCtrl.emailController.clear();
-    forgotCtrl.isSuccess.value = false;
-    Get.to(() => const ForgotPasswordScreen());
-  }
-
   Future<void> _showEmailPasswordSheet() async {
     _emailController.clear();
     _passwordController.clear();
@@ -67,143 +60,14 @@ class _LoginPageState extends State<LoginPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              20,
-              20,
-              MediaQuery.of(context).viewInsets.bottom +
-                  MediaQuery.of(context).padding.bottom +
-                  20,
-            ),
-            child: Obx(() {
-              final isLoading = controller.isEmailSignInLoading;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Continue with Email',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    enabled: !isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: isLoading ? null : _openForgotPassword,
-                      child: const Text('Forgot Password?'),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  CustomButton(
-                    label: 'Sign In',
-                    isLoading: isLoading,
-                    enabled: !isLoading,
-                    gradientColors: const [
-                      AppColors.gradientStart,
-                      AppColors.gradientEnd,
-                    ],
-                    textColor: AppColors.white,
-                    onTap: () async {
-                      final email = _emailController.text.trim();
-                      final password = _passwordController.text;
-                      if (email.isEmpty || password.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter email and password.'),
-                          ),
-                        );
-                        return;
-                      }
-                      final isSuccess = await controller
-                          .signInWithEmailPassword(
-                            email: email,
-                            password: password,
-                          );
-                      if (!mounted) return;
-                      if (isSuccess) {
-                        Navigator.of(context).pop();
-                        _navigateByRole();
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            controller.lastAuthError ??
-                                'Email sign in failed. Please try again.',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    onPressed: isLoading
-                        ? null
-                        : () async {
-                            final email = _emailController.text.trim();
-                            final password = _passwordController.text;
-                            if (email.isEmpty || password.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter email and password.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-                            final isSuccess = await controller
-                                .signUpWithEmailPassword(
-                                  email: email,
-                                  password: password,
-                                );
-                            if (!mounted) return;
-                            if (isSuccess) {
-                              Navigator.of(context).pop();
-                              _navigateByRole();
-                              return;
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  controller.lastAuthError ??
-                                      'Email sign up failed. Please try again.',
-                                ),
-                              ),
-                            );
-                          },
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    child: const Text('Create New Account'),
-                  ),
-                ],
-              );
-            }),
-          ),
+      builder: (sheetContext) {
+        return _EmailPasswordBottomSheet(
+          emailController: _emailController,
+          passwordController: _passwordController,
+          onAuthSuccess: () {
+            Navigator.of(sheetContext).pop();
+            _navigateByRole();
+          },
         );
       },
     );
@@ -400,6 +264,196 @@ class _LoginPageState extends State<LoginPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmailPasswordBottomSheet extends StatefulWidget {
+  const _EmailPasswordBottomSheet({
+    required this.emailController,
+    required this.passwordController,
+    required this.onAuthSuccess,
+  });
+
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final VoidCallback onAuthSuccess;
+
+  @override
+  State<_EmailPasswordBottomSheet> createState() =>
+      _EmailPasswordBottomSheetState();
+}
+
+class _EmailPasswordBottomSheetState extends State<_EmailPasswordBottomSheet> {
+  bool _obscurePassword = true;
+  bool _showForgotPassword = false;
+
+  AuthController get _auth => Get.find<AuthController>();
+
+  void _openForgotPassword() {
+    final forgotCtrl = Get.find<ForgotPasswordController>();
+    forgotCtrl.emailController.text = widget.emailController.text.trim();
+    forgotCtrl.isSuccess.value = false;
+    setState(() => _showForgotPassword = true);
+  }
+
+  void _closeForgotPassword() {
+    setState(() => _showForgotPassword = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom +
+        MediaQuery.of(context).padding.bottom +
+        20;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, bottom),
+        child: _showForgotPassword
+            ? InlineForgotPasswordForm(onBack: _closeForgotPassword)
+            : Obx(() {
+                final isLoading = _auth.isEmailSignInLoading;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Continue with Email',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: widget.emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: !isLoading,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: widget.passwordController,
+                      obscureText: _obscurePassword,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: isLoading
+                              ? null
+                              : () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isLoading ? null : _openForgotPassword,
+                        child: const Text('Forgot Password?'),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    CustomButton(
+                      label: 'Sign In',
+                      isLoading: isLoading,
+                      enabled: !isLoading,
+                      gradientColors: const [
+                        AppColors.gradientStart,
+                        AppColors.gradientEnd,
+                      ],
+                      textColor: AppColors.white,
+                      onTap: () async {
+                        final email = widget.emailController.text.trim();
+                        final password = widget.passwordController.text;
+                        if (email.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please enter email and password.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        final isSuccess = await _auth.signInWithEmailPassword(
+                          email: email,
+                          password: password,
+                        );
+                        if (!context.mounted) return;
+                        if (isSuccess) {
+                          widget.onAuthSuccess();
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              _auth.lastAuthError ??
+                                  'Email sign in failed. Please try again.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              final email = widget.emailController.text.trim();
+                              final password = widget.passwordController.text;
+                              if (email.isEmpty || password.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter email and password.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final isSuccess =
+                                  await _auth.signUpWithEmailPassword(
+                                email: email,
+                                password: password,
+                              );
+                              if (!context.mounted) return;
+                              if (isSuccess) {
+                                widget.onAuthSuccess();
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    _auth.lastAuthError ??
+                                        'Email sign up failed. Please try again.',
+                                  ),
+                                ),
+                              );
+                            },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: const Text('Create New Account'),
+                    ),
+                  ],
+                );
+              }),
       ),
     );
   }

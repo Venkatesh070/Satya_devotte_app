@@ -66,6 +66,43 @@ class AdminOrdersRemoteDataSource {
     );
   }
 
+  /// `GET /payments/all` — paginated payments inbox (admin).
+  Future<AdminOrdersPage> getAllPayments({
+    int page = 1,
+    int limit = 10,
+    String? paymentStatus,
+    String? search,
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      if (paymentStatus != null && paymentStatus.isNotEmpty)
+        'paymentStatus': paymentStatus,
+      if (search != null && search.isNotEmpty) 'search': search,
+    };
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.allPayments,
+      queryParameters: query,
+    );
+    final body = _asMap(res.data);
+    final rawItems = _extractItems(body);
+    final orders = rawItems
+        .whereType<Map<String, dynamic>>()
+        .map(_normalizePaymentListJson)
+        .map(AdminOrder.fromJson)
+        .toList(growable: false);
+
+    final pagination = _extractPagination(body, page, limit, orders.length);
+
+    return AdminOrdersPage(
+      items: orders,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
+  }
+
   /// `GET /orders/:id`
   Future<AdminOrder> getOrder(String id) async {
     final res = await _apiClient.dio.get(ApiEndpoints.order(id));
@@ -266,6 +303,42 @@ class AdminOrdersRemoteDataSource {
 
   // ────────────────────────────── Payments ────────────────────────────
 
+  /// Merges a payment list row with its populated `order` for [AdminOrder.fromJson].
+  Map<String, dynamic> _normalizePaymentListJson(Map<String, dynamic> json) {
+    final order = json['order'];
+    if (order is Map<String, dynamic>) {
+      final merged = Map<String, dynamic>.from(order);
+      void copyIfMissing(String key, dynamic value) {
+        if (value == null) return;
+        final existing = merged[key];
+        if (existing == null ||
+            (existing is String && existing.trim().isEmpty)) {
+          merged[key] = value;
+        }
+      }
+      copyIfMissing('paymentStatus', json['paymentStatus']);
+      copyIfMissing('paymentMethod', json['paymentMethod']);
+      copyIfMissing(
+        'paystackReference',
+        json['paystackReference'] ?? json['reference'],
+      );
+      copyIfMissing('totalAmount', json['totalAmount'] ?? json['amount']);
+      copyIfMissing('currency', json['currency']);
+      copyIfMissing('createdAt', json['createdAt']);
+      copyIfMissing('orderNumber', json['orderNumber']);
+      return merged;
+    }
+    final flat = Map<String, dynamic>.from(json);
+    final orderId = flat['orderId'];
+    if (orderId != null) {
+      final id = orderId.toString();
+      if ((flat['_id'] ?? flat['id'] ?? '').toString().isEmpty) {
+        flat['_id'] = id;
+      }
+    }
+    return flat;
+  }
+
   /// `GET /payments/verify/:reference` — admin-triggered idempotent verify.
   /// Returns the updated [AdminOrder] when the server attaches one,
   /// otherwise `null`.
@@ -333,11 +406,13 @@ class AdminOrdersRemoteDataSource {
       if (data['orders'] is List) return data['orders'] as List;
       if (data['requests'] is List) return data['requests'] as List;
       if (data['replacements'] is List) return data['replacements'] as List;
+      if (data['payments'] is List) return data['payments'] as List;
     }
     if (data is List) return data;
     for (final k in const [
       'items',
       'orders',
+      'payments',
       'requests',
       'replacements',
       'results',

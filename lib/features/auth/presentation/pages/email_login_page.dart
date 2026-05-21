@@ -6,7 +6,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
+import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class EmailLoginPage extends StatefulWidget {
@@ -20,6 +20,8 @@ class _EmailLoginPageState extends State<EmailLoginPage>
     with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _showForgotPassword = false;
 
   late final AnimationController _rotationController;
 
@@ -55,9 +57,13 @@ class _EmailLoginPageState extends State<EmailLoginPage>
 
   void _openForgotPassword() {
     final forgotCtrl = Get.find<ForgotPasswordController>();
-    forgotCtrl.emailController.clear();
+    forgotCtrl.emailController.text = _emailController.text.trim();
     forgotCtrl.isSuccess.value = false;
-    Get.to(() => const ForgotPasswordScreen());
+    setState(() => _showForgotPassword = true);
+  }
+
+  void _closeForgotPassword() {
+    setState(() => _showForgotPassword = false);
   }
 
   @override
@@ -167,7 +173,11 @@ class _EmailLoginPageState extends State<EmailLoginPage>
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Obx(() {
+                    child: _showForgotPassword
+                        ? InlineForgotPasswordForm(
+                            onBack: _closeForgotPassword,
+                          )
+                        : Obx(() {
                       final isLoading = controller.isEmailSignInLoading;
 
                       return Column(
@@ -198,11 +208,27 @@ class _EmailLoginPageState extends State<EmailLoginPage>
                           /// Password
                           TextField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: _obscurePassword,
                             enabled: !isLoading,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: "Password",
-                              border: OutlineInputBorder(),
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: isLoading
+                                    ? null
+                                    : () => setState(
+                                          () => _obscurePassword =
+                                              !_obscurePassword,
+                                        ),
+                              ),
                             ),
                           ),
                           Align(

@@ -1288,6 +1288,12 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
 class CmsShellNavigation {
   static _CmsShellPageState? _shell;
 
+  /// Notifies [CmsPujaContent] to open the add-pooja form after tab switch.
+  static final ValueNotifier<int> openAddPujaTick = ValueNotifier<int>(0);
+
+  /// Notifies [CmsFestivalsContent] to open the add-festival form after tab switch.
+  static final ValueNotifier<int> openAddFestivalTick = ValueNotifier<int>(0);
+
   static void attach(_CmsShellPageState shell) => _shell = shell;
 
   static void detach(_CmsShellPageState shell) {
@@ -1299,6 +1305,28 @@ class CmsShellNavigation {
     final shell = _shell;
     if (shell == null) return false;
     shell.navigateToTab(_NavIds.admins);
+    return true;
+  }
+
+  /// Switches to Manage Poojas and signals the add form to open in-shell.
+  static bool openAddPuja() {
+    final shell = _shell;
+    if (shell == null) return false;
+    shell.navigateToTab(_NavIds.pujas);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddPujaTick.value++;
+    });
+    return true;
+  }
+
+  /// Switches to Festivals and signals the add form to open in-shell.
+  static bool openAddFestival() {
+    final shell = _shell;
+    if (shell == null) return false;
+    shell.navigateToTab(_NavIds.festivals);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddFestivalTick.value++;
+    });
     return true;
   }
 }

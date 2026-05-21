@@ -9,7 +9,7 @@ class ApiClient {
     if (tokenProvider != null) {
       dio.interceptors.add(AuthTokenInterceptor(tokenProvider));
     }
-    dio.interceptors.add(ApiErrorInterceptor());
+    dio.interceptors.add(ApiErrorInterceptor(dio));
   }
 
   final Dio dio;

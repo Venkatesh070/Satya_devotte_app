@@ -54,9 +54,9 @@ class DonationRemoteDataSource {
     return body;
   }
 
-  // ── GET /donations/my — admin's own ──────────────────────────
+  // ── GET /donations/all — all ──────────────────────────
   Future<List<DonationModel>> getMyDonations() async {
-    final res = await _apiClient.dio.get('/api/v1/donations/my');
+    final res = await _apiClient.dio.get('/api/v1/donations/all');
     return _list(
       res.data as Map<String, dynamic>,
     ).map((e) => DonationModel.fromJson(e as Map<String, dynamic>)).toList();

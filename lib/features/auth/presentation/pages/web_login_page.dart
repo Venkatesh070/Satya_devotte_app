@@ -7,7 +7,7 @@ import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
+import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class WebLoginPage extends StatefulWidget {
@@ -22,6 +22,8 @@ class _WebLoginPageState extends State<WebLoginPage>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final AnimationController _rotationController;
+  bool _obscurePassword = true;
+  bool _showForgotPassword = false;
 
   AuthController get controller => Get.find<AuthController>();
 
@@ -35,9 +37,13 @@ class _WebLoginPageState extends State<WebLoginPage>
 
   void _openForgotPassword() {
     final forgotCtrl = Get.find<ForgotPasswordController>();
-    forgotCtrl.emailController.clear();
+    forgotCtrl.emailController.text = _emailController.text.trim();
     forgotCtrl.isSuccess.value = false;
-    Get.to(() => const ForgotPasswordScreen());
+    setState(() => _showForgotPassword = true);
+  }
+
+  void _closeForgotPassword() {
+    setState(() => _showForgotPassword = false);
   }
 
   @override
@@ -98,7 +104,12 @@ class _WebLoginPageState extends State<WebLoginPage>
   }
 
   Widget _buildLoginCard({bool isFullHeight = false}) {
-    final cardContent = Obx(() {
+    final cardContent = _showForgotPassword
+        ? InlineForgotPasswordForm(
+            onBack: _closeForgotPassword,
+            showYogaImage: true,
+          )
+        : Obx(() {
               final isEmailLoading = controller.isEmailSignInLoading;
               return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -126,11 +137,27 @@ class _WebLoginPageState extends State<WebLoginPage>
                     const SizedBox(height: 12),
                     TextField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       enabled: !isEmailLoading,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Password',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: isEmailLoading
+                              ? null
+                              : () => setState(
+                                    () =>
+                                        _obscurePassword = !_obscurePassword,
+                                  ),
+                        ),
                       ),
                     ),
                     Align(

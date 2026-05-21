@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/contents/cms_festivals_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
@@ -22,6 +23,14 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
   bool _showForm = false;
   FestivalModel? _editing;
 
+  void _openAddForm() {
+    if (!mounted) return;
+    setState(() {
+      _editing = null;
+      _showForm = true;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -31,7 +40,17 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _ctrl.loadFestivals();
+      if (Get.currentRoute == AppRoutes.cmsFestivalCreate) {
+        _openAddForm();
+      }
     });
+    CmsShellNavigation.openAddFestivalTick.addListener(_openAddForm);
+  }
+
+  @override
+  void dispose() {
+    CmsShellNavigation.openAddFestivalTick.removeListener(_openAddForm);
+    super.dispose();
   }
 
   @override

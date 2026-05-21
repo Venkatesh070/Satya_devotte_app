@@ -20,7 +20,7 @@ class InventoryController extends GetxController {
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _search = ''.obs;
-  final _categoryFilter = 'ALL'.obs;
+  final _categoryFilters = <String>[].obs;
   final _statusFilter = 'ALL'.obs;
   final _stockFilter = 'All'.obs;
   final _pickerItems = <InventoryItem>[].obs;
@@ -43,7 +43,7 @@ class InventoryController extends GetxController {
   int get total => _total.value;
   int get totalPages => _totalPages.value;
   String get search => _search.value;
-  String get categoryFilter => _categoryFilter.value;
+  List<String> get categoryFilters => _categoryFilters;
   String get statusFilter => _statusFilter.value;
   String get stockFilter => _stockFilter.value;
 
@@ -136,9 +136,14 @@ class InventoryController extends GetxController {
     _load(page: 1);
   }
 
-  void setCategoryFilter(String v) {
-    if (_categoryFilter.value == v) return;
-    _categoryFilter.value = v;
+  void setCategoryFilters(List<String> values) {
+    final normalized = values
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && e.toUpperCase() != 'ALL')
+        .toSet()
+        .toList(growable: false);
+    if (_sameStrings(_categoryFilters, normalized)) return;
+    _categoryFilters.assignAll(normalized);
     _load(page: 1);
   }
 
@@ -176,9 +181,22 @@ class InventoryController extends GetxController {
   }
 
   String? get _apiCategory {
-    final c = _categoryFilter.value;
-    if (c == 'ALL') return null;
-    return c;
+    if (_categoryFilters.isEmpty) return null;
+    // Backend category query supports a single category code.
+    // For multi-category filter, we apply category filtering client-side below.
+    if (_categoryFilters.length == 1) return _categoryFilters.first;
+    return null;
+  }
+
+  bool _sameStrings(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    final aa = a.toSet();
+    final bb = b.toSet();
+    if (aa.length != bb.length) return false;
+    for (final v in aa) {
+      if (!bb.contains(v)) return false;
+    }
+    return true;
   }
 
   Future<void> _load({required int page}) async {
@@ -194,6 +212,12 @@ class InventoryController extends GetxController {
         lowStock: _apiLowStock,
       );
       var list = res.items;
+      if (_categoryFilters.isNotEmpty) {
+        final selected = _categoryFilters.toSet();
+        list = list
+            .where((i) => selected.contains(i.category))
+            .toList(growable: false);
+      }
       switch (_stockFilter.value) {
         case 'In stock':
           list = list

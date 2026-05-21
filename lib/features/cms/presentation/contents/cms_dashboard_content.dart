@@ -247,10 +247,14 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                 children: [
                   Expanded(
                     child: _QuickAction(
-                      label: 'Add Pooja',
+                      label: 'Add Puja',
                       icon: Icons.add_circle_outline,
                       color: const Color(0xFF9C27B0),
-                      onTap: () {},
+                      onTap: () {
+                        if (!CmsShellNavigation.openAddPuja()) {
+                          Get.offNamed(AppRoutes.cmsRitualCreate);
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -259,7 +263,11 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                       label: 'Add Festival',
                       icon: Icons.celebration_outlined,
                       color: const Color(0xFF2196F3),
-                      onTap: () {},
+                      onTap: () {
+                        if (!CmsShellNavigation.openAddFestival()) {
+                          Get.offNamed(AppRoutes.cmsFestivalCreate);
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -288,10 +296,14 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                     children: [
                       Expanded(
                         child: _QuickAction(
-                          label: 'Add Pooja',
+                          label: 'Add Puja',
                           icon: Icons.add_circle_outline,
                           color: const Color(0xFF9C27B0),
-                          onTap: () {},
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddPuja()) {
+                              Get.offNamed(AppRoutes.cmsRitualCreate);
+                            }
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -300,7 +312,11 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                           label: 'Add Festival',
                           icon: Icons.celebration_outlined,
                           color: const Color(0xFF2196F3),
-                          onTap: () {},
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddFestival()) {
+                              Get.offNamed(AppRoutes.cmsFestivalCreate);
+                            }
+                          },
                         ),
                       ),
                     ],

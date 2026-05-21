@@ -1,6 +1,6 @@
-// Payments inbox controller. Same datasource as orders but defaults to a
-// payment-status-focused view: `GET /orders/all` with `paymentStatus` as the
-// primary filter, plus an explicit "Verify now" action.
+// Payments inbox controller — `GET /payments/all` with optional
+// `paymentStatus` filter, `search` (order number or Paystack reference),
+// plus "Verify now" via `GET /payments/verify/:reference`.
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
@@ -81,7 +81,7 @@ class AdminPaymentsController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final res = await _ds.getAllOrders(
+      final res = await _ds.getAllPayments(
         page: page,
         limit: _limit.value,
         paymentStatus: _filter.value == 'ALL' ? null : _filter.value,

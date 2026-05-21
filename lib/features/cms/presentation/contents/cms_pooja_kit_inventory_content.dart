@@ -166,14 +166,17 @@ class _InventoryListView extends StatelessWidget {
         ),
         Obx(
           () {
-            // Subscribe to category list changes (assignAll after async load).
+            // Subscribe to all filter/category observables used in this strip.
             final _ = ctrl.categories.length;
+            ctrl.categoryFilters.length;
+            final categoryFiltersSnapshot =
+                List<String>.from(ctrl.categoryFilters);
             return _FilterStrip(
               ctrl: ctrl,
-              categoryFilter: ctrl.categoryFilter,
+              categoryFilters: categoryFiltersSnapshot,
               statusFilter: ctrl.statusFilter,
               stockFilter: ctrl.stockFilter,
-              onCategory: ctrl.setCategoryFilter,
+              onCategory: ctrl.setCategoryFilters,
               onStatus: ctrl.setStatusFilter,
               onStock: ctrl.setStockFilter,
             );
@@ -214,7 +217,7 @@ class _InventoryListView extends StatelessWidget {
 class _FilterStrip extends StatelessWidget {
   const _FilterStrip({
     required this.ctrl,
-    required this.categoryFilter,
+    required this.categoryFilters,
     required this.statusFilter,
     required this.stockFilter,
     required this.onCategory,
@@ -223,10 +226,10 @@ class _FilterStrip extends StatelessWidget {
   });
 
   final InventoryController ctrl;
-  final String categoryFilter;
+  final List<String> categoryFilters;
   final String statusFilter;
   final String stockFilter;
-  final ValueChanged<String> onCategory;
+  final ValueChanged<List<String>> onCategory;
   final ValueChanged<String> onStatus;
   final ValueChanged<String> onStock;
 
@@ -266,8 +269,39 @@ class _FilterStrip extends StatelessWidget {
               ],
               _CategoryFilterButton(
                 ctrl: ctrl,
-                categoryFilter: categoryFilter,
+                categoryFilters: categoryFilters,
                 onApply: onCategory,
+              ),
+              const SizedBox(width: 6),
+              Opacity(
+                opacity: categoryFilters.isNotEmpty ? 1 : 0.55,
+                child: TextButton.icon(
+                  onPressed: categoryFilters.isNotEmpty
+                      ? () => onCategory(const <String>[])
+                      : null,
+                  icon: const Icon(
+                    Icons.clear_rounded,
+                    size: 14,
+                    color: CmsColors.red,
+                  ),
+                  label: const Text(
+                    'Clear filters',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: CmsColors.red,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: CmsColors.red,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
               ),
             ],
           ),
@@ -317,13 +351,13 @@ class _FilterChip extends StatelessWidget {
 class _CategoryFilterButton extends StatelessWidget {
   const _CategoryFilterButton({
     required this.ctrl,
-    required this.categoryFilter,
+    required this.categoryFilters,
     required this.onApply,
   });
 
   final InventoryController ctrl;
-  final String categoryFilter;
-  final ValueChanged<String> onApply;
+  final List<String> categoryFilters;
+  final ValueChanged<List<String>> onApply;
 
   String _labelFor(String code) {
     if (code == 'ALL') return 'All categories';
@@ -336,11 +370,11 @@ class _CategoryFilterButton extends StatelessWidget {
   Future<void> _openFilter(BuildContext context) async {
     await ctrl.loadCategories();
     if (!context.mounted) return;
-    final applied = await showDialog<String>(
+    final applied = await showDialog<List<String>>(
       context: context,
       builder: (ctx) => _CategoryFilterDialog(
         categories: ctrl.categories,
-        initialCode: categoryFilter,
+        initialCodes: categoryFilters,
       ),
     );
     if (applied != null) onApply(applied);
@@ -348,8 +382,15 @@ class _CategoryFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = categoryFilter != 'ALL';
-    final label = isActive ? _labelFor(categoryFilter) : 'Category';
+    final selected = categoryFilters
+        .where((e) => e.trim().isNotEmpty && e.toUpperCase() != 'ALL')
+        .toList(growable: false);
+    final isActive = selected.isNotEmpty;
+    final label = !isActive
+        ? 'Category'
+        : selected.length == 1
+            ? _labelFor(selected.first)
+            : '${selected.length} categories selected';
 
     return Material(
       color: Colors.transparent,
@@ -401,25 +442,28 @@ class _CategoryFilterButton extends StatelessWidget {
 class _CategoryFilterDialog extends StatefulWidget {
   const _CategoryFilterDialog({
     required this.categories,
-    required this.initialCode,
+    required this.initialCodes,
   });
 
   final List<InventoryCategory> categories;
-  final String initialCode;
+  final List<String> initialCodes;
 
   @override
   State<_CategoryFilterDialog> createState() => _CategoryFilterDialogState();
 }
 
 class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
-  late String _draft;
+  late Set<String> _draft;
   late final TextEditingController _searchCtrl;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _draft = _safeCode(widget.initialCode);
+    _draft = widget.initialCodes
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && e.toUpperCase() != 'ALL')
+        .toSet();
     _searchCtrl = TextEditingController();
   }
 
@@ -427,14 +471,6 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  String _safeCode(String code) {
-    if (code == 'ALL') return 'ALL';
-    for (final c in widget.categories) {
-      if (c.code == code) return c.code;
-    }
-    return 'ALL';
   }
 
   bool get _showAllOption {
@@ -565,10 +601,24 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final code = _codeAt(index);
-                        final isSelected = code == _draft;
+                        final isSelected = code == 'ALL'
+                            ? _draft.isEmpty
+                            : _draft.contains(code);
                         final subtitle = _subtitleAt(index);
                         return InkWell(
-                          onTap: () => setState(() => _draft = code),
+                          onTap: () {
+                            setState(() {
+                              if (code == 'ALL') {
+                                _draft.clear();
+                                return;
+                              }
+                              if (_draft.contains(code)) {
+                                _draft.remove(code);
+                              } else {
+                                _draft.add(code);
+                              }
+                            });
+                          },
                           child: Container(
                             color: isSelected
                                 ? CmsColors.orange.withOpacity(0.06)
@@ -632,7 +682,8 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: () => Navigator.pop(context, _draft),
+                    onPressed: () =>
+                        Navigator.pop(context, _draft.toList(growable: false)),
                     style: FilledButton.styleFrom(
                       backgroundColor: CmsColors.orange,
                     ),
