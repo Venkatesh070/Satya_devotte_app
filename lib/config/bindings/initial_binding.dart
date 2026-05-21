@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_api.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/core/services/location_service.dart';
@@ -74,6 +75,7 @@ class InitialBinding extends Bindings {
       permanent: true,
     );
     Get.put<NotificationService>(NotificationService(), permanent: true);
+    Get.put<AppMusicService>(AppMusicService(), permanent: true);
     // ── FCM token registry (depends on ApiClient + AuthSessionService) ──
     Get.put<FcmApi>(FcmApi(Get.find<ApiClient>()), permanent: true);
     Get.put<FcmBootstrap>(FcmBootstrap(Get.find<FcmApi>()), permanent: true);

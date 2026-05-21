@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
@@ -5,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
@@ -47,6 +49,11 @@ class _OnboardingPageState extends State<OnboardingPage>
       vsync: this,
       duration: const Duration(seconds: 24),
     )..repeat();
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.find<AppMusicService>().start();
+      });
+    }
   }
 
   void _goNext() {

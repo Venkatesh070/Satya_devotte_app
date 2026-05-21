@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -28,6 +29,11 @@ class _SplashPageState extends State<SplashPage>
       vsync: this,
       duration: const Duration(seconds: 24),
     )..repeat();
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.find<AppMusicService>().start();
+      });
+    }
     _navigate();
   }
 

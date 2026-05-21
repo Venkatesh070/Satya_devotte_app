@@ -1,0 +1,111 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
+
+/// Loops [assetPath] across the mobile app and web CMS admin.
+class AppMusicService extends GetxService with WidgetsBindingObserver {
+  static const String assetPath = 'assets/audios/SatyaAppMusic.mp3';
+
+  final AudioPlayer _player = AudioPlayer();
+  bool _prepared = false;
+  bool _userPaused = false;
+
+  final RxBool isPlaying = false.obs;
+  final RxBool showFab = false.obs;
+
+  static const Set<String> _fabHiddenRoutes = {
+    AppRoutes.splash,
+    AppRoutes.onboarding,
+    AppRoutes.login,
+  };
+
+  @override
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+    _player.playerStateStream.listen((state) {
+      isPlaying.value = state.playing;
+    });
+    syncControlsVisibility();
+  }
+
+  static bool isCmsRoute(String route) =>
+      route == AppRoutes.cms || route.startsWith('${AppRoutes.cms}/');
+
+  /// Updates mobile FAB visibility and web CMS auto-play/stop by route.
+  void syncControlsVisibility([String? route]) {
+    final current = route ?? Get.currentRoute;
+    showFab.value = !kIsWeb && !_fabHiddenRoutes.contains(current);
+
+    if (kIsWeb) {
+      if (isCmsRoute(current)) {
+        unawaited(start());
+      } else {
+        unawaited(pause());
+      }
+    }
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_player.dispose());
+    super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_userPaused) return;
+    if (state == AppLifecycleState.resumed) {
+      final route = Get.currentRoute;
+      if (!kIsWeb || isCmsRoute(route)) {
+        unawaited(start());
+      }
+    }
+  }
+
+  Future<void> _prepare() async {
+    if (_prepared) return;
+    await _player.setAsset(assetPath);
+    await _player.setLoopMode(LoopMode.one);
+    _prepared = true;
+  }
+
+  /// Starts or resumes background music (idempotent).
+  Future<void> start() async {
+    if (_userPaused) return;
+    try {
+      await _prepare();
+      if (!_player.playing) {
+        await _player.play();
+      }
+    } catch (e, st) {
+      debugPrint('[AppMusicService] start failed: $e\n$st');
+    }
+  }
+
+  Future<void> pause() async {
+    if (!_player.playing) return;
+    await _player.pause();
+  }
+
+  Future<void> toggle() async {
+    try {
+      await _prepare();
+      if (_player.playing) {
+        _userPaused = true;
+        await _player.pause();
+      } else {
+        _userPaused = false;
+        await _player.play();
+      }
+    } catch (e, st) {
+      debugPrint('[AppMusicService] toggle failed: $e\n$st');
+    }
+  }
+}
+

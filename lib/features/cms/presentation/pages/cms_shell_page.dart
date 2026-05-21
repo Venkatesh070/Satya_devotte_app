@@ -24,6 +24,8 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
+import 'package:satya_devotte_app/shared/widgets/app_music_control_button.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {
@@ -78,6 +80,7 @@ class _CmsShellPageState extends State<CmsShellPage> {
 
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.find<AppMusicService>().start();
         _applyCmsRouteEffects(_initialCmsRoute());
         final orderId = CmsRoutePaths.poojaKitOrderIdFromRoute(_initialCmsRoute());
         if (orderId == null) {
@@ -960,6 +963,12 @@ class _WebTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          const AppMusicControlButton(
+            size: 36,
+            borderRadius: 8,
+            iconSize: 18,
+          ),
+          const SizedBox(width: 12),
           // Notification bell
           Container(
             width: 36,
