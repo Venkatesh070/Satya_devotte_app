@@ -21,6 +21,7 @@ import 'package:satya_devotte_app/features/poojakit/presentation/pages/cart_scre
 import 'package:satya_devotte_app/features/poojakit/bindings/user_orders_binding.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/bottom_tab_page.dart';
 import 'package:satya_devotte_app/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
@@ -50,6 +51,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.home,
       page: BottomTabPage.new,
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.editProfile,
+      page: () => const EditProfilePage(),
       middlewares: [AuthGuard()],
     ),
     GetPage(

@@ -9,14 +9,15 @@ abstract final class DonationUi {
   static const Color profileBackground = Color(0xFFFFF5E6);
   static const Color headerOrange = Color(0xFFED5A00);
   static const Color headerOrangeDark = Color(0xFFD64A00);
-  static const Color cardFill = Color(0xFFFFF9F2);
+  static const Color cardFill = Color(0XFFFCF7EF);
   static const Color cardBorder = Color(0xFFF3E5D0);
-  static const Color textPrimary = Color(0xFF3B1E08);
-  static const Color textMuted = Color(0xFF8A6B4A);
+  static const Color textPrimary = Color(0xFF4A1C00);
+  static const Color textMuted = Color(0xFF875131);
   static const Color successGreen = Color(0xFF1F8A4C);
   static const Color amountBlue = Color(0xFF1F4CB7);
   static const Color chevron = Color(0xFFEAD9BC);
   static const Color sectionLabel = Color(0xFF8A6B4A);
+  static const Color text = Color(0xFF1C1917);
 
   static String formatCurrency(num value) {
     return NumberFormat.currency(
@@ -27,7 +28,8 @@ abstract final class DonationUi {
 }
 
 /// Cream app bar — "Donations", "Record of Donations", etc.
-class DonationSimpleAppBar extends StatelessWidget implements PreferredSizeWidget {
+class DonationSimpleAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
   const DonationSimpleAppBar({
     super.key,
     required this.title,
@@ -58,8 +60,8 @@ class DonationSimpleAppBar extends StatelessWidget implements PreferredSizeWidge
       title: Text(
         title,
         style: AppTypography.lora(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+          fontSize: 24,
+          fontWeight: FontWeight.w500,
           color: DonationUi.textPrimary,
         ),
       ),
@@ -281,7 +283,7 @@ class ProfileMenuRow extends StatelessWidget {
   }
 }
 
-/// History pill for Donations app bar (Figma top-right).
+/// History pill — Figma: white capsule, thin border, clock + "History".
 class DonationHistoryChip extends StatelessWidget {
   const DonationHistoryChip({super.key, required this.onTap});
 
@@ -289,25 +291,53 @@ class DonationHistoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: TextButton.icon(
-        onPressed: onTap,
-        icon: const Icon(Icons.history, size: 18, color: DonationUi.headerOrange),
-        label: Text(
-          'History',
-          style: AppTypography.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: DonationUi.headerOrange,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: DonationUi.cardBorder, width: 1),
           ),
-        ),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          backgroundColor: DonationUi.cardFill,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: DonationUi.cardBorder),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                blendMode: BlendMode.srcIn,
+                child: Icon(
+                  Icons.history_rounded,
+                  size: 18,
+                  color: Colors.white, // must be opaque white
+                ),
+              ),
+              const SizedBox(width: 6),
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                blendMode: BlendMode.srcIn,
+                child: Text(
+                  'History',
+                  style: AppTypography.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors
+                        .white, // must be white/opaque for ShaderMask to work
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -424,11 +454,7 @@ class DonationOrangeButton extends StatelessWidget {
 
 /// Recent donation row — thumbnail, title, date, amount (Figma overview list).
 class RecentDonationTile extends StatelessWidget {
-  const RecentDonationTile({
-    super.key,
-    required this.contribution,
-    this.onTap,
-  });
+  const RecentDonationTile({super.key, required this.contribution, this.onTap});
 
   final DonationContribution contribution;
   final VoidCallback? onTap;
@@ -499,119 +525,85 @@ class RecentDonationTile extends StatelessWidget {
   }
 }
 
-/// Record of donations row — date, purpose, amount, status pill (Figma screen 3).
+/// History of donations row — Figma: purpose bold, date • time; amount + txn id.
 class RecordDonationTile extends StatelessWidget {
-  const RecordDonationTile({
-    super.key,
-    required this.contribution,
-    this.onTap,
-  });
+  const RecordDonationTile({super.key, required this.contribution, this.onTap});
 
   final DonationContribution contribution;
   final VoidCallback? onTap;
 
-  String _statusLabel(ContributionStatus s) {
-    switch (s) {
-      case ContributionStatus.paid:
-        return 'Success';
-      case ContributionStatus.pending:
-        return 'Pending';
-      case ContributionStatus.failed:
-        return 'Failed';
-    }
-  }
-
-  Color _statusColor(ContributionStatus s) {
-    switch (s) {
-      case ContributionStatus.paid:
-        return DonationUi.successGreen;
-      case ContributionStatus.pending:
-        return const Color(0xFFB35A00);
-      case ContributionStatus.failed:
-        return const Color(0xFFB10F1A);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final status = contribution.status;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: DonationUi.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (contribution.formattedDate.isNotEmpty)
-                        Text(
-                          contribution.formattedDate.split(',').first.trim(),
-                          style: AppTypography.inter(
-                            fontSize: 12,
-                            color: DonationUi.textMuted,
-                          ),
-                        ),
-                      const SizedBox(height: 4),
-                      Text(
-                        contribution.donationTitle.isEmpty
-                            ? 'General Donation'
-                            : contribution.donationTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: DonationUi.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+    final title = contribution.donationTitle.isEmpty
+        ? 'General Donation'
+        : contribution.donationTitle;
+    final dateLine = contribution.formattedDateHistoryLine;
+    final txnLine = contribution.displayTransactionLine;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      contribution.formattedAmount,
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                         color: DonationUi.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    if (dateLine.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        dateLine,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: DonationUi.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    contribution.formattedAmount,
+                    style: AppTypography.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: DonationUi.textPrimary,
+                    ),
+                  ),
+                  if (txnLine.isNotEmpty) ...[
+                    const SizedBox(height: 4),
                     Text(
-                      _statusLabel(status),
+                      txnLine,
+                      textAlign: TextAlign.right,
                       style: AppTypography.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _statusColor(status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: DonationUi.textMuted,
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

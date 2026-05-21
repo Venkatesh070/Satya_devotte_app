@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 
 /// Figma calendar design tokens.
@@ -11,6 +10,8 @@ abstract final class CalendarUi {
   static const Color textPrimary = Color(0xFF3B1E08);
   static const Color textMuted = Color(0xFF8A6B4A);
   static const Color cardBorder = Color(0xFFF3E5D0);
+  static const Color text = Color(0xFF1C1917);
+  static const Color subText = Color(0xFF78716C);
 
   /// List area below filter tabs — room to scroll clear of tabs and bottom nav.
   static EdgeInsets listScrollPadding(BuildContext context) {
@@ -19,12 +20,13 @@ abstract final class CalendarUi {
   }
 }
 
+/// Figma action buttons — blue (#183EA4) → orange (#E35600), left to right.
 const kCalendarActionGradient = [
-  AppColors.gradientStart,
-  AppColors.gradientEnd,
+  Color(0xFF183EA4),
+  Color(0xFFE35600),
 ];
 
-const kAppHeaderImage = 'assets/images/appHeaderImg.png';
+const kAppHeaderImage = 'assets/images/pooja/pujaHeaderImg.png';
 
 /// Temple header background — matches home, profile, and donations.
 class CalendarAppHeader extends StatelessWidget {

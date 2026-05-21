@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
 
 class ProfileController extends GetxController {
@@ -23,6 +24,80 @@ class ProfileController extends GetxController {
   Map<String, dynamic>? get profile => _profile.value;
   String? get error => _error.value;
   Map<String, dynamic>? get sessionUser => _sessionUser.value;
+
+  /// Best-effort display name from login/session user or GET /profile payload.
+  static String displayNameFromUserMap(Map<String, dynamic>? u) {
+    if (u == null || u.isEmpty) return 'User';
+    String? t(dynamic v) {
+      final s = v?.toString().trim();
+      if (s == null || s.isEmpty) return null;
+      return s;
+    }
+
+    String? fromFirstLast() {
+      final fn = t(u['firstName']);
+      final ln = t(u['lastName']);
+      if (fn == null && ln == null) return null;
+      return '${fn ?? ''} ${ln ?? ''}'.trim();
+    }
+
+    String? fromEmail() {
+      final email = t(u['email']);
+      if (email == null) return null;
+      final at = email.indexOf('@');
+      if (at <= 0) return email;
+      return email.substring(0, at);
+    }
+
+    return t(u['fullName']) ??
+        t(u['name']) ??
+        t(u['displayName']) ??
+        fromFirstLast() ??
+        fromEmail() ??
+        'User';
+  }
+
+  /// Session user merged with GET /profile user (profile wins on duplicate keys).
+  Map<String, dynamic>? get resolvedUser => _mergedUserPayload;
+
+  Map<String, dynamic>? get _mergedUserPayload {
+    final session = _sessionUser.value;
+    final root = _profile.value;
+    Map<String, dynamic>? fromProfile;
+    if (root != null) {
+      final u = root['user'];
+      if (u is Map<String, dynamic>) {
+        fromProfile = u;
+      } else {
+        final data = root['data'];
+        if (data is Map<String, dynamic>) {
+          final du = data['user'];
+          if (du is Map<String, dynamic>) {
+            fromProfile = du;
+          } else {
+            fromProfile = data;
+          }
+        } else {
+          fromProfile = root;
+        }
+      }
+    }
+    if ((session == null || session.isEmpty) &&
+        (fromProfile == null || fromProfile.isEmpty)) {
+      return null;
+    }
+    final merged = <String, dynamic>{};
+    if (session != null && session.isNotEmpty) merged.addAll(session);
+    if (fromProfile != null && fromProfile.isNotEmpty)
+      merged.addAll(fromProfile);
+    return merged.isEmpty ? null : merged;
+  }
+
+  String get userName {
+    final name = displayNameFromUserMap(_mergedUserPayload);
+    if (name != 'User') return name;
+    return 'Devotee';
+  }
 
   @override
   void onInit() {
@@ -54,6 +129,15 @@ class ProfileController extends GetxController {
   Future<void> loadSessionUser() async {
     final user = await _authSessionService.getUserData();
     _sessionUser.value = user;
+    update();
+  }
+
+  /// Clears cached user after logout so UI (e.g. home greeting) resets.
+  void clearCachedUser() {
+    _sessionUser.value = null;
+    _profile.value = null;
+    _error.value = null;
+    update();
   }
 
   Future<void> loadProfile() async {
@@ -82,6 +166,25 @@ class ProfileController extends GetxController {
       }
     } finally {
       _isLoading.value = false;
+      update();
+    }
+  }
+
+  Future<bool> updateProfile(Map<String, dynamic> profileData) async {
+    _isLoading.value = true;
+    _error.value = null;
+    try {
+      // Find the repository and call update
+      final authRepo = Get.find<AuthRepository>();
+      await authRepo.updateProfile(profileData);
+      await loadProfile(); // Refresh
+      return true;
+    } catch (error) {
+      _error.value = 'Failed to update profile.';
+      return false;
+    } finally {
+      _isLoading.value = false;
+      update();
     }
   }
 }

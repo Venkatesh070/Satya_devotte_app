@@ -2,9 +2,20 @@ class ApiEndpoints {
   static const String authLogin = '/api/v1/auth/login';
   static const String authAdminLogin = '/api/v1/auth/admin/login';
 
+  /// POST — body `{ "refreshToken": "..." }`. Revokes refresh token (Swagger: Auth → Logout).
   static const String authLogout = '/api/v1/auth/logout';
+  /// DELETE — body `{ "refreshToken": "..." }`. Soft delete (Swagger: Auth → Delete account).
+  static const String authDeleteAccount = '/api/v1/auth/account';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
+
+  /// GET — list current user's favourite deities (full APPROVED deity docs).
+  static const String favoriteDeities = '/api/v1/auth/favorite-deities';
+
+  /// POST — add favourite (201, idempotent). DELETE — remove favourite (200).
+  static String favoriteDeity(String deityId) =>
+      '/api/v1/auth/favorite-deities/$deityId';
+
   // ── Poojas ────────────────────────────────────────────────
   static const String poojas = '/api/v1/poojas'; // GET — all poojas (public)
   static const String festivals =
@@ -27,6 +38,9 @@ class ApiEndpoints {
   static String reviewPooja(String id) =>
       '/api/v1/poojas/review/$id'; // PUT — approve/reject (super admin)
   static const String home = '/api/v1/user-home';
+  /// GET — global search. Query: `q` (required), `types?`, `limit?`, `maxTotal?`.
+  /// Must use the same `/api/v1` prefix as other mobile endpoints (root `/search` 404s).
+  static const String search = '/api/v1/search';
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
 

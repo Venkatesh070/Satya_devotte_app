@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 
 class AuthController extends GetxController {
   AuthController(
@@ -24,11 +26,13 @@ class AuthController extends GetxController {
   final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
   final _userRole = RxString('user');
+  final _isAuthLoading = false.obs;
   bool _authApiInFlight = false;
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
   bool get isEmailSignInLoading => _isEmailSignInLoading.value;
+  bool get isAuthLoading => _isAuthLoading.value;
   String? get lastAuthError => _lastAuthError.value;
 
   // ─── Role getters ─────────────────────────────────────────────
@@ -60,7 +64,28 @@ class AuthController extends GetxController {
       // Re-register the device with the backend on a cold start so any
       // tokens that rotated while the app was closed get reconciled.
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
     }
+  }
+
+  /// Keeps [ProfileController] in sync after login / cold-start restore so
+  /// home greeting and profile UI see the latest `user` map (e.g. `fullName`).
+  void _refreshProfileControllerAfterAuth() {
+    try {
+      if (!Get.isRegistered<ProfileController>()) return;
+      final pc = Get.find<ProfileController>();
+      unawaited(() async {
+        await pc.loadSessionUser();
+        await pc.loadProfile();
+      }());
+    } catch (_) {}
+  }
+
+  void _clearProfileControllerCache() {
+    try {
+      if (!Get.isRegistered<ProfileController>()) return;
+      Get.find<ProfileController>().clearCachedUser();
+    } catch (_) {}
   }
 
   /// Best-effort register the device FCM token with the backend.
@@ -108,7 +133,9 @@ class AuthController extends GetxController {
 
   // ─── Google Sign-In ──────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -136,6 +163,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -147,6 +175,7 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapGoogleSignInError(error);
@@ -192,11 +221,13 @@ class AuthController extends GetxController {
         userProfile: adminProfile,
       );
       // Server flag: explicit gate for the admin panel.
-      final canAccessAdminPanel = loginResult.user['canLoginAdminPanel'] == true;
+      final canAccessAdminPanel =
+          loginResult.user['canLoginAdminPanel'] == true;
       final rawRole = (loginResult.user['role'] as String? ?? '')
           .trim()
           .toLowerCase();
-      final hasAdminRole = rawRole == 'admin' ||
+      final hasAdminRole =
+          rawRole == 'admin' ||
           rawRole == 'superadmin' ||
           loginResult.user['isSuperAdmin'] == true;
       if (!canAccessAdminPanel || !hasAdminRole) {
@@ -213,9 +244,11 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignInError(error);
@@ -231,7 +264,9 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -262,6 +297,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -273,6 +309,7 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignInError(error);
@@ -288,7 +325,9 @@ class AuthController extends GetxController {
     required String email,
     required String password,
   }) async {
-    if (_authApiInFlight || _isGoogleSignInLoading.value || _isEmailSignInLoading.value) {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
       return false;
     }
@@ -319,6 +358,7 @@ class AuthController extends GetxController {
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
       // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
       print('');
       print('╔══════════════════════════════════════════════════════════╗');
@@ -330,9 +370,66 @@ class AuthController extends GetxController {
       return true;
     } catch (error) {
       await _authSessionService.clear();
+      _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignUpError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
+  }
+
+  Future<bool> signUpAndCreateProfile({
+    required String email,
+    required String password,
+    Map<String, dynamic>? profileData,
+  }) async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after email sign up.');
+      }
+      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+        userProfile: emailProfile,
+      );
+      await _authSessionService.setSession(
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+        userData: loginResult.user,
+      );
+      if (profileData != null && profileData.isNotEmpty) {
+        await _authRepository.upsertProfile(profileData);
+      }
+      _applyRole(loginResult.user);
+      _isAuthenticated.value = true;
+      await _registerDeviceForPush();
+      _refreshProfileControllerAfterAuth();
+      return true;
+    } catch (error) {
+      await _authSessionService.clear();
+      _clearProfileControllerCache();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapCreateAccountError(error);
       return false;
     } finally {
       _isEmailSignInLoading.value = false;
@@ -347,28 +444,83 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
-    // ── Unregister this device's push token BEFORE clearing the session
-    //    so the auth interceptor can still attach a valid bearer to the
-    //    DELETE /fcm/unregister request. ──
+    // ── 1. Unregister FCM while the session still has a valid access token ──
     await _unregisterDeviceFromPush();
 
-    // ── Clear local state so route guards see unauthenticated immediately ──
+    final refreshToken = _authSessionService.refreshToken;
+
+    // ── 2. Backend logout while session is intact (Bearer on the request) ──
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _authRepository.logout(refreshToken);
+      } catch (e) {
+        debugPrint('AuthController.signOut: logout API failed: $e');
+      }
+    }
+
+    // ── 3. Local session + Firebase ─────────────────────────────────
     _isAuthenticated.value = false;
     _userRole.value = 'user';
-
-    // ── Clear persisted session ──────────────────────────────────
-    final refreshToken = _authSessionService.refreshToken;
     await _authSessionService.clear();
+    _clearProfileControllerCache();
 
-    // ── Firebase sign-out ────────────────────────────────────────
     try {
       await _firebaseService.signOut();
     } catch (_) {}
+  }
 
-    // ── Invalidate refresh token on server (best-effort, non-blocking) ──
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      _authRepository.logout(refreshToken).catchError((_) {});
+  /// Deletes the account on the backend, then clears session and signs out of Firebase.
+  Future<bool> deleteAccount() async {
+    _isAuthLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      final refreshToken = _authSessionService.refreshToken;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        _lastAuthError.value = 'Session expired. Please sign in again.';
+        return false;
+      }
+
+      await _unregisterDeviceFromPush();
+      await _authRepository.deleteAccount(refreshToken);
+
+      _isAuthenticated.value = false;
+      _userRole.value = 'user';
+      await _authSessionService.clear();
+      _clearProfileControllerCache();
+
+      try {
+        await _firebaseService.signOut();
+      } catch (_) {}
+
+      return true;
+    } catch (e) {
+      debugPrint('AuthController.deleteAccount failed: $e');
+      _lastAuthError.value = _mapDeleteAccountError(e);
+      return false;
+    } finally {
+      _isAuthLoading.value = false;
     }
+  }
+
+  String _mapDeleteAccountError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final msg = data['message'] ?? data['error'];
+        if (msg != null && msg.toString().trim().isNotEmpty) {
+          return msg.toString();
+        }
+      }
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout) {
+        return 'Unable to reach the server. Check your connection.';
+      }
+      final code = error.response?.statusCode;
+      if (code == 401 || code == 403) {
+        return 'You are not allowed to delete this account. Try signing in again.';
+      }
+    }
+    return 'Could not delete account. Please try again.';
   }
 
   // ─── Error mappers ────────────────────────────────────────────
@@ -491,5 +643,24 @@ class AuthController extends GetxController {
       }
     }
     return 'Email sign up failed. Please try again.';
+  }
+
+  String _mapCreateAccountError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final msg = data['message'] ?? data['error'];
+        if (msg != null && msg.toString().trim().isNotEmpty) {
+          return msg.toString();
+        }
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach server. Check your internet and try again.';
+      }
+    }
+    return _mapEmailSignUpError(error);
   }
 }

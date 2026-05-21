@@ -7,6 +7,8 @@ import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
+import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class EmailLoginPage extends StatefulWidget {
@@ -47,13 +49,7 @@ class _EmailLoginPageState extends State<EmailLoginPage>
     super.dispose();
   }
 
-  void _navigateByRole() {
-    if (controller.isAdmin) {
-      Get.offAllNamed(AppRoutes.cms);
-    } else {
-      Get.offAllNamed(AppRoutes.home);
-    }
-  }
+  void _navigateAfterLogin() => controller.navigateAfterLogin();
 
   void _openForgotPassword() {
     final forgotCtrl = Get.find<ForgotPasswordController>();
@@ -271,7 +267,7 @@ class _EmailLoginPageState extends State<EmailLoginPage>
                                   );
 
                               if (success) {
-                                _navigateByRole();
+                                _navigateAfterLogin();
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -291,33 +287,7 @@ class _EmailLoginPageState extends State<EmailLoginPage>
                           OutlinedButton(
                             onPressed: isLoading
                                 ? null
-                                : () async {
-                                    final email = _emailController.text.trim();
-                                    final password = _passwordController.text;
-
-                                    if (email.isEmpty || password.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please enter email and password',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    final success = await controller
-                                        .signUpWithEmailPassword(
-                                          email: email,
-                                          password: password,
-                                        );
-
-                                    if (success) {
-                                      _navigateByRole();
-                                    }
-                                  },
+                                : () => Get.to(() => const CreateAccountPage()),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(48),
                             ),

@@ -133,4 +133,24 @@ class DonationContribution {
     if (createdAt == null) return '';
     return DateFormat('d MMM yyyy, h:mm a').format(createdAt!.toLocal());
   }
+
+  /// Figma history row: "March 22, 2024 • 10:30 AM"
+  String get formattedDateHistoryLine {
+    if (createdAt == null) return '';
+    final local = createdAt!.toLocal();
+    final d = DateFormat('MMMM d, yyyy').format(local);
+    final t = DateFormat('h:mm a').format(local);
+    return '$d • $t';
+  }
+
+  /// Shown under amount on history (Paystack ref / contribution #).
+  String get displayTransactionLine {
+    final tid = (transactionId ?? '').trim();
+    if (tid.isNotEmpty) return tid;
+    final cn = contributionNumber.trim();
+    if (cn.isNotEmpty) return cn;
+    final ref = (reference ?? '').trim();
+    if (ref.isNotEmpty) return ref;
+    return '';
+  }
 }

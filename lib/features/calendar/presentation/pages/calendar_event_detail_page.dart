@@ -41,12 +41,13 @@ class CalendarEventDetailPage extends StatelessWidget {
     final description = _description(event);
     final date = _date(event);
     final imageUrl = _imageUrl(event);
-    final dateLabel =
-        date != null ? DateFormat('EEEE, MMMM do').format(date) : '';
+    final dateLabel = date != null
+        ? DateFormat('EEEE, MMMM do').format(date)
+        : '';
 
     return Material(
       color: CalendarUi.background,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -92,8 +93,8 @@ class CalendarEventDetailPage extends StatelessWidget {
                   Text(
                     title,
                     style: AppTypography.lora(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                       color: CalendarUi.textPrimary,
                     ),
                   ),
@@ -102,8 +103,8 @@ class CalendarEventDetailPage extends StatelessWidget {
                     Text(
                       dateLabel,
                       style: AppTypography.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
                         color: CalendarUi.textMuted,
                       ),
                     ),
@@ -116,6 +117,7 @@ class CalendarEventDetailPage extends StatelessWidget {
                     style: AppTypography.inter(
                       fontSize: 14,
                       height: 1.55,
+                      fontWeight: FontWeight.w400,
                       color: CalendarUi.textPrimary,
                     ),
                   ),
@@ -204,67 +206,68 @@ class _EventDetailActions extends StatelessWidget {
       final eventId = controller.eventIdFor(event);
       final isAdded =
           eventId.isNotEmpty && controller.isAddedToCalendar(eventId);
-      final isReminded =
-          eventId.isNotEmpty && controller.isReminded(eventId);
+      final isReminded = eventId.isNotEmpty && controller.isReminded(eventId);
+
+      final canAct = eventId.isNotEmpty;
 
       return Row(
         children: [
           Expanded(
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: eventId.isEmpty
-                    ? null
-                    : () => controller.addToDeviceCalendar(event),
-                icon: Icon(
-                  isAdded ? Icons.check_circle_outline : Icons.event,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                label: Text(
-                  isAdded ? 'Added to Calendar' : 'Add to Google Calendar',
-                  style: AppTypography.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+            child: _GradientActionButton(
+              height: 48,
+              borderRadius: 20,
+              enabled: canAct,
+              onTap: canAct
+                  ? () => controller.addToDeviceCalendar(event)
+                  : null,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isAdded ? Icons.check_circle_outline : Icons.event,
                     color: Colors.white,
+                    size: 20,
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CalendarUi.tabSelected,
-                  disabledBackgroundColor:
-                      CalendarUi.tabSelected.withValues(alpha: 0.45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      isAdded ? 'Added to Calendar' : 'Add to Google Calendar',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  elevation: 0,
-                ),
+                ],
               ),
             ),
           ),
           const SizedBox(width: 12),
           Material(
-            color: isReminded ? CalendarUi.tabSelected : Colors.white,
-            borderRadius: BorderRadius.circular(14),
+            color: isReminded ? kCalendarActionGradient[0] : Colors.white,
+            borderRadius: BorderRadius.circular(20),
             child: InkWell(
-              onTap: eventId.isEmpty
-                  ? null
-                  : () => controller.toggleReminder(event),
-              borderRadius: BorderRadius.circular(14),
+              onTap: canAct ? () => controller.toggleReminder(event) : null,
+              borderRadius: BorderRadius.circular(20),
               child: Container(
-                width: 52,
-                height: 52,
+                width: 48,
+                height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(20),
                   border: isReminded
                       ? null
-                      : Border.all(color: CalendarUi.cardBorder),
+                      : Border.all(color: const Color(0xFFE5E7EB), width: 0.66),
                 ),
                 child: Icon(
                   isReminded
                       ? Icons.notifications_active
                       : Icons.notifications_outlined,
-                  color: isReminded ? Colors.white : CalendarUi.tabSelected,
+                  color: isReminded ? Colors.white : kCalendarActionGradient[0],
                   size: 24,
                 ),
               ),
@@ -273,6 +276,51 @@ class _EventDetailActions extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+/// Figma gradient CTA — #183EA4 → #E35600.
+class _GradientActionButton extends StatelessWidget {
+  const _GradientActionButton({
+    required this.child,
+    required this.onTap,
+    this.enabled = true,
+    this.height = 48,
+    this.borderRadius = 20,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final bool enabled;
+  final double height;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Ink(
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(borderRadius),
+            gradient: LinearGradient(
+              colors: enabled
+                  ? kCalendarActionGradient
+                  : [
+                      kCalendarActionGradient[0].withValues(alpha: 0.45),
+                      kCalendarActionGradient[1].withValues(alpha: 0.45),
+                    ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          child: Center(child: child),
+        ),
+      ),
+    );
   }
 }
 
@@ -285,11 +333,7 @@ class _HeroImage extends StatelessWidget {
     final placeholder = Container(
       color: const Color(0xFFEADCC3),
       alignment: Alignment.center,
-      child: const Icon(
-        Icons.temple_hindu,
-        size: 64,
-        color: Color(0xFF8C5A2A),
-      ),
+      child: const Icon(Icons.temple_hindu, size: 64, color: Color(0xFF8C5A2A)),
     );
     if (url == null || url!.isEmpty) return placeholder;
     if (url!.startsWith('http')) {

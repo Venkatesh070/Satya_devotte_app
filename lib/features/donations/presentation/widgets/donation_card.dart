@@ -7,11 +7,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 
 /// Figma cause row — thumbnail, title, chevron only.
 class DonationCard extends StatelessWidget {
-  const DonationCard({
-    super.key,
-    required this.donation,
-    required this.onTap,
-  });
+  const DonationCard({super.key, required this.donation, required this.onTap});
 
   final Donation donation;
   final VoidCallback onTap;
@@ -19,7 +15,7 @@ class DonationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: DonationUi.cardFill,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -40,29 +36,50 @@ class DonationCard extends StatelessWidget {
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 child: SizedBox(
-                  width: 56,
-                  height: 56,
+                  width: 52,
+                  height: 52,
                   child: _Image(url: donation.imageUrl),
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  donation.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: DonationUi.textPrimary,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      donation.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.lora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: DonationUi.text,
+                        height: 1.25,
+                      ),
+                    ),
+                    if (donation.description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        donation.description.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0XFF78716C),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const Icon(
                 Icons.chevron_right,
-                color: DonationUi.chevron,
+                color: DonationUi.textMuted,
                 size: 24,
               ),
             ],

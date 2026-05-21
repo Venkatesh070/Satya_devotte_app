@@ -5,6 +5,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -41,14 +42,7 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
-  /// Navigate based on the user's role after successful login.
-  void _navigateByRole() {
-    if (controller.isAdmin) {
-      Get.offAllNamed(AppRoutes.cms);
-    } else {
-      Get.offAllNamed(AppRoutes.home);
-    }
-  }
+  void _navigateAfterLogin() => controller.navigateAfterLogin();
 
   Future<void> _showEmailPasswordSheet() async {
     _emailController.clear();
@@ -66,7 +60,11 @@ class _LoginPageState extends State<LoginPage>
           passwordController: _passwordController,
           onAuthSuccess: () {
             Navigator.of(sheetContext).pop();
-            _navigateByRole();
+            _navigateAfterLogin();
+          },
+          onCreateAccount: () {
+            Navigator.of(sheetContext).pop();
+            Get.to(() => const CreateAccountPage());
           },
         );
       },
@@ -179,7 +177,7 @@ class _LoginPageState extends State<LoginPage>
                         onTap: () async {
                           final isSuccess = await controller.signInWithGoogle();
                           if (isSuccess) {
-                            _navigateByRole();
+                            _navigateAfterLogin();
                             return;
                           }
                           if (!mounted) return;
@@ -206,7 +204,7 @@ class _LoginPageState extends State<LoginPage>
                         isEnabled: !isLoading,
                         onTap: () async {
                           await controller.signInWithApple();
-                          _navigateByRole();
+                          _navigateAfterLogin();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -274,11 +272,13 @@ class _EmailPasswordBottomSheet extends StatefulWidget {
     required this.emailController,
     required this.passwordController,
     required this.onAuthSuccess,
+    required this.onCreateAccount,
   });
 
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final VoidCallback onAuthSuccess;
+  final VoidCallback onCreateAccount;
 
   @override
   State<_EmailPasswordBottomSheet> createState() =>
@@ -412,40 +412,7 @@ class _EmailPasswordBottomSheetState extends State<_EmailPasswordBottomSheet> {
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              final email = widget.emailController.text.trim();
-                              final password = widget.passwordController.text;
-                              if (email.isEmpty || password.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please enter email and password.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              final isSuccess =
-                                  await _auth.signUpWithEmailPassword(
-                                email: email,
-                                password: password,
-                              );
-                              if (!context.mounted) return;
-                              if (isSuccess) {
-                                widget.onAuthSuccess();
-                                return;
-                              }
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    _auth.lastAuthError ??
-                                        'Email sign up failed. Please try again.',
-                                  ),
-                                ),
-                              );
-                            },
+                      onPressed: isLoading ? null : widget.onCreateAccount,
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                       ),

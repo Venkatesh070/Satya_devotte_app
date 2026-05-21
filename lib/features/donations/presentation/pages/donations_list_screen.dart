@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
-import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_card.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_summary_card.dart';
@@ -17,21 +17,24 @@ class DonationsListScreen extends StatelessWidget {
     final ctrl = Get.find<DonationsListController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF9F3),
+      backgroundColor: DonationUi.background,
       body: Obx(() {
-        // Explicitly access observables to ensure Obx tracks them
         final items = ctrl.items;
         final loading = ctrl.isLoading;
         final error = ctrl.error;
-        // Trigger listeners for summary getters
         final total = ctrl.totalDonated;
         final count = ctrl.contributionsCount;
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildHeader(context),
+            _FigmaDonationsHeader(
+              onBack: () => Get.back(),
+              onHistory: () => Get.toNamed(AppRoutes.userContributions),
+            ),
             Expanded(
               child: RefreshIndicator(
+                color: DonationUi.amountBlue,
                 onRefresh: () async {
                   await ctrl.refreshDonations();
                   await ctrl.fetchContributions();
@@ -39,18 +42,43 @@ class DonationsListScreen extends StatelessWidget {
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                    SliverToBoxAdapter(child: _buildSummaryCard(ctrl)),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                    const SliverToBoxAdapter(
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                        child: Text(
+                          'Donations',
+                          textAlign: TextAlign.left,
+                          style: AppTypography.lora(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w500,
+                            color: DonationUi.textPrimary,
+                            height: 1.15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: DonationSummaryCard(
+                          totalLabel: 'Total Donated',
+                          totalValue: DonationUi.formatCurrency(total),
+                          countLabel: 'Contributions',
+                          countValue: '$count',
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
                           'Offer your donations to',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF3B1E08),
+                          style: AppTypography.lora(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: DonationUi.textPrimary,
                           ),
                         ),
                       ),
@@ -77,7 +105,7 @@ class DonationsListScreen extends StatelessWidget {
                           delegate: SliverChildBuilderDelegate((_, i) {
                             final d = items[i];
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.only(bottom: 10),
                               child: DonationCard(
                                 donation: d,
                                 onTap: () => MakeDonationScreen.show(
@@ -98,117 +126,47 @@ class DonationsListScreen extends StatelessWidget {
       }),
     );
   }
+}
 
-  Widget _buildHeader(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 200,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: Image(
-              image: AssetImage('assets/images/appHeaderImg.png'),
-              fit: BoxFit.fill,
-              alignment: Alignment.topCenter,
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Get.back(),
-                      ),
-                      const Text(
-                        'Donations',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontFamily: 'Lora',
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+/// Figma: cream bar, back + History pill, no hero image.
+class _FigmaDonationsHeader extends StatelessWidget {
+  const _FigmaDonationsHeader({required this.onBack, required this.onHistory});
+
+  final VoidCallback onBack;
+  final VoidCallback onHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: DonationUi.background,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_sharp,
+                    size: 20,
+                    color: DonationUi.textPrimary,
                   ),
-                  GestureDetector(
-                    onTap: () => Get.toNamed(AppRoutes.userContributions),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white30),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.history, size: 16, color: Colors.white),
-                          SizedBox(width: 6),
-                          Text(
-                            'History',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                  onPressed: onBack,
+                ),
               ),
-            ),
+              const Spacer(),
+              DonationHistoryChip(onTap: onHistory),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-
-  Widget _buildSummaryCard(DonationsListController ctrl) {
-    return DonationSummaryCard(
-      totalLabel: 'total donated',
-      totalValue: DonationUi.formatCurrency(ctrl.totalDonated),
-      countLabel: 'contributions',
-      countValue: '${ctrl.contributionsCount}',
-    );
-  }
-}
-
-class _TempleHeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height - 30);
-
-    // Create a scalloped arch with 3 curves
-    final scallopWidth = size.width / 3;
-    for (var i = 0; i < 3; i++) {
-      final xStart = i * scallopWidth;
-      final xEnd = (i + 1) * scallopWidth;
-      path.quadraticBezierTo(
-        xStart + scallopWidth / 2,
-        size.height + 10,
-        xEnd,
-        size.height - 30,
-      );
-    }
-
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
 class _EmptyState extends StatelessWidget {
@@ -232,7 +190,7 @@ class _EmptyState extends StatelessWidget {
             style: AppTypography.lora(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B1E08),
+              color: DonationUi.textPrimary,
             ),
           ),
         ],

@@ -9,15 +9,80 @@ class AuthRemoteDataSource {
   final ApiClient _apiClient;
 
   /// Invalidates the stored refresh token on the server.
-  /// Matches Swagger: POST /auth/logout  { "refreshToken": "string" }
+  /// POST `/api/v1/auth/logout` with `{ "refreshToken": "..." }`.
   Future<void> logout(String refreshToken) async {
-    try {
-      await _apiClient.dio.post<dynamic>(
-        ApiEndpoints.authLogout,
-        data: {'refreshToken': refreshToken},
+    await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.authLogout,
+      data: {'refreshToken': refreshToken},
+    );
+  }
+
+  /// Soft-deletes the account on the server.
+  /// DELETE `/api/v1/auth/account` with body `{ "refreshToken": "..." }`.
+  Future<void> deleteAccount(String refreshToken) async {
+    await _apiClient.dio.delete<dynamic>(
+      ApiEndpoints.authDeleteAccount,
+      data: {'refreshToken': refreshToken},
+    );
+  }
+
+  /// Creates or updates the signed-in user's profile.
+  /// POST `/api/v1/auth/profile` as multipart/form-data.
+  Future<void> upsertProfile(Map<String, dynamic> profileData) async {
+    final formDataMap = <String, dynamic>{};
+    profileData.forEach((key, value) {
+      if (value == null) return;
+      if (value is MultipartFile) {
+        formDataMap[key] = value;
+      } else {
+        final text = value.toString().trim();
+        if (text.isNotEmpty) {
+          formDataMap[key] = text;
+        }
+      }
+    });
+    final response = await _apiClient.dio.post<dynamic>(
+      ApiEndpoints.profile,
+      data: FormData.fromMap(formDataMap),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message:
+            'Profile upsert API failed with status ${response.statusCode}.',
       );
-    } catch (_) {
-      // Best-effort: even if the server call fails, local session is cleared.
+    }
+  }
+
+  /// Partially updates the signed-in user's profile.
+  /// PATCH `/api/v1/auth/profile` as multipart/form-data.
+  Future<void> updateProfile(Map<String, dynamic> profileData) async {
+    final formDataMap = <String, dynamic>{};
+    profileData.forEach((key, value) {
+      if (value == null) return;
+      if (value is MultipartFile) {
+        formDataMap[key] = value;
+      } else {
+        final text = value.toString().trim();
+        if (text.isNotEmpty) {
+          formDataMap[key] = text;
+        }
+      }
+    });
+    final response = await _apiClient.dio.patch<dynamic>(
+      ApiEndpoints.profile,
+      data: FormData.fromMap(formDataMap),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message:
+            'Profile update API failed with status ${response.statusCode}.',
+      );
     }
   }
 
@@ -30,20 +95,15 @@ class AuthRemoteDataSource {
   }) async {
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.authAdminLogin,
-      data: userProfile == null
-          ? null
-          : <String, dynamic>{'user': userProfile},
-      options: Options(
-        headers: {'Authorization': 'Bearer $firebaseIdToken'},
-      ),
+      data: userProfile == null ? null : <String, dynamic>{'user': userProfile},
+      options: Options(headers: {'Authorization': 'Bearer $firebaseIdToken'}),
     );
     if (response.statusCode == null || response.statusCode! >= 400) {
       throw DioException(
         requestOptions: response.requestOptions,
         response: response,
         type: DioExceptionType.badResponse,
-        message:
-            'Admin login API failed with status ${response.statusCode}.',
+        message: 'Admin login API failed with status ${response.statusCode}.',
       );
     }
     final accessToken = _extractAccessToken(response.data);
@@ -88,11 +148,7 @@ class AuthRemoteDataSource {
     print('BACKEND_LOGIN_AUTHORIZATION_TOKEN:Bearer $firebaseIdToken');
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.authLogin,
-      data: userProfile == null
-          ? null
-          : <String, dynamic>{
-              'user': userProfile,
-            },
+      data: userProfile == null ? null : <String, dynamic>{'user': userProfile},
       options: Options(headers: {'Authorization': 'Bearer $firebaseIdToken'}),
     );
     print('║ Body   : ${response.data}');
