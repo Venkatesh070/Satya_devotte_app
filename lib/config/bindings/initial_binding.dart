@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/services/api_loading_service.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_api.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
@@ -62,8 +63,10 @@ class InitialBinding extends Bindings {
   void dependencies() {
     Get.put<FirebaseService>(FirebaseService(), permanent: true);
     Get.put<AuthSessionService>(AuthSessionService(), permanent: true);
+    Get.put<ApiLoadingService>(ApiLoadingService(), permanent: true);
     Get.put<ApiClient>(
       ApiClient(
+        loadingService: Get.find<ApiLoadingService>(),
         tokenProvider: () => Get.find<AuthSessionService>().getAccessToken(),
       ),
       permanent: true,

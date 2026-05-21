@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_pages.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_theme.dart';
+import 'package:satya_devotte_app/shared/widgets/api_loading_overlay.dart';
 
 class SathyaApp extends StatelessWidget {
   const SathyaApp({super.key});
@@ -18,6 +19,8 @@ class SathyaApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: kIsWeb ? AppRoutes.login : AppRoutes.splash,
       getPages: AppPages.pages,
+      builder: (context, child) =>
+          ApiLoadingOverlay(child: child ?? const SizedBox.shrink()),
     );
   }
 }

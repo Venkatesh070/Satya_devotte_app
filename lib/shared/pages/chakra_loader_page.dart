@@ -120,7 +120,7 @@ class _ChakraLoaderPageState extends State<ChakraLoaderPage>
 
     if (widget.asOverlay) {
       return Positioned.fill(
-        child: IgnorePointer(
+        child: AbsorbPointer(
           child: loaderBody,
         ),
       );

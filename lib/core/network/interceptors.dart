@@ -1,4 +1,47 @@
 import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/services/api_loading_service.dart';
+
+/// Set on [RequestOptions.extra] to skip the global chakra loader for a call.
+const String kSkipApiLoaderKey = 'skipApiLoader';
+
+class ApiLoadingInterceptor extends Interceptor {
+  ApiLoadingInterceptor(this._loadingService);
+
+  final ApiLoadingService _loadingService;
+
+  bool _shouldSkip(RequestOptions options) =>
+      options.extra[kSkipApiLoaderKey] == true;
+
+  @override
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) {
+    if (!_shouldSkip(options)) {
+      _loadingService.onRequestStarted();
+    }
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    if (!_shouldSkip(response.requestOptions)) {
+      _loadingService.onRequestFinished();
+    }
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (!_shouldSkip(err.requestOptions)) {
+      _loadingService.onRequestFinished();
+    }
+    handler.next(err);
+  }
+}
 
 class AuthTokenInterceptor extends Interceptor {
   AuthTokenInterceptor(this._tokenProvider);

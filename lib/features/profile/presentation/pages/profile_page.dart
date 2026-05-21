@@ -11,8 +11,6 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/profile_ac
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_more_options_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
-import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
-
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -21,7 +19,6 @@ class ProfilePage extends StatelessWidget {
     final profileController = Get.find<ProfileController>();
 
     return Obx(() {
-      final isLoading = profileController.isLoading;
       final userData = profileController.resolvedUser;
 
       final name = (userData?['fullName'] ?? userData?['name'] ?? 'Devotee')
@@ -54,11 +51,9 @@ class ProfilePage extends StatelessWidget {
 
       return Scaffold(
         backgroundColor: AppColors.appBgColor,
-        body: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: profileController.loadProfile,
-              child: SingleChildScrollView(
+        body: RefreshIndicator(
+          onRefresh: profileController.loadProfile,
+          child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
@@ -113,10 +108,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
-            if (isLoading) const ChakraLoaderPage(asOverlay: true),
-          ],
+          ),
         ),
       );
     });
