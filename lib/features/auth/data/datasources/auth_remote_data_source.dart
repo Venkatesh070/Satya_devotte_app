@@ -137,6 +137,7 @@ class AuthRemoteDataSource {
       accessToken: accessToken,
       refreshToken: refreshToken,
       user: user,
+      isRegistered: _extractIsRegistered(response.data),
     );
   }
 
@@ -192,7 +193,43 @@ class AuthRemoteDataSource {
       accessToken: accessToken,
       refreshToken: refreshToken,
       user: user,
+      isRegistered: _extractIsRegistered(response.data),
     );
+  }
+
+  /// Parses `isRegistered` from the login payload (root, `data`, or nested `user`).
+  /// Defaults to `true` when the field is absent (older API responses).
+  bool _extractIsRegistered(dynamic data) {
+    if (data is! Map<String, dynamic>) return true;
+
+    bool? parseValue(dynamic v) {
+      if (v == null) return null;
+      if (v is bool) return v;
+      if (v is String) {
+        final s = v.trim().toLowerCase();
+        if (s == 'true' || s == '1') return true;
+        if (s == 'false' || s == '0') return false;
+      }
+      if (v is num) return v != 0;
+      return null;
+    }
+
+    final direct = parseValue(data['isRegistered']);
+    if (direct != null) return direct;
+
+    final inner = data['data'];
+    if (inner is Map<String, dynamic>) {
+      final nested = parseValue(inner['isRegistered']);
+      if (nested != null) return nested;
+    }
+
+    final user = _extractUser(data);
+    if (user != null) {
+      final onUser = parseValue(user['isRegistered']);
+      if (onUser != null) return onUser;
+    }
+
+    return true;
   }
 
   String? _extractAccessToken(dynamic data) {

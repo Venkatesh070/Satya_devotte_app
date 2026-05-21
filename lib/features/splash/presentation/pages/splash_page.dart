@@ -55,12 +55,7 @@ class _SplashPageState extends State<SplashPage>
       return;
     }
 
-    // Route based on role
-    if (auth.isAdmin) {
-      Get.offAllNamed(AppRoutes.cms);
-    } else {
-      Get.offAllNamed(AppRoutes.home);
-    }
+    auth.navigateAfterLogin();
   }
 
   @override

@@ -7,7 +7,10 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/features/auth/domain/entities/auth_login_result.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 
 class AuthController extends GetxController {
@@ -40,6 +43,32 @@ class AuthController extends GetxController {
   bool get isSuperAdmin => _userRole.value == 'superadmin';
   bool get isAdmin => _userRole.value == 'admin' || isSuperAdmin;
   bool get isRegularUser => _userRole.value == 'user';
+
+  /// `false` when the backend login response requires profile completion.
+  bool get isProfileRegistrationComplete {
+    final v = _authSessionService.userData?['isRegistered'];
+    if (v is bool) return v;
+    if (v is String) {
+      final s = v.trim().toLowerCase();
+      if (s == 'true' || s == '1') return true;
+      if (s == 'false' || s == '0') return false;
+    }
+    if (v is num) return v != 0;
+    return true;
+  }
+
+  /// Routes admin → CMS, incomplete profile → create account, else home.
+  void navigateAfterLogin() {
+    if (isAdmin) {
+      Get.offAllNamed(AppRoutes.cms);
+      return;
+    }
+    if (!isProfileRegistrationComplete) {
+      Get.offAll(() => const CreateAccountPage(completeProfileOnly: true));
+      return;
+    }
+    Get.offAllNamed(AppRoutes.home);
+  }
 
   /// Current logged-in user's backend MongoDB _id
   String get currentUserId =>
@@ -131,6 +160,42 @@ class AuthController extends GetxController {
     _authSessionService.patchRole(_userRole.value);
   }
 
+  Future<void> _persistLoginResult(AuthLoginResult loginResult) async {
+    final user = Map<String, dynamic>.from(loginResult.user);
+    user['isRegistered'] = loginResult.isRegistered;
+    await _authSessionService.setSession(
+      accessToken: loginResult.accessToken,
+      refreshToken: loginResult.refreshToken,
+      userData: user,
+    );
+    _applyRole(user);
+    _isAuthenticated.value = true;
+    await _registerDeviceForPush();
+    _refreshProfileControllerAfterAuth();
+  }
+
+  void _markProfileRegisteredInSession() {
+    final current = _authSessionService.userData;
+    if (current == null) return;
+    final user = Map<String, dynamic>.from(current);
+    user['isRegistered'] = true;
+    final access = _authSessionService.accessToken;
+    final refresh = _authSessionService.refreshToken;
+    if (access == null ||
+        access.isEmpty ||
+        refresh == null ||
+        refresh.isEmpty) {
+      return;
+    }
+    unawaited(
+      _authSessionService.setSession(
+        accessToken: access,
+        refreshToken: refresh,
+        userData: user,
+      ),
+    );
+  }
+
   // ─── Google Sign-In ──────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
     if (_authApiInFlight ||
@@ -155,23 +220,7 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: googleProfile,
       );
-      await _authSessionService.setSession(
-        accessToken: loginResult.accessToken,
-        refreshToken: loginResult.refreshToken,
-        userData: loginResult.user,
-      );
-      _applyRole(loginResult.user);
-      _isAuthenticated.value = true;
-      await _registerDeviceForPush();
-      _refreshProfileControllerAfterAuth();
-      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
-      print('');
-      print('╔══════════════════════════════════════════════════════════╗');
-      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
-      print('╠══════════════════════════════════════════════════════════╣');
-      print('  ' + loginResult.accessToken);
-      print('╚══════════════════════════════════════════════════════════╝');
-      print('');
+      await _persistLoginResult(loginResult);
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -289,23 +338,7 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: emailProfile,
       );
-      await _authSessionService.setSession(
-        accessToken: loginResult.accessToken,
-        refreshToken: loginResult.refreshToken,
-        userData: loginResult.user,
-      );
-      _applyRole(loginResult.user);
-      _isAuthenticated.value = true;
-      await _registerDeviceForPush();
-      _refreshProfileControllerAfterAuth();
-      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
-      print('');
-      print('╔══════════════════════════════════════════════════════════╗');
-      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
-      print('╠══════════════════════════════════════════════════════════╣');
-      print('  ' + loginResult.accessToken);
-      print('╚══════════════════════════════════════════════════════════╝');
-      print('');
+      await _persistLoginResult(loginResult);
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -350,23 +383,7 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: emailProfile,
       );
-      await _authSessionService.setSession(
-        accessToken: loginResult.accessToken,
-        refreshToken: loginResult.refreshToken,
-        userData: loginResult.user,
-      );
-      _applyRole(loginResult.user);
-      _isAuthenticated.value = true;
-      await _registerDeviceForPush();
-      _refreshProfileControllerAfterAuth();
-      // ── DEBUG: Copy this Bearer token into Swagger Authorize ──
-      print('');
-      print('╔══════════════════════════════════════════════════════════╗');
-      print('║  SWAGGER ACCESS TOKEN — paste into Authorize as Bearer   ║');
-      print('╠══════════════════════════════════════════════════════════╣');
-      print('  ' + loginResult.accessToken);
-      print('╚══════════════════════════════════════════════════════════╝');
-      print('');
+      await _persistLoginResult(loginResult);
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -374,6 +391,38 @@ class AuthController extends GetxController {
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignUpError(error);
+      return false;
+    } finally {
+      _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
+  }
+
+  /// Completes registration for users who already signed in (`isRegistered: false`).
+  Future<bool> completeRegistration({
+    Map<String, dynamic>? profileData,
+    bool skipProfile = false,
+  }) async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Please wait for the current request to finish.';
+      return false;
+    }
+    _authApiInFlight = true;
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      if (!skipProfile &&
+          profileData != null &&
+          profileData.isNotEmpty) {
+        await _authRepository.upsertProfile(profileData);
+      }
+      _markProfileRegisteredInSession();
+      _refreshProfileControllerAfterAuth();
+      return true;
+    } catch (error) {
+      _lastAuthError.value = _mapCreateAccountError(error);
       return false;
     } finally {
       _isEmailSignInLoading.value = false;
@@ -411,18 +460,11 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: emailProfile,
       );
-      await _authSessionService.setSession(
-        accessToken: loginResult.accessToken,
-        refreshToken: loginResult.refreshToken,
-        userData: loginResult.user,
-      );
+      await _persistLoginResult(loginResult);
       if (profileData != null && profileData.isNotEmpty) {
         await _authRepository.upsertProfile(profileData);
       }
-      _applyRole(loginResult.user);
-      _isAuthenticated.value = true;
-      await _registerDeviceForPush();
-      _refreshProfileControllerAfterAuth();
+      _markProfileRegisteredInSession();
       return true;
     } catch (error) {
       await _authSessionService.clear();

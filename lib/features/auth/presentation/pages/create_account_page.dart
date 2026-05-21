@@ -4,14 +4,20 @@ import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class CreateAccountPage extends StatefulWidget {
-  const CreateAccountPage({super.key});
+  const CreateAccountPage({
+    super.key,
+    this.completeProfileOnly = false,
+  });
+
+  /// User already signed in (e.g. Google) but `isRegistered` was false on login.
+  final bool completeProfileOnly;
 
   @override
   State<CreateAccountPage> createState() => _CreateAccountPageState();
@@ -43,6 +49,25 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   AuthController get _authController => Get.find<AuthController>();
   MediaUploadService get _mediaService => Get.find<MediaUploadService>();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.completeProfileOnly) {
+      _step = 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _prefillFromSession());
+    }
+  }
+
+  Future<void> _prefillFromSession() async {
+    final user = await Get.find<AuthSessionService>().getUserData();
+    if (user == null) return;
+    final email = (user['email'] as String? ?? '').trim();
+    if (email.isNotEmpty) _emailController.text = email;
+    final name = (user['fullName'] as String? ?? user['name'] as String? ?? '')
+        .trim();
+    if (name.isNotEmpty) _fullNameController.text = name;
+  }
 
   @override
   void dispose() {
@@ -139,11 +164,19 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       profilePayload['timeOfBirth'] = '$hh:$mm';
     }
 
-    final isSuccess = await _authController.signUpAndCreateProfile(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      profileData: profilePayload,
-    );
+    final bool isSuccess;
+    if (widget.completeProfileOnly) {
+      isSuccess = await _authController.completeRegistration(
+        profileData: profilePayload,
+        skipProfile: skipProfile,
+      );
+    } else {
+      isSuccess = await _authController.signUpAndCreateProfile(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        profileData: profilePayload,
+      );
+    }
     if (!mounted) return;
 
     if (!isSuccess) {
@@ -157,11 +190,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       return;
     }
 
-    if (_authController.isAdmin) {
-      Get.offAllNamed(AppRoutes.cms);
-    } else {
-      Get.offAllNamed(AppRoutes.home);
-    }
+    _authController.navigateAfterLogin();
   }
 
   @override
@@ -223,7 +252,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _step == 0 ? 'Signup with email' : 'Your details',
+                      widget.completeProfileOnly
+                          ? 'Complete your profile'
+                          : (_step == 0 ? 'Signup with email' : 'Your details'),
                       style: const TextStyle(
                         color: _titleColor,
                         fontSize: 27,
@@ -249,9 +280,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _step == 0
-                      ? 'Sign up with your email and set a secure password'
-                      : 'Enter your details with us',
+                  widget.completeProfileOnly
+                      ? 'Add your details to finish setting up your account'
+                      : (_step == 0
+                          ? 'Sign up with your email and set a secure password'
+                          : 'Enter your details with us'),
                   style: TextStyle(
                     color: Colors.black.withOpacity(0.58),
                     fontSize: 11.5,
@@ -261,7 +294,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 const SizedBox(height: 14),
                 Expanded(
                   child: SingleChildScrollView(
-                    child: _step == 0
+                    child: _step == 0 && !widget.completeProfileOnly
                         ? Form(
                             key: _formStepOneKey,
                             child: Column(
