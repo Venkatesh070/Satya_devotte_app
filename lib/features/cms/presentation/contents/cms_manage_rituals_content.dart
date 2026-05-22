@@ -427,6 +427,7 @@ class _RitualFormState extends State<_RitualForm> {
 
   PickedFile? _pickedImage;
   String? _imageUrl;
+  bool _imageRemoved = false;
 
   bool get _isEdit => widget.ritual != null;
 
@@ -572,7 +573,9 @@ class _RitualFormState extends State<_RitualForm> {
       difficulty: _difficulty,
       isFeatured: _isFeatured,
       status: _status,
-      imageUrl: _pickedImage == null ? _imageUrl : null,
+      imageUrl: _pickedImage != null
+          ? null
+          : (_imageRemoved ? null : _imageUrl),
     );
 
     final success = widget.ritual == null
@@ -782,10 +785,14 @@ class _RitualFormState extends State<_RitualForm> {
           accept: 'JPG, PNG up to 5MB',
           mediaType: PickMediaType.image,
           initialUrl: _imageUrl,
-          onPicked: (f) => setState(() => _pickedImage = f),
+          onPicked: (f) => setState(() {
+            _pickedImage = f;
+            _imageRemoved = false;
+          }),
           onRemoved: () => setState(() {
             _pickedImage = null;
             _imageUrl = null;
+            _imageRemoved = true;
           }),
         ),
       ],

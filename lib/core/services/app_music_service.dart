@@ -21,7 +21,14 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     AppRoutes.splash,
     AppRoutes.onboarding,
     AppRoutes.login,
+    AppRoutes.createAccount,
+    AppRoutes.poojaKitCart,
+    AppRoutes.poojaKitCheckout,
   };
+
+  /// Unnamed `Get.to(() => CreateAccountPage())` routes in GetX.
+  static bool _isCreateAccountRoute(String route) =>
+      route.contains('CreateAccount');
 
   @override
   void onInit() {
@@ -39,7 +46,10 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   /// Updates mobile FAB visibility and web CMS auto-play/stop by route.
   void syncControlsVisibility([String? route]) {
     final current = route ?? Get.currentRoute;
-    showFab.value = !kIsWeb && !_fabHiddenRoutes.contains(current);
+    showFab.value =
+        !kIsWeb &&
+        !_fabHiddenRoutes.contains(current) &&
+        !_isCreateAccountRoute(current);
 
     if (kIsWeb) {
       if (isCmsRoute(current)) {
@@ -49,6 +59,9 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
       }
     }
   }
+
+  /// Call while [CreateAccountPage] is visible (unnamed route).
+  void suppressFloatingControl() => showFab.value = false;
 
   @override
   void onClose() {

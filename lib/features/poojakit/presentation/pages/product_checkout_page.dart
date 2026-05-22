@@ -12,8 +12,6 @@ import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/app_background.dart';
-
 class ProductCheckoutPage extends StatefulWidget {
   const ProductCheckoutPage({super.key});
 
@@ -176,36 +174,37 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         : (_cartCtrl.cart?.totalAmount ?? 0);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AppBackground(
-        child: Column(
-          children: [
-            // Custom Header
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Get.back(),
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.textColor,
                     ),
-                    Text(
-                      isSingleProduct ? 'Checkout' : 'Cart Checkout',
-                      style: AppTypography.lora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    onPressed: () => Get.back(),
+                  ),
+                  Text(
+                    isSingleProduct ? 'Checkout' : 'Cart Checkout',
+                    style: AppTypography.lora(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColor,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          ),
 
             Expanded(
               child: SingleChildScrollView(
@@ -268,20 +267,21 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE8E0D6)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Order Summary (${_cartCtrl.itemCount} items)',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: AppTypography.inter(
                                 fontWeight: FontWeight.bold,
+                                color: AppColors.textColor,
                               ),
                             ),
-                            const Divider(color: Colors.white24),
+                            Divider(color: Colors.grey.shade300),
                             ...(_cartCtrl.cart?.items.map(
                                   (item) => Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -294,8 +294,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                                         Expanded(
                                           child: Text(
                                             '${item.product.title} x ${item.quantity}',
-                                            style: const TextStyle(
-                                              color: Colors.white70,
+                                            style: TextStyle(
+                                              color: AppColors.textColor
+                                                  .withValues(alpha: 0.7),
                                               fontSize: 13,
                                             ),
                                             maxLines: 1,
@@ -305,8 +306,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                                         Text(
                                           '${item.product.currency} ${item.lineTotal}',
                                           style: const TextStyle(
-                                            color: Colors.white,
+                                            color: AppColors.textColor,
                                             fontSize: 13,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ],
@@ -327,7 +329,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                         style: AppTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.textColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -341,7 +343,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                               style: AppTypography.inter(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: AppColors.textColor,
                               ),
                             ),
                           ),
@@ -351,7 +353,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                             '(${_product!.stockQuantity} in stock)',
                             style: AppTypography.inter(
                               fontSize: 12,
-                              color: Colors.white70,
+                              color: AppColors.textColor.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -368,7 +370,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                           style: AppTypography.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppColors.textColor,
                           ),
                         ),
                         TextButton.icon(
@@ -379,20 +381,20 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                                   height: 12,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Color(0xFFFFD180),
+                                    color: AppColors.primary,
                                   ),
                                 )
                               : const Icon(
                                   Icons.my_location,
                                   size: 14,
-                                  color: Color(0xFFFFD180),
+                                  color: AppColors.primary,
                                 ),
                           label: Text(
                             _isLocating
                                 ? 'Locating...'
                                 : 'Use Current Location',
                             style: const TextStyle(
-                              color: Color(0xFFFFD180),
+                              color: AppColors.primary,
                               fontSize: 12,
                             ),
                           ),
@@ -435,21 +437,25 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       style: AppTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.textColor,
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _notesCtrl,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textColor),
                       decoration: InputDecoration(
                         hintText: 'Special instructions…',
-                        hintStyle: const TextStyle(color: Colors.white54),
+                        hintStyle: TextStyle(
+                          color: AppColors.textColor.withValues(alpha: 0.45),
+                        ),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE8E0D6),
+                          ),
                         ),
                       ),
                     ),
@@ -476,8 +482,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                           'Total Amount',
                           style: AppTypography.inter(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Colors.grey,
                           ),
                         ),
                         Text(
@@ -485,7 +490,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                           style: AppTypography.lora(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFFD180),
+                            color: AppColors.textColor,
                           ),
                         ),
                       ],
@@ -529,8 +534,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -545,13 +549,16 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+            color: AppColors.textColor.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: AppColors.textColor, fontSize: 14),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(
@@ -559,10 +566,10 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
               vertical: 12,
             ),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
+            fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
+              borderSide: const BorderSide(color: Color(0xFFE8E0D6)),
             ),
           ),
         ),
@@ -577,10 +584,11 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white70),
+          border: Border.all(color: const Color(0xFFE0D6C2)),
           borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: AppColors.textColor, size: 20),
       ),
     );
   }

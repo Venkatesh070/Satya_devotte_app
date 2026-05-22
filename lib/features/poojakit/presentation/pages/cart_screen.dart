@@ -8,8 +8,6 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/app_background.dart';
-
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
@@ -18,40 +16,40 @@ class CartScreen extends StatelessWidget {
     final c = Get.find<CartController>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           'My Cart',
           style: AppTypography.lora(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.textColor,
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.textColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
+            color: AppColors.textColor,
           ),
           onPressed: () => Get.back(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.delete_sweep_outlined,
-              color: Colors.white70,
+              color: AppColors.textColor.withValues(alpha: 0.7),
             ),
             onPressed: () => _showClearCartDialog(context, c),
           ),
         ],
       ),
-      body: AppBackground(
-        child: Obx(() {
+      body: Obx(() {
           if (c.isLoading && c.cart == null) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFFD180)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -64,14 +62,14 @@ class CartScreen extends StatelessWidget {
                   Icon(
                     Icons.shopping_cart_outlined,
                     size: 80,
-                    color: Colors.white.withOpacity(0.2),
+                    color: AppColors.textColor.withValues(alpha: 0.25),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Your cart is empty',
                     style: AppTypography.lora(
                       fontSize: 18,
-                      color: Colors.white.withOpacity(0.6),
+                      color: AppColors.textColor.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -104,7 +102,6 @@ class CartScreen extends StatelessWidget {
             ],
           );
         }),
-      ),
     );
   }
 
@@ -150,9 +147,16 @@ class _CartItemTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: const Color(0xFFE8E0D6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -179,7 +183,7 @@ class _CartItemTile extends StatelessWidget {
                   style: AppTypography.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.textColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -189,7 +193,7 @@ class _CartItemTile extends StatelessWidget {
                   '${product.currency} ${product.effectivePrice}',
                   style: AppTypography.inter(
                     fontSize: 12,
-                    color: const Color(0xFFFFD180),
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -207,7 +211,7 @@ class _CartItemTile extends StatelessWidget {
                       child: Text(
                         '${item.quantity}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -243,10 +247,10 @@ class _CartItemTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white24),
+          border: Border.all(color: const Color(0xFFE0D6C2)),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, color: Colors.white, size: 16),
+        child: Icon(icon, color: AppColors.textColor, size: 16),
       ),
     );
   }

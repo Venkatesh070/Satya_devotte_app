@@ -4,7 +4,10 @@
 // The picked file bytes are sent directly in the create/update API calls.
 // e.g. POST /poojas/create-pooja (multipart) includes image/audio/video bytes.
 
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 enum PickMediaType { image, audio, video }
@@ -28,12 +31,13 @@ class MediaUploadService extends GetxService {
       final result = await FilePicker.pickFiles(
         type: _fileType(type),
         withData: true,
+        withReadStream: true,
         allowMultiple: false,
       );
       if (result == null || result.files.isEmpty) return null;
 
       final file = result.files.first;
-      final bytes = file.bytes;
+      final bytes = await _loadPlatformFileBytes(file);
       if (bytes == null || bytes.isEmpty) return null;
 
       return PickedFile(
@@ -55,6 +59,21 @@ class MediaUploadService extends GetxService {
       case PickMediaType.video:
         return FileType.video;
     }
+  }
+
+  /// Web often returns [PlatformFile.bytes] as null; read stream or path instead.
+  Future<List<int>?> _loadPlatformFileBytes(PlatformFile file) async {
+    if (file.bytes != null && file.bytes!.isNotEmpty) {
+      return file.bytes!;
+    }
+    final stream = file.readStream;
+    if (stream != null) {
+      final builder = BytesBuilder(copy: false);
+      await stream.forEach(builder.add);
+      final data = builder.takeBytes();
+      if (data.isNotEmpty) return data;
+    }
+    return null;
   }
 
   String _mimeType(String filename, PickMediaType t) {

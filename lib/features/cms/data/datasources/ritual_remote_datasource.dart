@@ -1,7 +1,7 @@
 // lib/features/cms/data/datasources/ritual_remote_datasource.dart
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -67,8 +67,16 @@ class RitualRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
   }) async {
-    final hasMedia = image != null || audio != null || video != null;
+    final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
     final payload = Map<String, dynamic>.from(ritual.toJson());
+    if (hasMedia) {
+      _stripMediaSlotsReplacedByFiles(
+        payload,
+        image: image,
+        audio: audio,
+        video: video,
+      );
+    }
 
     if (!hasMedia) {
       final response = await _apiClient.dio.post(
@@ -119,10 +127,10 @@ class RitualRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
   }) async {
-    final hasMedia = image != null || audio != null || video != null;
-    final payload = Map<String, dynamic>.from(ritual.toJson());
-
+    final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
     if (!hasMedia) {
+      final payload = Map<String, dynamic>.from(ritual.toJson());
+      _applyExplicitMediaClearsForPatch(payload, ritual);
       final response = await _apiClient.dio.patch(
         ApiEndpoints.updateRitual(id),
         data: payload,
@@ -132,6 +140,13 @@ class RitualRemoteDataSource {
       );
     }
 
+    final payload = Map<String, dynamic>.from(ritual.toJson());
+    _stripMediaSlotsReplacedByFiles(
+      payload,
+      image: image,
+      audio: audio,
+      video: video,
+    );
     final formMap = _toMultipartFields(payload);
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
@@ -206,5 +221,69 @@ class RitualRemoteDataSource {
       }
     });
     return out;
+  }
+
+  bool _pickedHasBytes(PickedFile? f) => f != null && f.bytes.isNotEmpty;
+
+  bool _hasMediaFiles({
+    required PickedFile? image,
+    required PickedFile? audio,
+    required PickedFile? video,
+  }) =>
+      _pickedHasBytes(image) || _pickedHasBytes(audio) || _pickedHasBytes(video);
+
+  void _stripMediaSlotsReplacedByFiles(
+    Map<String, dynamic> payload, {
+    required PickedFile? image,
+    required PickedFile? audio,
+    required PickedFile? video,
+  }) {
+    if (_pickedHasBytes(image)) {
+      payload['imageUrl'] = '';
+      _mediaMap(payload)['images'] = <String>[];
+    }
+    if (_pickedHasBytes(audio)) {
+      payload['audioUrl'] = '';
+      _mediaMap(payload)['audio'] = <String>[];
+    }
+    if (_pickedHasBytes(video)) {
+      payload['videoUrl'] = '';
+      _mediaMap(payload)['videos'] = <String>[];
+    }
+  }
+
+  void _applyExplicitMediaClearsForPatch(
+    Map<String, dynamic> payload,
+    RitualModel ritual,
+  ) {
+    if (ritual.imageUrl == null) {
+      payload['imageUrl'] = '';
+      _mediaMap(payload)['images'] = <String>[];
+    }
+    if (ritual.audioUrl == null) {
+      payload['audioUrl'] = '';
+      _mediaMap(payload)['audio'] = <String>[];
+    }
+    if (ritual.videoUrl == null) {
+      payload['videoUrl'] = '';
+      _mediaMap(payload)['videos'] = <String>[];
+    }
+  }
+
+  Map<String, dynamic> _mediaMap(Map<String, dynamic> payload) {
+    final raw = payload['media'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) {
+      final m = Map<String, dynamic>.from(raw);
+      payload['media'] = m;
+      return m;
+    }
+    final fresh = <String, dynamic>{
+      'images': <String>[],
+      'audio': <String>[],
+      'videos': <String>[],
+    };
+    payload['media'] = fresh;
+    return fresh;
   }
 }
