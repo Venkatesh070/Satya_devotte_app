@@ -2,6 +2,7 @@
 // as returned by `GET /orders/requests`.
 import 'package:intl/intl.dart';
 
+import 'package:satya_devotte_app/config/env/app_env.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 
 enum OrderRequestType { cancellation, refund, replacement, unknown }
@@ -197,18 +198,7 @@ class OrderRequest {
       : DateFormat('d MMM yyyy, h:mm a').format(createdAt!);
 
   factory OrderRequest.fromJson(Map<String, dynamic> json) {
-    final attachmentsRaw =
-        json['attachments'] ?? json['files'] ?? const <dynamic>[];
-    final attachments = <String>[];
-    if (attachmentsRaw is List) {
-      for (final a in attachmentsRaw) {
-        if (a is String && a.isNotEmpty) {
-          attachments.add(a);
-        } else if (a is Map && a['url'] is String) {
-          attachments.add(a['url'] as String);
-        }
-      }
-    }
+    final attachments = _parseAttachmentUrls(json);
 
     // user may live on the request OR inside `order.user`.
     String userId = '';
@@ -290,4 +280,87 @@ DateTime? _parseDate(dynamic v) {
   final s = v.toString();
   if (s.isEmpty) return null;
   return DateTime.tryParse(s)?.toLocal();
+}
+
+/// Devotee replacement uploads use multipart field `images`; the API may
+/// return them as `images`, `attachments`, populated docs, or relative paths.
+List<String> _parseAttachmentUrls(Map<String, dynamic> json) {
+  final out = <String>[];
+
+  void addResolved(String? raw) {
+    final url = _resolveMediaUrl(raw);
+    if (url != null && url.isNotEmpty && !out.contains(url)) {
+      out.add(url);
+    }
+  }
+
+  void addFromMap(Map<dynamic, dynamic> raw) {
+    final m = Map<String, dynamic>.from(raw);
+    for (final key in const [
+      'url',
+      'secure_url',
+      'secureUrl',
+      'location',
+      'href',
+      'src',
+    ]) {
+      final v = m[key];
+      if (v != null && v.toString().trim().isNotEmpty) {
+        addResolved(v.toString());
+        return;
+      }
+    }
+    for (final key in const ['path', 'key', 'filename', 'name']) {
+      final v = m[key];
+      if (v != null && v.toString().trim().isNotEmpty) {
+        addResolved(v.toString());
+        return;
+      }
+    }
+  }
+
+  void walk(dynamic value) {
+    if (value == null) return;
+    if (value is String) {
+      addResolved(value);
+      return;
+    }
+    if (value is List) {
+      for (final item in value) {
+        walk(item);
+      }
+      return;
+    }
+    if (value is Map) {
+      addFromMap(value);
+    }
+  }
+
+  for (final field in const [
+    'images',
+    'image',
+    'attachments',
+    'files',
+    'damageImages',
+    'proofImages',
+    'photos',
+    'imageUrls',
+    'replacementImages',
+  ]) {
+    if (json.containsKey(field)) {
+      walk(json[field]);
+    }
+  }
+
+  return out;
+}
+
+String? _resolveMediaUrl(String? raw) {
+  if (raw == null) return null;
+  final s = raw.trim();
+  if (s.isEmpty) return null;
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  final base = AppEnv.resolvedApiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+  if (s.startsWith('/')) return '$base$s';
+  return '$base/$s';
 }

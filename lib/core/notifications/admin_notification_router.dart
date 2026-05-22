@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/notifications/notification_alert_sound.dart';
 import 'package:satya_devotte_app/features/admin_notifications/data/models/admin_notification_item.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
@@ -94,6 +95,9 @@ class AdminNotificationRouter {
   }
 
   static Future<void> _openFromTap(AdminNotificationItem item) async {
+    if (!CmsShellNavigation.isAttached) {
+      await Get.offNamed(AppRoutes.cms);
+    }
     if (Get.isRegistered<CmsAdminNotificationsController>()) {
       await Get.find<CmsAdminNotificationsController>().markReadAndOpen(item);
       return;

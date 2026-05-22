@@ -4,10 +4,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
@@ -55,6 +57,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
     _fetchHomeDataIfNeeded();
+    _recordUserStreak();
   }
 
   @override
@@ -83,8 +86,33 @@ class _HomePageState extends State<HomePage> {
     setState(() => _currentIndex = index);
     if (index == 0) {
       _fetchHomeDataIfNeeded();
+      _recordUserStreak();
     }
     _isAnimatingToTab = false;
+  }
+
+  /// `POST /user/streak` with device IANA timezone for daily streak tracking.
+  Future<void> _recordUserStreak() async {
+    try {
+      final apiClient = Get.find<ApiClient>();
+      String deviceTimeZone;
+      try {
+        deviceTimeZone = await FlutterTimezone.getLocalTimezone();
+      } catch (_) {
+        deviceTimeZone = DateTime.now().timeZoneName;
+      }
+      await apiClient.dio.post<void>(
+        ApiEndpoints.userStreak,
+        options: Options(
+          headers: {'X-Timezone': deviceTimeZone},
+          extra: {kSkipApiLoaderKey: true},
+        ),
+      );
+    } on DioException catch (error) {
+      debugPrint('User streak API failed: ${error.message}');
+    } catch (error) {
+      debugPrint('User streak API failed: $error');
+    }
   }
 
   Future<void> _openPoojasTabFromViewMore() async {

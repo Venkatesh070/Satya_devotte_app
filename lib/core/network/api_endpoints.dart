@@ -38,6 +38,9 @@ class ApiEndpoints {
   static String reviewPooja(String id) =>
       '/api/v1/poojas/review/$id'; // PUT — approve/reject (super admin)
   static const String home = '/api/v1/user-home';
+
+  /// POST — record daily app visit / streak (header: `X-Timezone`).
+  static const String userStreak = '/api/v1/user/streak';
   /// GET — global search. Query: `q` (required), `types?`, `limit?`, `maxTotal?`.
   /// Must use the same `/api/v1` prefix as other mobile endpoints (root `/search` 404s).
   static const String search = '/api/v1/search';
@@ -58,6 +61,9 @@ class ApiEndpoints {
 
   /// Super Admin — invite/create admin user (POST JSON body).
   static const String superadminCreateAdmin = superadminAdmins;
+
+  /// Super Admin — remove admin user (DELETE).
+  static String superadminAdmin(String id) => '/api/v1/superadmin/admins/$id';
 
   /// Super Admin — toggle admin panel access (PATCH).
   /// Body: `{ "canLoginAdminPanel": bool }`.
@@ -126,13 +132,20 @@ class ApiEndpoints {
   static const String myOrders = '/api/v1/orders/my';
   static String order(String id) => '/api/v1/orders/$id';
 
-  /// POST — cancel my order (only allowed while PENDING).
+  /// POST — cancel my order. Body: `{ reason: string }`.
   static String cancelOrder(String id) => '/api/v1/orders/$id/cancel';
+
+  /// POST — submit order request (cancellation, refund, etc.).
+  /// Body: `{ type, reason, attachments? }`.
+  static String orderRequest(String id) => '/api/v1/orders/$id/requests';
 
   /// POST — customer confirms delivery.
   /// Body: `{ satisfied: boolean, feedback?: string }`.
   static String confirmDelivery(String id) =>
       '/api/v1/orders/$id/confirm-delivery';
+
+  /// POST — devotee replacement request (multipart: orderId, reason, images[]).
+  static const String requestReplacement = '/api/v1/replacements/request';
 
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
@@ -158,6 +171,10 @@ class ApiEndpoints {
   /// POST — admin terminal cancel for paid / pre-ship orders.
   /// Body: `{ reason? }`. Not allowed once SHIPPED / DELIVERED / FULFILLED.
   static String orderCancelPaid(String id) => '/api/v1/orders/$id/cancel-paid';
+
+  /// POST — admin initiate refund (delivered PAID orders).
+  /// Body: `{ reason: string, adminNote?: string }`.
+  static String orderRefund(String id) => '/api/v1/orders/$id/refund';
 
   // ── Pooja Kit replacement requests (admin) ─────────────────────
   /// GET — paginated replacement inbox. Query: `page`, `limit`, `status`.

@@ -277,6 +277,29 @@ class AdminOrdersController extends GetxController {
     });
   }
 
+  /// `POST /orders/:id/refund` — marks refund initiated on the order.
+  Future<bool> initiateRefund({
+    required String reason,
+    String? adminNote,
+  }) async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final updated = await _ds.initiateRefund(
+        id,
+        reason: reason,
+        adminNote: adminNote,
+      );
+      _replaceDetail(updated);
+      _ok(
+        'Refund initiated',
+        'Refund has been initiated on this order. Complete the payout in the '
+        'Paystack dashboard if required.',
+      );
+      return true;
+    });
+  }
+
   /// Idempotent admin verify by Paystack reference.
   Future<bool> verifyPayment(String reference) async {
     if (reference.trim().isEmpty) return false;

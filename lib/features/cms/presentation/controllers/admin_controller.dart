@@ -219,7 +219,7 @@ class AdminController extends GetxController {
   Future<bool> removeAdmin(String id) async {
     try {
       await _dataSource.removeAdmin(id);
-      _ok('Admin role removed');
+      _ok('Admin removed');
       // Reload both lists fresh from server
       await loadAll();
       return true;

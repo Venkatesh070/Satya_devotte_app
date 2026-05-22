@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 
@@ -286,6 +287,33 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+            if (order.orderStatus == OrderStatus.delivered) ...[
+              const Divider(height: 1, color: Colors.white12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ReplacementRequestSheet.show(
+                        context,
+                        orderId: order.id,
+                        orderNumber: order.orderNumber,
+                        onSubmitted: () =>
+                            Get.find<UserOrdersController>().fetchOrders(),
+                      );
+                    },
+                    icon: const Icon(Icons.sync_problem_outlined, size: 18),
+                    label: const Text('Raise Replacement Request'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFFD180),
+                      side: const BorderSide(color: Color(0xFFFFD180)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
               ),
             ],

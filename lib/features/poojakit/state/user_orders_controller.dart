@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 
@@ -64,10 +65,10 @@ class UserOrdersController extends GetxController {
     }
   }
 
-  Future<bool> cancelOrder(String orderId) async {
+  Future<bool> cancelOrder(String orderId, {required String reason}) async {
     _isMutating.value = true;
     try {
-      await _repo.cancelOrder(orderId);
+      await _repo.cancelOrder(orderId, reason: reason);
       await fetchOrders();
       return true;
     } catch (e) {
@@ -89,6 +90,28 @@ class UserOrdersController extends GetxController {
         orderId,
         satisfied: satisfied,
         feedback: feedback,
+      );
+      await fetchOrders();
+      return true;
+    } catch (e) {
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+      return false;
+    } finally {
+      _isMutating.value = false;
+    }
+  }
+
+  Future<bool> requestReplacement({
+    required String orderId,
+    required String reason,
+    required List<PickedFile> images,
+  }) async {
+    _isMutating.value = true;
+    try {
+      await _repo.requestReplacement(
+        orderId: orderId,
+        reason: reason,
+        images: images,
       );
       await fetchOrders();
       return true;

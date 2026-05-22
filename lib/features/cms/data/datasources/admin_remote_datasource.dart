@@ -136,10 +136,20 @@ class AdminRemoteDataSource {
     return AdminModel.fromJson(_single(res.data as Map<String, dynamic>));
   }
 
-  // ── PATCH /admin/remove-admin/{id} — demote admin to user ─────
-  Future<AdminModel> removeAdmin(String id) async {
-    final res = await _apiClient.dio.patch('/api/v1/admin/remove-admin/$id');
-    return AdminModel.fromJson(_single(res.data as Map<String, dynamic>));
+  // ── DELETE /superadmin/admins/:id — remove admin user ────────
+  Future<void> removeAdmin(String id) async {
+    if (id.trim().isEmpty) {
+      throw Exception('Cannot remove admin: id is missing.');
+    }
+    try {
+      await _apiClient.dio.delete<void>(ApiEndpoints.superadminAdmin(id));
+    } on DioException catch (e) {
+      final raw = e.response?.data;
+      if (raw is Map && raw['message'] != null) {
+        throw Exception(raw['message'].toString());
+      }
+      rethrow;
+    }
   }
 
   /// POST `/api/v1/superadmin/admins/:id/password-reset-link` — generate a

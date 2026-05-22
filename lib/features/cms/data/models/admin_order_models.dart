@@ -66,15 +66,37 @@ extension OrderStatusX on OrderStatus {
     }
   }
 
+  /// True once the order has left the warehouse / is terminal.
+  bool get isShippedOrBeyond =>
+      this == OrderStatus.shipped ||
+      this == OrderStatus.delivered ||
+      this == OrderStatus.fulfilled ||
+      this == OrderStatus.cancelled;
+
+  /// Devotee may cancel only before the order ships.
+  bool get canUserCancel =>
+      this == OrderStatus.placed || this == OrderStatus.processing;
+
   static OrderStatus parse(dynamic v) {
     final s = (v ?? '').toString().toUpperCase().trim();
+    if (s.isEmpty) return OrderStatus.unknown;
     switch (s) {
       case 'PLACED':
       case 'PENDING':
+      case 'CONFIRMED':
+      case 'CREATED':
+      case 'NEW':
+      case 'OPEN':
+      case 'ORDER_PLACED':
         return OrderStatus.placed;
       case 'PROCESSING':
+      case 'IN_PROGRESS':
+      case 'IN_PROCESSING':
+      case 'PREPARING':
         return OrderStatus.processing;
       case 'SHIPPED':
+      case 'DISPATCHED':
+      case 'IN_TRANSIT':
         return OrderStatus.shipped;
       case 'DELIVERED':
         return OrderStatus.delivered;
@@ -86,6 +108,35 @@ extension OrderStatusX on OrderStatus {
       default:
         return OrderStatus.unknown;
     }
+  }
+
+  /// Reads fulfilment status from common API shapes (flat or nested).
+  static OrderStatus parseFromOrderJson(Map<String, dynamic> json) {
+    final candidates = <dynamic>[
+      json['orderStatus'],
+      json['status'],
+      json['fulfillmentStatus'],
+      if (json['fulfillment'] is Map)
+        (json['fulfillment'] as Map)['status'],
+    ];
+
+    for (final raw in candidates) {
+      final parsed = parse(raw);
+      if (parsed != OrderStatus.unknown) return parsed;
+    }
+
+    // Some create/payment responses omit orderStatus until admin processes.
+    final hasStatusField = candidates.any(
+      (v) => v != null && v.toString().trim().isNotEmpty,
+    );
+    if (!hasStatusField) {
+      final pay = PaymentStatusX.parse(json['paymentStatus']);
+      if (pay == PaymentStatus.pending || pay == PaymentStatus.paid) {
+        return OrderStatus.placed;
+      }
+    }
+
+    return OrderStatus.unknown;
   }
 }
 
@@ -381,6 +432,17 @@ class AdminOrder {
   /// Paystack reported a successful charge; fulfilment actions apply.
   bool get isPaymentPaid => paymentStatus == PaymentStatus.paid;
 
+  /// Admin may start a refund request only after fulfilment is **Delivered**.
+  bool get canInitiateRefund {
+    if (orderStatus != OrderStatus.delivered) return false;
+    if (paymentStatus == PaymentStatus.refunded ||
+        paymentStatus == PaymentStatus.refundInitiated) {
+      return false;
+    }
+    return paymentStatus == PaymentStatus.paid ||
+        paymentStatus == PaymentStatus.refundFailed;
+  }
+
   /// Formatted currency string, e.g. `R 250` for ZAR or `R 250.50`.
   String get formattedTotal => _formatCurrency(totalAmount, currency);
   String get formattedSubtotal => _formatCurrency(subtotalAmount, currency);
@@ -422,9 +484,7 @@ class AdminOrder {
     return AdminOrder(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       orderNumber: (json['orderNumber'] ?? '').toString(),
-      orderStatus: OrderStatusX.parse(
-        json['orderStatus'] ?? json['status'],
-      ),
+      orderStatus: OrderStatusX.parseFromOrderJson(json),
       paymentStatus: PaymentStatusX.parse(json['paymentStatus']),
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
       paystackReference: (json['paystackReference'] ??

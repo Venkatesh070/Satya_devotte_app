@@ -49,14 +49,13 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     showFab.value =
         !kIsWeb &&
         !_fabHiddenRoutes.contains(current) &&
-        !_isCreateAccountRoute(current);
+        !_isCreateAccountRoute(current) &&
+        !isCmsRoute(current);
 
-    if (kIsWeb) {
-      if (isCmsRoute(current)) {
-        unawaited(start());
-      } else {
-        unawaited(pause());
-      }
+    if (isCmsRoute(current)) {
+      unawaited(start());
+    } else if (kIsWeb) {
+      unawaited(pause());
     }
   }
 

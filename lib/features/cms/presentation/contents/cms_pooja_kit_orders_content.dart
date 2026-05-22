@@ -1488,6 +1488,18 @@ class _ActionBar extends StatelessWidget {
             ),
           );
         }
+        if (order.canInitiateRefund) {
+          children.add(
+            _OutlinedAction(
+              label: 'Initiate Refund',
+              icon: Icons.currency_exchange_rounded,
+              color: const Color(0xFF6A1B9A),
+              onTap: busy
+                  ? null
+                  : () => _showInitiateRefundDialog(context, controller),
+            ),
+          );
+        }
         if (order.paystackReference.isNotEmpty) {
           children.add(
             _OutlinedAction(
@@ -1774,6 +1786,91 @@ Future<void> _showDispatchDialog(
       );
     },
   );
+}
+
+Future<void> _showInitiateRefundDialog(
+  BuildContext context,
+  AdminOrdersController controller,
+) async {
+  final reason = TextEditingController();
+  final adminNote = TextEditingController();
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text(
+          'Initiate Refund',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF6A1B9A),
+          ),
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Available after the order is marked Delivered. Initiates a refund '
+                'on this order. Process the actual payout in Paystack when required.',
+                style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              ),
+              const SizedBox(height: 10),
+              CmsFormField(
+                label: 'Reason',
+                hint: 'e.g. Customer reported damaged items',
+                controller: reason,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              CmsFormField(
+                label: 'Admin note',
+                hint: 'e.g. Refund approved by support',
+                controller: adminNote,
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6A1B9A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final reasonText = reason.text.trim();
+              if (reasonText.isEmpty) return;
+              Navigator.pop(dialogContext);
+              await controller.initiateRefund(
+                reason: reasonText,
+                adminNote: adminNote.text.trim().isEmpty
+                    ? null
+                    : adminNote.text.trim(),
+              );
+            },
+            child: const Text('Initiate Refund'),
+          ),
+        ],
+      );
+    },
+  ).whenComplete(() {
+    reason.dispose();
+    adminNote.dispose();
+  });
 }
 
 Future<void> _showCancelDialog(

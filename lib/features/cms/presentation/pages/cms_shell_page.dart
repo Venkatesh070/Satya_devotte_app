@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/features/admin_notifications/data/models/admin_notification_item.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/contents/cms_admin_notifications_content.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/widgets/cms_activity_bell_button.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_music_control_button.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
@@ -53,46 +53,75 @@ class CmsShellPage extends StatefulWidget {
   State<CmsShellPage> createState() => _CmsShellPageState();
 }
 
-class _CmsShellPageState extends State<CmsShellPage> {
+class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   // Sidebar groups that the user has manually expanded. Groups that contain
   // the currently selected leaf are always treated as expanded regardless
   // of this set.
   final Set<String> _expandedGroups = <String>{};
   final ScrollController _sidebarScrollController = ScrollController();
-  Timer? _notificationsPollTimer;
+  Timer? _activityPollTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     CmsShellNavigation.attach(this);
     final auth = Get.find<AuthController>();
     _selectedIndex = _indexFromRoute(Get.currentRoute, auth.isSuperAdmin);
-    if (Get.isRegistered<CmsAdminNotificationsController>()) {
-      final ctrl = Get.find<CmsAdminNotificationsController>();
-      unawaited(ctrl.refreshUnreadCount());
-      _notificationsPollTimer = Timer.periodic(
-        const Duration(seconds: 60),
-        (_) => unawaited(ctrl.refreshUnreadCount()),
-      );
-    }
     // Auto-expand any group that owns the resolved selected index so the
     // sidebar reflects the deep-linked tab on first paint.
     final group = _groupLabelForIndex(_selectedIndex);
     if (group != null) _expandedGroups.add(group);
-    if (kIsWeb && Get.isRegistered<AppMusicService>()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.find<AppMusicService>().startOnAdminLogin();
-      });
+    _startActivityPolling();
+    _refreshActivityBadge();
+    if (_selectedIndex == _NavIds.activity) {
+      _loadActivityInbox();
     }
   }
 
   @override
   void dispose() {
-    _notificationsPollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _activityPollTimer?.cancel();
     CmsShellNavigation.detach(this);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _onActivityFocus();
+    }
+  }
+
+  void _startActivityPolling() {
+    _activityPollTimer?.cancel();
+    _activityPollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _refreshActivityBadge();
+    });
+  }
+
+  void _refreshActivityBadge() {
+    if (!Get.isRegistered<CmsAdminNotificationsController>()) return;
+    unawaited(Get.find<CmsAdminNotificationsController>().refreshUnreadCount());
+  }
+
+  void _loadActivityInbox() {
+    if (!Get.isRegistered<CmsAdminNotificationsController>()) return;
+    final ctrl = Get.find<CmsAdminNotificationsController>();
+    unawaited(ctrl.refreshUnreadCount());
+    if (ctrl.items.isEmpty && !ctrl.isLoading.value) {
+      unawaited(ctrl.loadFirstPage());
+    }
+  }
+
+  void _onActivityFocus() {
+    _refreshActivityBadge();
+    if (_selectedIndex == _NavIds.activity) {
+      _loadActivityInbox();
+    }
   }
 
   /// Switches CMS tabs without recreating [CmsShellPage] (preserves sidebar scroll).
@@ -114,54 +143,15 @@ class _CmsShellPageState extends State<CmsShellPage> {
         Get.isRegistered<InventoryController>()) {
       Get.find<InventoryController>().init();
     }
-    if (index == _NavIds.activity &&
-        Get.isRegistered<CmsAdminNotificationsController>()) {
-      unawaited(Get.find<CmsAdminNotificationsController>().loadFirstPage());
-    }
-    if (kIsWeb) {
-      updateCmsHashRoute(_routeFromIndex(index));
+    if (index == _NavIds.activity) {
+      _onActivityFocus();
+      if (kIsWeb) {
+        updateCmsHashRoute(AppRoutes.cmsActivity);
+      }
     }
   }
 
-  String _routeFromIndex(int index) {
-    switch (index) {
-      case _NavIds.deities:
-        return AppRoutes.cmsDeities;
-      case _NavIds.pujas:
-        return AppRoutes.cmsRituals;
-      case _NavIds.festivals:
-        return AppRoutes.cmsFestivals;
-      case _NavIds.donations:
-        return AppRoutes.cmsDonations;
-      case _NavIds.donationsAll:
-        return AppRoutes.cmsDonationsAll;
-      case _NavIds.notifications:
-        return AppRoutes.cmsNotifications;
-      case _NavIds.activity:
-        return AppRoutes.cmsActivity;
-      case _NavIds.users:
-        return AppRoutes.cmsUsers;
-      case _NavIds.shlokas:
-        return AppRoutes.cmsShlokas;
-      case _NavIds.admins:
-        return AppRoutes.cmsAdmins;
-      case _NavIds.poojaKitInventory:
-        return AppRoutes.cmsPoojaKitInventory;
-      case _NavIds.poojaKitManage:
-        return AppRoutes.cmsPoojaKit;
-      case _NavIds.poojaKitOrders:
-        return AppRoutes.cmsPoojaKitOrders;
-      case _NavIds.poojaKitRefunds:
-        return AppRoutes.cmsPoojaKitRefunds;
-      case _NavIds.poojaKitPayments:
-        return AppRoutes.cmsPoojaKitPayments;
-      case _NavIds.manageRituals:
-        return AppRoutes.cmsManageRituals;
-      case _NavIds.dashboard:
-      default:
-        return AppRoutes.cms;
-    }
-  }
+  void openActivityTab() => _onSelect(_NavIds.activity);
 
   void _onToggleGroup(String label) {
     setState(() {
@@ -242,7 +232,7 @@ class _WebLayout extends StatelessWidget {
               children: [
                 _WebTopBar(
                   selectedIndex: selectedIndex,
-                  onActivityBellTap: () => onSelect(_NavIds.activity),
+                  onOpenActivity: () => onSelect(_NavIds.activity),
                 ),
                 Expanded(child: _buildContent(selectedIndex)),
               ],
@@ -293,15 +283,20 @@ class _MobileLayout extends StatelessWidget {
           ),
         ),
         actions: [
-          if (Get.isRegistered<AppMusicService>())
-            const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: AppMusicControlButton(
-                size: 36,
-                borderRadius: 8,
-                iconSize: 20,
-              ),
-            ),
+          const AppMusicControlButton(
+            size: 36,
+            borderRadius: 8,
+            iconSize: 18,
+            showShadow: false,
+          ),
+          const SizedBox(width: 8),
+          CmsActivityBellButton(
+            onTap: () => onSelect(_NavIds.activity),
+            size: 36,
+            iconSize: 18,
+            borderRadius: 8,
+          ),
+          const SizedBox(width: 8),
           Obx(
             () => Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -592,7 +587,8 @@ class _SidebarItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (item.index == _NavIds.activity) const CmsActivitySidebarBadge(),
+                if (item.index == _NavIds.activity)
+                  const CmsActivitySidebarBadge(),
               ],
             ),
           ),
@@ -940,10 +936,10 @@ class _MobileDrawer extends StatelessWidget {
 class _WebTopBar extends StatelessWidget {
   const _WebTopBar({
     required this.selectedIndex,
-    required this.onActivityBellTap,
+    required this.onOpenActivity,
   });
   final int selectedIndex;
-  final VoidCallback onActivityBellTap;
+  final VoidCallback onOpenActivity;
 
   @override
   Widget build(BuildContext context) {
@@ -988,16 +984,19 @@ class _WebTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          if (Get.isRegistered<AppMusicService>())
-            const AppMusicControlButton(
-              size: 36,
-              borderRadius: 8,
-              iconSize: 18,
-              enableTooltip: true,
-              showShadow: false,
-            ),
-          if (Get.isRegistered<AppMusicService>()) const SizedBox(width: 12),
-          CmsActivityBellButton(onTap: onActivityBellTap),
+          const AppMusicControlButton(
+            size: 36,
+            borderRadius: 8,
+            iconSize: 18,
+            enableTooltip: true,
+          ),
+          const SizedBox(width: 10),
+          CmsActivityBellButton(
+            onTap: onOpenActivity,
+            size: 36,
+            iconSize: 18,
+            borderRadius: 8,
+          ),
           const SizedBox(width: 12),
           // Avatar
           Obx(
@@ -1092,6 +1091,7 @@ class _NavIds {
   static const int poojaKitRefunds = 14;
   // Pooja Kit group child for payments.
   static const int poojaKitPayments = 15;
+  // Operational alerts inbox (orders, donations, refunds).
   static const int activity = 17;
 }
 
@@ -1386,11 +1386,13 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
 class CmsShellNavigation {
   static _CmsShellPageState? _shell;
 
-  /// Notifies [CmsPujaContent] to open the add-pooja form after tab switch.
-  static final ValueNotifier<int> openAddPujaTick = ValueNotifier<int>(0);
+  static bool get isAttached => _shell != null;
 
-  /// Notifies [CmsFestivalsContent] to open the add-festival form after tab switch.
-  static final ValueNotifier<int> openAddFestivalTick = ValueNotifier<int>(0);
+  /// Bumped after navigating to Manage Pujas so [CmsRitualsContent] opens the add form.
+  static final openAddPujaTick = ValueNotifier<int>(0);
+
+  /// Bumped after navigating to Manage Festivals so [CmsFestivalsContent] opens the add form.
+  static final openAddFestivalTick = ValueNotifier<int>(0);
 
   static void attach(_CmsShellPageState shell) => _shell = shell;
 
@@ -1398,25 +1400,11 @@ class CmsShellNavigation {
     if (_shell == shell) _shell = null;
   }
 
-  /// Switches to Manage Pujas and signals the add form to open in-shell.
-  static bool openAddPuja() {
+  /// Opens the Activity inbox tab (header bell / deep links).
+  static bool openActivity() {
     final shell = _shell;
     if (shell == null) return false;
-    shell.navigateToTab(_NavIds.pujas);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      openAddPujaTick.value++;
-    });
-    return true;
-  }
-
-  /// Switches to Festivals and signals the add form to open in-shell.
-  static bool openAddFestival() {
-    final shell = _shell;
-    if (shell == null) return false;
-    shell.navigateToTab(_NavIds.festivals);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      openAddFestivalTick.value++;
-    });
+    shell.openActivityTab();
     return true;
   }
 
@@ -1428,42 +1416,65 @@ class CmsShellNavigation {
     return true;
   }
 
-  static bool selectTab(int index) {
+  /// Dashboard quick-action: switch to Manage Pujas and open the add form.
+  static bool openAddPuja() {
     final shell = _shell;
     if (shell == null) return false;
-    shell.navigateToTab(index);
+    shell.navigateToTab(_NavIds.pujas);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddPujaTick.value++;
+    });
     return true;
   }
 
+  /// Dashboard quick-action: switch to Manage Festivals and open the add form.
+  static bool openAddFestival() {
+    final shell = _shell;
+    if (shell == null) return false;
+    shell.navigateToTab(_NavIds.festivals);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddFestivalTick.value++;
+    });
+    return true;
+  }
+
+  /// Deep link from Activity inbox / FCM tap into the relevant CMS tab.
   static void openFromNotification(AdminNotificationItem n) {
     final shell = _shell;
     if (shell == null) return;
-    switch (n.type) {
+
+    switch (n.type.trim().toUpperCase()) {
       case 'NEW_ORDER':
-        final id = n.orderId;
         shell.navigateToTab(_NavIds.poojaKitOrders);
-        if (id != null && id.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (Get.isRegistered<AdminOrdersController>()) {
-              Get.find<AdminOrdersController>().openOrder(id);
-            }
-          });
+        final orderId = n.orderId;
+        if (orderId != null && orderId.isNotEmpty) {
+          if (Get.isRegistered<AdminOrdersController>()) {
+            Get.find<AdminOrdersController>().openOrder(orderId, syncUrl: kIsWeb);
+          } else if (kIsWeb) {
+            updateCmsHashRoute(CmsRoutePaths.poojaKitOrderDetail(orderId));
+          }
         } else if (kIsWeb) {
           updateCmsHashRoute(AppRoutes.cmsPoojaKitOrders);
         }
         break;
       case 'PAYMENT_SUCCESS':
         shell.navigateToTab(_NavIds.donationsAll);
-        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsDonationsAll);
+        if (kIsWeb) {
+          updateCmsHashRoute(AppRoutes.cmsDonationsAll);
+        }
         break;
       case 'REFUND_REQUEST':
       case 'REPLACEMENT_REQUEST':
         shell.navigateToTab(_NavIds.poojaKitRefunds);
-        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsPoojaKitRefunds);
+        if (kIsWeb) {
+          updateCmsHashRoute(AppRoutes.cmsPoojaKitRefunds);
+        }
+        if (Get.isRegistered<AdminOrderRequestsController>()) {
+          Get.find<AdminOrderRequestsController>().refresh();
+        }
         break;
       default:
-        shell.navigateToTab(_NavIds.activity);
-        if (kIsWeb) updateCmsHashRoute(AppRoutes.cmsActivity);
+        break;
     }
   }
 }

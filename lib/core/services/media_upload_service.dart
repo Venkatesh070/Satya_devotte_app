@@ -24,6 +24,35 @@ class PickedFile {
 }
 
 class MediaUploadService extends GetxService {
+  /// Pick one or more image files (e.g. damage photos for replacement requests).
+  Future<List<PickedFile>> pickImages({bool allowMultiple = true}) async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.image,
+        withData: true,
+        withReadStream: true,
+        allowMultiple: allowMultiple,
+      );
+      if (result == null || result.files.isEmpty) return const [];
+
+      final picked = <PickedFile>[];
+      for (final file in result.files) {
+        final bytes = await _loadPlatformFileBytes(file);
+        if (bytes == null || bytes.isEmpty) continue;
+        picked.add(
+          PickedFile(
+            bytes: bytes,
+            filename: file.name,
+            mimeType: _mimeType(file.name, PickMediaType.image),
+          ),
+        );
+      }
+      return picked;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Pick a file and return its bytes + metadata.
   /// Returns null if user cancelled.
   Future<PickedFile?> pickFile({required PickMediaType type}) async {

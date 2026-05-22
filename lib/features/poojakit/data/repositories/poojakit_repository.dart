@@ -2,8 +2,10 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
@@ -166,13 +168,17 @@ class PoojaKitRepository {
     }
   }
 
-  /// Cancel a pending order.
-  Future<void> cancelOrder(String orderId) async {
+  /// Cancel an order (Placed / Processing). `POST /orders/:id/cancel`.
+  /// Body: `{ "reason": string }`.
+  Future<void> cancelOrder(String orderId, {required String reason}) async {
     try {
-      await _apiClient.dio.post<dynamic>(ApiEndpoints.cancelOrder(orderId));
+      await _apiClient.dio.post<dynamic>(
+        ApiEndpoints.cancelOrder(orderId),
+        data: {'reason': reason},
+      );
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not cancel the order.';
-      throw Exception(msg);
+      throw Exception(msg is String ? msg : msg.toString());
     }
   }
 
@@ -190,6 +196,44 @@ class PoojaKitRepository {
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not confirm delivery.';
       throw Exception(msg);
+    }
+  }
+
+  /// POST multipart replacement request for a delivered order.
+  Future<void> requestReplacement({
+    required String orderId,
+    required String reason,
+    required List<PickedFile> images,
+  }) async {
+    if (images.isEmpty) {
+      throw Exception('Please attach at least one photo of the damage.');
+    }
+    try {
+      final formData = FormData();
+      formData.fields
+        ..add(MapEntry('orderId', orderId))
+        ..add(MapEntry('reason', reason));
+      for (final img in images) {
+        formData.files.add(
+          MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              img.bytes,
+              filename: img.filename,
+              contentType: MediaType.parse(img.mimeType),
+            ),
+          ),
+        );
+      }
+      await _apiClient.dio.post<dynamic>(
+        ApiEndpoints.requestReplacement,
+        data: formData,
+      );
+    } on DioException catch (e) {
+      final msg =
+          e.response?.data?['message'] ??
+          'Could not submit the replacement request.';
+      throw Exception(msg is String ? msg : msg.toString());
     }
   }
 

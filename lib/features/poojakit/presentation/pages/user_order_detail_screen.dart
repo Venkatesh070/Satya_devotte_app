@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,6 +26,7 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
   void initState() {
     super.initState();
     _order = Get.arguments as AdminOrder;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
   Future<void> _refresh() async {
@@ -95,81 +97,47 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
   }
 
   void _onCancelOrder() {
-    final isPaid = _order.paymentStatus == PaymentStatus.paid;
+    final reasonCtrl = TextEditingController();
 
-    if (isPaid) {
-      Get.dialog(
-        AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(
-            'Cancel Paid Order',
-            style: AppTypography.lora(color: Colors.white),
-          ),
-          content: Text(
-            'This order is already paid. To request a cancellation and refund, please contact our support team at superadmin@satya.com with your Order Number: ${_order.orderNumber}.',
-            style: AppTypography.inter(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text(
-                'Close',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                final name = _order.userName.isNotEmpty
-                    ? _order.userName
-                    : (_order.shippingAddress?.name ?? 'Not provided');
-                final email = _order.userEmail.isNotEmpty
-                    ? _order.userEmail
-                    : (_order.shippingAddress?.email ?? 'Not provided');
-
-                final body =
-                    'Cancellation Request Details:\n'
-                    'Order Number: ${_order.orderNumber}\n'
-                    'Registered Name: $name\n'
-                    'Registered Email: $email\n\n'
-                    'Please enter your reason for cancellation here:';
-
-                final Uri emailLaunchUri = Uri(
-                  scheme: 'mailto',
-                  path: 'stangudu@linkfields.com',
-                  query:
-                      'subject=Cancellation Request: ${_order.orderNumber}&body=${Uri.encodeComponent(body)}',
-                );
-                launchUrl(emailLaunchUri);
-              },
-              icon: const Icon(
-                Icons.email_outlined,
-                size: 18,
-                color: Colors.black,
-              ),
-              label: const Text(
-                'Send Email',
-                style: TextStyle(color: Colors.black),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD180),
-              ),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    Get.dialog(
+    Get.dialog<void>(
       AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: Text(
           'Cancel Order',
           style: AppTypography.lora(color: Colors.white),
         ),
-        content: Text(
-          'Are you sure you want to cancel this order?',
-          style: AppTypography.inter(color: Colors.white70),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cancel order #${_order.orderNumber}? This cannot be undone.',
+              style: AppTypography.inter(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              maxLength: 500,
+              style: AppTypography.inter(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Reason',
+                labelStyle: AppTypography.inter(color: Colors.white54),
+                hintText: 'e.g. Ordered wrong items by mistake',
+                hintStyle: AppTypography.inter(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.white24),
+                ),
+                counterStyle: AppTypography.inter(
+                  color: Colors.white38,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -178,8 +146,17 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final reason = reasonCtrl.text.trim();
+              if (reason.isEmpty) {
+                Get.snackbar(
+                  'Reason required',
+                  'Please enter a reason for cancellation.',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+                return;
+              }
               Get.back();
-              final success = await _c.cancelOrder(_order.id);
+              final success = await _c.cancelOrder(_order.id, reason: reason);
               if (success) {
                 _refresh();
                 Get.snackbar(
@@ -196,7 +173,7 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(reasonCtrl.dispose);
   }
 
   @override
@@ -632,146 +609,213 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
     );
   }
 
-  Widget _buildActions() {
-    final canCancel =
-        (_order.orderStatus == OrderStatus.placed ||
-        _order.orderStatus == OrderStatus.processing);
-    final canConfirm = _order.orderStatus == OrderStatus.shipped;
+  void _onRaiseReplacementRequest() {
+    ReplacementRequestSheet.show(
+      context,
+      orderId: _order.id,
+      orderNumber: _order.orderNumber,
+      onSubmitted: _refresh,
+    );
+  }
 
-    if (!canCancel && !canConfirm) {
-      // Show support info if already delivered or fulfilled
-      if (_order.orderStatus == OrderStatus.delivered ||
-          _order.orderStatus == OrderStatus.fulfilled) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Need help with your order?',
-                style: AppTypography.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'If you have any issues or wish to apply for a refund/replacement, please email us at stangudu@linkfields.com with your order number.',
-                style: AppTypography.inter(fontSize: 13, color: Colors.white70),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    final name = _order.userName.isNotEmpty
-                        ? _order.userName
-                        : (_order.shippingAddress?.name ?? 'Not provided');
-                    final email = _order.userEmail.isNotEmpty
-                        ? _order.userEmail
-                        : (_order.shippingAddress?.email ?? 'Not provided');
-
-                    final body =
-                        'Order Support Request:\n'
-                        'Order Number: ${_order.orderNumber}\n'
-                        'Registered Name: $name\n'
-                        'Registered Email: $email\n\n'
-                        'Please describe the issue with your order:';
-
-                    final Uri emailLaunchUri = Uri(
-                      scheme: 'mailto',
-                      path: 'stangudu@linkfields.com',
-                      query:
-                          'subject=Order Support: ${_order.orderNumber}&body=${Uri.encodeComponent(body)}',
-                    );
-                    launchUrl(emailLaunchUri);
-                  },
-                  icon: const Icon(Icons.support_agent, size: 18),
-                  label: const Text('Contact Support'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFD180),
-                    side: const BorderSide(color: Color(0xFFFFD180)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-      return const SizedBox.shrink();
+  bool get _canCancelOrder {
+    final s = _order.orderStatus;
+    if (s.canUserCancel) return true;
+    // Paid/placed orders sometimes arrive with unknown fulfilment until refresh.
+    if (!s.isShippedOrBeyond &&
+        s == OrderStatus.unknown &&
+        (_order.paymentStatus == PaymentStatus.pending ||
+            _order.paymentStatus == PaymentStatus.paid)) {
+      return true;
     }
+    return false;
+  }
+
+  Widget _buildActions() {
+    final status = _order.orderStatus;
+    final canCancel = _canCancelOrder;
+    final canConfirm = status == OrderStatus.shipped;
+    final canRequestReplacement = status == OrderStatus.delivered;
 
     return Obx(() {
       final loading = _c.isMutating;
+      final children = <Widget>[const SizedBox(height: 12)];
+
+      if (canCancel) {
+        children.add(
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: loading ? null : _onCancelOrder,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Cancel Order',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        );
+      }
+
+      if (canConfirm) {
+        if (children.length > 1) children.add(const SizedBox(height: 12));
+        children.add(
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: loading ? null : _onConfirmDelivery,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4CAF50),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Confirm Delivery',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        );
+      }
+
+      if (canRequestReplacement) {
+        if (children.length > 1) children.add(const SizedBox(height: 12));
+        children.add(
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: loading ? null : _onRaiseReplacementRequest,
+              icon: const Icon(Icons.sync_problem_outlined, size: 20),
+              label: const Text(
+                'Raise Replacement Request',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD180),
+                foregroundColor: Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        );
+        children.add(const SizedBox(height: 8));
+        children.add(
+          Text(
+            'Received damaged or incorrect items? Submit photos and a short description.',
+            style: AppTypography.inter(fontSize: 12, color: Colors.white54),
+          ),
+        );
+      }
+
+      if (children.length == 1 && status == OrderStatus.fulfilled) {
+        return _buildFulfilledSupportCard();
+      }
+
+      if (children.length == 1) {
+        return const SizedBox.shrink();
+      }
+
       return Column(
-        children: [
-          const SizedBox(height: 12),
-          if (canConfirm)
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: loading ? null : _onConfirmDelivery,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Confirm Delivery',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-              ),
-            ),
-          if (canCancel)
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: loading ? null : _onCancelOrder,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.redAccent,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Cancel Order',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-              ),
-            ),
-        ],
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       );
     });
+  }
+
+  Widget _buildFulfilledSupportCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Need help with your order?',
+            style: AppTypography.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'If you have any issues, please email us at stangudu@linkfields.com with your order number.',
+            style: AppTypography.inter(fontSize: 13, color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                final name = _order.userName.isNotEmpty
+                    ? _order.userName
+                    : (_order.shippingAddress?.name ?? 'Not provided');
+                final email = _order.userEmail.isNotEmpty
+                    ? _order.userEmail
+                    : (_order.shippingAddress?.email ?? 'Not provided');
+
+                final body =
+                    'Order Support Request:\n'
+                    'Order Number: ${_order.orderNumber}\n'
+                    'Registered Name: $name\n'
+                    'Registered Email: $email\n\n'
+                    'Please describe the issue with your order:';
+
+                final Uri emailLaunchUri = Uri(
+                  scheme: 'mailto',
+                  path: 'stangudu@linkfields.com',
+                  query:
+                      'subject=Order Support: ${_order.orderNumber}&body=${Uri.encodeComponent(body)}',
+                );
+                launchUrl(emailLaunchUri);
+              },
+              icon: const Icon(Icons.support_agent, size: 18),
+              label: const Text('Contact Support'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFFD180),
+                side: const BorderSide(color: Color(0xFFFFD180)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

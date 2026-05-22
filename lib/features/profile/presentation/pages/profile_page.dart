@@ -70,6 +70,12 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           _InfoCard(phone, dob, sunSign, moonSign),
                           const SizedBox(height: 30),
+                          ProfileLinkTile(
+                            icon: Icons.receipt_long_outlined,
+                            label: 'My orders',
+                            onTap: () => Get.toNamed(AppRoutes.userOrders),
+                          ),
+                          const SizedBox(height: 30),
                           const ProfileSectionHeading('Spiritual'),
                           ProfileLinkTile(
                             icon: Icons.volunteer_activism_outlined,

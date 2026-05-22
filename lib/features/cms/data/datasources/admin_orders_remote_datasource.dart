@@ -193,6 +193,22 @@ class AdminOrdersRemoteDataSource {
     return AdminOrder.fromJson(_unwrapOrder(res.data));
   }
 
+  /// `POST /orders/:id/refund` — admin initiate refund.
+  Future<AdminOrder> initiateRefund(
+    String orderId, {
+    required String reason,
+    String? adminNote,
+  }) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.orderRefund(orderId),
+      data: {
+        'reason': reason,
+        if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
+      },
+    );
+    return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
   // ───────────────────────── Order requests ───────────────────────────
 
   /// `GET /orders/requests` — paginated requests inbox.
@@ -369,7 +385,12 @@ class AdminOrdersRemoteDataSource {
 
   Map<String, dynamic> _unwrapRequest(dynamic raw) => _peelSingleResource(
         raw,
-        const ['request', 'orderRequest', 'replacement'],
+        const [
+          'request',
+          'orderRequest',
+          'replacement',
+          'replacementRequest',
+        ],
       );
 
   Map<String, dynamic> _peelSingleResource(

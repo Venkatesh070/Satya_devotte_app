@@ -594,7 +594,12 @@ class _DetailBody extends StatelessWidget {
           _SummaryCard(request: request),
           const SizedBox(height: 14),
           if (request.attachments.isNotEmpty) ...[
-            _AttachmentsCard(attachments: request.attachments),
+            _AttachmentsCard(
+              attachments: request.attachments,
+              title: request.type == OrderRequestType.replacement
+                  ? 'Damage photos (${request.attachments.length})'
+                  : 'Attachments (${request.attachments.length})',
+            ),
             const SizedBox(height: 14),
           ],
           if (request.order != null) ...[
@@ -693,13 +698,17 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _AttachmentsCard extends StatelessWidget {
-  const _AttachmentsCard({required this.attachments});
+  const _AttachmentsCard({
+    required this.attachments,
+    this.title = 'Attachments',
+  });
   final List<String> attachments;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     return CmsFormCard(
-      title: 'Attachments (${attachments.length})',
+      title: title,
       children: [
         Wrap(
           spacing: 10,
