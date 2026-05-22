@@ -59,7 +59,7 @@ class AuthController extends GetxController {
     return true;
   }
 
-  /// Routes admin → CMS, incomplete profile → create account, else home.
+  /// Routes admin → CMS, else home.
   void navigateAfterLogin() {
     if (isAdmin) {
       Get.offAllNamed(AppRoutes.cms);
@@ -67,10 +67,7 @@ class AuthController extends GetxController {
       _refreshAdminActivityBadge();
       return;
     }
-    if (!isProfileRegistrationComplete) {
-      Get.offAll(() => const CreateAccountPage(completeProfileOnly: true));
-      return;
-    }
+    // Profile is now optional during signup, so we go straight to home.
     Get.offAllNamed(AppRoutes.home);
   }
 
@@ -194,7 +191,7 @@ class AuthController extends GetxController {
     _refreshProfileControllerAfterAuth();
   }
 
-  void _markProfileRegisteredInSession() {
+  Future<void> _markProfileRegisteredInSession() async {
     final current = _authSessionService.userData;
     if (current == null) return;
     final user = Map<String, dynamic>.from(current);
@@ -207,12 +204,10 @@ class AuthController extends GetxController {
         refresh.isEmpty) {
       return;
     }
-    unawaited(
-      _authSessionService.setSession(
-        accessToken: access,
-        refreshToken: refresh,
-        userData: user,
-      ),
+    await _authSessionService.setSession(
+      accessToken: access,
+      refreshToken: refresh,
+      userData: user,
     );
   }
 
@@ -359,6 +354,7 @@ class AuthController extends GetxController {
         userProfile: emailProfile,
       );
       await _persistLoginResult(loginResult);
+      await _markProfileRegisteredInSession();
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -433,12 +429,10 @@ class AuthController extends GetxController {
     _isEmailSignInLoading.value = true;
     _lastAuthError.value = null;
     try {
-      if (!skipProfile &&
-          profileData != null &&
-          profileData.isNotEmpty) {
+      if (!skipProfile && profileData != null && profileData.isNotEmpty) {
         await _authRepository.upsertProfile(profileData);
       }
-      _markProfileRegisteredInSession();
+      await _markProfileRegisteredInSession();
       _refreshProfileControllerAfterAuth();
       return true;
     } catch (error) {
@@ -484,7 +478,7 @@ class AuthController extends GetxController {
       if (profileData != null && profileData.isNotEmpty) {
         await _authRepository.upsertProfile(profileData);
       }
-      _markProfileRegisteredInSession();
+      await _markProfileRegisteredInSession();
       return true;
     } catch (error) {
       await _authSessionService.clear();

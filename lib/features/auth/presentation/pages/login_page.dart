@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
-import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class LoginPage extends StatefulWidget {
@@ -20,8 +17,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _rotationController;
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
 
   AuthController get controller => Get.find<AuthController>();
 
@@ -37,45 +32,16 @@ class _LoginPageState extends State<LoginPage>
   @override
   void dispose() {
     _rotationController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   void _navigateAfterLogin() => controller.navigateAfterLogin();
 
-  Future<void> _showEmailPasswordSheet() async {
-    _emailController.clear();
-    _passwordController.clear();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return _EmailPasswordBottomSheet(
-          emailController: _emailController,
-          passwordController: _passwordController,
-          onAuthSuccess: () {
-            Navigator.of(sheetContext).pop();
-            _navigateAfterLogin();
-          },
-          onCreateAccount: () {
-            Navigator.of(sheetContext).pop();
-            Get.to(() => const CreateAccountPage());
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
     return Scaffold(
-      backgroundColor: const Color(0xFFF2EBDC),
+      backgroundColor: AppColors.appBgColor,
       body: Stack(
         children: [
           Positioned(
@@ -152,275 +118,85 @@ class _LoginPageState extends State<LoginPage>
               ),
             ),
           ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Obx(() {
-                  final isLoading = controller.isGoogleSignInLoading;
-                  final isEmailLoading = controller.isEmailSignInLoading;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _SocialButton(
-                        label: 'Continue with Google',
-                        backgroundColor: const Color(0xFFF2F2F2),
-                        textColor: const Color(0xFF1F1F1F),
-                        leading: SvgPicture.asset(
-                          'assets/svgs/google.svg',
-                          width: 16,
-                          height: 16,
-                        ),
-                        isLoading: isLoading,
-                        isEnabled: !isLoading,
-                        onTap: () async {
-                          final isSuccess = await controller.signInWithGoogle();
-                          if (isSuccess) {
-                            _navigateAfterLogin();
-                            return;
-                          }
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                controller.lastAuthError ??
-                                    'Google sign in failed. Please try again.',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _SocialButton(
-                        label: 'Continue with Apple',
-                        backgroundColor: AppColors.black,
-                        textColor: AppColors.white,
-                        leading: SvgPicture.asset(
-                          'assets/svgs/apple.svg',
-                          width: 16,
-                          height: 16,
-                        ),
-                        isEnabled: !isLoading,
-                        onTap: () async {
-                          await controller.signInWithApple();
-                          _navigateAfterLogin();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      const Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Color(0xFFE3D9C4),
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              'Or',
-                              style: TextStyle(
-                                color: Color(0xFF8B8B8B),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Color(0xFFE3D9C4),
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      CustomButton(
-                        label: 'Continue with Email/Password',
-                        gradientColors: [
-                          AppColors.gradientStart,
-                          AppColors.gradientEnd,
-                        ],
-                        textColor: AppColors.white,
-                        isLoading: isEmailLoading,
-                        enabled: !isEmailLoading && !isLoading,
-                        onTap: () {
-                          final isMobile =
-                              MediaQuery.of(context).size.width < 600;
 
-                          if (isMobile) {
-                            _showEmailPasswordSheet();
-                          } else {
-                            Get.to(() => const EmailLoginPage());
-                          }
-                        },
-                      ),
-                    ],
-                  );
-                }),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+          /// Bottom Actions (Figma style)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 30),
 
-class _EmailPasswordBottomSheet extends StatefulWidget {
-  const _EmailPasswordBottomSheet({
-    required this.emailController,
-    required this.passwordController,
-    required this.onAuthSuccess,
-    required this.onCreateAccount,
-  });
+              child: Obx(() {
+                final isLoading = controller.isGoogleSignInLoading;
+                final isEmailLoading = controller.isEmailSignInLoading;
 
-  final TextEditingController emailController;
-  final TextEditingController passwordController;
-  final VoidCallback onAuthSuccess;
-  final VoidCallback onCreateAccount;
-
-  @override
-  State<_EmailPasswordBottomSheet> createState() =>
-      _EmailPasswordBottomSheetState();
-}
-
-class _EmailPasswordBottomSheetState extends State<_EmailPasswordBottomSheet> {
-  bool _obscurePassword = true;
-  bool _showForgotPassword = false;
-
-  AuthController get _auth => Get.find<AuthController>();
-
-  void _openForgotPassword() {
-    final forgotCtrl = Get.find<ForgotPasswordController>();
-    forgotCtrl.emailController.text = widget.emailController.text.trim();
-    forgotCtrl.isSuccess.value = false;
-    setState(() => _showForgotPassword = true);
-  }
-
-  void _closeForgotPassword() {
-    setState(() => _showForgotPassword = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom +
-        MediaQuery.of(context).padding.bottom +
-        20;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, bottom),
-        child: _showForgotPassword
-            ? InlineForgotPasswordForm(onBack: _closeForgotPassword)
-            : Obx(() {
-                final isLoading = _auth.isEmailSignInLoading;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Continue with Email',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                    _SocialButton(
+                      label: 'Continue with Google',
+                      backgroundColor: Colors.white,
+                      textColor: const Color(0xFF1F1F1F),
+                      leading: SvgPicture.asset(
+                        'assets/svgs/google.svg',
+                        width: 18,
+                        height: 18,
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: widget.emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      enabled: !isLoading,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
+                      isLoading: isLoading,
+                      isEnabled: !isLoading && !isEmailLoading,
+                      onTap: () async {
+                        final isSuccess = await controller.signInWithGoogle();
+                        if (isSuccess) _navigateAfterLogin();
+                      },
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: widget.passwordController,
-                      obscureText: _obscurePassword,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          tooltip: _obscurePassword
-                              ? 'Show password'
-                              : 'Hide password',
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                          ),
-                          onPressed: isLoading
-                              ? null
-                              : () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                        ),
+                    _SocialButton(
+                      label: 'Continue with Apple',
+                      backgroundColor: Colors.black,
+                      textColor: Colors.white,
+                      leading: SvgPicture.asset(
+                        'assets/svgs/apple.svg',
+                        width: 18,
+                        height: 18,
                       ),
+                      isEnabled: !isLoading && !isEmailLoading,
+                      onTap: () async {
+                        await controller.signInWithApple();
+                        _navigateAfterLogin();
+                      },
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: isLoading ? null : _openForgotPassword,
-                        child: const Text('Forgot Password?'),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     CustomButton(
-                      label: 'Sign In',
-                      isLoading: isLoading,
-                      enabled: !isLoading,
+                      label: 'Continue with Email',
                       gradientColors: const [
                         AppColors.gradientStart,
                         AppColors.gradientEnd,
                       ],
-                      textColor: AppColors.white,
-                      onTap: () async {
-                        final email = widget.emailController.text.trim();
-                        final password = widget.passwordController.text;
-                        if (email.isEmpty || password.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Please enter email and password.',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        final isSuccess = await _auth.signInWithEmailPassword(
-                          email: email,
-                          password: password,
-                        );
-                        if (!context.mounted) return;
-                        if (isSuccess) {
-                          widget.onAuthSuccess();
-                          return;
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              _auth.lastAuthError ??
-                                  'Email sign in failed. Please try again.',
-                            ),
-                          ),
-                        );
-                      },
+                      textColor: Colors.white,
+                      isLoading: isEmailLoading,
+                      enabled: !isEmailLoading && !isLoading,
+                      borderRadius: 14,
+                      onTap: () => Get.to(() => const EmailLoginPage()),
                     ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: isLoading ? null : widget.onCreateAccount,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: () => Get.offAllNamed(AppRoutes.home),
+                      child: Text(
+                        'Skip for now',
+                        style: TextStyle(
+                          color: const Color(0xFF6B5730).withOpacity(0.7),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
-                      child: const Text('Create New Account'),
                     ),
                   ],
                 );
               }),
+            ),
+          ),
+        ],
       ),
     );
   }

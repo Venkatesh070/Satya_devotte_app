@@ -42,7 +42,7 @@ class CalendarEventDetailPage extends StatelessWidget {
     final date = _date(event);
     final imageUrl = _imageUrl(event);
     final dateLabel = date != null
-        ? DateFormat('EEEE, MMMM do').format(date)
+        ? DateFormat('EEEE, MMMM dd').format(date)
         : '';
 
     return Material(

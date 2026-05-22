@@ -1,38 +1,119 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
-class AppBackground extends StatelessWidget {
+class AppBackground extends StatefulWidget {
   const AppBackground({
     super.key,
     required this.child,
     this.showPattern = false,
+    this.rotateFooter = false,
+    this.animatePatterns = false,
   });
 
   final Widget child;
   final bool showPattern;
+  final bool rotateFooter;
+  final bool animatePatterns;
 
   static const String assetPath = 'assets/images/pooja_step_bg.png';
-  static const String bottomChakraAssetPath = 'assets/images/footerImg.png';
+  static const String bottomChakraAssetPath = 'assets/images/flowerImg.png';
   static const String sideChakraAssetPath = 'assets/images/vector1.png';
   static const String topChakraAssetPath = 'assets/images/vector2.png';
-
-  // ← This is the glow blob you exported from Figma
   static const String glowAssetPath = 'assets/images/vector2.png';
-  // 👆 Replace with whatever you named the exported glow PNG
+
+  @override
+  State<AppBackground> createState() => _AppBackgroundState();
+}
+
+class _AppBackgroundState extends State<AppBackground>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _rotationController;
+
+  bool get _needsAnimation =>
+      widget.rotateFooter || (widget.showPattern && widget.animatePatterns);
+
+  @override
+  void initState() {
+    super.initState();
+    if (_needsAnimation) {
+      _rotationController = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 20),
+      )..repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(AppBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final needsAnimation = _needsAnimation;
+    if (needsAnimation && _rotationController == null) {
+      _rotationController = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 20),
+      )..repeat();
+    } else if (!needsAnimation && _rotationController != null) {
+      _rotationController!.dispose();
+      _rotationController = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotationController?.dispose();
+    super.dispose();
+  }
+
+  Widget _rotatingPattern({
+    required Widget child,
+    required bool counterClockwise,
+  }) {
+    final controller = _rotationController;
+    if (controller == null) return child;
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, patternChild) {
+        final spin = controller.value * 2 * math.pi;
+        return Transform.rotate(
+          angle: counterClockwise ? -spin : spin,
+          child: patternChild,
+        );
+      },
+      child: child,
+    );
+  }
+
+  Widget _footerImage({required double width, required double height}) {
+    final image = Image.asset(
+      AppBackground.bottomChakraAssetPath,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+
+    final controller = _rotationController;
+    if (widget.rotateFooter && controller != null) {
+      return RotationTransition(turns: controller, child: image);
+    }
+    return image;
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final bottomChakraSize = size.width * 1.28;
     final vectorSize = size.width * 0.86;
-    final glowSize = size.width * 1.1; // slightly wider than screen
+    final glowSize = size.width * 1.1;
 
     return SizedBox.expand(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ── 1. Base background ──
           Image.asset(
-            assetPath,
+            AppBackground.assetPath,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => const DecoratedBox(
               decoration: BoxDecoration(
@@ -48,67 +129,78 @@ class AppBackground extends StatelessWidget {
               ),
             ),
           ),
-
-          // ── 2. Glow blob — bottom center (matches Figma) ──
           Positioned(
-            left: (size.width - glowSize) / 2, // centered horizontally
-            bottom: -glowSize * 0.15, // slightly off-screen bottom
+            left: (size.width - glowSize) / 2,
+            bottom: -glowSize * 0.28,
             child: Image.asset(
-              glowAssetPath,
+              AppBackground.glowAssetPath,
               width: glowSize,
               height: glowSize,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
-
-          // ── 3. Bottom chakra (on top of glow) ──
           Positioned(
             left: (size.width - bottomChakraSize) / 2,
-            bottom: -bottomChakraSize * 0.09,
-            child: Image.asset(
-              bottomChakraAssetPath,
+            bottom: -bottomChakraSize * 0.50,
+            child: _footerImage(
               width: bottomChakraSize,
               height: bottomChakraSize,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
-
-          // ── 4. Pattern overlays ──
-          if (showPattern)
+          if (widget.showPattern)
             Positioned(
               left: (size.width - vectorSize) / 2,
               top: size.height * 0.28,
               child: Opacity(
                 opacity: 0.28,
-                child: Image.asset(
-                  topChakraAssetPath,
-                  width: vectorSize,
-                  height: vectorSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
+                child: widget.animatePatterns
+                    ? _rotatingPattern(
+                        counterClockwise: false,
+                        child: Image.asset(
+                          AppBackground.topChakraAssetPath,
+                          width: vectorSize,
+                          height: vectorSize,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      )
+                    : Image.asset(
+                        AppBackground.topChakraAssetPath,
+                        width: vectorSize,
+                        height: vectorSize,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
               ),
             ),
-
-          if (showPattern)
+          if (widget.showPattern)
             Positioned(
               left: (size.width - vectorSize) / 2,
               top: size.height * 0.54,
               child: Opacity(
                 opacity: 1,
-                child: Image.asset(
-                  sideChakraAssetPath,
-                  width: vectorSize,
-                  height: vectorSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
+                child: widget.animatePatterns
+                    ? _rotatingPattern(
+                        counterClockwise: true,
+                        child: Image.asset(
+                          AppBackground.sideChakraAssetPath,
+                          width: vectorSize,
+                          height: vectorSize,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      )
+                    : Image.asset(
+                        AppBackground.sideChakraAssetPath,
+                        width: vectorSize,
+                        height: vectorSize,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
               ),
             ),
-
-          child,
+          widget.child,
         ],
       ),
     );

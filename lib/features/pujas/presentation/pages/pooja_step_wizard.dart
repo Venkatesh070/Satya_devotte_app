@@ -3,12 +3,21 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 
 class PoojaStepWizard extends StatefulWidget {
-  const PoojaStepWizard({super.key, required this.pooja});
+  const PoojaStepWizard({
+    super.key,
+    required this.pooja,
+    this.initialStep,
+    this.sessionId,
+  });
   final PoojaView pooja;
+  final int? initialStep;
+  final String? sessionId;
 
   @override
   State<PoojaStepWizard> createState() => _PoojaStepWizardState();
@@ -16,14 +25,69 @@ class PoojaStepWizard extends StatefulWidget {
 
 class _PoojaStepWizardState extends State<PoojaStepWizard> {
   late final PageController _pageController;
-  int _currentPage = 0;
-  late final List<Widget> _screens;
+  late int _currentPage;
+  List<Widget> _screens = [];
+  String? _sessionId;
+  bool _isLoadingFullPooja = false;
+  late PoojaView _currentPooja;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _screens = _buildScreens();
+    _currentPooja = widget.pooja;
+    _currentPage = widget.initialStep ?? 0;
+    _sessionId = widget.sessionId;
+    _pageController = PageController(initialPage: _currentPage);
+
+    if (_currentPooja.preparation.isEmpty) {
+      _loadFullPooja();
+    } else {
+      _screens = _buildScreens();
+    }
+
+    if (_sessionId == null) {
+      _startSession();
+    }
+  }
+
+  Future<void> _loadFullPooja() async {
+    setState(() => _isLoadingFullPooja = true);
+    try {
+      final ritualRepo = Get.find<RitualRepository>();
+      final fullRitual = await ritualRepo.getRitualDetail(_currentPooja.id);
+      if (fullRitual != null) {
+        // Assume ritualRepo.getRitualDetail returns a PoojaEntity that can be mapped
+        // For now, let's update _currentPooja if the structure allows
+        // If your RitualEntity has a toModel/toMap method:
+        // _currentPooja = PoojaView(fullRitual.toMap());
+      }
+    } catch (e) {
+      debugPrint('Error loading full pooja: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _screens = _buildScreens();
+          _isLoadingFullPooja = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _startSession() async {
+    final historyCtrl = Get.find<PoojaHistoryController>();
+    final result = await historyCtrl.startPooja(widget.pooja.id);
+    if (result != null) {
+      setState(() {
+        _sessionId = result['_id'] ?? result['id'];
+        if (widget.initialStep == null) {
+          final step = result['currentStep'] as int? ?? 0;
+          if (step > 0 && step < _screens.length) {
+            _currentPage = step;
+            _pageController.jumpToPage(step);
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -139,28 +203,46 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
   void _nextPage() {
     if (_currentPage < _screens.length - 1) {
+      final nextIdx = _currentPage + 1;
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() => _currentPage++);
+      setState(() => _currentPage = nextIdx);
+
+      // Update progress if we have a session
+      if (_sessionId != null) {
+        print('DEBUG: Wizard updating progress to NEXT index: $nextIdx');
+        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, nextIdx);
+      }
     }
   }
 
   // ← NEW: go to previous wizard page, or pop if on first page
   void _previousPage() {
     if (_currentPage > 0) {
+      final prevIdx = _currentPage - 1;
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() => _currentPage--);
+      setState(() => _currentPage = prevIdx);
+
+      if (_sessionId != null) {
+        print('DEBUG: Wizard updating progress to PREVIOUS index: $prevIdx');
+        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, prevIdx);
+      }
     } else {
-      Get.back();
+      Get.offAllNamed(AppRoutes.home);
     }
   }
 
   void _finish() {
+    if (_sessionId != null) {
+      Get.find<PoojaHistoryController>().finishPoojaBySession(_sessionId!);
+    } else {
+      Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
+    }
     Get.back();
   }
 
@@ -174,6 +256,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       },
       child: AppBackground(
         showPattern: false,
+        rotateFooter: true,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: PageView(
@@ -207,6 +290,8 @@ class _BaseWizardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppBackground(
       showPattern: showPattern,
+      rotateFooter: true,
+      animatePatterns: showPattern,
       child: Stack(
         children: [
           SafeArea(
@@ -240,6 +325,16 @@ class _BaseWizardScreen extends StatelessWidget {
                             color: Colors.white,
                             size: 18,
                           ),
+                        ),
+                      ),
+
+                      // Logo
+                      GestureDetector(
+                        onTap: () => Get.offAllNamed(AppRoutes.home),
+                        child: Image.asset(
+                          'assets/images/logoWhite.png',
+                          height: 32,
+                          fit: BoxFit.contain,
                         ),
                       ),
 
@@ -389,47 +484,271 @@ class _IntroScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFFD180),
-                  Color(0xFFFF6D00),
-                  Color(0xFFFFAB40),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  pooja.title,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.lora(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+            Spacer(),
+            _WizardFadeSlideIn(
+              child: _WizardGradientTitle(text: pooja.title, fontSize: 28),
+            ),
+            const SizedBox(height: 20),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: Text(
+                pooja.description,
+                textAlign: TextAlign.start,
+                style: AppTypography.inter(
+                  fontSize: 16,
+                  color: Color(0xFFFFD180),
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 180),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => Get.to(() => _PoojaKnowMoreScreen(pooja: pooja)),
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    'Know more about the puja →',
+                    style:
+                        AppTypography.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ).copyWith(
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.white,
+                          decorationThickness: 2.0,
+                        ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              pooja.description,
-              textAlign: TextAlign.start,
-              style: AppTypography.inter(
-                fontSize: 16,
-                color: Color(0xFFFFD180),
-                height: 1.5,
-              ),
-            ),
             const Spacer(),
-            _WizardButton(label: 'Proceed', onTap: onNext),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 240),
+              child: _WizardButton(label: 'Proceed', onTap: onNext),
+            ),
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
+}
+
+class _PoojaKnowMoreScreen extends StatelessWidget {
+  const _PoojaKnowMoreScreen({required this.pooja});
+
+  final PoojaView pooja;
+
+  String get _whyPerformed {
+    final why = pooja.purpose['why']?.toString().trim() ?? '';
+    if (why.isNotEmpty) return why;
+    return pooja.description.trim();
+  }
+
+  List<String> get _expectedOutcomes =>
+      _poojaStringList(pooja.purpose['benefits']);
+
+  String get _deityAbout {
+    final summary = pooja.deitySummary['about']?.toString().trim() ?? '';
+    if (summary.isNotEmpty) return summary;
+    final doc = pooja.deityDoc;
+    if (doc == null) return '';
+    return (doc['about'] ??
+            doc['description'] ??
+            doc['who'] ??
+            doc['summary'] ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  List<String> get _coreBlessings {
+    final fromSummary = _poojaStringList(pooja.deitySummary['blessings']);
+    if (fromSummary.isNotEmpty) return fromSummary;
+    return pooja.blessings;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = <Widget>[];
+
+    final why = _whyPerformed;
+    if (why.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(title: 'Why is this ritual performed?', body: why),
+      );
+    }
+
+    final outcomes = _expectedOutcomes;
+    if (outcomes.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'What outcomes can be expected?',
+          bullets: outcomes,
+        ),
+      );
+    }
+
+    final deityAbout = _deityAbout;
+    if (deityAbout.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(title: 'Who is the Deity?', body: deityAbout),
+      );
+    }
+
+    final blessings = _coreBlessings;
+    if (blessings.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Core Blessings of this Deity',
+          bullets: blessings,
+        ),
+      );
+    }
+
+    if (sections.isEmpty) {
+      sections.add(
+        const _KnowMoreInfoCard(
+          title: 'About this puja',
+          body: 'More information will be available soon.',
+        ),
+      );
+    }
+
+    return _BaseWizardScreen(
+      showPattern: true,
+      onBack: () => Get.back(),
+      child: DefaultTextStyle(
+        style: const TextStyle(decoration: TextDecoration.none),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text(
+                'Know More about the Puja',
+                style: AppTypography.lora(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFFFD180),
+                  height: 1.2,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: sections.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (_, index) => sections[index],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KnowMoreInfoCard extends StatelessWidget {
+  const _KnowMoreInfoCard({required this.title, this.body, this.bullets});
+
+  final String title;
+  final String? body;
+  final List<String>? bullets;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(0XFFEAE1D5).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.lora(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFFFD180),
+              decoration: TextDecoration.none,
+            ),
+          ),
+          if (body != null && body!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              body!,
+              style: AppTypography.inter(
+                fontSize: 14,
+                height: 1.55,
+                color: Colors.white.withOpacity(0.92),
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
+          if (bullets != null && bullets!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final item in bullets!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.92),
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: AppTypography.inter(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Colors.white.withOpacity(0.92),
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+List<String> _poojaStringList(dynamic raw) {
+  if (raw is List) {
+    return raw
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+  if (raw is String && raw.trim().isNotEmpty) {
+    return raw
+        .split(RegExp(r'[,;\n]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+  return const [];
 }
 
 class _SimpleInfoScreen extends StatelessWidget {
@@ -449,48 +768,35 @@ class _SimpleInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _BaseWizardScreen(
-      onBack: onBack, // ← NEW
+      showPattern: true,
+      onBack: onBack,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             const SizedBox(height: 180),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFFD180),
-                  Color(0xFFFF6D00),
-                  Color(0xFFFFAB40),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.lora(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+            _WizardFadeSlideIn(
+              child: _WizardGradientTitle(text: title, fontSize: 28),
+            ),
+            const SizedBox(height: 10),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.start,
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  color: Color(0xFFFF9D00),
+                  height: 1.5,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              subtitle,
-              textAlign: TextAlign.start,
-              style: AppTypography.inter(
-                fontSize: 14,
-                color: Color(0xFFFF9D00),
-                height: 1.5,
-              ),
-            ),
             const Spacer(),
-            _WizardButton(label: buttonLabel, onTap: onNext),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 240),
+              child: _WizardButton(label: buttonLabel, onTap: onNext),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -521,28 +827,8 @@ class _ListScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 40),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFFD180),
-                  Color(0xFFFF6D00),
-                  Color(0xFFFFAB40),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.lora(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+            _WizardFadeSlideIn(
+              child: _WizardGradientTitle(text: title, fontSize: 24),
             ),
             const SizedBox(height: 30),
             Expanded(
@@ -550,32 +836,31 @@ class _ListScreen extends StatelessWidget {
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            items[index],
-                            style: AppTypography.inter(
-                              fontSize: 15,
-                              color: Colors.white,
-                              height: 1.4,
-                            ),
-                          ),
+                  return _WizardFadeSlideIn(
+                    delay: Duration(milliseconds: 160 + (index * 70)),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        items[index],
+                        style: AppTypography.inter(
+                          fontSize: 15,
+                          color: Colors.white,
+                          height: 1.4,
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            _WizardButton(label: 'Next', onTap: onNext),
+            _WizardFadeSlideIn(
+              delay: Duration(milliseconds: 220 + (items.length * 70)),
+              child: _WizardButton(label: 'Next', onTap: onNext),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -606,28 +891,8 @@ class _IngredientsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 40),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFFD180),
-                  Color(0xFFFF6D00),
-                  Color(0xFFFFAB40),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.lora(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+            _WizardFadeSlideIn(
+              child: _WizardGradientTitle(text: title, fontSize: 24),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -635,27 +900,33 @@ class _IngredientsScreen extends StatelessWidget {
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.09),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      items[index],
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                  return _WizardFadeSlideIn(
+                    delay: Duration(milliseconds: 140 + (index * 60)),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.09),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        items[index],
+                        style: AppTypography.inter(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
                       ),
                     ),
                   );
                 },
               ),
             ),
-            _WizardButton(label: 'Next', onTap: onNext),
+            _WizardFadeSlideIn(
+              delay: Duration(milliseconds: 200 + (items.length * 60)),
+              child: _WizardButton(label: 'Next', onTap: onNext),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -809,37 +1080,20 @@ class _PujaStepScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            Text(
-              'Step ${step.number}/$totalSteps',
-              style: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white.withOpacity(0.6),
+            _WizardFadeSlideIn(
+              child: Text(
+                'Step ${step.number}/$totalSteps',
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withOpacity(0.6),
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFFD180),
-                  Color(0xFFFF6D00),
-                  Color(0xFFFFAB40),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  step.title,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.lora(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+            _WizardFadeSlideIn(
+              delay: const Duration(milliseconds: 100),
+              child: _WizardGradientTitle(text: step.title, fontSize: 24),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -847,29 +1101,43 @@ class _PujaStepScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Description blocks (grouped)
-                    for (final block in blocks)
+                    for (var i = 0; i < blocks.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 14),
-                        child: _buildStepCard(block.text, block.type),
+                        child: _WizardFadeSlideIn(
+                          delay: Duration(milliseconds: 180 + (i * 70)),
+                          child: _buildStepCard(blocks[i].text, blocks[i].type),
+                        ),
                       ),
-
-                    // subSteps always render as mantra cards
                     if (step.subSteps.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      for (final sub in step.subSteps)
+                      for (var i = 0; i < step.subSteps.length; i++)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildStepCard(sub, _StepCardType.mantra),
+                          child: _WizardFadeSlideIn(
+                            delay: Duration(
+                              milliseconds: 180 + ((blocks.length + i) * 70),
+                            ),
+                            child: _buildStepCard(
+                              step.subSteps[i],
+                              _StepCardType.mantra,
+                            ),
+                          ),
                         ),
                     ],
                   ],
                 ),
               ),
             ),
-            _WizardButton(
-              label: step.number == totalSteps ? 'Complete Puja' : 'Next',
-              onTap: onNext,
+            _WizardFadeSlideIn(
+              delay: Duration(
+                milliseconds:
+                    260 + ((blocks.length + step.subSteps.length) * 70),
+              ),
+              child: _WizardButton(
+                label: step.number == totalSteps ? 'Complete Puja' : 'Next',
+                onTap: onNext,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1016,6 +1284,109 @@ class _CompletionScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+const _wizardTitleGradient = LinearGradient(
+  colors: [Color(0xFFFFD180), Color(0xFFFF6D00), Color(0xFFFFAB40)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+class _WizardGradientTitle extends StatelessWidget {
+  const _WizardGradientTitle({
+    required this.text,
+    this.fontSize = 28,
+    this.textAlign = TextAlign.start,
+  });
+
+  final String text;
+  final double fontSize;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseStyle = AppTypography.lora(
+      fontSize: fontSize,
+      fontWeight: FontWeight.bold,
+      height: 1.2,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: baseStyle),
+          textAlign: textAlign,
+          textDirection: Directionality.of(context),
+          maxLines: null,
+        )..layout(maxWidth: constraints.maxWidth);
+
+        return Text(
+          text,
+          textAlign: textAlign,
+          style: baseStyle.copyWith(
+            decoration: TextDecoration.none,
+            foreground: Paint()
+              ..shader = _wizardTitleGradient.createShader(
+                Rect.fromLTWH(0, 0, painter.width, painter.height),
+              ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _WizardFadeSlideIn extends StatefulWidget {
+  const _WizardFadeSlideIn({required this.child, this.delay = Duration.zero});
+
+  final Widget child;
+  final Duration delay;
+
+  @override
+  State<_WizardFadeSlideIn> createState() => _WizardFadeSlideInState();
+}
+
+class _WizardFadeSlideInState extends State<_WizardFadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+
+    if (widget.delay == Duration.zero) {
+      _controller.forward();
+    } else {
+      Future<void>.delayed(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }

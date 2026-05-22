@@ -232,6 +232,7 @@ class _MonthGrid extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ..._buildWeekRows(
+          context: context,
           daysInMonth: daysInMonth,
           firstWeekday: firstWeekday,
           focused: focused,
@@ -242,6 +243,7 @@ class _MonthGrid extends StatelessWidget {
   }
 
   List<Widget> _buildWeekRows({
+    required BuildContext context,
     required int daysInMonth,
     required int firstWeekday,
     required DateTime focused,
@@ -262,7 +264,8 @@ class _MonthGrid extends StatelessWidget {
       dayWidgets.add(
         Expanded(
           child: GestureDetector(
-            onTap: () => controller.onDateSelected(date, date),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _onCalendarDayTap(context, date, events),
             child: SizedBox(
               height: 36,
               child: Stack(
@@ -287,14 +290,16 @@ class _MonthGrid extends StatelessWidget {
                           : Colors.white,
                     ),
                   ),
-                  if (events.isNotEmpty && !isSelected)
+                  if (events.isNotEmpty)
                     Positioned(
                       bottom: 2,
                       child: Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: Colors.white70,
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? CalendarUi.headerOrange
+                              : Colors.white.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -317,6 +322,165 @@ class _MonthGrid extends StatelessWidget {
       rows.add(Row(children: dayWidgets.sublist(i, i + 7)));
     }
     return rows;
+  }
+
+  void _onCalendarDayTap(
+    BuildContext context,
+    DateTime date,
+    List<dynamic> events,
+  ) {
+    controller.onDateSelected(date, date);
+    if (events.isEmpty) return;
+
+    if (events.length == 1) {
+      CalendarEventDetailPage.show(context, event: events.first);
+      return;
+    }
+
+    _CalendarDayEventsSheet.show(
+      context,
+      date: date,
+      events: events,
+    );
+  }
+}
+
+/// Bottom sheet listing every festival / lunar / event on the tapped day.
+class _CalendarDayEventsSheet extends StatelessWidget {
+  const _CalendarDayEventsSheet({
+    required this.date,
+    required this.events,
+  });
+
+  final DateTime date;
+  final List<dynamic> events;
+
+  static Future<void> show(
+    BuildContext context, {
+    required DateTime date,
+    required List<dynamic> events,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.55;
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: _CalendarDayEventsSheet(date: date, events: events),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = DateFormat('EEEE, MMMM d').format(date);
+
+    return Material(
+      color: CalendarUi.background,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 38,
+            height: 4,
+            decoration: BoxDecoration(
+              color: CalendarUi.cardBorder,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    dateLabel,
+                    style: AppTypography.lora(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: CalendarUi.text,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: CalendarUi.textMuted),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              itemCount: events.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final event = events[index];
+                return _DayEventListTile(
+                  event: event,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    CalendarEventDetailPage.show(context, event: event);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayEventListTile extends StatelessWidget {
+  const _DayEventListTile({required this.event, required this.onTap});
+
+  final dynamic event;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (event is FestivalModel) {
+      return _FestivalCard(festival: event, onTap: onTap);
+    }
+    if (event is MoonPhaseModel) {
+      final isFull = event.type.toUpperCase().contains('FULL');
+      return _LunarCard(
+        title: isFull ? 'Full moon' : 'New moon',
+        subtitle: isFull ? 'Purnima' : 'Amavasya',
+        date: event.date,
+        onTap: onTap,
+      );
+    }
+    if (event is UserCalendarEvent) {
+      return _GenericEventCard(
+        title: event.name,
+        description: event.description,
+        date: event.date,
+        onTap: onTap,
+      );
+    }
+    if (event is PoojaView) {
+      return _GenericEventCard(
+        title: event.title,
+        description: event.description,
+        date: _parseDate(event.date),
+        onTap: onTap,
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 
@@ -353,7 +517,7 @@ class _FestivalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = _parseDate(festival.date);
     final dateStr = date != null
-        ? DateFormat('EEEE, MMMM do').format(date)
+        ? DateFormat('EEEE, MMMM dd').format(date)
         : festival.date;
 
     return Material(
@@ -602,7 +766,7 @@ class _CalendarEntryCard extends StatelessWidget {
         ? DateFormat('MMM').format(date!).toUpperCase()
         : '---';
     final dateLine = date != null
-        ? DateFormat('EEEE, MMMM do').format(date!)
+        ? DateFormat('EEEE, MMMM dd').format(date!)
         : '';
 
     return Material(

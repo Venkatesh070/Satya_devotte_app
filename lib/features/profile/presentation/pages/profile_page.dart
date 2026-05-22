@@ -6,13 +6,12 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_about_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_achievements_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_more_options_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
-import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
-
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -21,7 +20,6 @@ class ProfilePage extends StatelessWidget {
     final profileController = Get.find<ProfileController>();
 
     return Obx(() {
-      final isLoading = profileController.isLoading;
       final userData = profileController.resolvedUser;
 
       final name = (userData?['fullName'] ?? userData?['name'] ?? 'Devotee')
@@ -54,11 +52,9 @@ class ProfilePage extends StatelessWidget {
 
       return Scaffold(
         backgroundColor: AppColors.appBgColor,
-        body: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: profileController.loadProfile,
-              child: SingleChildScrollView(
+        body: RefreshIndicator(
+          onRefresh: profileController.loadProfile,
+          child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
@@ -86,12 +82,12 @@ class ProfilePage extends StatelessWidget {
                             onTap: () =>
                                 Get.to(() => const ProfilePoojaHistoryPage()),
                           ),
-                          ProfileLinkTile(
-                            icon: Icons.emoji_events_outlined,
-                            label: 'Achievements',
-                            onTap: () =>
-                                Get.to(() => const ProfileAchievementsPage()),
-                          ),
+                          // ProfileLinkTile(
+                          //   icon: Icons.emoji_events_outlined,
+                          //   label: 'Achievements',
+                          //   onTap: () =>
+                          //       Get.to(() => const ProfileAchievementsPage()),
+                          // ),
                           const SizedBox(height: 30),
                           const ProfileSectionHeading('Settings'),
                           ProfileLinkTile(
@@ -113,10 +109,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
-            if (isLoading) const ChakraLoaderPage(asOverlay: true),
-          ],
+          ),
         ),
       );
     });
@@ -140,12 +133,17 @@ class _ProfileHeader extends StatelessWidget {
       children: [
         SizedBox(
           width: double.infinity,
-          height: 200,
+          // Avatar sits 40px below the banner; include that in the hit-test box.
+          height: 240,
           child: Stack(
             alignment: Alignment.bottomCenter,
             clipBehavior: Clip.none,
             children: [
-              const Positioned.fill(
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 200,
                 child: Image(
                   image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
                   fit: BoxFit.fill,
@@ -153,83 +151,70 @@ class _ProfileHeader extends StatelessWidget {
                 ),
               ),
               Positioned(
-                bottom: -40,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        border: Border.all(
-                          color: AppColors.appBgColor,
-                          width: 4,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x40000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: imageUrl != null && imageUrl!.isNotEmpty
-                          ? ClipOval(
-                              child: Image.network(
-                                imageUrl!,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Text(
-                                      initials,
-                                      style: AppTypography.inter(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1C1917),
-                                      ),
-                                    ),
-                              ),
-                            )
-                          : Text(
-                              initials,
-                              style: AppTypography.inter(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1C1917),
-                              ),
-                            ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () => Get.toNamed(AppRoutes.editProfile),
+                bottom: 0,
+                child: SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 4,
+                        top: 4,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.gradientStart,
-                                AppColors.gradientEnd,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-
-                          child: const Icon(
-                            Icons.edit_outlined,
-                            size: 14,
                             color: Colors.white,
+                            border: Border.all(
+                              color: AppColors.appBgColor,
+                              width: 4,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x40000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
                           ),
+                          alignment: Alignment.center,
+                          child: imageUrl != null && imageUrl!.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    imageUrl!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Text(
+                                          initials,
+                                          style: AppTypography.inter(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF1C1917),
+                                          ),
+                                        ),
+                                  ),
+                                )
+                              : Text(
+                                  initials,
+                                  style: AppTypography.inter(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1C1917),
+                                  ),
+                                ),
                         ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: _EditProfileButton(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -245,6 +230,44 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EditProfileButton extends StatelessWidget {
+  const _EditProfileButton();
+
+  void _openEditProfile(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(builder: (_) => const EditProfilePage()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openEditProfile(context),
+        customBorder: const CircleBorder(),
+        child: Ink(
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [AppColors.gradientStart, AppColors.gradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: const Icon(
+            Icons.edit_outlined,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

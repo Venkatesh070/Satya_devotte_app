@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/services/api_loading_service.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_api.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
@@ -54,17 +55,22 @@ import 'package:satya_devotte_app/features/donations/state/donate_controller.dar
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/my_contributions_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
+import 'package:satya_devotte_app/features/profile/data/datasources/pooja_history_remote_datasource.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
+import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
     Get.put<FirebaseService>(FirebaseService(), permanent: true);
     Get.put<AuthSessionService>(AuthSessionService(), permanent: true);
+    Get.put<ApiLoadingService>(ApiLoadingService(), permanent: true);
     Get.put<ApiClient>(
       ApiClient(
+        loadingService: Get.find<ApiLoadingService>(),
         tokenProvider: () => Get.find<AuthSessionService>().getAccessToken(),
       ),
       permanent: true,
@@ -111,6 +117,18 @@ class InitialBinding extends Bindings {
         Get.find<ProfileRepository>(),
         Get.find<AuthSessionService>(),
       ),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryRemoteDataSource>(
+      PoojaHistoryRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryRepository>(
+      PoojaHistoryRepository(Get.find<PoojaHistoryRemoteDataSource>()),
+      permanent: true,
+    );
+    Get.put<PoojaHistoryController>(
+      PoojaHistoryController(Get.find<PoojaHistoryRepository>()),
       permanent: true,
     );
     Get.put<PoojaRemoteDataSource>(

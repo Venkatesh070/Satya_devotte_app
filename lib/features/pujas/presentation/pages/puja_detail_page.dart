@@ -60,6 +60,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       vsync: this,
       initialIndex: 0,
     );
+    _tabController.addListener(_onTabChanged);
 
     final args = Get.arguments;
     if (args is Map && args['type'] == 'deity') {
@@ -83,8 +84,14 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     }
   }
 
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -327,6 +334,14 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     return (map['_id'] ?? map['id'] ?? '').toString().trim();
   }
 
+  /// Same list logic as [_CalendarTab] — used to decide if Get Started is shown.
+  List<Map<String, dynamic>> _calendarPoojasFor(PoojaView pooja) {
+    final activePoojaId = _entityId(pooja.raw);
+    if (_deityPoojas.isNotEmpty) return _deityPoojas;
+    if (activePoojaId.isNotEmpty) return [_pooja!];
+    return const [];
+  }
+
   /// When the populated `deity` field is just an ObjectId string we hit
   /// `/api/v1/deities/:id` so the About / Stories tabs can render the
   /// full set of cards (family, posture, description, weapons, chakra,
@@ -462,7 +477,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
     final activePooja = _pooja!;
     final p = PoojaView(activePooja);
-    final hasLaunchablePooja = _entityId(activePooja).isNotEmpty;
+    final hasCalendarPujas = _calendarPoojasFor(p).isNotEmpty;
+    final showGetStartedButton =
+        _tabController.index == 0 &&
+        hasCalendarPujas &&
+        _entityId(activePooja).isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
@@ -581,23 +600,22 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               ),
             ),
           ),
-          // Get Started CTA
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: CustomButton(
-              label: hasLaunchablePooja ? 'Get Started' : 'No Puja Available',
-              borderRadius: 14,
-              onTap: () => Get.to(() => PoojaStepWizard(pooja: p)),
-              enabled: hasLaunchablePooja,
-              textColor: AppColors.white,
-              gradientColors: const [
-                AppColors.gradientStart,
-                AppColors.gradientEnd,
-              ],
+          if (showGetStartedButton)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+              child: CustomButton(
+                label: 'Get Started',
+                borderRadius: 14,
+                onTap: () => Get.to(() => PoojaStepWizard(pooja: p)),
+                textColor: AppColors.white,
+                gradientColors: const [
+                  AppColors.gradientStart,
+                  AppColors.gradientEnd,
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

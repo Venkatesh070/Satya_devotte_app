@@ -26,6 +26,7 @@ class AppTypography {
     double? height,
     FontStyle? fontStyle,
     TextDecoration? decoration,
+    Color? decorationColor,
   }) {
     return GoogleFonts.inter(
       fontSize: fontSize,

@@ -44,6 +44,15 @@ class ApiEndpoints {
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
 
+  // ── User Pooja History ────────────────────────────────────
+  static const String userPoojaHistory = '/api/v1/user/pooja-history';
+  static const String userPoojaHistoryPending = '/api/v1/user/pooja-history/pending';
+  static const String userPoojaHistoryFinished = '/api/v1/user/pooja-history/finished';
+  static String startUserPooja(String poojaId) => '/api/v1/user/pooja-history/$poojaId/start';
+  static String finishUserPooja(String poojaId) => '/api/v1/user/pooja-history/$poojaId/finish';
+  static String updatePoojaProgress(String sessionId) => '/api/v1/user/pooja-history/sessions/$sessionId/progress';
+  static String finishPoojaBySession(String sessionId) => '/api/v1/user/pooja-history/sessions/$sessionId/finish';
+
   /// Super Admin — list / invite admin users.
   static const String superadminAdmins = '/api/v1/superadmin/admins';
 

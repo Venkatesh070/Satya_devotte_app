@@ -535,6 +535,20 @@ class CalendarController extends GetxController {
           e.date.day == dayOnly.day),
     );
 
+    events.sort((a, b) {
+      final da = _eventSortDate(a);
+      final db = _eventSortDate(b);
+      return (da ?? DateTime(2100)).compareTo(db ?? DateTime(2100));
+    });
+
     return events;
+  }
+
+  DateTime? _eventSortDate(dynamic event) {
+    if (event is FestivalModel) return _parseDate(event.date);
+    if (event is PoojaView) return _parseDate(event.date);
+    if (event is UserCalendarEvent) return event.date;
+    if (event is MoonPhaseModel) return _parseDate(event.date);
+    return null;
   }
 }
