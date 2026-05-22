@@ -10,7 +10,9 @@ import 'package:satya_devotte_app/features/admin_notifications/presentation/cont
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/widgets/cms_activity_bell_button.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/app_music_control_button.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_deities_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_puja_content.dart';
@@ -78,6 +80,11 @@ class _CmsShellPageState extends State<CmsShellPage> {
     // sidebar reflects the deep-linked tab on first paint.
     final group = _groupLabelForIndex(_selectedIndex);
     if (group != null) _expandedGroups.add(group);
+    if (kIsWeb && Get.isRegistered<AppMusicService>()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.find<AppMusicService>().startOnAdminLogin();
+      });
+    }
   }
 
   @override
@@ -286,6 +293,15 @@ class _MobileLayout extends StatelessWidget {
           ),
         ),
         actions: [
+          if (Get.isRegistered<AppMusicService>())
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: AppMusicControlButton(
+                size: 36,
+                borderRadius: 8,
+                iconSize: 20,
+              ),
+            ),
           Obx(
             () => Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -972,6 +988,15 @@ class _WebTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          if (Get.isRegistered<AppMusicService>())
+            const AppMusicControlButton(
+              size: 36,
+              borderRadius: 8,
+              iconSize: 18,
+              enableTooltip: true,
+              showShadow: false,
+            ),
+          if (Get.isRegistered<AppMusicService>()) const SizedBox(width: 12),
           CmsActivityBellButton(onTap: onActivityBellTap),
           const SizedBox(width: 12),
           // Avatar
