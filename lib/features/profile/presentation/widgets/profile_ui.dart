@@ -27,31 +27,38 @@ class ProfileLinkTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: DonationUi.cardFill,
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFFFFFCF6),
+        borderRadius: BorderRadius.circular(14),
+        elevation: 5,
+        shadowColor: const Color(0x1A7A4E12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            constraints: const BoxConstraints(minHeight: 58),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: DonationUi.cardBorder),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFF2E6D1)),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.appBgColor,
-                    borderRadius: BorderRadius.circular(22),
+                    color: const Color(0xFFFFF2DC),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(icon, size: 20, color: DonationUi.textMuted),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: isDestructive
+                        ? const Color(0xFFB45026)
+                        : const Color(0xFFC28335),
+                  ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
@@ -64,7 +71,7 @@ class ProfileLinkTile extends StatelessWidget {
                 ),
                 Icon(
                   Icons.chevron_right,
-                  size: 20,
+                  size: 18,
                   color: const Color(0xFF78716C),
                 ),
               ],
@@ -84,11 +91,11 @@ class ProfileSectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
         style: AppTypography.lora(
-          fontSize: 16,
+          fontSize: 12,
           fontWeight: FontWeight.w500,
           color: Color(0XFF1C1917),
         ),
@@ -306,7 +313,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                     hintText: 'Enter your reason for deletion',
                     hintStyle: AppTypography.inter(
                       fontSize: 14,
-                      color: DonationUi.textMuted.withOpacity(0.5),
+                      color: DonationUi.textMuted.withValues(alpha: 0.5),
                     ),
                     filled: true,
                     fillColor: Colors.white,

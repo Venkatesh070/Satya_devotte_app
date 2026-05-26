@@ -4,47 +4,50 @@ import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_about_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_achievements_page.dart';
-import 'package:satya_devotte_app/features/profile/presentation/pages/profile_more_options_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
+import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final profileController = Get.find<ProfileController>();
+    final authController = Get.find<AuthController>();
 
     return Obx(() {
       final userData = profileController.resolvedUser;
-
       final name = (userData?['fullName'] ?? userData?['name'] ?? 'Devotee')
           .toString();
       final phone = (userData?['phone'] ?? 'Not provided').toString();
+      final email = (userData?['email'] ?? 'Not provided').toString();
+      final sunSign = (userData?['sunSign'] ?? 'Not provided').toString();
+      final moonSign = (userData?['moonSign'] ?? 'Not provided').toString();
+      final imageUrl = userData?['imageUrl'] ?? userData?['profileImageUrl'];
 
       String dob = 'Not provided';
       final rawDob = userData?['dateOfBirth'];
       if (rawDob != null) {
         try {
-          final date = DateTime.parse(rawDob.toString());
-          dob = DateFormat('dd MMM yyyy').format(date);
+          dob = DateFormat(
+            'dd MMM yyyy',
+          ).format(DateTime.parse(rawDob.toString()));
         } catch (_) {
           dob = rawDob.toString();
         }
       }
 
-      final sunSign = (userData?['sunSign'] ?? 'Not provided').toString();
-      final moonSign = (userData?['moonSign'] ?? 'Not provided').toString();
-      final imageUrl = userData?['imageUrl'] ?? userData?['profileImageUrl'];
-
       final initials = name.isNotEmpty
           ? name
                 .split(' ')
-                .map((e) => e.isNotEmpty ? e[0] : '')
+                .map((part) => part.isNotEmpty ? part[0] : '')
                 .take(2)
                 .join()
                 .toUpperCase()
@@ -52,11 +55,15 @@ class ProfilePage extends StatelessWidget {
 
       return Scaffold(
         backgroundColor: AppColors.appBgColor,
-        body: RefreshIndicator(
-          onRefresh: profileController.loadProfile,
-          child: SingleChildScrollView(
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: profileController.loadProfile,
+              color: AppColors.gradientEnd,
+              child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _ProfileHeader(
                       name: name,
@@ -68,14 +75,22 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _InfoCard(phone, dob, sunSign, moonSign),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 18),
+                          const ProfileSectionHeading('Spiritual'),
                           ProfileLinkTile(
-                            icon: Icons.receipt_long_outlined,
-                            label: 'My orders',
+                            icon: Icons.inventory_2_outlined,
+                            label: 'My Orders',
                             onTap: () => Get.toNamed(AppRoutes.userOrders),
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 8),
+                          _InfoCard(
+                            phone: phone,
+                            email: email,
+                            dob: dob,
+                            sunSign: sunSign,
+                            moonSign: moonSign,
+                          ),
+                          const SizedBox(height: 22),
                           const ProfileSectionHeading('Spiritual'),
                           ProfileLinkTile(
                             icon: Icons.volunteer_activism_outlined,
@@ -88,13 +103,13 @@ class ProfilePage extends StatelessWidget {
                             onTap: () =>
                                 Get.to(() => const ProfilePoojaHistoryPage()),
                           ),
-                          // ProfileLinkTile(
-                          //   icon: Icons.emoji_events_outlined,
-                          //   label: 'Achievements',
-                          //   onTap: () =>
-                          //       Get.to(() => const ProfileAchievementsPage()),
-                          // ),
-                          const SizedBox(height: 30),
+                          ProfileLinkTile(
+                            icon: Icons.emoji_events_outlined,
+                            label: 'Achievements',
+                            onTap: () =>
+                                Get.to(() => const ProfileAchievementsPage()),
+                          ),
+                          const SizedBox(height: 22),
                           const ProfileSectionHeading('Settings'),
                           ProfileLinkTile(
                             icon: Icons.info_outline,
@@ -102,20 +117,54 @@ class ProfilePage extends StatelessWidget {
                             onTap: () => Get.to(() => const ProfileAboutPage()),
                           ),
                           ProfileLinkTile(
-                            icon: Icons.settings_outlined,
-                            label: 'More options',
-                            onTap: () =>
-                                Get.to(() => const ProfileMoreOptionsPage()),
+                            icon: Icons.logout_outlined,
+                            label: 'Logout',
+                            onTap: () => showProfileLogoutSheet(
+                              onConfirm: () async {
+                                await authController.signOut();
+                                Get.offAllNamed(AppRoutes.login);
+                              },
+                            ),
                           ),
-                          const SizedBox(height: 40),
+                          ProfileLinkTile(
+                            icon: Icons.delete_outline,
+                            label: 'Delete Account',
+                            isDestructive: true,
+                            onTap: () => showProfileDeleteAccountSheet(
+                              userName: profileController.userName,
+                              onConfirm: () async {
+                                final ok = await authController.deleteAccount();
+                                if (ok) {
+                                  Get.offAllNamed(AppRoutes.login);
+                                  Get.snackbar(
+                                    'Account Deleted',
+                                    'Your account has been deleted successfully.',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                } else {
+                                  Get.snackbar(
+                                    'Error',
+                                    authController.lastAuthError ??
+                                        'Failed to delete account.',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 70),
                           _Footer(),
-                          const SizedBox(height: 150),
+                          const SizedBox(height: 105),
                         ],
                       ),
                     ),
                   ],
                 ),
-          ),
+              ),
+            ),
+            if (authController.isAuthLoading)
+              const ChakraLoaderPage(asOverlay: true),
+          ],
         ),
       );
     });
@@ -135,180 +184,215 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          // Avatar sits 40px below the banner; include that in the hit-test box.
-          height: 240,
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            clipBehavior: Clip.none,
-            children: [
-              const Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 200,
-                child: Image(
-                  image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
-                  fit: BoxFit.fill,
-                  alignment: Alignment.topCenter,
-                ),
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    return SizedBox(
+      height: topPadding + 178,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topPadding + 120,
+            child: const Image(
+              image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
+              fit: BoxFit.fill,
+              alignment: Alignment.topCenter,
+              color: Color(0XFFF0650E),
+            ),
+          ),
+          Positioned(
+            top: topPadding + 34,
+            left: 20,
+            child: Text(
+              'My Profile',
+              style: AppTypography.lora(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
-              Positioned(
-                bottom: 0,
-                child: SizedBox(
-                  width: 88,
-                  height: 88,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        left: 4,
-                        top: 4,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(
-                              color: AppColors.appBgColor,
-                              width: 4,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x40000000),
-                                blurRadius: 18,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: imageUrl != null && imageUrl!.isNotEmpty
-                              ? ClipOval(
-                                  child: Image.network(
-                                    imageUrl!,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Text(
-                                          initials,
-                                          style: AppTypography.inter(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF1C1917),
-                                          ),
-                                        ),
-                                  ),
-                                )
-                              : Text(
-                                  initials,
-                                  style: AppTypography.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1C1917),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: _EditProfileButton(),
-                      ),
-                    ],
+            ),
+          ),
+          Positioned(
+            top: topPadding + 82,
+            child: Column(
+              children: [
+                _ProfileAvatar(initials: initials, imageUrl: imageUrl),
+                const SizedBox(height: 10),
+                Text(
+                  name,
+                  style: AppTypography.lora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1C1917),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Container(width: 74, height: 1, color: const Color(0xFFE6B666)),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 52),
-        Text(
-          name,
-          style: AppTypography.lora(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF1C1917),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _EditProfileButton extends StatelessWidget {
-  const _EditProfileButton();
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.initials, this.imageUrl});
 
-  void _openEditProfile(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(builder: (_) => const EditProfilePage()),
-    );
-  }
+  final String initials;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openEditProfile(context),
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [AppColors.gradientStart, AppColors.gradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+    return Container(
+      width: 64,
+      height: 64,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
-          child: const Icon(
-            Icons.edit_outlined,
-            size: 16,
-            color: Colors.white,
-          ),
+        ],
+      ),
+      child: ClipOval(
+        child: Container(
+          color: const Color(0xFFFFF7EA),
+          alignment: Alignment.center,
+          child: imageUrl != null && imageUrl!.isNotEmpty
+              ? Image.network(
+                  imageUrl!,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      _AvatarInitials(initials),
+                )
+              : _AvatarInitials(initials),
         ),
+      ),
+    );
+  }
+}
+
+class _AvatarInitials extends StatelessWidget {
+  const _AvatarInitials(this.initials);
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      initials,
+      style: AppTypography.lora(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        color: AppColors.gradientStart,
       ),
     );
   }
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard(this.phone, this.dob, this.sunSign, this.moonSign);
+  const _InfoCard({
+    required this.phone,
+    required this.email,
+    required this.dob,
+    required this.sunSign,
+    required this.moonSign,
+  });
 
   final String phone;
+  final String email;
   final String dob;
   final String sunSign;
   final String moonSign;
+
+  void _openEditProfile(BuildContext context) {
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute<void>(builder: (_) => const EditProfilePage()));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        color: Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Color(0xFFFCF7EF)),
+        color: const Color(0xFFFFFCF6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF2E6D1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A7A4E12),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          _InfoRow(Icons.phone_outlined, 'Phone Number', phone),
-          const Divider(height: 24, color: DonationUi.cardBorder),
-          _InfoRow(Icons.calendar_today_outlined, 'Date of Birth', dob),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _SignBadge('Sun Sign', sunSign)),
-              const SizedBox(width: 12),
-              Expanded(child: _SignBadge('Moon Sign', moonSign)),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 46),
+            child: Column(
+              children: [
+                _InfoRow(Icons.phone_outlined, 'Phone Number', phone),
+                const SizedBox(height: 16),
+                _InfoRow(Icons.mail_outline, 'Email ID', email),
+                const SizedBox(height: 16),
+                _InfoRow(Icons.calendar_today_outlined, 'Date of Birth', dob),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(child: _SignBadge('Sun Sign', sunSign)),
+                    const SizedBox(width: 18),
+                    Expanded(child: _SignBadge('Moon Sign', moonSign)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _openEditProfile(context),
+                borderRadius: BorderRadius.circular(20),
+                child: Ink(
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Edit Details',
+                      style: AppTypography.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

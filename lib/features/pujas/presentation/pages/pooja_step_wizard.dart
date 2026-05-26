@@ -902,23 +902,7 @@ class _IngredientsScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   return _WizardFadeSlideIn(
                     delay: Duration(milliseconds: 140 + (index * 60)),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.09),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        items[index],
-                        style: AppTypography.inter(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ),
+                    child: _IngredientChecklistTile(label: items[index]),
                   );
                 },
               ),
@@ -928,6 +912,80 @@ class _IngredientsScreen extends StatelessWidget {
               child: _WizardButton(label: 'Next', onTap: onNext),
             ),
             const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IngredientChecklistTile extends StatefulWidget {
+  const _IngredientChecklistTile({required this.label});
+
+  final String label;
+
+  @override
+  State<_IngredientChecklistTile> createState() =>
+      _IngredientChecklistTileState();
+}
+
+class _IngredientChecklistTileState extends State<_IngredientChecklistTile> {
+  bool _checked = false;
+
+  void _toggle(bool? value) {
+    setState(() => _checked = value ?? !_checked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => _toggle(!_checked),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: _checked
+              ? const Color(0xFFFFD180).withValues(alpha: 0.14)
+              : Colors.white.withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _checked
+                ? const Color(0xFFFFD11A).withValues(alpha: 0.28)
+                : Colors.white.withValues(alpha: 0.04),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.label,
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  height: 1.25,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: _checked,
+                onChanged: _toggle,
+                checkColor: const Color(0xFF4A1C00),
+                activeColor: const Color(0xFFFFD11A),
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.86),
+                  width: 1.8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
           ],
         ),
       ),
@@ -950,18 +1008,72 @@ class _PujaStepScreen extends StatelessWidget {
   final VoidCallback onBack;
 
   _StepCardType _detectType(String text) {
-    final t = text.trim().toLowerCase();
+    final trimmed = text.trim();
+    final t = trimmed.toLowerCase();
     if (t.startsWith('recite') ||
         t.startsWith('chant') ||
-        text.trim().startsWith('"') ||
-        text.trim().startsWith('\u201c') ||
-        text.trim().startsWith('\u2018')) {
+        trimmed.startsWith('"') ||
+        trimmed.startsWith('\u201c') ||
+        trimmed.startsWith('\u2018')) {
       return _StepCardType.mantra;
     }
     if (text.trim().contains('•') || t.contains('represents')) {
       return _StepCardType.significance;
     }
     return _StepCardType.instruction;
+  }
+
+  bool _introducesMantra(String text) {
+    final t = text.toLowerCase();
+    return t.contains('prayer') ||
+        t.contains('mantra') ||
+        t.contains('chant') ||
+        t.contains('recite');
+  }
+
+  bool _looksLikeActionInstruction(String text) {
+    final t = text.trim().toLowerCase();
+    const actionStarts = [
+      'light ',
+      'say ',
+      'ring ',
+      'offer ',
+      'place ',
+      'take ',
+      'sprinkle ',
+      'apply ',
+      'hold ',
+      'sit ',
+      'stand ',
+      'bow ',
+      'close ',
+      'open ',
+      'keep ',
+      'prepare ',
+      'clean ',
+      'wash ',
+      'pour ',
+      'wave ',
+      'perform ',
+    ];
+    return actionStarts.any(t.startsWith);
+  }
+
+  String _formatMantraText(String text) {
+    return text
+        .split('\n')
+        .map((line) {
+          return line
+              .trim()
+              .replaceFirst(
+                RegExp(r'^(recite|chant)\s*:?\s*', caseSensitive: false),
+                '',
+              )
+              .replaceAll('\u201c', '"')
+              .replaceAll('\u201d', '"');
+        })
+        .where((line) => line.isNotEmpty)
+        .join('\n');
   }
 
   /// Groups consecutive mantra lines into a single block,
@@ -974,6 +1086,7 @@ class _PujaStepScreen extends StatelessWidget {
 
     final List<_StepBlock> blocks = [];
     final List<String> pendingMantraLines = [];
+    var expectingMantra = false;
 
     void flushMantra() {
       if (pendingMantraLines.isNotEmpty) {
@@ -989,13 +1102,13 @@ class _PujaStepScreen extends StatelessWidget {
 
     for (final line in lines) {
       final type = _detectType(line);
-      if (type == _StepCardType.mantra) {
-        // accumulate mantra lines together
+      if (type == _StepCardType.mantra ||
+          (expectingMantra && !_looksLikeActionInstruction(line))) {
         pendingMantraLines.add(line.trim());
       } else {
-        // flush any buffered mantra first
         flushMantra();
         blocks.add(_StepBlock(text: line.trim(), type: type));
+        expectingMantra = _introducesMantra(line);
       }
     }
     flushMantra(); // flush trailing mantra lines
@@ -1006,25 +1119,41 @@ class _PujaStepScreen extends StatelessWidget {
   Widget _buildStepCard(String text, _StepCardType type) {
     switch (type) {
       case _StepCardType.mantra:
+        final mantraText = _formatMantraText(text);
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF3B1E08).withOpacity(0.7),
+            color: const Color(0xFFB63A19).withValues(alpha: 0.48),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFFFFD180).withOpacity(0.25),
+              color: const Color(0xFFFFD180).withValues(alpha: 0.16),
             ),
           ),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: AppTypography.inter(
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              color: const Color(0xFFFFD180),
-              height: 1.8,
-            ),
+          child: Column(
+            children: [
+              Text(
+                'Recite :',
+                textAlign: TextAlign.center,
+                style: AppTypography.lora(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFFFD180),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                mantraText,
+                textAlign: TextAlign.center,
+                style: AppTypography.lora(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFFFD180),
+                  height: 1.35,
+                ),
+              ),
+            ],
           ),
         );
 
