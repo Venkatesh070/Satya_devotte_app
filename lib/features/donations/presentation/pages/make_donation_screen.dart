@@ -52,6 +52,7 @@ class MakeDonationScreen extends StatefulWidget {
 
 class _MakeDonationScreenState extends State<MakeDonationScreen> {
   final _amountCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
   late final DonateController _donateCtrl;
   int? _selectedPreset;
   String? _inlineError;
@@ -68,6 +69,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _noteCtrl.dispose();
     super.dispose();
   }
 
@@ -77,6 +79,9 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     final parsed = num.tryParse(raw);
     if (parsed == null) return 'Enter a valid amount.';
     if (parsed < 10) return 'Minimum donation is R 10.';
+    if (_noteCtrl.text.trim().length > 280) {
+      return 'Note must be 280 characters or fewer.';
+    }
     return null;
   }
 
@@ -91,6 +96,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     final init = await _donateCtrl.initiate(
       donationId: widget.donation.id,
       amount: num.parse(_amountCtrl.text.trim()),
+      note: _noteCtrl.text.trim(),
     );
 
     if (!mounted) return;
@@ -225,6 +231,33 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       });
                     },
                   ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Add Note',
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: DonationUi.text,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _noteCtrl,
+                    minLines: 3,
+                    maxLines: 4,
+                    maxLength: 280,
+                    textInputAction: TextInputAction.newline,
+                    decoration: _fieldDecoration(
+                      hintText: 'Write a note or prayer...',
+                      prefixText: null,
+                      alignLabelWithHint: true,
+                    ),
+                    onChanged: (_) {
+                      if (_inlineError != null) {
+                        setState(() => _inlineError = null);
+                      }
+                    },
+                  ),
                   if (_inlineError != null) ...[
                     const SizedBox(height: 10),
                     Text(
@@ -289,10 +322,15 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     );
   }
 
-  InputDecoration _fieldDecoration() {
+  InputDecoration _fieldDecoration({
+    String hintText = '0000',
+    String? prefixText = 'R ',
+    bool alignLabelWithHint = false,
+  }) {
     return InputDecoration(
-      hintText: '0000',
-      prefixText: 'R ',
+      hintText: hintText,
+      prefixText: prefixText,
+      alignLabelWithHint: alignLabelWithHint,
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -386,14 +424,14 @@ class _CauseImage extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: url!,
         fit: BoxFit.cover,
-        placeholder: (_, __) => placeholder,
-        errorWidget: (_, __, ___) => placeholder,
+        placeholder: (_, _) => placeholder,
+        errorWidget: (_, _, _) => placeholder,
       );
     }
     return Image.asset(
       url!,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => placeholder,
+      errorBuilder: (_, _, _) => placeholder,
     );
   }
 }

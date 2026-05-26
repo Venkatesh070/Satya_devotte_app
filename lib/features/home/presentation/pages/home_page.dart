@@ -17,7 +17,6 @@ import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
-import 'package:satya_devotte_app/features/donations/presentation/pages/donate_amount_sheet.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
@@ -42,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   bool _hideNavContent = false;
   Timer? _hideNavDebounceTimer;
   bool _isFetchingHome = false;
+  String _todayDateAndTithi = HomeConstants.dateAndTithi;
   String _dailySloka = HomeConstants.quote;
   String _slokaAuthor = '- Bhagavad Gita';
   String _slokaMeaning = '';
@@ -49,7 +49,6 @@ class _HomePageState extends State<HomePage> {
   String _slokaPrayer = '';
   List<HomeCircleItem> _poojas = HomeConstants.upcomingPooja;
   List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
-  List<HomeCircleItem> _donations = HomeConstants.donations;
   List<ProductModel> _featuredProducts = [];
 
   @override
@@ -119,31 +118,6 @@ class _HomePageState extends State<HomePage> {
     await Get.toNamed(AppRoutes.rituals);
   }
 
-  /// Tap on a single donation circle on the Home screen.
-  /// If the backend gave us a real `_id` we navigate straight to the
-  /// donation flow; otherwise we fall back to the full donations list.
-  void _onDonationItemTap(HomeCircleItem item) {
-    final id = item.id?.trim() ?? '';
-    if (id.isEmpty) {
-      _openDonationsList();
-      return;
-    }
-    final donation = Donation(
-      id: id,
-      title: item.title.replaceAll('\n', ' ').trim(),
-      description: item.description?.trim() ?? '',
-      imageUrl: item.imagePath.startsWith('http') ? item.imagePath : null,
-    );
-    // Two equally valid entry points — open the amount sheet directly so
-    // the user can donate in one tap. Power users can still browse all
-    // donations via the "More" tile.
-    DonateAmountSheet.show(context, donation: donation);
-  }
-
-  Future<void> _openDonationsList() async {
-    await Get.toNamed(AppRoutes.userDonations);
-  }
-
   Future<void> _fetchHomeDataIfNeeded() async {
     if (_isFetchingHome) return;
     _isFetchingHome = true;
@@ -165,7 +139,7 @@ class _HomePageState extends State<HomePage> {
       final slokaData = data['dailySloka'];
       final poojasData = data['poojas'];
       final festivalsData = data['festivals'];
-      final donationsData = data['donations'];
+      final todayDateAndTithi = data['todayDateAndTithi']?.toString().trim();
 
       final parsedSloka = slokaData is Map
           ? slokaData['sloka']?.toString().trim()
@@ -192,14 +166,13 @@ class _HomePageState extends State<HomePage> {
         fallbackImage: '',
         useDatePlaceholderWhenImageMissing: true,
       );
-      final parsedDonations = _mapHomeItems(
-        donationsData,
-        fallbackImage: 'assets/images/home/moreDonations.png',
-      );
 
       if (!mounted) return;
       setState(() {
         _featuredProducts = products;
+        if (todayDateAndTithi != null && todayDateAndTithi.isNotEmpty) {
+          _todayDateAndTithi = todayDateAndTithi;
+        }
         if (parsedSloka != null && parsedSloka.isNotEmpty) {
           _dailySloka = parsedSloka;
         }
@@ -214,9 +187,6 @@ class _HomePageState extends State<HomePage> {
         }
         if (parsedFestivals.isNotEmpty) {
           _festivals = parsedFestivals;
-        }
-        if (parsedDonations.isNotEmpty) {
-          _donations = parsedDonations;
         }
       });
     } on DioException catch (error) {
@@ -327,6 +297,7 @@ class _HomePageState extends State<HomePage> {
           _HomeTabContent(
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
             onOpenTab: _onTabSelected,
+            todayDateAndTithi: _todayDateAndTithi,
             dailySloka: _dailySloka,
             slokaAuthor: _slokaAuthor,
             slokaMeaning: _slokaMeaning,
@@ -334,11 +305,8 @@ class _HomePageState extends State<HomePage> {
             slokaPrayer: _slokaPrayer,
             poojas: _poojas,
             festivals: _festivals,
-            donations: _donations,
             featuredProducts: _featuredProducts,
             onPoojasViewMore: _openPoojasTabFromViewMore,
-            onDonationTap: _onDonationItemTap,
-            onDonationsViewMore: _openDonationsList,
           ),
           const PoojaKitPage(),
           const RitualListPage(),
@@ -346,29 +314,42 @@ class _HomePageState extends State<HomePage> {
           const ProfilePage(),
         ],
       ),
-      bottomNavigationBar: AnimatedSlide(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeInOutCubicEmphasized,
-        offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
-        onEnd: _onBottomNavSlideEnd,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeInOutCubic,
-          opacity: _showBottomNav ? 1 : 0,
-          child: _hideNavContent
-              ? const SizedBox.shrink()
-              : SafeArea(
-                  top: false,
-                  bottom: true,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 0),
-                    child: _BottomNavBar(
-                      currentIndex: _currentIndex,
-                      pageController: _pageController,
-                      onTap: _onTabSelected,
-                    ),
-                  ),
-                ),
+      bottomNavigationBar: SizedBox(
+        height: 94 + MediaQuery.paddingOf(context).bottom,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedSlide(
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeInOutCubicEmphasized,
+              offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
+              onEnd: _onBottomNavSlideEnd,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+                opacity: _showBottomNav ? 1 : 0,
+                child: _hideNavContent
+                    ? const SizedBox.shrink()
+                    : SafeArea(
+                        top: false,
+                        bottom: true,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 0),
+                          child: _BottomNavBar(
+                            currentIndex: _currentIndex,
+                            pageController: _pageController,
+                            onTap: _onTabSelected,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              bottom: MediaQuery.paddingOf(context).bottom + 26,
+              child: _StickyShopButton(onTap: () => _onTabSelected(1)),
+            ),
+          ],
         ),
       ),
     );
@@ -379,6 +360,7 @@ class _HomeTabContent extends StatefulWidget {
   const _HomeTabContent({
     required this.onScrollDirectionChanged,
     required this.onOpenTab,
+    required this.todayDateAndTithi,
     required this.dailySloka,
     required this.slokaAuthor,
     required this.slokaMeaning,
@@ -386,15 +368,13 @@ class _HomeTabContent extends StatefulWidget {
     required this.slokaPrayer,
     required this.poojas,
     required this.festivals,
-    required this.donations,
     required this.featuredProducts,
     required this.onPoojasViewMore,
-    required this.onDonationTap,
-    required this.onDonationsViewMore,
   });
 
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
   final Future<void> Function(int index) onOpenTab;
+  final String todayDateAndTithi;
   final String dailySloka;
   final String slokaAuthor;
   final String slokaMeaning;
@@ -402,11 +382,8 @@ class _HomeTabContent extends StatefulWidget {
   final String slokaPrayer;
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
-  final List<HomeCircleItem> donations;
   final List<ProductModel> featuredProducts;
   final Future<void> Function() onPoojasViewMore;
-  final void Function(HomeCircleItem item) onDonationTap;
-  final Future<void> Function() onDonationsViewMore;
 
   @override
   State<_HomeTabContent> createState() => _HomeTabContentState();
@@ -592,7 +569,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
         return false;
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 0),
+        padding: const EdgeInsets.only(bottom: 120),
         child: Column(
           children: [
             _HomeHeader(
@@ -604,6 +581,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                 if (q.length >= 2) _search(q);
               },
               onClearSearch: _clearSearch,
+              todayDateAndTithi: widget.todayDateAndTithi,
               dailySloka: widget.dailySloka,
               slokaAuthor: widget.slokaAuthor,
               slokaMeaning: widget.slokaMeaning,
@@ -622,11 +600,8 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                   : _HomeBodySections(
                       poojas: widget.poojas,
                       festivals: widget.festivals,
-                      donations: widget.donations,
                       featuredProducts: widget.featuredProducts,
                       onPoojasViewMore: widget.onPoojasViewMore,
-                      onDonationTap: widget.onDonationTap,
-                      onDonationsViewMore: widget.onDonationsViewMore,
                     ),
             ),
           ],
@@ -640,25 +615,14 @@ class _HomeBodySections extends StatelessWidget {
   const _HomeBodySections({
     required this.poojas,
     required this.festivals,
-    required this.donations,
     required this.featuredProducts,
     required this.onPoojasViewMore,
-    required this.onDonationTap,
-    required this.onDonationsViewMore,
   });
 
   final List<HomeCircleItem> poojas;
   final List<HomeCircleItem> festivals;
-  final List<HomeCircleItem> donations;
   final List<ProductModel> featuredProducts;
   final Future<void> Function() onPoojasViewMore;
-
-  /// Triggered when a real donation tile is tapped on the Home screen.
-  final void Function(HomeCircleItem item) onDonationTap;
-
-  /// Triggered by the trailing "More" tile inside the donations wrap
-  /// and by the "Make a Donation" CTA banner.
-  final Future<void> Function() onDonationsViewMore;
 
   @override
   Widget build(BuildContext context) {
@@ -670,6 +634,8 @@ class _HomeBodySections extends StatelessWidget {
           child: _HomeCircleSection(
             title: 'Upcoming Puja',
             items: poojas,
+            useWrap: false,
+            onItemTap: null,
             onViewMoreTap: onPoojasViewMore,
           ),
         ),
@@ -683,74 +649,12 @@ class _HomeBodySections extends StatelessWidget {
           child: _HomeCircleSection(
             title: 'Upcoming Festivals',
             items: festivals,
+            useWrap: false,
+            onItemTap: null,
           ),
         ),
-        SizedBox(height: 10),
-        _DonationsContainer(
-          items: donations,
-          onItemTap: onDonationTap,
-          onMoreTap: onDonationsViewMore,
-        ),
+        // Donation section removed from Home screen as per updated design.
       ],
-    );
-  }
-}
-
-class _DonationsContainer extends StatelessWidget {
-  const _DonationsContainer({
-    required this.items,
-    required this.onItemTap,
-    required this.onMoreTap,
-  });
-
-  final List<HomeCircleItem> items;
-  final void Function(HomeCircleItem item) onItemTap;
-  final Future<void> Function() onMoreTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: double.infinity,
-        color: AppColors.donationBgColor,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _HomeCircleSection(
-                    title: 'Donations',
-                    items: items,
-                    useWrap: true,
-                    onItemTap: onItemTap,
-                    onViewMoreTap: onMoreTap,
-                  ),
-                ],
-              ),
-            ),
-            Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                // Decorative texture behind the donation CTA area.
-                const Image(
-                  image: AssetImage('assets/images/flowerImg.png'),
-                  width: 180,
-                  height: 180,
-                  fit: BoxFit.cover,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 35, 10, 12),
-                  child: _DonationBannerCard(onTap: onMoreTap),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -769,8 +673,7 @@ class _HomeCircleSection extends StatelessWidget {
   final bool useWrap;
   final Future<void> Function()? onViewMoreTap;
 
-  /// Optional per-item tap handler. Currently used by the Donations wrap
-  /// to deep-link into the donation flow.
+  /// Optional per-item tap handler.
   final void Function(HomeCircleItem item)? onItemTap;
 
   @override
@@ -791,98 +694,6 @@ class _HomeCircleSection extends StatelessWidget {
                 )
               : _CircleRow(items: items, onViewMoreTap: onViewMoreTap),
         ],
-      ),
-    );
-  }
-}
-
-class _DonationBannerCard extends StatelessWidget {
-  const _DonationBannerCard({this.onTap});
-
-  final Future<void> Function()? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final card = Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFB10F33), Color(0xFF8E0B2A)],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0x22FFFFFF),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.volunteer_activism_outlined,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Make a Donation',
-                    style: AppTypography.lora(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Support noble causes\n& earn blessings',
-                    style: AppTypography.inter(
-                      color: const Color(0xFFFDE7EC),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0x26FFFFFF),
-            ),
-            child: const Icon(
-              Icons.chevron_right,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-        ],
-      ),
-    );
-    if (onTap == null) return card;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onTap!(),
-        borderRadius: BorderRadius.circular(20),
-        child: card,
       ),
     );
   }
@@ -978,8 +789,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
         builder: (context, constraints) {
           const slotWidth =
               72.0; // Reduced slotWidth to fit 5 items comfortably
-          const railWidth = slotWidth * 7;
-          final railLeft = (constraints.maxWidth - railWidth) / 2;
+          const firstSlotLeft = 78.0;
           return AnimatedBuilder(
             animation: widget.pageController,
             builder: (context, _) {
@@ -995,16 +805,13 @@ class _BottomNavBarState extends State<_BottomNavBar> {
               final horizontalShift =
                   pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
                   slotWidth;
-              // Offset by half-slot so active tab center aligns with screen center.
-              final homeLeft = (railLeft + (slotWidth * 2.5)) - horizontalShift;
-              final poojaKitLeft =
-                  (railLeft + (slotWidth * 3.5)) - horizontalShift;
-              final poojasLeft =
-                  (railLeft + (slotWidth * 4.5)) - horizontalShift;
-              final calendarLeft =
-                  (railLeft + (slotWidth * 5.5)) - horizontalShift;
-              final profileLeft =
-                  (railLeft + (slotWidth * 6.5)) - horizontalShift;
+              // The fixed Shop chip overlays this rail, so tabs intentionally
+              // start underneath it and slide behind it while the rail moves.
+              final homeLeft = firstSlotLeft - horizontalShift;
+              final poojaKitLeft = homeLeft + slotWidth;
+              final poojasLeft = poojaKitLeft + slotWidth;
+              final calendarLeft = poojasLeft + slotWidth;
+              final profileLeft = calendarLeft + slotWidth;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragStart: _handleDragStart,
@@ -1116,6 +923,7 @@ class _HomeHeader extends StatelessWidget {
     required this.onSearchChanged,
     required this.onSearchSubmitted,
     required this.onClearSearch,
+    required this.todayDateAndTithi,
     required this.dailySloka,
     required this.slokaAuthor,
     required this.slokaMeaning,
@@ -1128,6 +936,7 @@ class _HomeHeader extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onSearchSubmitted;
   final VoidCallback onClearSearch;
+  final String todayDateAndTithi;
   final String dailySloka;
   final String slokaAuthor;
   final String slokaMeaning;
@@ -1146,109 +955,164 @@ class _HomeHeader extends StatelessWidget {
         final headerHeight = isSearchMode ? topInset + 250 : 500.0;
 
         return SizedBox(
-      width: double.infinity,
-      height: headerHeight,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: Image(
-              image: AssetImage('assets/images/appHeaderImg.png'),
-              fit: BoxFit.fill,
-              alignment: Alignment.topCenter,
-            ),
-          ),
-          // Positioned(
-          //   top: 0,
-          //   right: -2,
-          //   child: Opacity(
-          //     opacity: 0.95,
-          //     child: const Image(
-          //       image: AssetImage('assets/images/home/homeHeaderFlower.png'),
-          //       width: 178,
-          //       height: 120,
-          //       fit: BoxFit.contain,
-          //     ),
-          //   ),
-          // ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          width: double.infinity,
+          height: headerHeight,
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: Image(
+                  image: AssetImage('assets/images/home/new_home_header.png'),
+                  fit: BoxFit.fill,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+              // Positioned(
+              //   top: 0,
+              //   right: -2,
+              //   child: Opacity(
+              //     opacity: 0.95,
+              //     child: const Image(
+              //       image: AssetImage('assets/images/home/homeHeaderFlower.png'),
+              //       width: 178,
+              //       height: 120,
+              //       fit: BoxFit.contain,
+              //     ),
+              //   ),
+              // ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image(
-                      image: const AssetImage('assets/images/appLogo.png'),
-                      height: 52,
-                      color: Colors.white,
+                    Row(
+                      children: [
+                        Image(
+                          image: const AssetImage('assets/images/appLogo.png'),
+                          height: 52,
+                          color: Colors.white,
+                        ),
+                        Spacer(),
+                        Text(
+                          todayDateAndTithi,
+                          style: AppTypography.inter(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SvgPicture.asset(
+                          'assets/svgs/bell.svg',
+                          width: 18,
+                          height: 18,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Cart icon (with count badge) for Pooja Kit.
+                        Obx(() {
+                          final cartCtrl = Get.find<CartController>();
+                          final count = cartCtrl.itemCount;
+                          return GestureDetector(
+                            onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.shopping_cart_outlined,
+                                    size: 22,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                if (count > 0)
+                                  Positioned(
+                                    right: 2,
+                                    top: 2,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE44D4D),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1.2,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        count > 99 ? '99+' : '$count',
+                                        style: AppTypography.inter(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                    Spacer(),
+                    const SizedBox(height: 10),
                     Text(
-                      HomeConstants.dateAndTithi,
+                      'Namaste',
                       style: AppTypography.inter(
+                        color: Color(0xFFE4B8AB),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayName,
+                      style: AppTypography.lora(
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w400,
+                        height: 1.15,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    SvgPicture.asset(
-                      'assets/svgs/bell.svg',
-                      width: 18,
-                      height: 18,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
-                      ),
+                    const SizedBox(height: 18),
+                    _GlobalSearchField(
+                      controller: searchController,
+                      onChanged: onSearchChanged,
+                      onSubmitted: onSearchSubmitted,
+                      onClear: onClearSearch,
                     ),
+                    if (!isSearchMode) ...[
+                      const SizedBox(height: 18),
+                      const _HeaderDivider(),
+                      const SizedBox(height: 12),
+                      _QuoteCard(
+                        quote: dailySloka,
+                        author: slokaAuthor,
+                        meaning: slokaMeaning,
+                        contemplation: slokaContemplation,
+                        prayer: slokaPrayer,
+                      ),
+                      const SizedBox(height: 12),
+                      const _HeaderDivider(),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Namaste',
-                  style: AppTypography.inter(
-                    color: Color(0xFFE4B8AB),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  displayName,
-                  style: AppTypography.lora(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w400,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _GlobalSearchField(
-                  controller: searchController,
-                  onChanged: onSearchChanged,
-                  onSubmitted: onSearchSubmitted,
-                  onClear: onClearSearch,
-                ),
-                if (!isSearchMode) ...[
-                  const SizedBox(height: 18),
-                  const _HeaderDivider(),
-                  const SizedBox(height: 12),
-                  _QuoteCard(
-                    quote: dailySloka,
-                    author: slokaAuthor,
-                    meaning: slokaMeaning,
-                    contemplation: slokaContemplation,
-                    prayer: slokaPrayer,
-                  ),
-                  const SizedBox(height: 12),
-                  const _HeaderDivider(),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
       },
     );
   }
@@ -1308,22 +1172,34 @@ class _GlobalSearchField extends StatelessWidget {
             color: const Color(0xFF9B8B7B),
             fontWeight: FontWeight.w400,
           ),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: Color(0xFF8E5C25),
-            size: 22,
+          prefixIcon: ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ).createShader(bounds),
+            blendMode: BlendMode.srcIn,
+            child: Icon(
+              Icons.search_rounded,
+              // color: Color(0xFF8E5C25),
+              size: 22,
+            ),
           ),
           prefixIconConstraints: const BoxConstraints(
             minWidth: 44,
             minHeight: 48,
           ),
           suffixIcon: hasQuery
-              ? IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: Color(0xFF8A7A6A),
-                    size: 20,
+              ? ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ).createShader(bounds),
+                  blendMode: BlendMode.srcIn,
+                  child: IconButton(
+                    onPressed: onClear,
+                    icon: const Icon(Icons.close_rounded, size: 20),
                   ),
                 )
               : null,
@@ -1648,7 +1524,8 @@ class _QuoteCardState extends State<_QuoteCard> {
   static const double _cardRadius = 16;
   static const double _flowerSize = 100;
   static const double _horizontalAttach = 22;
-  static const double _cardHeight = 172;
+  static const double _tabHeight = 40;
+  static const double _contentHeight = 122;
 
   String get _tabText {
     switch (_selectedTab) {
@@ -1670,60 +1547,103 @@ class _QuoteCardState extends State<_QuoteCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0x2EFFFFFF),
-        borderRadius: BorderRadius.circular(_cardRadius),
-        border: Border.all(color: const Color(0x2EFFFFFF)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_cardRadius),
-        child: SizedBox(
-          height: _cardHeight,
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: [
-              // Corner motifs are clipped to the same radius as the quote card.
-              Positioned(
-                top: 0,
-                left: -_horizontalAttach,
-                child: Opacity(
-                  opacity: 0.22,
-                  child: Image(
-                    image: AssetImage('assets/images/home/cardFlower.png'),
-                    width: _flowerSize,
-                    height: _flowerSize,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: -_horizontalAttach,
-                child: Opacity(
-                  opacity: 0.22,
-                  child: RotatedBox(
-                    quarterTurns: 2,
-                    child: Image(
-                      image: AssetImage('assets/images/home/cardFlower.png'),
-                      width: _flowerSize,
-                      height: _flowerSize,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: SizedBox(
+        width: double.infinity,
+        height: _tabHeight + _contentHeight + 6,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                height: _tabHeight,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _SlokaTabBtn(
+                        label: 'Meaning',
+                        selected: _selectedTab == 0,
+                        onTap: () => setState(() => _selectedTab = 0),
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: _SlokaTabBtn(
+                        label: 'Contemplation',
+                        selected: _selectedTab == 1,
+                        onTap: () => setState(() => _selectedTab = 1),
+                      ),
+                    ),
+                    Expanded(
+                      child: _SlokaTabBtn(
+                        label: 'Prayer',
+                        selected: _selectedTab == 2,
+                        onTap: () => setState(() => _selectedTab = 2),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0x3D2A2632),
+                  borderRadius: BorderRadius.circular(_cardRadius),
+                  border: Border.all(color: const Color(0x30FFFFFF)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 130,
+                      offset: Offset(0, 4),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(_cardRadius),
+                  child: Stack(
+                    clipBehavior: Clip.hardEdge,
                     children: [
-                      Expanded(
-                        child: Center(
+                      Positioned(
+                        top: 0,
+                        left: -_horizontalAttach,
+                        child: Opacity(
+                          opacity: 0.22,
+                          child: Image(
+                            image: AssetImage(
+                              'assets/images/home/cardFlower.png',
+                            ),
+                            width: _flowerSize,
+                            height: _flowerSize,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: -_horizontalAttach,
+                        child: Opacity(
+                          opacity: 0.22,
+                          child: RotatedBox(
+                            quarterTurns: 2,
+                            child: Image(
+                              image: AssetImage(
+                                'assets/images/home/cardFlower.png',
+                              ),
+                              width: _flowerSize,
+                              height: _flowerSize,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 16,
+                          ),
                           child: Text(
                             _tabText,
                             maxLines: 4,
@@ -1738,44 +1658,12 @@ class _QuoteCardState extends State<_QuoteCard> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      // Text(
-                      //   _selectedTab == 0 ? 'Meaning' : _selectedTab == 1 ? 'Contemplation' : 'Prayer / Resolve',
-                      //   maxLines: 1,
-                      //   overflow: TextOverflow.ellipsis,
-                      //   style: AppTypography.lora(
-                      //     color: const Color(0xFFF0E5DE),
-                      //     fontSize: 12,
-                      //     fontStyle: FontStyle.italic,
-                      //     fontWeight: FontWeight.w500,
-                      //   ),
-                      // ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _SlokaTabBtn(
-                            label: 'Meaning',
-                            selected: _selectedTab == 0,
-                            onTap: () => setState(() => _selectedTab = 0),
-                          ),
-                          _SlokaTabBtn(
-                            label: 'Contemplation',
-                            selected: _selectedTab == 1,
-                            onTap: () => setState(() => _selectedTab = 1),
-                          ),
-                          _SlokaTabBtn(
-                            label: 'Prayer / Resolve',
-                            selected: _selectedTab == 2,
-                            onTap: () => setState(() => _selectedTab = 2),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1794,27 +1682,70 @@ class _SlokaTabBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: selected ? Colors.white.withOpacity(0.2) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: selected ? Colors.white.withOpacity(0.5) : Colors.transparent,
-        ),
+  Widget build(BuildContext context) {
+    const selectedBorder = Color(0xFFFFEF11);
+    const selectedGradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [Color(0xB8506AB2), Color(0x5C643D52)],
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            alignment: Alignment.center,
+            height: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              gradient: selected ? selectedGradient : null,
+              color: selected ? null : const Color(0x3D643D52),
+              border: Border.all(
+                color: selected ? Colors.transparent : const Color(0x14643D52),
+                width: 1,
+              ),
+              boxShadow: selected
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 4),
+                      ),
+                    ]
+                  : const [],
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.inter(
+                color: selected ? Colors.white : const Color(0x99FFFFFF),
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                height: 1,
+              ),
+            ),
+          ),
+          if (selected)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: selectedBorder, width: 1.4),
+                      right: BorderSide(color: selectedBorder, width: 1.4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
-      child: Text(
-        label,
-        style: AppTypography.inter(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        ),
-      ),
-    ),
-  );
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -2004,6 +1935,52 @@ class _CircleItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyShopButton extends StatelessWidget {
+  const _StickyShopButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+        child: Ink(
+          height: 42,
+          padding: const EdgeInsets.only(left: 16, right: 18),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(10)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 12,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              'Shop',
+              style: AppTypography.inter(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ),
       ),
     );
