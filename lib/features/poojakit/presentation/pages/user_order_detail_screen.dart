@@ -109,26 +109,28 @@ class _OrderItemCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
+                          // maxLines: 1,
+                          // overflow: TextOverflow.ellipsis,
+                          style: AppTypography.lora(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                             color: const Color(0xFF2B1A0C),
                           ),
                         ),
                       ),
-                      Text(
-                        'Ordered on : ${order.formattedDate}',
-                        style: AppTypography.inter(
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFFE95700),
-                        ),
-                      ),
                     ],
                   ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Ordered on : ${order.formattedDate}',
+                    style: AppTypography.inter(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFFE95700),
+                    ),
+                  ),
                   const SizedBox(height: 7),
+
                   _Bullet(
                     text: count == 0
                         ? 'Puja kit essentials included.'
@@ -174,11 +176,11 @@ class _OrderItemCard extends StatelessWidget {
               const SizedBox(width: 5),
             ],
             Text(
-              order.formattedTotal,
+              '${order.currency} ${order.formattedTotal}',
               style: AppTypography.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFFE95700),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFDC5B0A),
               ),
             ),
           ],
@@ -205,11 +207,11 @@ class _DeliveryCard extends StatelessWidget {
           Expanded(
             child: Text(
               address.isEmpty ? 'Address not available' : address,
-              style: AppTypography.inter(
-                fontSize: 10,
+              style: AppTypography.lora(
+                fontSize: 14,
                 height: 1.3,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF4A1C00),
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF1C1917),
               ),
             ),
           ),
@@ -225,13 +227,14 @@ class _BillSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final itemAmount = _billItemAmount(order);
     return _SummaryCard(
       title: 'Bill Summary',
       child: Column(
         children: [
           _RowLine(
             label: '${_firstItemTitle(order)} x${_itemCount(order)}',
-            value: order.formattedSubtotal,
+            value: _formatOrderCurrency(itemAmount, order.currency),
           ),
           _RowLine(label: 'Delivery Charge', value: order.formattedShipping),
           _RowLine(label: 'Tax', value: order.formattedTax),
@@ -467,10 +470,10 @@ class _SummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF2B1A0C),
+            style: AppTypography.lora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C1917),
             ),
           ),
           const SizedBox(height: 12),
@@ -499,6 +502,7 @@ class _RowLine extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (icon != null) ...[
             Icon(icon, size: 14, color: const Color(0xFF253FA8)),
@@ -508,9 +512,9 @@ class _RowLine extends StatelessWidget {
             child: Text(
               label,
               style: AppTypography.inter(
-                fontSize: 10,
-                fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-                color: const Color(0xFF4A1C00),
+                fontSize: 14,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+                color: const Color(0xFF1D1B19),
               ),
             ),
           ),
@@ -522,9 +526,9 @@ class _RowLine extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                fontSize: 10,
-                fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
-                color: const Color(0xFF2B1A0C),
+                fontSize: 14,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+                color: const Color(0xFF1D1B19),
               ),
             ),
           ),
@@ -543,8 +547,8 @@ class _OrderThumb extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
-        width: 72,
-        height: 72,
+        width: 100,
+        height: 100,
         child: image.trim().isNotEmpty
             ? Image.network(
                 image,
@@ -581,11 +585,12 @@ class _Bullet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '- ',
+            '. ',
             style: AppTypography.inter(
-              fontSize: 8.5,
+              fontSize: 12,
               height: 1.25,
-              color: const Color(0xFF6C5B46),
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF78716C),
             ),
           ),
           Expanded(
@@ -594,9 +599,10 @@ class _Bullet extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                fontSize: 8.5,
+                fontSize: 10,
                 height: 1.25,
-                color: const Color(0xFF6C5B46),
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF78716C),
               ),
             ),
           ),
@@ -642,4 +648,25 @@ String _firstItemTitle(AdminOrder order) {
 int _itemCount(AdminOrder order) {
   final count = order.items.fold<int>(0, (sum, item) => sum + item.qty);
   return count == 0 ? order.items.length : count;
+}
+
+double _billItemAmount(AdminOrder order) {
+  if (order.subtotalAmount > 0) return order.subtotalAmount;
+
+  final lineTotal = order.items.fold<double>(
+    0,
+    (sum, item) => sum + item.lineTotal,
+  );
+  if (lineTotal > 0) return lineTotal;
+
+  final derived = order.totalAmount - order.shippingAmount - order.taxAmount;
+  if (derived > 0) return derived;
+
+  return order.totalAmount;
+}
+
+String _formatOrderCurrency(double amount, String currency) {
+  final symbol = currency.toUpperCase() == 'ZAR' ? 'R' : currency;
+  final decimals = amount.truncateToDouble() == amount ? 0 : 2;
+  return '$symbol ${amount.toStringAsFixed(decimals)}';
 }

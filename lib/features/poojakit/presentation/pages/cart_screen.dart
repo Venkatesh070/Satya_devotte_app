@@ -138,10 +138,11 @@ class _CartItemTile extends StatelessWidget {
                 children: [
                   Text(
                     product.title,
-                    style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF2B1A0C),
+                    style: AppTypography.lora(
+                      fontSize: 16,
+                      height: 1.25,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1C1917),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -172,9 +173,9 @@ class _CartItemTile extends StatelessWidget {
                       Text(
                         '${product.currency} ${_formatPrice(product.effectivePrice)}',
                         style: AppTypography.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFE95700),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFDC5B0A),
                         ),
                       ),
                     ],
@@ -209,14 +210,14 @@ class _CartItemTile extends StatelessWidget {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFFE95700),
+                          color: Color(0xFFDC5B0A),
                         ),
                       )
                     : Text(
                         item.quantity.toString().padLeft(2, '0'),
                         key: ValueKey(item.quantity),
                         style: AppTypography.inter(
-                          color: const Color(0xFFE95700),
+                          color: const Color(0xFFDC5B0A),
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                         ),
@@ -280,11 +281,12 @@ class _CartBullet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '- ',
+            '. ',
             style: AppTypography.inter(
-              fontSize: 9,
+              fontSize: 12,
               height: 1.25,
-              color: const Color(0xFF6C5B46),
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF78716C),
             ),
           ),
           Expanded(
@@ -293,9 +295,10 @@ class _CartBullet extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                fontSize: 9,
+                fontSize: 12,
                 height: 1.25,
-                color: const Color(0xFF6C5B46),
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF78716C),
               ),
             ),
           ),
@@ -314,8 +317,8 @@ class _ProductThumb extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
-        width: 72,
-        height: 72,
+        width: 100,
+        height: 100,
         child: imageUrl != null && imageUrl!.trim().isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: imageUrl!,
@@ -478,10 +481,10 @@ class _DeliveryLocationSection extends StatelessWidget {
         children: [
           Text(
             'Delivery Location',
-            style: AppTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF2B1A0C),
+            style: AppTypography.lora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C1917),
             ),
           ),
           const SizedBox(height: 10),
@@ -494,12 +497,21 @@ class _DeliveryLocationSection extends StatelessWidget {
               border: Border.all(color: const Color(0xFFE8E0D6)),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  size: 18,
-                  color: Color(0xFF6C5B46),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ).createShader(bounds),
+                  blendMode: BlendMode.srcIn,
+                  child: Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: Color(0xFF6C5B46),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -531,13 +543,21 @@ class _DeliveryLocationSection extends StatelessWidget {
                   vertical: 10,
                 ),
               ),
-              child: Text(
-                address == null
-                    ? 'Set Delivery Location'
-                    : 'Change Delivery Location',
-                style: AppTypography.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ).createShader(bounds),
+                blendMode: BlendMode.srcIn,
+                child: Text(
+                  address == null
+                      ? 'Set Delivery Location'
+                      : 'Change Delivery Location',
+                  style: AppTypography.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -567,17 +587,17 @@ class _BillSummarySection extends StatelessWidget {
             Text(
               left,
               style: AppTypography.inter(
-                fontSize: 10,
-                fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-                color: const Color(0xFF6C5B46),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF1D1B19),
               ),
             ),
             Text(
               right,
               style: AppTypography.inter(
-                fontSize: 10,
-                fontWeight: bold ? FontWeight.w900 : FontWeight.w800,
-                color: const Color(0xFF2B1A0C),
+                fontSize: 14,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+                color: const Color(0xFF1D1B19),
               ),
             ),
           ],
@@ -598,10 +618,10 @@ class _BillSummarySection extends StatelessWidget {
         children: [
           Text(
             'Bill Summary',
-            style: AppTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF2B1A0C),
+            style: AppTypography.lora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C1917),
             ),
           ),
           const SizedBox(height: 12),
@@ -609,6 +629,14 @@ class _BillSummarySection extends StatelessWidget {
           row('Delivery charge', '${cart.currency} $delivery'),
           const Divider(height: 16, color: Color(0x1A6B4A2B)),
           row('To pay', '${cart.currency} $toPay', bold: true),
+          Text(
+            'Inclusive of all taxes and charges',
+            style: AppTypography.inter(
+              fontSize: 8,
+              fontWeight: FontWeight.w400,
+              color: Color(0XFF1D1B19),
+            ),
+          ),
         ],
       ),
     );

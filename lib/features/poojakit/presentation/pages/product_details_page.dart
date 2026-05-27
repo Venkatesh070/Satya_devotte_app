@@ -210,10 +210,10 @@ class _ProductHeader extends StatelessWidget {
         Text(
           product.title,
           textAlign: TextAlign.center,
-          style: AppTypography.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF2B1A0C),
+          style: AppTypography.lora(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF1C1917),
           ),
         ),
         const SizedBox(height: 10),
@@ -221,9 +221,9 @@ class _ProductHeader extends StatelessWidget {
           detailText.trim().isEmpty ? 'Complete puja essentials.' : detailText,
           textAlign: TextAlign.center,
           style: AppTypography.inter(
-            fontSize: 10,
+            fontSize: 12,
             height: 1.35,
-            color: const Color(0xFF8B765D),
+            color: const Color(0xFF78716C),
           ),
         ),
         Text(
@@ -232,9 +232,9 @@ class _ProductHeader extends StatelessWidget {
               : 'Currently out of stock.',
           textAlign: TextAlign.center,
           style: AppTypography.inter(
-            fontSize: 10,
+            fontSize: 12,
             height: 1.35,
-            color: const Color(0xFF8B765D),
+            color: const Color(0xFF78716C),
           ),
         ),
       ],
@@ -249,8 +249,8 @@ class _ProductHeroImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 92,
-      height: 92,
+      width: 147,
+      height: 111,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -313,10 +313,10 @@ class _KitItemsSection extends StatelessWidget {
       children: [
         Text(
           'Puja Kit Items',
-          style: AppTypography.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF2B1A0C),
+          style: AppTypography.lora(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF1C1917),
           ),
         ),
         const SizedBox(height: 10),
@@ -349,7 +349,7 @@ class _KitItemPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -364,9 +364,9 @@ class _KitItemPill extends StatelessWidget {
       child: Text(
         text,
         style: AppTypography.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: const Color(0xFF4A1C00),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: const Color(0xFF1C1917),
         ),
       ),
     );
@@ -418,8 +418,8 @@ class _GradientCtaBar extends StatelessWidget {
             child: Text(
               label,
               style: AppTypography.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
                 color: Colors.white,
               ),
             ),

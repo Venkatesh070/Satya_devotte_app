@@ -28,7 +28,7 @@ class UserOrdersScreen extends StatelessWidget {
               child: Text(
                 'My Orders',
                 style: AppTypography.lora(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF4A1C00),
                 ),
@@ -145,28 +145,29 @@ class _OrderCard extends StatelessWidget {
                             child: Text(
                               title,
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF2B1A0C),
+                              // overflow: TextOverflow.ellipsis,
+                              style: AppTypography.lora(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF1C1917),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$dateLabel : ${order.formattedDate}',
-                            style: AppTypography.inter(
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w800,
-                              color: isDelivered
-                                  ? const Color(0xFF188A53)
-                                  : const Color(0xFFE95700),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '$dateLabel : ${order.formattedDate}',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: isDelivered
+                              ? const Color(0xFF088B56)
+                              : const Color(0xFFC06A2D),
+                        ),
+                      ),
                       const SizedBox(height: 7),
+
                       _Bullet(
                         text: count == 0
                             ? 'Puja kit essentials included.'
@@ -212,11 +213,11 @@ class _OrderCard extends StatelessWidget {
                   const SizedBox(width: 5),
                 ],
                 Text(
-                  order.formattedTotal,
+                  '${order.currency} ${order.formattedTotal}',
                   style: AppTypography.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFFE95700),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFDC5B0A),
                   ),
                 ),
               ],
@@ -265,8 +266,8 @@ class _OrderThumb extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
-        width: 72,
-        height: 72,
+        width: 100,
+        height: 100,
         child: image.trim().isNotEmpty
             ? Image.network(
                 image,
@@ -303,11 +304,12 @@ class _Bullet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '- ',
+            '. ',
             style: AppTypography.inter(
-              fontSize: 8.5,
+              fontSize: 12,
               height: 1.25,
-              color: const Color(0xFF6C5B46),
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF78716C),
             ),
           ),
           Expanded(
@@ -316,9 +318,9 @@ class _Bullet extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                fontSize: 8.5,
-                height: 1.25,
-                color: const Color(0xFF6C5B46),
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF78716C),
               ),
             ),
           ),

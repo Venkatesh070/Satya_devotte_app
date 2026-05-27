@@ -1298,8 +1298,8 @@ class _GradientButton extends StatelessWidget {
         child: Text(
           label,
           style: AppTypography.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
         ),

@@ -255,8 +255,8 @@ class _ProductListTile extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                width: 72,
-                height: 72,
+                width: 100,
+                height: 100,
                 child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: product.imageUrl!,
@@ -288,18 +288,20 @@ class _ProductListTile extends StatelessWidget {
                     product.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF2B1A0C),
+                    style: AppTypography.lora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1C1917),
                     ),
                   ),
                   const SizedBox(height: 5),
                   _ProductBullet(
                     text: itemCount == 0
                         ? description
-                        : '$itemCount ${itemCount == 1 ? 'item' : 'items'} required for performing the puja.\nSufficient for 2 members.',
+                        : '$itemCount ${itemCount == 1 ? 'item' : 'items'} required for performing the puja.',
                   ),
+                  const SizedBox(height: 7),
+                  _ProductBullet(text: 'Sufficient for 2 members.'),
                   const SizedBox(height: 7),
                   Row(
                     children: [
@@ -308,7 +310,7 @@ class _ProductListTile extends StatelessWidget {
                         Text(
                           '${product.currency} ${_formatPrice(product.price)}',
                           style: AppTypography.inter(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: const Color(0x8A6C5B46),
                             decoration: TextDecoration.lineThrough,
                             decorationColor: const Color(0x8A6C5B46),
@@ -319,9 +321,9 @@ class _ProductListTile extends StatelessWidget {
                       Text(
                         '${product.currency} ${_formatPrice(product.effectivePrice)}',
                         style: AppTypography.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFE95700),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFDC5B0A),
                         ),
                       ),
                       const Spacer(),
@@ -362,13 +364,15 @@ class _ProductBullet extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Text(
-            '- ',
+            '. ',
             style: AppTypography.inter(
-              fontSize: 10,
+              fontSize: 12,
               height: 1.25,
-              color: const Color(0xFF6C5B46),
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF78716C),
             ),
           ),
           Expanded(
@@ -377,9 +381,10 @@ class _ProductBullet extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                fontSize: 10,
+                fontSize: 12,
                 height: 1.25,
-                color: const Color(0xFF6C5B46),
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF78716C),
               ),
             ),
           ),

@@ -2399,8 +2399,7 @@ class _BottomItem extends StatelessWidget {
                   child: Center(
                     child: selected
                         ? ShaderMask(
-                            shaderCallback: (bounds) =>
-                                const LinearGradient(
+                            shaderCallback: (bounds) => const LinearGradient(
                               colors: [Color(0xFF183EA4), Color(0xFFE35600)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
