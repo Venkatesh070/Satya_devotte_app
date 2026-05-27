@@ -5,9 +5,13 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+const _figmaActionGradient = [AppColors.gradientStart, AppColors.gradientEnd];
 
 class UserOrderDetailScreen extends StatefulWidget {
   const UserOrderDetailScreen({super.key});
@@ -121,14 +125,8 @@ class _OrderItemCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 5),
-                  Text(
-                    'Ordered on : ${order.formattedDate}',
-                    style: AppTypography.inter(
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFFE95700),
-                    ),
-                  ),
+                  _OrderStatusPill(order: order),
+
                   const SizedBox(height: 7),
 
                   _Bullet(
@@ -160,6 +158,7 @@ class _OrderItemCard extends StatelessWidget {
             ),
           ],
         ),
+
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -268,6 +267,14 @@ class _TransactionCard extends StatelessWidget {
                 ? order.orderNumber
                 : order.paystackReference,
           ),
+          _RowLine(
+            label: 'Order Status',
+            value:
+                order.orderStatus == OrderStatus.cancelled &&
+                    order.paymentStatus == PaymentStatus.refundInitiated
+                ? 'Cancelled - refund initiated'
+                : order.orderStatus.label,
+          ),
           if (order.invoice?.url.isNotEmpty == true) ...[
             const SizedBox(height: 8),
             SizedBox(
@@ -363,40 +370,199 @@ class _ActionSection extends StatelessWidget {
     UserOrdersController controller,
     VoidCallback onRefresh,
   ) {
-    final reasonCtrl = TextEditingController();
-    Get.dialog<void>(
-      AlertDialog(
-        title: const Text('Cancel Order'),
-        content: TextField(
-          controller: reasonCtrl,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Reason',
-            hintText: 'e.g. Ordered wrong items by mistake',
+    Get.bottomSheet<void>(
+      _CancelOrderDialog(
+        order: order,
+        controller: controller,
+        onRefresh: onRefresh,
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+}
+
+class _CancelOrderDialog extends StatefulWidget {
+  const _CancelOrderDialog({
+    required this.order,
+    required this.controller,
+    required this.onRefresh,
+  });
+
+  final AdminOrder order;
+  final UserOrdersController controller;
+  final VoidCallback onRefresh;
+
+  @override
+  State<_CancelOrderDialog> createState() => _CancelOrderDialogState();
+}
+
+class _CancelOrderDialogState extends State<_CancelOrderDialog> {
+  late final TextEditingController _reasonCtrl;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final reason = _reasonCtrl.text.trim();
+    if (reason.isEmpty) {
+      Get.snackbar(
+        'Reason required',
+        'Please enter a reason for cancellation.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    final ok = await widget.controller.cancelOrder(
+      widget.order.id,
+      reason: reason,
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (!ok) return;
+
+    Get.back<void>();
+    widget.onRefresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFEF9F3),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Stack(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DonationUi.cardBorder,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Cancel Order',
+                    style: AppTypography.lora(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: DonationUi.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Are you sure you want to cancel order ${widget.order.orderNumber}? Please enter a reason for cancellation.',
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: DonationUi.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _reasonCtrl,
+                    enabled: !_submitting,
+                    minLines: 3,
+                    maxLines: 4,
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: DonationUi.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your reason for cancellation',
+                      hintStyle: AppTypography.inter(
+                        fontSize: 14,
+                        color: DonationUi.textMuted.withValues(alpha: 0.5),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: DonationUi.cardBorder,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: DonationUi.cardBorder,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFFED5A00)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  CustomButton(
+                    label: _submitting ? 'Cancelling...' : 'Yes, Cancel',
+                    textColor: Colors.white,
+                    gradientColors: _figmaActionGradient,
+                    borderRadius: 14,
+                    enabled: !_submitting,
+                    onTap: _submit,
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 0,
+                top: 10,
+                child: GestureDetector(
+                  onTap: _submitting ? null : () => Get.back<void>(),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF3E5D0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Color(0xFF3B1E08),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(onPressed: Get.back, child: const Text('No')),
-          ElevatedButton(
-            onPressed: () async {
-              final reason = reasonCtrl.text.trim();
-              if (reason.isEmpty) {
-                Get.snackbar(
-                  'Reason required',
-                  'Please enter a reason for cancellation.',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-                return;
-              }
-              Get.back();
-              final ok = await controller.cancelOrder(order.id, reason: reason);
-              if (ok) onRefresh();
-            },
-            child: const Text('Cancel Order'),
-          ),
-        ],
       ),
-    ).whenComplete(reasonCtrl.dispose);
+    );
   }
 }
 
@@ -535,6 +701,60 @@ class _RowLine extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _OrderStatusPill extends StatelessWidget {
+  const _OrderStatusPill({required this.order});
+
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusText =
+        order.orderStatus == OrderStatus.cancelled &&
+            order.paymentStatus == PaymentStatus.refundInitiated
+        ? 'Cancelled - refund initiated'
+        : order.orderStatus == OrderStatus.cancelled &&
+              order.paymentStatus == PaymentStatus.refunded
+        ? 'Cancelled - refunded'
+        : order.orderStatus.label;
+    final color = _statusColor(order.orderStatus);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: .28)),
+      ),
+      child: Text(
+        statusText,
+        style: AppTypography.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+Color _statusColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.cancelled:
+      return const Color(0xFFD14343);
+    case OrderStatus.delivered:
+    case OrderStatus.fulfilled:
+      return const Color(0xFF088B56);
+    case OrderStatus.shipped:
+      return const Color(0xFF253FA8);
+    case OrderStatus.processing:
+      return const Color(0xFFC06A2D);
+    case OrderStatus.placed:
+      return const Color(0xFFE95700);
+    case OrderStatus.unknown:
+      return const Color(0xFF78716C);
   }
 }
 

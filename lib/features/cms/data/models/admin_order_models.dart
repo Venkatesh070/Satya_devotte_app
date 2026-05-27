@@ -104,6 +104,12 @@ extension OrderStatusX on OrderStatus {
         return OrderStatus.fulfilled;
       case 'CANCELLED':
       case 'CANCELED':
+      case 'ORDER_CANCELLED':
+      case 'ORDER_CANCELED':
+      case 'CANCELLED_BY_USER':
+      case 'CANCELED_BY_USER':
+      case 'USER_CANCELLED':
+      case 'USER_CANCELED':
         return OrderStatus.cancelled;
       default:
         return OrderStatus.unknown;
@@ -116,14 +122,25 @@ extension OrderStatusX on OrderStatus {
       json['orderStatus'],
       json['status'],
       json['fulfillmentStatus'],
-      if (json['fulfillment'] is Map)
-        (json['fulfillment'] as Map)['status'],
+      json['cancelStatus'],
+      json['cancellationStatus'],
+      if (json['fulfillment'] is Map) (json['fulfillment'] as Map)['status'],
+      if (json['cancellation'] is Map) (json['cancellation'] as Map)['status'],
+      if (json['cancelOrder'] is Map) (json['cancelOrder'] as Map)['status'],
     ];
 
     for (final raw in candidates) {
       final parsed = parse(raw);
       if (parsed != OrderStatus.unknown) return parsed;
     }
+
+    final hasCancellationMarker =
+        json['cancelledAt'] != null ||
+        json['canceledAt'] != null ||
+        json['cancelReason'] != null ||
+        json['cancellationReason'] != null ||
+        json['cancelOrder'] is Map;
+    if (hasCancellationMarker) return OrderStatus.cancelled;
 
     // Some create/payment responses omit orderStatus until admin processes.
     final hasStatusField = candidates.any(
@@ -487,17 +504,19 @@ class AdminOrder {
       orderStatus: OrderStatusX.parseFromOrderJson(json),
       paymentStatus: PaymentStatusX.parse(json['paymentStatus']),
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
-      paystackReference: (json['paystackReference'] ??
-              json['paymentReference'] ??
-              json['reference'] ??
-              '')
-          .toString(),
+      paystackReference:
+          (json['paystackReference'] ??
+                  json['paymentReference'] ??
+                  json['reference'] ??
+                  '')
+              .toString(),
       currency:
           (json['currency'] ?? 'ZAR').toString().toUpperCase().trim().isEmpty
-              ? 'ZAR'
-              : (json['currency'] ?? 'ZAR').toString().toUpperCase().trim(),
+          ? 'ZAR'
+          : (json['currency'] ?? 'ZAR').toString().toUpperCase().trim(),
       totalAmount: _toDouble(json['totalAmount'] ?? json['total']) ?? 0,
-      subtotalAmount: _toDouble(json['subtotalAmount'] ?? json['subtotal']) ?? 0,
+      subtotalAmount:
+          _toDouble(json['subtotalAmount'] ?? json['subtotal']) ?? 0,
       shippingAmount: _toDouble(json['shippingAmount']) ?? 0,
       taxAmount: _toDouble(json['taxAmount']) ?? 0,
       createdAt: _parseDate(json['createdAt']),
@@ -531,7 +550,8 @@ class AdminOrder {
   AdminOrder withCustomerFallback(AdminOrder fallback) {
     final stripped = userName.trim().isEmpty && userEmail.trim().isEmpty;
     if (!stripped) return this;
-    final fbHas = fallback.userName.trim().isNotEmpty ||
+    final fbHas =
+        fallback.userName.trim().isNotEmpty ||
         fallback.userEmail.trim().isNotEmpty ||
         fallback.userId.trim().isNotEmpty;
     if (!fbHas) return this;

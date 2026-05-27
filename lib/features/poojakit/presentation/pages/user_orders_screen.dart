@@ -110,7 +110,12 @@ class _OrderCard extends StatelessWidget {
     final isDelivered =
         order.orderStatus == OrderStatus.delivered ||
         order.orderStatus == OrderStatus.fulfilled;
-    final dateLabel = isDelivered ? 'Delivered on' : 'Ordered on';
+    final isCancelled = order.orderStatus == OrderStatus.cancelled;
+    final dateLabel = isDelivered
+        ? 'Delivered on'
+        : isCancelled
+        ? 'Cancelled on'
+        : 'Ordered on';
 
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.userOrderDetail, arguments: order),
@@ -144,8 +149,8 @@ class _OrderCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               title,
-                              maxLines: 1,
-                              // overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: AppTypography.lora(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -163,9 +168,13 @@ class _OrderCard extends StatelessWidget {
                           fontWeight: FontWeight.w400,
                           color: isDelivered
                               ? const Color(0xFF088B56)
+                              : isCancelled
+                              ? const Color(0xFFD14343)
                               : const Color(0xFFC06A2D),
                         ),
                       ),
+                      const SizedBox(height: 7),
+                      _OrderStatusPill(order: order),
                       const SizedBox(height: 7),
 
                       _Bullet(
@@ -254,6 +263,63 @@ class _OrderCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _OrderStatusPill extends StatelessWidget {
+  const _OrderStatusPill({required this.order});
+
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusText =
+        order.orderStatus == OrderStatus.cancelled &&
+            order.paymentStatus == PaymentStatus.refundInitiated
+        ? 'Cancelled - refund initiated'
+        : order.orderStatus == OrderStatus.cancelled &&
+              order.paymentStatus == PaymentStatus.refunded
+        ? 'Cancelled - refunded'
+        : order.orderStatus.label;
+    final color = _statusColor(order.orderStatus);
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: .28)),
+        ),
+        child: Text(
+          statusText,
+          style: AppTypography.inter(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _statusColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.cancelled:
+      return const Color(0xFFD14343);
+    case OrderStatus.delivered:
+    case OrderStatus.fulfilled:
+      return const Color(0xFF088B56);
+    case OrderStatus.shipped:
+      return const Color(0xFF253FA8);
+    case OrderStatus.processing:
+      return const Color(0xFFC06A2D);
+    case OrderStatus.placed:
+      return const Color(0xFFE95700);
+    case OrderStatus.unknown:
+      return const Color(0xFF78716C);
   }
 }
 

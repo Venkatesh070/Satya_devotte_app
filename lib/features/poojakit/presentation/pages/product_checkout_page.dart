@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 
 class ProductCheckoutPage extends StatefulWidget {
   const ProductCheckoutPage({super.key});
@@ -43,6 +44,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   bool _isSearching = false;
   bool _isLoadingSuggestions = false;
   bool _isResolvingPin = false;
+  bool _isEditingReceiver = true;
   Alignment _pinAlignment = const Alignment(0.08, 0.05);
   _PickedLocation? _pickedLocation;
   List<_LocationSuggestion> _suggestions = const [];
@@ -65,6 +67,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     }
     _checkoutCtrl = Get.find<PoojaKitCheckoutController>();
     _hydrateSavedAddress();
+    unawaited(_hydrateReceiverFromProfile());
     _searchCtrl.addListener(_onSearchChanged);
   }
 
@@ -181,6 +184,56 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       longitude: null,
       address: _addressPreview(address),
     );
+    _isEditingReceiver =
+        address.fullName.trim().isEmpty || address.phone.trim().isEmpty;
+  }
+
+  Future<void> _hydrateReceiverFromProfile() async {
+    if (_fullNameCtrl.text.trim().isNotEmpty &&
+        _phoneCtrl.text.trim().isNotEmpty) {
+      return;
+    }
+    if (!Get.isRegistered<ProfileController>()) return;
+
+    final profileCtrl = Get.find<ProfileController>();
+    if (profileCtrl.resolvedUser == null && !profileCtrl.isLoading) {
+      await profileCtrl.loadProfile();
+    }
+    final user = profileCtrl.resolvedUser;
+    if (!mounted || user == null) return;
+
+    final name = _firstNonEmpty(user, const [
+      'fullName',
+      'name',
+      'displayName',
+      'userName',
+    ]);
+    final phone = _firstNonEmpty(user, const [
+      'phone',
+      'mobile',
+      'phoneNumber',
+      'mobileNumber',
+      'contactNumber',
+    ]);
+
+    setState(() {
+      if (_fullNameCtrl.text.trim().isEmpty && name.isNotEmpty) {
+        _fullNameCtrl.text = name;
+      }
+      if (_phoneCtrl.text.trim().isEmpty && phone.isNotEmpty) {
+        _phoneCtrl.text = phone;
+      }
+      _isEditingReceiver =
+          _fullNameCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty;
+    });
+  }
+
+  String _firstNonEmpty(Map<String, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -474,6 +527,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     _ReceiverCard(
                       fullNameCtrl: _fullNameCtrl,
                       phoneCtrl: _phoneCtrl,
+                      isEditing: _isEditingReceiver,
+                      onEditPhone: () =>
+                          setState(() => _isEditingReceiver = true),
                     ),
                     const SizedBox(height: 14),
                     _InputLabel(
@@ -1113,13 +1169,23 @@ class _TilePoint {
 }
 
 class _ReceiverCard extends StatelessWidget {
-  const _ReceiverCard({required this.fullNameCtrl, required this.phoneCtrl});
+  const _ReceiverCard({
+    required this.fullNameCtrl,
+    required this.phoneCtrl,
+    required this.isEditing,
+    required this.onEditPhone,
+  });
 
   final TextEditingController fullNameCtrl;
   final TextEditingController phoneCtrl;
+  final bool isEditing;
+  final VoidCallback onEditPhone;
 
   @override
   Widget build(BuildContext context) {
+    final name = fullNameCtrl.text.trim();
+    final phone = phoneCtrl.text.trim();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -1139,15 +1205,85 @@ class _ReceiverCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _AddressInput(controller: fullNameCtrl, hint: 'Name'),
-          const SizedBox(height: 10),
-          _AddressInput(
-            controller: phoneCtrl,
-            hint: 'Phone number',
-            keyboardType: TextInputType.phone,
-          ),
+          if (!isEditing) ...[
+            _ReceiverInfoRow(label: 'Name', value: name),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _ReceiverInfoRow(label: 'Phone number', value: phone),
+                ),
+                TextButton.icon(
+                  onPressed: onEditPhone,
+                  icon: const Icon(Icons.edit_outlined, size: 14),
+                  label: const Text('Edit'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFE95700),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Text(
+              'Enter receiver details to continue.',
+              style: AppTypography.inter(
+                fontSize: 9.5,
+                color: const Color(0xFF8B765D),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _AddressInput(controller: fullNameCtrl, hint: 'Name'),
+            const SizedBox(height: 10),
+            _AddressInput(
+              controller: phoneCtrl,
+              hint: 'Phone number',
+              keyboardType: TextInputType.phone,
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _ReceiverInfoRow extends StatelessWidget {
+  const _ReceiverInfoRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 10,
+              color: const Color(0xFF4A1C00),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value.isEmpty ? 'Not provided' : value,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF4A1C00),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
