@@ -1586,7 +1586,7 @@ class _InventoryFormState extends State<_InventoryForm> {
     if (priceText.isEmpty) {
       showCmsSnackbar(
         title: 'Price required',
-        message: 'Enter list price per stock unit.',
+        message: 'Enter MRP per stock unit.',
         isError: true,
       );
       return;
@@ -1614,7 +1614,7 @@ class _InventoryFormState extends State<_InventoryForm> {
     if (salePrice != null && salePrice > price) {
       showCmsSnackbar(
         title: 'Invalid sale price',
-        message: 'Sale price cannot exceed list price.',
+        message: 'Sale price cannot exceed MRP.',
         isError: true,
       );
       return;
@@ -1881,7 +1881,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                           Expanded(
                             flex: 3,
                             child: CmsFormField(
-                              label: 'List price *',
+                              label: 'MRP *',
                               hint: '29.99',
                               controller: _priceCtrl,
                             ),
@@ -1899,7 +1899,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Sale price must be ≤ list price. Price is per one '
+                        'Sale price must be ≤ MRP. Price is per one '
                         'stock unit. Total available = stock quantity × item quantity.',
                         style: TextStyle(
                           fontSize: 11,

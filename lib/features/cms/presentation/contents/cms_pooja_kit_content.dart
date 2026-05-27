@@ -2245,7 +2245,7 @@ class _ProductFormState extends State<_ProductForm> {
     if (salePrice != null && salePrice > price) {
       showCmsSnackbar(
         title: 'Invalid sale price',
-        message: 'Sale price cannot exceed list price.',
+        message: 'Sale price cannot exceed MRP.',
         isError: true,
       );
       return;
@@ -2525,7 +2525,7 @@ class _ProductFormState extends State<_ProductForm> {
                     Expanded(
                       flex: 3,
                       child: CmsFormField(
-                        label: 'Kit price *',
+                        label: 'Kit MRP *',
                         hint: '999',
                         controller: _priceCtrl,
                       ),
@@ -2550,7 +2550,7 @@ class _ProductFormState extends State<_ProductForm> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Kit price uses inventory list prices; kit sale price uses '
+                  'Kit price uses inventory MRP prices; kit sale price uses '
                   'inventory sale prices when any component is on sale.',
                   style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
                 ),
@@ -3374,14 +3374,14 @@ class _KitComponentsCostSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _costRow(
-            label: 'Components total (list price)',
+            label: 'Kit components total (MRP)',
             value: _kitMoney(cost.listTotal, cost.currency),
             valueColor: CmsColors.orangeDark,
           ),
           if (cost.hasInventorySale) ...[
             const SizedBox(height: 6),
             _costRow(
-              label: 'Components total (sale price)',
+              label: 'Kit components total (sale price)',
               value: _kitMoney(cost.saleTotal, cost.currency),
               valueColor: const Color(0xFF2E7D32),
             ),
@@ -3397,7 +3397,7 @@ class _KitComponentsCostSummary extends StatelessWidget {
           if (kitPrice != null && kitPrice > 0) ...[
             const SizedBox(height: 8),
             _costRow(
-              label: 'Kit price entered',
+              label: 'Kit MRP entered',
               value: _kitMoney(kitPrice, cost.currency),
             ),
           ],

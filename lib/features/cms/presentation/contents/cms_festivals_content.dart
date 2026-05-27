@@ -947,9 +947,6 @@ class _FestivalFormState extends State<_FestivalForm> {
   // ── Text controllers ──────────────────────────────────────────
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
-  late final TextEditingController _locationCityCtrl;
-  late final TextEditingController _locationStateCtrl;
-  late final TextEditingController _locationCountryCtrl;
   late final TextEditingController _notifyDaysCtrl;
 
   // ── FIX: properly declared state fields ───────────────────────
@@ -978,11 +975,6 @@ class _FestivalFormState extends State<_FestivalForm> {
 
     _titleCtrl = TextEditingController(text: f?.title ?? '');
     _descCtrl = TextEditingController(text: f?.description ?? '');
-    _locationCityCtrl = TextEditingController(text: f?.locationCity ?? '');
-    _locationStateCtrl = TextEditingController(text: f?.locationState ?? '');
-    _locationCountryCtrl = TextEditingController(
-      text: f?.locationCountry ?? 'India',
-    );
     _notifyDaysCtrl = TextEditingController(
       text: (f?.notificationDaysBefore ?? 0).toString(),
     );
@@ -1059,13 +1051,6 @@ class _FestivalFormState extends State<_FestivalForm> {
       'date': _formatDate(_date!),
       'category': _category,
       'isGlobal': _isGlobal,
-      'location': {
-        'city': _locationCityCtrl.text.trim(),
-        'state': _locationStateCtrl.text.trim(),
-        'country': _locationCountryCtrl.text.trim().isEmpty
-            ? 'India'
-            : _locationCountryCtrl.text.trim(),
-      },
       'notifyUsers': _notifyUsers,
       'notificationDaysBefore': int.tryParse(_notifyDaysCtrl.text) ?? 0,
     };
@@ -1110,9 +1095,6 @@ class _FestivalFormState extends State<_FestivalForm> {
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
-    _locationCityCtrl.dispose();
-    _locationStateCtrl.dispose();
-    _locationCountryCtrl.dispose();
     _notifyDaysCtrl.dispose();
     super.dispose();
   }
@@ -1213,32 +1195,6 @@ class _FestivalFormState extends State<_FestivalForm> {
         items: _categories,
         initialValue: _category,
         onChanged: (v) => setState(() => _category = v ?? 'MAJOR'),
-      ),
-      const SizedBox(height: 12),
-      Row(
-        children: [
-          Expanded(
-            child: CmsFormField(
-              label: 'City',
-              hint: 'e.g. Hyderabad',
-              controller: _locationCityCtrl,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CmsFormField(
-              label: 'State',
-              hint: 'e.g. Telangana',
-              controller: _locationStateCtrl,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      CmsFormField(
-        label: 'Country',
-        hint: 'India',
-        controller: _locationCountryCtrl,
       ),
       const SizedBox(height: 12),
       CmsFormField(

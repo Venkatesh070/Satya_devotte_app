@@ -414,11 +414,9 @@ class _RitualFormState extends State<_RitualForm> {
   late final TextEditingController _startingDayCtrl;
   late final TextEditingController _ritualDaysCtrl;
   late final TextEditingController _bestTimeCtrl;
-  late final TextEditingController _priceCtrl;
-  late final TextEditingController _currencyCtrl;
   String? _selectedDeityId;
   String _difficulty = 'BEGINNER';
-  String _accessType = 'FREE';
+  static const String _accessType = 'FREE';
   String _status = 'PENDING';
   bool _isFeatured = false;
 
@@ -471,11 +469,8 @@ class _RitualFormState extends State<_RitualForm> {
       text: dayCount > 0 ? dayCount.toString() : '',
     );
     _bestTimeCtrl = TextEditingController(text: r?.bestDayTime ?? '');
-    _priceCtrl = TextEditingController(text: (r?.price ?? 0).toString());
-    _currencyCtrl = TextEditingController(text: r?.currency ?? 'ZAR');
     _selectedDeityId = r?.deity;
     _difficulty = r?.difficulty ?? 'BEGINNER';
-    _accessType = r?.accessType ?? 'FREE';
     _status = r?.status ?? 'PENDING';
     _isFeatured = r?.isFeatured ?? false;
     _days = List.from(r?.days ?? []);
@@ -497,8 +492,6 @@ class _RitualFormState extends State<_RitualForm> {
     _startingDayCtrl.dispose();
     _ritualDaysCtrl.dispose();
     _bestTimeCtrl.dispose();
-    _priceCtrl.dispose();
-    _currencyCtrl.dispose();
     super.dispose();
   }
 
@@ -568,8 +561,8 @@ class _RitualFormState extends State<_RitualForm> {
       ritualDays: ritualDays ?? cleanDays.length,
       bestDayTime: _bestTimeCtrl.text.trim(),
       accessType: _accessType,
-      price: num.tryParse(_priceCtrl.text) ?? 0,
-      currency: _currencyCtrl.text.trim(),
+      price: 0,
+      currency: 'ZAR',
       difficulty: _difficulty,
       isFeatured: _isFeatured,
       status: _status,
@@ -850,13 +843,48 @@ class _RitualFormState extends State<_RitualForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: CmsDropdownField(
-                label: 'Access type',
-                items: const ['FREE', 'PAID'],
-                initialValue: _accessType,
-                onChanged: (v) {
-                  if (v != null) setState(() => _accessType = v);
-                },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Access type',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: CmsColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    initialValue: 'Free',
+                    readOnly: true,
+                    enableInteractiveSelection: false,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: CmsColors.textSecond,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F5),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 12),
@@ -872,28 +900,6 @@ class _RitualFormState extends State<_RitualForm> {
             ),
           ],
         ),
-        if (_accessType == 'PAID') ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: CmsFormField(
-                  label: 'Price',
-                  hint: '0',
-                  controller: _priceCtrl,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: CmsFormField(
-                  label: 'Currency',
-                  hint: 'ZAR',
-                  controller: _currencyCtrl,
-                ),
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: 16),
         _buildFeaturedToggle(),
       ],
