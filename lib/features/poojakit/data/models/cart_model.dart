@@ -13,6 +13,18 @@ class CartItemModel {
   final int quantity;
   final num lineTotal;
 
+  CartItemModel copyWith({
+    ProductModel? product,
+    int? quantity,
+    num? lineTotal,
+  }) {
+    return CartItemModel(
+      product: product ?? this.product,
+      quantity: quantity ?? this.quantity,
+      lineTotal: lineTotal ?? this.lineTotal,
+    );
+  }
+
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
     final productJson = Map<String, dynamic>.from(
       json['product'] as Map<String, dynamic>,
@@ -46,6 +58,20 @@ class CartModel {
   final num totalAmount;
   final String currency;
   final int? serverItemCount;
+
+  CartModel copyWith({
+    List<CartItemModel>? items,
+    num? totalAmount,
+    String? currency,
+    int? serverItemCount,
+  }) {
+    return CartModel(
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+      currency: currency ?? this.currency,
+      serverItemCount: serverItemCount,
+    );
+  }
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List? ?? [];

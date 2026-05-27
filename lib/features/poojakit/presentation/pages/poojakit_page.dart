@@ -1,44 +1,385 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/app_background.dart';
-import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 
 class PoojaKitPage extends GetView<PoojaKitController> {
-  const PoojaKitPage({super.key});
+  const PoojaKitPage({super.key, this.onBack});
 
-  Widget _buildSearchField() {
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0x22FFFFFF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: Colors.white, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              onChanged: (v) => controller.setSearchQuery(v),
-              cursorColor: Colors.black,
-              style: AppTypography.inter(
-                fontSize: 14,
-                color: const Color(0xFF232323),
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final cartCtrl = Get.find<CartController>();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAECD2),
+      body: SafeArea(
+        child: Obx(() {
+          if (controller.isLoading && controller.products.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
+          }
+
+          if (controller.error != null && controller.products.isEmpty) {
+            return _ShopScaffold(
+              cartController: cartCtrl,
+              onBack: onBack,
+              child: _StateMessage(
+                icon: Icons.error_outline,
+                title: 'Error loading products',
+                actionLabel: 'Retry',
+                onAction: () => controller.fetchProducts(refresh: true),
               ),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: 'Search pooja kits...',
-                hintStyle: AppTypography.inter(
-                  fontSize: 14,
-                  color: const Color(0xFFFFFFFF),
+            );
+          }
+
+          if (controller.products.isEmpty) {
+            return _ShopScaffold(
+              cartController: cartCtrl,
+              onBack: onBack,
+              child: const _StateMessage(
+                icon: Icons.shopping_bag_outlined,
+                title: 'No products available',
+              ),
+            );
+          }
+
+          return _ShopScaffold(
+            cartController: cartCtrl,
+            onBack: onBack,
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => controller.fetchProducts(refresh: true),
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
+                itemCount:
+                    controller.products.length + (controller.isLoading ? 1 : 0),
+                separatorBuilder: (_, _) => const Divider(
+                  height: 22,
+                  thickness: 0.7,
+                  color: Color(0x1A6B4A2B),
                 ),
+                itemBuilder: (context, index) {
+                  if (index >= controller.products.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (index == controller.products.length - 1) {
+                    controller.loadNextPage();
+                  }
+
+                  final product = controller.products[index];
+                  return _ProductListTile(
+                    product: product,
+                    onTap: () => Get.toNamed(
+                      AppRoutes.poojaKitDetails,
+                      arguments: product,
+                    ),
+                    onAddToCartTap: () => cartCtrl.addToCart(product.id),
+                  );
+                },
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _ShopScaffold extends StatelessWidget {
+  const _ShopScaffold({
+    required this.cartController,
+    required this.child,
+    this.onBack,
+  });
+
+  final CartController cartController;
+  final Widget child;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: SizedBox(
+            height: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _CircleIconButton(
+                    icon: Icons.arrow_back,
+                    onTap: onBack ?? () => Get.back(),
+                  ),
+                ),
+                Text(
+                  'Shop',
+                  style: AppTypography.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1D160E),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _CartBadge(controller: cartController),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 5,
+      shadowColor: const Color(0x22000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(icon, size: 19, color: const Color(0xFF1C1C1C)),
+        ),
+      ),
+    );
+  }
+}
+
+class _StateMessage extends StatelessWidget {
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 46, color: const Color(0x996B4A2B)),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: AppTypography.inter(
+              color: const Color(0xFF4A1C00),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onAction,
+              child: Text(
+                actionLabel!,
+                style: AppTypography.inter(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductListTile extends StatelessWidget {
+  const _ProductListTile({
+    required this.product,
+    required this.onTap,
+    required this.onAddToCartTap,
+  });
+
+  final ProductModel product;
+  final VoidCallback onTap;
+  final VoidCallback onAddToCartTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final itemCount = product.items.length;
+    final description = product.description.trim().isEmpty
+        ? 'Complete puja essentials.'
+        : product.description.trim();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: product.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => const ColoredBox(
+                          color: Color(0xFFFFF7E8),
+                          child: Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, _, _) => _ProductImageFallback(),
+                      )
+                    : const _ProductImageFallback(),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF2B1A0C),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  _ProductBullet(
+                    text: itemCount == 0
+                        ? description
+                        : '$itemCount ${itemCount == 1 ? 'item' : 'items'} required for performing the puja.\nSufficient for 2 members.',
+                  ),
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      if (product.salePrice != null &&
+                          product.salePrice! < product.price) ...[
+                        Text(
+                          '${product.currency} ${_formatPrice(product.price)}',
+                          style: AppTypography.inter(
+                            fontSize: 11,
+                            color: const Color(0x8A6C5B46),
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: const Color(0x8A6C5B46),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Text(
+                        '${product.currency} ${_formatPrice(product.effectivePrice)}',
+                        style: AppTypography.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFFE95700),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (product.inStock)
+                        GestureDetector(
+                          onTap: onAddToCartTap,
+                          child: const Icon(
+                            Icons.add_shopping_cart_outlined,
+                            size: 20,
+                            color: Color(0xFFE95700),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatPrice(num value) {
+    if (value % 1 == 0) return value.toInt().toStringAsFixed(2);
+    return value.toStringAsFixed(2);
+  }
+}
+
+class _ProductBullet extends StatelessWidget {
+  const _ProductBullet({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '- ',
+            style: AppTypography.inter(
+              fontSize: 10,
+              height: 1.25,
+              color: const Color(0xFF6C5B46),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.inter(
+                fontSize: 10,
+                height: 1.25,
+                color: const Color(0xFF6C5B46),
               ),
             ),
           ),
@@ -46,107 +387,16 @@ class PoojaKitPage extends GetView<PoojaKitController> {
       ),
     );
   }
+}
+
+class _ProductImageFallback extends StatelessWidget {
+  const _ProductImageFallback();
 
   @override
   Widget build(BuildContext context) {
-    final cartCtrl = Get.find<CartController>();
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text(
-          'Pooja Kit',
-          style: AppTypography.lora(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [_CartBadge(controller: cartCtrl)],
-      ),
-      body: AppBackground(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildSearchField(),
-            ),
-
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading && controller.products.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  );
-                }
-
-                if (controller.error != null && controller.products.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: Colors.white70,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error loading products',
-                          style: AppTypography.inter(color: Colors.white),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              controller.fetchProducts(refresh: true),
-                          child: const Text(
-                            'Retry',
-                            style: TextStyle(color: Color(0xFFFFD180)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (controller.products.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No products available',
-                      style: AppTypography.inter(color: Colors.white70),
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => controller.fetchProducts(refresh: true),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.58,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                    itemCount: controller.products.length,
-                    itemBuilder: (context, index) {
-                      // Trigger next page load
-                      if (index == controller.products.length - 1) {
-                        controller.loadNextPage();
-                      }
-
-                      final product = controller.products[index];
-                      return _GridProductCard(product: product);
-                    },
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
+    return Container(
+      color: const Color(0xFFFFF7E8),
+      child: const Icon(Icons.shopping_bag_outlined, color: Color(0x996B4A2B)),
     );
   }
 }
@@ -158,30 +408,32 @@ class _CartBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        IconButton(
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          onPressed: () => Get.toNamed(AppRoutes.poojaKitCart),
+        _CircleIconButton(
+          icon: Icons.shopping_cart_outlined,
+          onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
         ),
         Positioned(
-          right: 8,
-          top: 8,
+          right: -1,
+          top: -1,
           child: Obx(() {
             final count = controller.itemCount;
             if (count == 0) return const SizedBox.shrink();
             return Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE95700),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.2),
               ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
               child: Text(
                 '$count',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -190,21 +442,6 @@ class _CartBadge extends StatelessWidget {
           }),
         ),
       ],
-    );
-  }
-}
-
-class _GridProductCard extends StatelessWidget {
-  const _GridProductCard({required this.product});
-  final dynamic product;
-
-  @override
-  Widget build(BuildContext context) {
-    final cartCtrl = Get.find<CartController>();
-    return ProductCard(
-      product: product,
-      onTap: () => Get.toNamed(AppRoutes.poojaKitDetails, arguments: product),
-      onAddToCartTap: () => cartCtrl.addToCart(product.id),
     );
   }
 }

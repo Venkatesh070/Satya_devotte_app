@@ -11,10 +11,12 @@ class CartController extends GetxController {
   final _cart = Rxn<CartModel>();
   final _isLoading = false.obs;
   final _error = RxnString();
+  final _busyProductIds = <String>{}.obs;
 
   CartModel? get cart => _cart.value;
   bool get isLoading => _isLoading.value;
   String? get error => _error.value;
+  bool isBusy(String productId) => _busyProductIds.contains(productId);
   int get itemCount {
     if (_cart.value == null) return 0;
     // Use server-provided itemCount if available, otherwise sum quantities
@@ -43,11 +45,14 @@ class CartController extends GetxController {
   }
 
   Future<void> addToCart(String productId, {int quantity = 1}) async {
+    if (_busyProductIds.contains(productId)) return;
+    _busyProductIds.add(productId);
     try {
       _cart.value = await _repo.addToCart(productId, quantity);
-      Get.snackbar('Success', 'Item added to cart');
     } catch (e) {
       Get.snackbar('Error', e.toString());
+    } finally {
+      _busyProductIds.remove(productId);
     }
   }
 
@@ -56,19 +61,32 @@ class CartController extends GetxController {
       await removeFromCart(productId);
       return;
     }
+    if (_busyProductIds.contains(productId)) return;
+    final previousCart = _cart.value;
+    _busyProductIds.add(productId);
+    _updateLocalQuantity(productId, quantity);
     try {
       _cart.value = await _repo.updateCartQuantity(productId, quantity);
     } catch (e) {
+      _cart.value = previousCart;
       Get.snackbar('Error', e.toString());
+    } finally {
+      _busyProductIds.remove(productId);
     }
   }
 
   Future<void> removeFromCart(String productId) async {
+    if (_busyProductIds.contains(productId)) return;
+    final previousCart = _cart.value;
+    _busyProductIds.add(productId);
+    _removeLocalItem(productId);
     try {
       _cart.value = await _repo.removeFromCart(productId);
-      Get.snackbar('Removed', 'Item removed from cart');
     } catch (e) {
+      _cart.value = previousCart;
       Get.snackbar('Error', e.toString());
+    } finally {
+      _busyProductIds.remove(productId);
     }
   }
 
@@ -79,5 +97,40 @@ class CartController extends GetxController {
     } catch (e) {
       Get.snackbar('Error', e.toString());
     }
+  }
+
+  void _updateLocalQuantity(String productId, int quantity) {
+    final current = _cart.value;
+    if (current == null) return;
+
+    final items = current.items.map((item) {
+      if (item.product.id != productId) return item;
+      return item.copyWith(
+        quantity: quantity,
+        lineTotal: item.product.effectivePrice * quantity,
+      );
+    }).toList();
+
+    _cart.value = current.copyWith(
+      items: items,
+      totalAmount: _calculateTotal(items),
+    );
+  }
+
+  void _removeLocalItem(String productId) {
+    final current = _cart.value;
+    if (current == null) return;
+
+    final items = current.items
+        .where((item) => item.product.id != productId)
+        .toList();
+    _cart.value = current.copyWith(
+      items: items,
+      totalAmount: _calculateTotal(items),
+    );
+  }
+
+  num _calculateTotal(List<CartItemModel> items) {
+    return items.fold<num>(0, (sum, item) => sum + item.lineTotal);
   }
 }

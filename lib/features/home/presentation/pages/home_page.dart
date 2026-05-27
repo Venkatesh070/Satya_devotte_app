@@ -518,7 +518,7 @@ class _HomePageState extends State<HomePage> {
             onPujaTap: _onPujaItemTap,
             onFestivalTap: _onFestivalItemTap,
           ),
-          const PoojaKitPage(),
+          PoojaKitPage(onBack: () => _onTabSelected(0)),
           const RitualListPage(),
           const CalendarPage(),
           const ProfilePage(),

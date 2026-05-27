@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
@@ -24,12 +23,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     super.initState();
     _result = Get.arguments as VerifyResult;
 
-    // Automatically navigate to My Orders after 2 seconds
-    Timer(const Duration(seconds: 2), () {
+    // Automatically navigate to My Orders after 3 seconds.
+    Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        // Clear stack up to home and then show orders
-        Get.offAllNamed(AppRoutes.home);
-        Get.toNamed(AppRoutes.userOrders);
+        Get.offAllNamed(AppRoutes.userOrders);
       }
     });
   }
@@ -49,7 +46,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -75,7 +72,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                   textAlign: TextAlign.center,
                   style: AppTypography.inter(
                     fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     height: 1.5,
                   ),
                 ),
@@ -84,13 +81,18 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
                   ),
                   child: Column(
                     children: [
-                      _row('Amount Paid', '${_result.currency} ${_result.amount}'),
+                      _row(
+                        'Amount Paid',
+                        '${_result.currency} ${_result.amount}',
+                      ),
                       const SizedBox(height: 12),
                       _row('Reference', _result.reference),
                     ],
@@ -121,12 +123,18 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }

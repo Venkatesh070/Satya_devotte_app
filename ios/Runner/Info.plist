@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSPhotoLibraryUsageDescription</key>
     <string>Required to pick images</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Satya uses your current location to fill your delivery address.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to add events to your calendar</string>
 	<key>LSRequiresIPhoneOS</key>

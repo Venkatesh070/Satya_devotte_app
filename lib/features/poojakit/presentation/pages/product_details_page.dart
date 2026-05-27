@@ -8,249 +8,69 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 
-class ProductDetailsPage extends StatelessWidget {
+class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({super.key});
 
   @override
+  State<ProductDetailsPage> createState() => _ProductDetailsPageState();
+}
+
+class _ProductDetailsPageState extends State<ProductDetailsPage> {
+  late final ProductModel _product;
+  late final CartController _cartCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _product = Get.arguments as ProductModel;
+    _cartCtrl = Get.find<CartController>();
+  }
+
+  Future<void> _addToCartAndOpenCart() async {
+    await _cartCtrl.addToCart(_product.id, quantity: 1);
+    if (!mounted) return;
+    Get.toNamed(AppRoutes.poojaKitCart);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final product = Get.arguments as ProductModel;
-    final cartCtrl = Get.find<CartController>();
-
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AppBackground(
-        child: CustomScrollView(
-          slivers: [
-            // App Bar
-            SliverAppBar(
-              expandedHeight: 300,
-              pinned: true,
-              backgroundColor: AppColors.primary,
-              flexibleSpace: FlexibleSpaceBar(
-                background: product.imageUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: product.imageUrl!,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.shopping_bag_outlined,
-                          size: 80,
-                          color: Colors.grey,
-                        ),
-                      ),
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Get.back(),
-              ),
-              actions: [_CartBadge(controller: cartCtrl)],
+      backgroundColor: AppColors.appBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _ShopTopBar(
+              title: '',
+              onBack: () => Get.back(),
+              cartController: _cartCtrl,
             ),
-
-            // Content
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            product.title,
-                            style: AppTypography.lora(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textColor,
-                            ),
-                          ),
-                        ),
-                        if (product.salePrice != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'SALE',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          '${product.currency} ${product.effectivePrice}',
-                          style: AppTypography.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        if (product.salePrice != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            '${product.price}',
-                            style: AppTypography.inter(
-                              fontSize: 16,
-                              color: Colors.grey,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Description',
-                      style: AppTypography.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      product.description.isNotEmpty
-                          ? product.description
-                          : 'No description available.',
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        height: 1.5,
-                      ),
-                    ),
+                    _ProductHeader(product: _product),
                     const SizedBox(height: 24),
-                    if (product.items.isNotEmpty) ...[
-                      Text(
-                        'Pooja Kit Items',
-                        style: AppTypography.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: product.items.length,
-                        padding: EdgeInsets.zero,
-                        itemBuilder: (context, index) {
-                          final item = product.items[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_outline,
-                                  size: 18,
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${item.displayLabel} · ${item.quantity} unit(s)/kit',
-                                  style: AppTypography.inter(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 100), // Spacer for button
+                    _KitItemsSection(items: _product.items),
+                    const SizedBox(height: 86),
                   ],
                 ),
               ),
             ),
+            Obx(() {
+              final busy = _cartCtrl.isBusy(_product.id);
+              return _GradientCtaBar(
+                enabled: _product.inStock && !busy,
+                label: !_product.inStock
+                    ? 'Out of stock'
+                    : busy
+                    ? 'Adding...'
+                    : 'Add to cart',
+                onTap: _product.inStock && !busy ? _addToCartAndOpenCart : null,
+              );
+            }),
           ],
-        ),
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: product.inStock
-                        ? () => cartCtrl.addToCart(product.id)
-                        : null,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add to Cart',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: product.inStock
-                        ? () => Get.toNamed(
-                            AppRoutes.poojaKitCheckout,
-                            arguments: product,
-                          )
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(
-                      product.inStock ? 'Order Now' : 'Out of Stock',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -264,30 +84,32 @@ class _CartBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        IconButton(
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-          onPressed: () => Get.toNamed(AppRoutes.poojaKitCart),
+        _CircleIconButton(
+          icon: Icons.shopping_cart_outlined,
+          onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
         ),
         Positioned(
-          right: 8,
-          top: 8,
+          right: -1,
+          top: -1,
           child: Obx(() {
             final count = controller.itemCount;
             if (count == 0) return const SizedBox.shrink();
             return Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE95700),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.2),
               ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
               child: Text(
                 '$count',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -296,6 +118,314 @@ class _CartBadge extends StatelessWidget {
           }),
         ),
       ],
+    );
+  }
+}
+
+class _ShopTopBar extends StatelessWidget {
+  const _ShopTopBar({
+    required this.title,
+    required this.onBack,
+    required this.cartController,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+  final CartController cartController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: SizedBox(
+        height: 46,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
+            ),
+            Text(
+              title,
+              style: AppTypography.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1D160E),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _CartBadge(controller: cartController),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 5,
+      shadowColor: const Color(0x22000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(icon, size: 19, color: const Color(0xFF1C1C1C)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductHeader extends StatelessWidget {
+  const _ProductHeader({required this.product});
+
+  final ProductModel product;
+
+  @override
+  Widget build(BuildContext context) {
+    final itemCount = product.items.length;
+    final detailText = itemCount == 0
+        ? product.description
+        : '$itemCount items required for performing the puja.';
+
+    return Column(
+      children: [
+        _ProductHeroImage(imageUrl: product.imageUrl),
+        const SizedBox(height: 16),
+        Text(
+          product.title,
+          textAlign: TextAlign.center,
+          style: AppTypography.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF2B1A0C),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          detailText.trim().isEmpty ? 'Complete puja essentials.' : detailText,
+          textAlign: TextAlign.center,
+          style: AppTypography.inter(
+            fontSize: 10,
+            height: 1.35,
+            color: const Color(0xFF8B765D),
+          ),
+        ),
+        Text(
+          product.inStock
+              ? 'Sufficient for 2 members.'
+              : 'Currently out of stock.',
+          textAlign: TextAlign.center,
+          style: AppTypography.inter(
+            fontSize: 10,
+            height: 1.35,
+            color: const Color(0xFF8B765D),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProductHeroImage extends StatelessWidget {
+  const _ProductHeroImage({required this.imageUrl});
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 92,
+      height: 92,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 18,
+            offset: Offset(0, 9),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: imageUrl != null && imageUrl!.trim().isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => const ColoredBox(
+                  color: Color(0xFFFFF7E8),
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => const ColoredBox(
+                  color: Color(0xFFFFF7E8),
+                  child: Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Color(0x996B4A2B),
+                  ),
+                ),
+              )
+            : const ColoredBox(
+                color: Color(0xFFFFF7E8),
+                child: Icon(
+                  Icons.shopping_bag_outlined,
+                  color: Color(0x996B4A2B),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _KitItemsSection extends StatelessWidget {
+  const _KitItemsSection({required this.items});
+
+  final List<ProductItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Puja Kit Items',
+          style: AppTypography.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF2B1A0C),
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (items.isEmpty)
+          _KitItemPill(text: 'No items listed.')
+        else
+          ...items.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _KitItemPill(
+                text: '${_formatQuantity(e.quantity)} x ${e.displayLabel}',
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatQuantity(num value) {
+    if (value % 1 == 0) return value.toInt().toString();
+    return value.toString();
+  }
+}
+
+class _KitItemPill extends StatelessWidget {
+  const _KitItemPill({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        style: AppTypography.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF4A1C00),
+        ),
+      ),
+    );
+  }
+}
+
+class _GradientCtaBar extends StatelessWidget {
+  const _GradientCtaBar({
+    required this.label,
+    required this.onTap,
+    required this.enabled,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
+            height: 48,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: enabled
+                  ? const LinearGradient(
+                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFFB8B1AA), Color(0xFFB8B1AA)],
+                    ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: AppTypography.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

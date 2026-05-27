@@ -13,10 +13,21 @@ class PoojaKitCheckoutController extends GetxController {
   final _isInitiating = false.obs;
   final _isVerifying = false.obs;
   final _lastError = RxnString();
+  final _shippingAddress = Rxn<AddressModel>();
 
   bool get isInitiating => _isInitiating.value;
   bool get isVerifying => _isVerifying.value;
   String? get lastError => _lastError.value;
+  AddressModel? get shippingAddress => _shippingAddress.value;
+  bool get hasShippingAddress => _shippingAddress.value != null;
+
+  void saveShippingAddress(AddressModel address) {
+    _shippingAddress.value = address;
+  }
+
+  void clearShippingAddress() {
+    _shippingAddress.value = null;
+  }
 
   void reset() {
     _isInitiating.value = false;
