@@ -119,7 +119,7 @@ Future<void> showProfileLogoutSheet({
 /// Delete account bottom sheet — Figma modal with text field + gradient button.
 Future<void> showProfileDeleteAccountSheet({
   required String userName,
-  required Future<void> Function() onConfirm,
+  required Future<void> Function(String comment) onConfirm,
 }) {
   return Get.bottomSheet<void>(
     _DeleteAccountSheet(userName: userName, onConfirm: onConfirm),
@@ -225,7 +225,7 @@ class _DeleteAccountSheet extends StatefulWidget {
   const _DeleteAccountSheet({required this.userName, required this.onConfirm});
 
   final String userName;
-  final Future<void> Function() onConfirm;
+  final Future<void> Function(String comment) onConfirm;
 
   @override
   State<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
@@ -239,7 +239,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
   void initState() {
     super.initState();
     _ctrl.addListener(() {
-      final ok = _ctrl.text.trim().toUpperCase() == 'DELETE';
+      final ok = _ctrl.text.trim().isNotEmpty;
       if (ok != _canDelete) setState(() => _canDelete = ok);
     });
   }
@@ -340,8 +340,10 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                   borderRadius: 14,
                   enabled: _canDelete,
                   onTap: () async {
+                    final comment = _ctrl.text.trim();
+                    if (comment.isEmpty) return;
                     Get.back();
-                    await widget.onConfirm();
+                    await widget.onConfirm(comment);
                   },
                 ),
               ],

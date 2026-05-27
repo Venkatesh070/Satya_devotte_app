@@ -110,36 +110,36 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     Map<String, dynamic>? profilePayload;
 
     if (!skipProfile) {
-      final dob = _dateOfBirth;
-      if (dob == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select date of birth.')),
-        );
-        return;
-      }
-      final tob = _timeOfBirth;
-      if (tob == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select time of birth.')),
-        );
-        return;
-      }
-
-      final hh = tob.hour.toString().padLeft(2, '0');
-      final mm = tob.minute.toString().padLeft(2, '0');
-
-      // Fix: assign to outer variable, don't redeclare with `final`
       profilePayload = {
         'fullName': _fullNameController.text.trim(),
         'gender': _selectedGender,
-        'dateOfBirth': DateFormat('yyyy-MM-dd').format(dob),
-        'phone': _phoneController.text.trim(),
-        'placeOfBirth': _birthPlaceController.text.trim(),
         'countryCode': '+91',
         'timeZone': DateTime.now().timeZoneName,
         'preferredLanguage': 'en',
-        'timeOfBirth': '$hh:$mm',
       };
+
+      final dob = _dateOfBirth;
+      if (dob != null) {
+        profilePayload['dateOfBirth'] =
+            DateFormat('yyyy-MM-dd').format(dob);
+      }
+
+      final tob = _timeOfBirth;
+      if (tob != null) {
+        final hh = tob.hour.toString().padLeft(2, '0');
+        final mm = tob.minute.toString().padLeft(2, '0');
+        profilePayload['timeOfBirth'] = '$hh:$mm';
+      }
+
+      final phone = _phoneController.text.trim();
+      if (phone.isNotEmpty) {
+        profilePayload['phone'] = phone;
+      }
+
+      final place = _birthPlaceController.text.trim();
+      if (place.isNotEmpty) {
+        profilePayload['placeOfBirth'] = place;
+      }
     }
 
     final bool isSuccess;
@@ -409,7 +409,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                         },
                                 ),
                                 const SizedBox(height: 18),
-                                _buildLabel('Select Date of Birth'),
+                                _buildLabel('Date of Birth (optional)'),
                                 const SizedBox(height: 6),
                                 _PickerField(
                                   value: _dateOfBirth == null
@@ -421,7 +421,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   onTap: isLoading ? null : _pickDob,
                                 ),
                                 const SizedBox(height: 18),
-                                _buildLabel('Select Time of Birth'),
+                                _buildLabel('Time of Birth (optional)'),
                                 const SizedBox(height: 6),
                                 _PickerField(
                                   value: _timeOfBirth == null
@@ -431,7 +431,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   onTap: isLoading ? null : _pickTob,
                                 ),
                                 const SizedBox(height: 18),
-                                _buildLabel('Place of Birth'),
+                                _buildLabel('Place of Birth (optional)'),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _birthPlaceController,
@@ -439,13 +439,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   decoration: _inputDecoration(
                                     'Enter place of birth',
                                   ),
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Place of birth is required'
-                                      : null,
                                 ),
                                 const SizedBox(height: 18),
-                                _buildLabel('Mobile Number'),
+                                _buildLabel('Mobile Number (optional)'),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _phoneController,
@@ -454,10 +450,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   decoration: _inputDecoration(
                                     'Enter mobile number',
                                   ),
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Phone number is required'
-                                      : null,
                                 ),
                               ],
                             ),

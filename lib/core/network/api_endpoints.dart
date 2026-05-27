@@ -4,7 +4,7 @@ class ApiEndpoints {
 
   /// POST — body `{ "refreshToken": "..." }`. Revokes refresh token (Swagger: Auth → Logout).
   static const String authLogout = '/api/v1/auth/logout';
-  /// DELETE — body `{ "refreshToken": "..." }`. Soft delete (Swagger: Auth → Delete account).
+  /// DELETE — body `{ "comment": "..." }`. Soft delete (Swagger: Auth → Delete account).
   static const String authDeleteAccount = '/api/v1/auth/account';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';

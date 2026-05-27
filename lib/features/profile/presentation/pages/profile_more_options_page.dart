@@ -40,8 +40,8 @@ class ProfileMoreOptionsPage extends StatelessWidget {
                 isDestructive: true,
                 onTap: () => showProfileDeleteAccountSheet(
                   userName: profile.userName,
-                  onConfirm: () async {
-                    final ok = await auth.deleteAccount();
+                  onConfirm: (comment) async {
+                    final ok = await auth.deleteAccount(comment: comment);
                     if (ok) {
                       Get.offAllNamed(AppRoutes.login);
                       Get.snackbar(

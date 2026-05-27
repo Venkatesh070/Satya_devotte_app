@@ -18,11 +18,11 @@ class AuthRemoteDataSource {
   }
 
   /// Soft-deletes the account on the server.
-  /// DELETE `/api/v1/auth/account` with body `{ "refreshToken": "..." }`.
-  Future<void> deleteAccount(String refreshToken) async {
+  /// DELETE `/api/v1/auth/account` with body `{ "comment": "..." }`.
+  Future<void> deleteAccount(String comment) async {
     await _apiClient.dio.delete<dynamic>(
       ApiEndpoints.authDeleteAccount,
-      data: {'refreshToken': refreshToken},
+      data: {'comment': comment},
     );
   }
 

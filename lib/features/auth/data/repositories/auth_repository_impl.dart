@@ -35,8 +35,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount(String refreshToken) {
-    return _remoteDataSource.deleteAccount(refreshToken);
+  Future<void> deleteAccount(String comment) {
+    return _remoteDataSource.deleteAccount(comment);
   }
 
   @override

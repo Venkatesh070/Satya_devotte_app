@@ -59,7 +59,7 @@ class AuthController extends GetxController {
     return true;
   }
 
-  /// Routes admin → CMS, else home.
+  /// Routes admin → CMS; users with `isRegistered: false` → profile setup; else home.
   void navigateAfterLogin() {
     if (isAdmin) {
       Get.offAllNamed(AppRoutes.cms);
@@ -67,7 +67,12 @@ class AuthController extends GetxController {
       _refreshAdminActivityBadge();
       return;
     }
-    // Profile is now optional during signup, so we go straight to home.
+    if (!isProfileRegistrationComplete) {
+      Get.offAll(
+        () => const CreateAccountPage(completeProfileOnly: true),
+      );
+      return;
+    }
     Get.offAllNamed(AppRoutes.home);
   }
 
@@ -526,18 +531,18 @@ class AuthController extends GetxController {
   }
 
   /// Deletes the account on the backend, then clears session and signs out of Firebase.
-  Future<bool> deleteAccount() async {
+  Future<bool> deleteAccount({required String comment}) async {
     _isAuthLoading.value = true;
     _lastAuthError.value = null;
     try {
-      final refreshToken = _authSessionService.refreshToken;
-      if (refreshToken == null || refreshToken.isEmpty) {
-        _lastAuthError.value = 'Session expired. Please sign in again.';
+      final normalizedComment = comment.trim();
+      if (normalizedComment.isEmpty) {
+        _lastAuthError.value = 'Please provide a deletion comment.';
         return false;
       }
 
       await _unregisterDeviceFromPush();
-      await _authRepository.deleteAccount(refreshToken);
+      await _authRepository.deleteAccount(normalizedComment);
 
       _isAuthenticated.value = false;
       _userRole.value = 'user';
