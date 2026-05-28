@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,7 @@ class _RitualListPageState extends State<RitualListPage> {
   static const _favoritesPrefsKey = 'favorite_deity_ids';
 
   late final FavoriteDeitiesRemoteDataSource _favoriteDeitiesApi;
+  late final PoojaHistoryController _poojaHistoryController;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -29,13 +31,18 @@ class _RitualListPageState extends State<RitualListPage> {
   String _searchQuery = '';
   String _selectedCategory = 'All Deities';
   Set<String> _favoriteIds = <String>{};
+
   /// Full deity payloads from GET `/auth/favorite-deities` (for favourites tab).
   List<DeityListItem> _favoriteDeityDocs = const [];
 
   @override
   void initState() {
     super.initState();
-    _favoriteDeitiesApi = FavoriteDeitiesRemoteDataSource(Get.find<ApiClient>());
+    _favoriteDeitiesApi = FavoriteDeitiesRemoteDataSource(
+      Get.find<ApiClient>(),
+    );
+    _poojaHistoryController = Get.find<PoojaHistoryController>();
+    _poojaHistoryController.fetchHistory();
     _loadFavoritesFromApi();
     _loadDeities();
   }
@@ -148,10 +155,10 @@ class _RitualListPageState extends State<RitualListPage> {
       final msg = code == 404
           ? 'Deity is not available to favourite.'
           : (e.response?.data is Map
-                ? (e.response!.data['message'] ?? e.message)?.toString()
-                : null) ??
-              e.message ??
-              'Could not update favourites.';
+                    ? (e.response!.data['message'] ?? e.message)?.toString()
+                    : null) ??
+                e.message ??
+                'Could not update favourites.';
       Get.snackbar(
         'Favourites',
         msg,
@@ -222,7 +229,7 @@ class _RitualListPageState extends State<RitualListPage> {
     Get.toNamed<dynamic>(
       AppRoutes.ritualDetail,
       arguments: item.toRitualDetailArgs(),
-    );
+    )?.then((_) => _poojaHistoryController.fetchHistory());
   }
 
   List<DeityListItem> get _filteredItems {
@@ -275,6 +282,7 @@ class _RitualListPageState extends State<RitualListPage> {
             await Future.wait<void>([
               _loadFavoritesFromApi(),
               _loadDeities(),
+              _poojaHistoryController.fetchHistory(),
             ]);
           },
           child: CustomScrollView(
@@ -458,15 +466,56 @@ class _RitualListPageState extends State<RitualListPage> {
             );
           }
           final item = items[index];
-          return _DeityCard(
-            item: item,
-            isFavorite: _favoriteIds.contains(item.id),
-            onFavoriteTap: () => _toggleFavorite(item),
-            onTap: () => _openDeityDetail(item),
+          return Obx(
+            () => _DeityCard(
+              item: item,
+              isFavorite: _favoriteIds.contains(item.id),
+              statusLabel: _hasInProgressPujaForDeity(item)
+                  ? 'In Progress'
+                  : null,
+              onFavoriteTap: () => _toggleFavorite(item),
+              onTap: () => _openDeityDetail(item),
+            ),
           );
         },
       ),
     );
+  }
+
+  bool _hasInProgressPujaForDeity(DeityListItem item) {
+    return _poojaHistoryController.pendingPoojas.any((session) {
+      if (session is! Map) return false;
+      if (!_isInProgressSession(session)) return false;
+      final pooja = session['pooja'];
+      if (pooja is! Map) return false;
+      return _poojaBelongsToDeity(pooja, item);
+    });
+  }
+
+  bool _isInProgressSession(Map session) {
+    final status = session['status']?.toString().toUpperCase().trim();
+    return status == 'PENDING' ||
+        status == 'IN_PROGRESS' ||
+        status == 'INPROGRESS' ||
+        status == 'STARTED';
+  }
+
+  bool _poojaBelongsToDeity(Map pooja, DeityListItem item) {
+    final expectedId = item.id.trim();
+    final expectedName = item.name.trim().toLowerCase();
+    final rawDeity = pooja['deity'] ?? pooja['deityId'] ?? pooja['deity_id'];
+    if (rawDeity is Map) {
+      final id = (rawDeity['_id'] ?? rawDeity['id'] ?? '').toString().trim();
+      if (id.isNotEmpty && id == expectedId) return true;
+      final name = (rawDeity['name'] ?? rawDeity['title'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      return expectedName.isNotEmpty && name == expectedName;
+    }
+    final value = (rawDeity ?? '').toString().trim();
+    if (value.isNotEmpty && value == expectedId) return true;
+    return expectedName.isNotEmpty && value.toLowerCase() == expectedName;
   }
 
   Widget _buildErrorState() {
@@ -570,12 +619,14 @@ class _DeityCard extends StatelessWidget {
     required this.onTap,
     required this.isFavorite,
     required this.onFavoriteTap,
+    this.statusLabel,
   });
 
   final DeityListItem item;
   final VoidCallback onTap;
   final bool isFavorite;
   final VoidCallback onFavoriteTap;
+  final String? statusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -660,6 +711,10 @@ class _DeityCard extends StatelessWidget {
                         color: const Color(0xFF8C775F),
                       ),
                     ),
+                  if (statusLabel != null) ...[
+                    const SizedBox(height: 7),
+                    _PujaStatusBadge(label: statusLabel!),
+                  ],
                   const SizedBox(height: 5),
                   if (item.description.isNotEmpty)
                     Text(
@@ -686,6 +741,43 @@ class _DeityCard extends StatelessWidget {
       color: const Color(0xFFEDE6D7),
       alignment: Alignment.center,
       child: const Icon(Icons.auto_awesome, color: Color(0xFFB07A3A), size: 22),
+    );
+  }
+}
+
+class _PujaStatusBadge extends StatelessWidget {
+  const _PujaStatusBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3D8),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE8A13A)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.play_circle_outline,
+            size: 13,
+            color: Color(0xFFC06A00),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFC06A00),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

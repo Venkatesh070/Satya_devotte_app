@@ -5,9 +5,9 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:video_player/video_player.dart';
-import 'package:satya_devotte_app/features/pujas/presentation/widgets/media_player_section.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
@@ -42,9 +42,10 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   Map<String, dynamic>? _selectedDeity;
   List<Map<String, dynamic>> _deityPoojas = const [];
   List<Map<String, dynamic>> _deityRituals = const [];
-  Map<String, String> _festivalNames = const {};
+  final Map<String, String> _festivalNames = const {};
 
   late final TabController _tabController;
+  late final PoojaHistoryController _historyController;
   static const _tabs = <String>[
     'Calendar Puja\'s',
     'About the Deity',
@@ -61,6 +62,8 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       initialIndex: 0,
     );
     _tabController.addListener(_onTabChanged);
+    _historyController = Get.find<PoojaHistoryController>();
+    _historyController.fetchHistory();
 
     final args = Get.arguments;
     if (args is Map && args['type'] == 'deity') {
@@ -135,6 +138,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         queryParameters: {'deity': deityId, 'limit': 50},
       );
       rituals = _extractList(res.data);
+      rituals = rituals
+          .where((r) => _poojaBelongsToDeity(r, deityId, deity))
+          .toList(growable: false);
     } catch (e) {
       debugPrint('Associated rituals fetch failed: $e');
     }
@@ -551,17 +557,23 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             body: TabBarView(
               controller: _tabController,
               children: [
-                _CalendarTab(
-                  key: ValueKey('cal_${p.title}'),
-                  pooja: p,
-                  poojas: _deityPoojas,
-                  festivalNames: _festivalNames,
-                  onSelectPooja: (pooja) {
-                    setState(() {
-                      _pooja = _mergeDeityIntoPooja(pooja, _selectedDeity);
-                    });
-                  },
-                ),
+                Obx(() {
+                  final pending = _historyController.pendingPoojas.toList();
+                  final finished = _historyController.finishedPoojas.toList();
+                  return _CalendarTab(
+                    key: ValueKey('cal_${p.title}'),
+                    pooja: p,
+                    poojas: _deityPoojas,
+                    festivalNames: _festivalNames,
+                    statusForPooja: (pooja) =>
+                        _statusForPooja(pooja, pending, finished),
+                    onSelectPooja: (pooja) {
+                      setState(() {
+                        _pooja = _mergeDeityIntoPooja(pooja, _selectedDeity);
+                      });
+                    },
+                  );
+                }),
                 _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
                 _RitualsTab(
                   key: ValueKey('rit_${p.title}'),
@@ -619,6 +631,40 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         ],
       ),
     );
+  }
+
+  String? _statusForPooja(
+    Map<String, dynamic> pooja,
+    List<dynamic> pendingSessions,
+    List<dynamic> finishedSessions,
+  ) {
+    final pending = pendingSessions.whereType<Map>().any(
+      (session) => _sessionMatchesPooja(session, pooja),
+    );
+    if (pending) return 'In Progress';
+
+    final finished = finishedSessions.whereType<Map>().any(
+      (session) => _sessionMatchesPooja(session, pooja),
+    );
+    if (finished) return 'Finished';
+
+    return null;
+  }
+
+  bool _sessionMatchesPooja(Map session, Map<String, dynamic> pooja) {
+    final sessionPooja = session['pooja'];
+    if (sessionPooja is! Map) return false;
+    final sessionPoojaId = _entityId(sessionPooja);
+    final poojaId = _entityId(pooja);
+    if (sessionPoojaId.isNotEmpty && poojaId.isNotEmpty) {
+      return sessionPoojaId == poojaId;
+    }
+    final sessionTitle = (sessionPooja['title'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
+    return sessionTitle.isNotEmpty && sessionTitle == title;
   }
 }
 
@@ -1523,12 +1569,14 @@ class _CalendarTab extends StatelessWidget {
     required this.pooja,
     required this.poojas,
     required this.festivalNames,
+    required this.statusForPooja,
     required this.onSelectPooja,
   });
 
   final PoojaView pooja;
   final List<Map<String, dynamic>> poojas;
   final Map<String, String> festivalNames;
+  final String? Function(Map<String, dynamic> pooja) statusForPooja;
   final ValueChanged<Map<String, dynamic>> onSelectPooja;
 
   @override
@@ -1560,6 +1608,7 @@ class _CalendarTab extends StatelessWidget {
                 .where((name) => name.trim().isNotEmpty)
                 .toList(),
             selected: _samePooja(raw, pooja.raw),
+            statusLabel: statusForPooja(raw),
             onTap: () => onSelectPooja(raw),
           ),
           if (raw != calendarPoojas.last) const SizedBox(height: 18),
@@ -1581,12 +1630,14 @@ class _CalendarPujaCard extends StatelessWidget {
     required this.pooja,
     required this.festivals,
     required this.selected,
+    this.statusLabel,
     required this.onTap,
   });
 
   final PoojaView pooja;
   final List<String> festivals;
   final bool selected;
+  final String? statusLabel;
   final VoidCallback onTap;
 
   @override
@@ -1648,6 +1699,10 @@ class _CalendarPujaCard extends StatelessWidget {
                               fontWeight: FontWeight.w400,
                             ),
                           ),
+                        if (statusLabel != null) ...[
+                          const SizedBox(height: 8),
+                          _PujaSessionStatusBadge(label: statusLabel!),
+                        ],
                         const SizedBox(height: 10),
                         if (date != null) ...[
                           Row(
@@ -1821,6 +1876,52 @@ class _CalendarThumb extends StatelessWidget {
       color: const Color(0xFFE8C27A),
       alignment: Alignment.center,
       child: const Icon(Icons.temple_hindu, size: 34, color: Colors.white),
+    );
+  }
+}
+
+class _PujaSessionStatusBadge extends StatelessWidget {
+  const _PujaSessionStatusBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFinished = label.toLowerCase() == 'finished';
+    final color = isFinished
+        ? const Color(0xFF0F8F5F)
+        : const Color(0xFFC06A00);
+    final bg = isFinished ? const Color(0xFFE7F7EF) : const Color(0xFFFFF3D8);
+    final border = isFinished
+        ? const Color(0xFF86D7AE)
+        : const Color(0xFFE8A13A);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isFinished ? Icons.check_circle_outline : Icons.play_circle_outline,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
