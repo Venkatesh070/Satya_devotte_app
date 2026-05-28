@@ -460,7 +460,7 @@ class AdminOrder {
         paymentStatus == PaymentStatus.refundFailed;
   }
 
-  /// Formatted currency string, e.g. `R 250` for ZAR or `R 250.50`.
+  /// Formatted currency string using the API currency code, e.g. `ZAR 250`.
   String get formattedTotal => _formatCurrency(totalAmount, currency);
   String get formattedSubtotal => _formatCurrency(subtotalAmount, currency);
   String get formattedShipping => _formatCurrency(shippingAmount, currency);
@@ -497,6 +497,7 @@ class AdminOrder {
         }
       }
     }
+    final dedupedItems = _mergeDuplicateItems(items);
 
     return AdminOrder(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
@@ -522,7 +523,7 @@ class AdminOrder {
       createdAt: _parseDate(json['createdAt']),
       dispatchedAt: _parseDate(json['dispatchedAt']),
       sharedWithUserAt: _parseDate(json['sharedWithUserAt']),
-      items: items,
+      items: dedupedItems,
       shippingAddress: json['shippingAddress'] is Map<String, dynamic>
           ? ShippingAddress.fromJson(
               json['shippingAddress'] as Map<String, dynamic>,
@@ -583,6 +584,31 @@ class AdminOrder {
   }
 }
 
+List<OrderLineItem> _mergeDuplicateItems(List<OrderLineItem> items) {
+  final merged = <String, OrderLineItem>{};
+  for (final item in items) {
+    final key = [
+      item.productId.trim(),
+      item.title.trim().toLowerCase(),
+      item.unitPrice.toStringAsFixed(2),
+    ].join('|');
+    final existing = merged[key];
+    if (existing == null) {
+      merged[key] = item;
+    } else {
+      merged[key] = OrderLineItem(
+        productId: existing.productId,
+        title: existing.title,
+        qty: existing.qty + item.qty,
+        unitPrice: existing.unitPrice,
+        lineTotal: existing.lineTotal + item.lineTotal,
+        image: existing.image.isNotEmpty ? existing.image : item.image,
+      );
+    }
+  }
+  return merged.values.toList();
+}
+
 /// One page of `GET /orders/all` results.
 class AdminOrdersPage {
   const AdminOrdersPage({
@@ -632,7 +658,7 @@ class OrderStatusMachine {
 }
 
 String _formatCurrency(double amount, String currency) {
-  final symbol = currency == 'ZAR' ? 'R' : currency;
+  final symbol = currency.trim().isEmpty ? 'ZAR' : currency.toUpperCase();
   final decimals = amount.truncateToDouble() == amount ? 0 : 2;
   final f = NumberFormat.currency(
     name: currency,

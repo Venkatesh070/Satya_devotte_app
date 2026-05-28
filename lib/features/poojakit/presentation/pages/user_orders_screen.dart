@@ -222,7 +222,7 @@ class _OrderCard extends StatelessWidget {
                   const SizedBox(width: 5),
                 ],
                 Text(
-                  '${order.currency} ${order.formattedTotal}',
+                  order.formattedTotal,
                   style: AppTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

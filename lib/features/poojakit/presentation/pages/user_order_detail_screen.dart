@@ -175,7 +175,7 @@ class _OrderItemCard extends StatelessWidget {
               const SizedBox(width: 5),
             ],
             Text(
-              '${order.currency} ${order.formattedTotal}',
+              order.formattedTotal,
               style: AppTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -886,7 +886,7 @@ double _billItemAmount(AdminOrder order) {
 }
 
 String _formatOrderCurrency(double amount, String currency) {
-  final symbol = currency.toUpperCase() == 'ZAR' ? 'R' : currency;
+  final symbol = currency.trim().isEmpty ? 'ZAR' : currency.toUpperCase();
   final decimals = amount.truncateToDouble() == amount ? 0 : 2;
   return '$symbol ${amount.toStringAsFixed(decimals)}';
 }

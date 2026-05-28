@@ -45,9 +45,10 @@ class UserOrdersController extends GetxController {
     try {
       final res = await _repo.getMyOrders(page: _page.value);
       if (refresh) {
-        _orders.assignAll(res.items);
+        _orders.assignAll(_dedupeOrders(res.items));
       } else {
-        _orders.addAll(res.items);
+        final seen = _orders.map((order) => order.id).toSet();
+        _orders.addAll(res.items.where((order) => seen.add(order.id)));
       }
       _totalPages.value = res.totalPages;
       _total.value = res.total;
@@ -56,6 +57,11 @@ class UserOrdersController extends GetxController {
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  List<AdminOrder> _dedupeOrders(List<AdminOrder> source) {
+    final seen = <String>{};
+    return source.where((order) => seen.add(order.id)).toList();
   }
 
   Future<void> loadNextPage() async {
