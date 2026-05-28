@@ -155,7 +155,7 @@ class _HistoryList extends StatelessWidget {
           } catch (_) {}
         }
 
-        final currentStepIndex = session['currentStep'] ?? 0;
+        final currentStepIndex = _intValue(session['currentStep']);
         final poojaSteps = pooja['steps'] is List ? pooja['steps'] as List : [];
         final totalStepsFromPooja = poojaSteps.length;
         final totalStepsFromSession =
@@ -172,7 +172,7 @@ class _HistoryList extends StatelessWidget {
         }
 
         String stepLabel = '';
-        if (session['status'] == 'PENDING') {
+        if (_isInProgress(session)) {
           if (currentStepIndex < offset) {
             stepLabel = 'Preparation';
           } else {
@@ -186,11 +186,10 @@ class _HistoryList extends StatelessWidget {
           }
         }
 
-        final isFinished = session['status'] == 'FINISHED';
+        final isFinished = _isFinished(session);
         final statusColor = isFinished
             ? const Color(0xFF10B981)
             : const Color(0xFFF59E0B);
-        final statusBg = statusColor.withOpacity(0.12);
 
         final deity = pooja['deity'] is Map ? pooja['deity'] as Map : {};
 
@@ -218,21 +217,21 @@ class _HistoryList extends StatelessWidget {
               child: InkWell(
                 onTap: () {
                   final poojaData = session['pooja'];
-                  if (poojaData is! Map<String, dynamic>) return;
+                  if (poojaData is! Map) return;
+                  final poojaMap = Map<String, dynamic>.from(poojaData);
+                  final sessionId = (session['_id'] ?? session['id'])
+                      ?.toString();
 
-                  if (session['status'] == 'PENDING') {
+                  if (_isInProgress(session)) {
                     Get.to(
                       () => PoojaStepWizard(
-                        pooja: PoojaView(poojaData),
+                        pooja: PoojaView(poojaMap),
                         initialStep: currentStepIndex,
-                        sessionId: session['_id'] ?? session['id'],
+                        sessionId: sessionId,
                       ),
                     );
                   } else {
-                    Get.to(
-                      () => const RitualDetailPage(),
-                      arguments: poojaData,
-                    );
+                    Get.to(() => const RitualDetailPage(), arguments: poojaMap);
                   }
                 },
                 borderRadius: BorderRadius.circular(16),
@@ -372,5 +371,24 @@ class _HistoryList extends StatelessWidget {
         );
       },
     );
+  }
+
+  bool _isInProgress(Map session) {
+    final status = session['status']?.toString().toUpperCase().trim();
+    return status == 'PENDING' ||
+        status == 'IN_PROGRESS' ||
+        status == 'INPROGRESS' ||
+        status == 'STARTED';
+  }
+
+  bool _isFinished(Map session) {
+    final status = session['status']?.toString().toUpperCase().trim();
+    return status == 'FINISHED' || status == 'COMPLETED' || status == 'DONE';
+  }
+
+  int _intValue(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

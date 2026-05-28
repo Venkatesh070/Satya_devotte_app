@@ -35,15 +35,16 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   void initState() {
     super.initState();
     _currentPooja = widget.pooja;
-    _currentPage = widget.initialStep ?? 0;
+    _currentPage = _normaliseStep(widget.initialStep);
     _sessionId = widget.sessionId;
-    _pageController = PageController(initialPage: _currentPage);
 
     if (_currentPooja.preparation.isEmpty) {
       _loadFullPooja();
     } else {
       _screens = _buildScreens();
+      _currentPage = _clampStep(_currentPage);
     }
+    _pageController = PageController(initialPage: _currentPage);
 
     if (_sessionId == null) {
       _startSession();
@@ -67,6 +68,10 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       if (mounted) {
         setState(() {
           _screens = _buildScreens();
+          _currentPage = _clampStep(_currentPage);
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(_currentPage);
+          }
           _isLoadingFullPooja = false;
         });
       }
@@ -193,6 +198,16 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     );
 
     return screens;
+  }
+
+  int _normaliseStep(int? step) {
+    if (step == null || step < 0) return 0;
+    return step;
+  }
+
+  int _clampStep(int step) {
+    if (_screens.isEmpty) return 0;
+    return step.clamp(0, _screens.length - 1).toInt();
   }
 
   List<String> _stringList(dynamic raw) {

@@ -114,7 +114,7 @@ class ProfilePage extends StatelessWidget {
                           ),
                           ProfileLinkTile(
                             icon: Icons.temple_hindu_outlined,
-                            label: 'Pooja History',
+                            label: 'Puja History',
                             onTap: () =>
                                 Get.to(() => const ProfilePoojaHistoryPage()),
                           ),
