@@ -6,7 +6,6 @@ import 'package:http_parser/http_parser.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
-import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/order_init_data.dart';
@@ -141,21 +140,34 @@ class PoojaKitRepository {
           }
         }
       }
+      final pagination = payload['pagination'] is Map<String, dynamic>
+          ? payload['pagination'] as Map<String, dynamic>
+          : const <String, dynamic>{};
 
       return AdminOrdersPage(
         items: items,
-        page: int.tryParse(payload['page']?.toString() ?? '1') ?? 1,
-        limit: int.tryParse(payload['limit']?.toString() ?? '10') ?? 10,
+        page:
+            int.tryParse(
+              (pagination['page'] ?? payload['page'] ?? '1').toString(),
+            ) ??
+            1,
+        limit:
+            int.tryParse(
+              (pagination['limit'] ?? payload['limit'] ?? '10').toString(),
+            ) ??
+            10,
         total:
             int.tryParse(
-              payload['total']?.toString() ??
+              pagination['total']?.toString() ??
+                  payload['total']?.toString() ??
                   payload['totalItems']?.toString() ??
                   items.length.toString(),
             ) ??
             items.length,
         totalPages:
             int.tryParse(
-              payload['totalPages']?.toString() ??
+              pagination['totalPages']?.toString() ??
+                  payload['totalPages']?.toString() ??
                   payload['pages']?.toString() ??
                   '1',
             ) ??

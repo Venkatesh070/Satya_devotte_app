@@ -106,7 +106,8 @@ class _OrderCard extends StatelessWidget {
     final title = item?.title.trim().isNotEmpty == true
         ? item!.title
         : 'Lakshmi Puja Kit';
-    final count = order.items.fold<int>(0, (sum, e) => sum + e.qty);
+    final itemCount = order.items.length;
+    final qty = item?.qty ?? 0;
     final isDelivered =
         order.orderStatus == OrderStatus.delivered ||
         order.orderStatus == OrderStatus.fulfilled;
@@ -178,9 +179,11 @@ class _OrderCard extends StatelessWidget {
                       const SizedBox(height: 7),
 
                       _Bullet(
-                        text: count == 0
+                        text: itemCount > 1
+                            ? '$itemCount products in this order.'
+                            : qty == 0
                             ? 'Puja kit essentials included.'
-                            : '$count items required for performing the puja.',
+                            : 'Quantity: $qty',
                       ),
                       const _Bullet(text: 'Sufficient for 2 members.'),
                       const SizedBox(height: 8),
@@ -193,7 +196,9 @@ class _OrderCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(11),
                         ),
                         child: Text(
-                          'No of items : ${count == 0 ? order.items.length : count}',
+                          itemCount > 1
+                              ? 'No of products : $itemCount'
+                              : 'No of items : ${qty == 0 ? 1 : qty}',
                           style: AppTypography.inter(
                             fontSize: 8,
                             fontWeight: FontWeight.w700,
@@ -206,6 +211,17 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (order.items.length > 1) ...[
+              const SizedBox(height: 10),
+              ...order.items
+                  .skip(1)
+                  .map(
+                    (lineItem) => Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _CompactOrderLine(item: lineItem),
+                    ),
+                  ),
+            ],
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -300,6 +316,64 @@ class _OrderStatusPill extends StatelessWidget {
             color: color,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CompactOrderLine extends StatelessWidget {
+  const _CompactOrderLine({required this.item});
+
+  final OrderLineItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = item.title.trim().isEmpty ? 'Puja Kit' : item.title.trim();
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: item.image.trim().isNotEmpty
+                  ? Image.network(
+                      item.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const _ThumbFallback(),
+                    )
+                  : const _ThumbFallback(),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.lora(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF1C1917),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Qty: ${item.qty}',
+            style: AppTypography.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF6C5B46),
+            ),
+          ),
+        ],
       ),
     );
   }
