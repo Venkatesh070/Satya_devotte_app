@@ -132,8 +132,10 @@ class ProfilePage extends StatelessWidget {
                             isDestructive: true,
                             onTap: () => showProfileDeleteAccountSheet(
                               userName: profileController.userName,
-                              onConfirm: () async {
-                                final ok = await authController.deleteAccount();
+                              onConfirm: (comment) async {
+                                final ok = await authController.deleteAccount(
+                                  comment: comment,
+                                );
                                 if (ok) {
                                   Get.offAllNamed(AppRoutes.login);
                                   Get.snackbar(
