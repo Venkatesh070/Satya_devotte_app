@@ -240,6 +240,14 @@ class _HomePageState extends State<HomePage> {
     await Get.toNamed(AppRoutes.rituals);
   }
 
+  Future<void> _openFestivalsCalendarTab() async {
+    final controller = Get.isRegistered<CalendarController>()
+        ? Get.find<CalendarController>()
+        : Get.put(CalendarController());
+    controller.setActiveTab(CalendarFilterTab.festivals);
+    await _onTabSelected(2);
+  }
+
   Future<void> _onPujaItemTap(HomeCircleItem item) async {
     final id = item.id?.trim() ?? '';
     final args = <String, dynamic>{
@@ -271,7 +279,7 @@ class _HomePageState extends State<HomePage> {
       controller.focusedDate.value = DateTime(date.year, date.month);
     }
 
-    await _onTabSelected(3);
+    await _onTabSelected(2);
   }
 
   DateTime? _parseHomeItemDate(HomeCircleItem item) {
@@ -515,10 +523,10 @@ class _HomePageState extends State<HomePage> {
             poojasCompleted: _poojasCompleted,
             dayStreak: _dayStreak,
             onPoojasViewMore: _openPoojasTabFromViewMore,
+            onFestivalsViewMore: _openFestivalsCalendarTab,
             onPujaTap: _onPujaItemTap,
             onFestivalTap: _onFestivalItemTap,
           ),
-          PoojaKitPage(onBack: () => _onTabSelected(0)),
           const RitualListPage(),
           const CalendarPage(),
           const ProfilePage(),
@@ -557,7 +565,9 @@ class _HomePageState extends State<HomePage> {
             Positioned(
               left: 0,
               bottom: MediaQuery.paddingOf(context).bottom + 26,
-              child: _StickyShopButton(onTap: () => _onTabSelected(1)),
+              child: _StickyShopButton(
+                onTap: () => Get.to(() => const PoojaKitPage()),
+              ),
             ),
           ],
         ),
@@ -582,6 +592,7 @@ class _HomeTabContent extends StatefulWidget {
     required this.poojasCompleted,
     required this.dayStreak,
     required this.onPoojasViewMore,
+    required this.onFestivalsViewMore,
     required this.onPujaTap,
     required this.onFestivalTap,
   });
@@ -600,6 +611,7 @@ class _HomeTabContent extends StatefulWidget {
   final int poojasCompleted;
   final int dayStreak;
   final Future<void> Function() onPoojasViewMore;
+  final Future<void> Function() onFestivalsViewMore;
   final Future<void> Function(HomeCircleItem item) onPujaTap;
   final Future<void> Function(HomeCircleItem item) onFestivalTap;
 
@@ -771,11 +783,11 @@ class _HomeTabContentState extends State<_HomeTabContent> {
         );
         return;
       case 'festival':
-        await widget.onOpenTab(3);
+        await widget.onOpenTab(2);
         return;
       case 'ritual':
       default:
-        await widget.onOpenTab(2);
+        await widget.onOpenTab(1);
     }
   }
 
@@ -822,6 +834,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                       poojasCompleted: widget.poojasCompleted,
                       dayStreak: widget.dayStreak,
                       onPoojasViewMore: widget.onPoojasViewMore,
+                      onFestivalsViewMore: widget.onFestivalsViewMore,
                       onPujaTap: widget.onPujaTap,
                       onFestivalTap: widget.onFestivalTap,
                     ),
@@ -844,6 +857,7 @@ class _HomeBodySections extends StatelessWidget {
     required this.poojasCompleted,
     required this.dayStreak,
     required this.onPoojasViewMore,
+    required this.onFestivalsViewMore,
     required this.onPujaTap,
     required this.onFestivalTap,
   });
@@ -854,6 +868,7 @@ class _HomeBodySections extends StatelessWidget {
   final int poojasCompleted;
   final int dayStreak;
   final Future<void> Function() onPoojasViewMore;
+  final Future<void> Function() onFestivalsViewMore;
   final Future<void> Function(HomeCircleItem item) onPujaTap;
   final Future<void> Function(HomeCircleItem item) onFestivalTap;
 
@@ -884,6 +899,7 @@ class _HomeBodySections extends StatelessWidget {
             items: festivals,
             useWrap: false,
             onItemTap: (item) => onFestivalTap(item),
+            onViewMoreTap: onFestivalsViewMore,
           ),
         ),
         const SizedBox(height: 28),
@@ -921,7 +937,7 @@ class _AchievementsSection extends StatelessWidget {
             Expanded(
               child: _AchievementCard(
                 value: poojasCompleted,
-                label: 'Poojas Completed',
+                label: 'Pujas Completed',
               ),
             ),
             const SizedBox(width: 12),
@@ -1042,7 +1058,7 @@ class _BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final PageController pageController;
   final Future<void> Function(int) onTap;
-  static const int lastTabIndex = 4;
+  static const int lastTabIndex = 3;
 
   @override
   State<_BottomNavBar> createState() => _BottomNavBarState();
@@ -1120,8 +1136,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
       height: 94,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const slotWidth =
-              72.0; // Reduced slotWidth to fit 5 items comfortably
+          const slotWidth = 72.0;
           const firstSlotLeft = 78.0;
           return AnimatedBuilder(
             animation: widget.pageController,
@@ -1138,11 +1153,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
               final horizontalShift =
                   pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
                   slotWidth;
-              // The fixed Shop chip overlays this rail, so tabs intentionally
-              // start underneath it and slide behind it while the rail moves.
               final homeLeft = firstSlotLeft - horizontalShift;
-              final poojaKitLeft = homeLeft + slotWidth;
-              final poojasLeft = poojaKitLeft + slotWidth;
+              final poojasLeft = homeLeft + slotWidth;
               final calendarLeft = poojasLeft + slotWidth;
               final profileLeft = calendarLeft + slotWidth;
               return GestureDetector(
@@ -1184,20 +1196,6 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                     ),
                     Positioned(
                       top: _tabTopOffset(
-                        centerX: poojaKitLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: poojaKitLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.shopping_bag_outlined,
-                        label: 'Pooja Kit',
-                        selected: widget.currentIndex == 1,
-                        onTap: () => _settleToIndex(1),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
                         centerX: poojasLeft + (slotWidth / 2),
                         totalWidth: constraints.maxWidth,
                       ),
@@ -1206,8 +1204,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.local_fire_department_outlined,
                         label: 'Deities',
-                        selected: widget.currentIndex == 2,
-                        onTap: () => _settleToIndex(2),
+                        selected: widget.currentIndex == 1,
+                        onTap: () => _settleToIndex(1),
                       ),
                     ),
                     Positioned(
@@ -1220,8 +1218,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.calendar_today_outlined,
                         label: 'Calendar',
-                        selected: widget.currentIndex == 3,
-                        onTap: () => _settleToIndex(3),
+                        selected: widget.currentIndex == 2,
+                        onTap: () => _settleToIndex(2),
                       ),
                     ),
                     Positioned(
@@ -1234,8 +1232,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.person_outline,
                         label: 'Profile',
-                        selected: widget.currentIndex == 4,
-                        onTap: () => _settleToIndex(4),
+                        selected: widget.currentIndex == 3,
+                        onTap: () => _settleToIndex(3),
                       ),
                     ),
                   ],
@@ -1354,8 +1352,8 @@ class _HomeHeader extends StatelessWidget {
                               clipBehavior: Clip.none,
                               children: [
                                 Container(
-                                  width: 48,
-                                  height: 48,
+                                  width: 38,
+                                  height: 38,
                                   decoration: const BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle,
@@ -1414,12 +1412,12 @@ class _HomeHeader extends StatelessWidget {
                       displayName,
                       style: AppTypography.lora(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.w400,
                         height: 1.15,
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 10),
                     _GlobalSearchField(
                       controller: searchController,
                       onChanged: onSearchChanged,
@@ -1427,9 +1425,9 @@ class _HomeHeader extends StatelessWidget {
                       onClear: onClearSearch,
                     ),
                     if (!isSearchMode) ...[
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 10),
                       const _HeaderDivider(),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       _QuoteCard(
                         quote: dailySloka,
                         author: slokaAuthor,
@@ -1883,7 +1881,7 @@ class _QuoteCard extends StatefulWidget {
 }
 
 class _QuoteCardState extends State<_QuoteCard> {
-  int _selectedTab = 0;
+  int _selectedTab = -1;
 
   static const double _cardRadius = 16;
   static const double _flowerSize = 100;
@@ -1893,6 +1891,10 @@ class _QuoteCardState extends State<_QuoteCard> {
 
   String get _tabText {
     switch (_selectedTab) {
+      case 0:
+        return widget.meaning.trim().isNotEmpty
+            ? widget.meaning.trim()
+            : 'No meaning available.';
       case 1:
         return widget.contemplation.trim().isNotEmpty
             ? widget.contemplation.trim()
@@ -1901,11 +1903,8 @@ class _QuoteCardState extends State<_QuoteCard> {
         return widget.prayer.trim().isNotEmpty
             ? widget.prayer.trim()
             : 'No prayer available.';
-      case 0:
       default:
-        return widget.meaning.trim().isNotEmpty
-            ? widget.meaning.trim()
-            : widget.quote;
+        return widget.quote;
     }
   }
 
@@ -2047,7 +2046,6 @@ class _SlokaTabBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const selectedBorder = Color(0xFFFFEF11);
     const selectedGradient = LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
@@ -2096,12 +2094,10 @@ class _SlokaTabBtn extends StatelessWidget {
           if (selected)
             const Positioned.fill(
               child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: selectedBorder, width: 1.4),
-                      right: BorderSide(color: selectedBorder, width: 1.4),
-                    ),
+                child: CustomPaint(
+                  painter: _TopRightChipBorderPainter(
+                    radius: 10,
+                    strokeWidth: 1.2,
                   ),
                 ),
               ),
@@ -2109,6 +2105,76 @@ class _SlokaTabBtn extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TopRightChipBorderPainter extends CustomPainter {
+  const _TopRightChipBorderPainter({
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final double radius;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final topY = strokeWidth / 2;
+    final rightX = size.width - strokeWidth / 2;
+
+    final topPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: const [Color(0x00FFEF11), Color(0x55FFEF11), Color(0xFFFFEF11)],
+        stops: const [0.0, 0.72, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, strokeWidth));
+
+    final topPath = Path()
+      ..moveTo(radius, topY)
+      ..lineTo(size.width - radius, topY)
+      ..arcToPoint(
+        Offset(rightX, radius),
+        radius: Radius.circular(radius),
+        clockwise: true,
+      );
+    canvas.drawPath(topPath, topPaint);
+
+    final rightPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [
+              Color(0xFFFFEF11),
+              Color(0x66FFEF11),
+              Color(0x00FFEF11),
+            ],
+            stops: const [0.0, 0.35, 1.0],
+          ).createShader(
+            Rect.fromLTWH(
+              size.width - strokeWidth,
+              0,
+              strokeWidth,
+              size.height,
+            ),
+          );
+
+    canvas.drawLine(
+      Offset(rightX, radius),
+      Offset(rightX, size.height - 2),
+      rightPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TopRightChipBorderPainter oldDelegate) {
+    return oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }
 
@@ -2387,7 +2453,7 @@ class _BottomItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: selected
-                        ? Colors.white.withOpacity(0.14)
+                        ? Colors.white.withValues(alpha: 0.14)
                         : Colors.transparent,
                     border: Border.all(
                       color: selected
