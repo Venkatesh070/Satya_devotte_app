@@ -154,9 +154,25 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
             }
 
             // List (mobile) or Table (web)
-            return isWeb
-                ? _UsersTable(users: users, onRefresh: _ctrl.loadRegularUsers)
-                : _UsersList(users: users, onRefresh: _ctrl.loadRegularUsers);
+            return Column(
+              children: [
+                Expanded(
+                  child: isWeb
+                      ? _UsersTable(
+                          users: users,
+                          onRefresh: () => _ctrl.loadRegularUsers(),
+                        )
+                      : _UsersList(
+                          users: users,
+                          onRefresh: () => _ctrl.loadRegularUsers(),
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: _UsersPaginationBar(ctrl: _ctrl),
+                ),
+              ],
+            );
           }),
         ),
       ],
@@ -701,36 +717,223 @@ class _DetailTile extends StatelessWidget {
   );
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.label, this.value);
-  final String label;
-  final String value;
+class _UsersPaginationBar extends StatelessWidget {
+  const _UsersPaginationBar({required this.ctrl});
+  final AdminController ctrl;
+
+  static const _pageSizes = [10, 25, 50, 100];
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 70,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: CmsColors.textSecond,
-              fontWeight: FontWeight.w500,
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isWide = MediaQuery.of(context).size.width >= 768;
+      final page = ctrl.regularUsersPage;
+      final size = ctrl.regularUsersPageSize;
+      final totalPages = ctrl.regularUsersTotalPages;
+      final totalRows = ctrl.regularUsersTotal;
+      final start = totalRows == 0 ? 0 : (page - 1) * size + 1;
+      final end = (page * size).clamp(0, totalRows);
+
+      final children = <Widget>[
+        Text(
+          'Showing $start-$end of $totalRows',
+          style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+        const SizedBox(width: 18),
+        const Text(
+          'Rows per page:',
+          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _pageSizes.contains(size) ? size : _pageSizes.first,
+              isDense: true,
+              style: const TextStyle(
+                fontSize: 12,
+                color: CmsColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              items: _pageSizes
+                  .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
+                  .toList(),
+              onChanged: ctrl.isLoadingRegularUsers
+                  ? null
+                  : (v) {
+                      if (v != null) {
+                        ctrl.setRegularUsersPageSize(v);
+                      }
+                    },
             ),
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12,
-            color: CmsColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+      ];
+
+      final pager = <Widget>[
+        _UsersPagerBtn(
+          icon: Icons.chevron_left,
+          enabled: page > 1 && !ctrl.isLoadingRegularUsers,
+          onTap: () => ctrl.setRegularUsersPage(page - 1),
         ),
-      ],
+        for (final n in _pageRange(page, totalPages))
+          n == -1
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    '...',
+                    style: TextStyle(color: CmsColors.textSecond),
+                  ),
+                )
+              : _UsersPageNumberBtn(
+                  number: n,
+                  isActive: n == page,
+                  onTap: () => ctrl.setRegularUsersPage(n),
+                ),
+        _UsersPagerBtn(
+          icon: Icons.chevron_right,
+          enabled: page < totalPages && !ctrl.isLoadingRegularUsers,
+          onTap: () => ctrl.setRegularUsersPage(page + 1),
+        ),
+      ];
+
+      if (isWide) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: CmsColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Row(
+            children: [
+              ...children,
+              const Spacer(),
+              ...pager.map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: w,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Column(
+          children: [
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
+              children: children,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
+              children: pager,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  List<int> _pageRange(int current, int total) {
+    if (total <= 7) return [for (int i = 1; i <= total; i++) i];
+    final out = <int>[1];
+    final start = (current - 1).clamp(2, total - 4);
+    final end = (current + 1).clamp(5, total - 1);
+    if (start > 2) out.add(-1);
+    for (int i = start; i <= end; i++) {
+      out.add(i);
+    }
+    if (end < total - 1) out.add(-1);
+    out.add(total);
+    return out;
+  }
+}
+
+class _UsersPagerBtn extends StatelessWidget {
+  const _UsersPagerBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: enabled ? onTap : null,
+    child: Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: enabled ? CmsColors.white : CmsColors.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Icon(
+        icon,
+        size: 18,
+        color: enabled ? CmsColors.textPrimary : CmsColors.textSecond,
+      ),
+    ),
+  );
+}
+
+class _UsersPageNumberBtn extends StatelessWidget {
+  const _UsersPageNumberBtn({
+    required this.number,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final int number;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isActive ? CmsColors.orange : CmsColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive ? CmsColors.orange : CmsColors.border,
+        ),
+      ),
+      child: Text(
+        '$number',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: isActive ? Colors.white : CmsColors.textPrimary,
+        ),
+      ),
     ),
   );
 }

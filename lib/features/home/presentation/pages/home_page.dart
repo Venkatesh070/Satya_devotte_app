@@ -19,6 +19,7 @@ import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_d
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
+import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
@@ -60,6 +61,9 @@ class _HomePageState extends State<HomePage> {
     _pageController = PageController(initialPage: _currentIndex);
     _fetchHomeDataIfNeeded();
     _fetchAchievementsData(recordStreak: true);
+    if (Get.isRegistered<UserNotificationsBadgeController>()) {
+      unawaited(Get.find<UserNotificationsBadgeController>().refreshUnreadBadge());
+    }
   }
 
   @override
@@ -1137,7 +1141,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           const slotWidth = 72.0;
-          const firstSlotLeft = 78.0;
+          final centeredSlotLeft = (constraints.maxWidth - slotWidth) / 2;
           return AnimatedBuilder(
             animation: widget.pageController,
             builder: (context, _) {
@@ -1153,7 +1157,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
               final horizontalShift =
                   pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
                   slotWidth;
-              final homeLeft = firstSlotLeft - horizontalShift;
+              final homeLeft = centeredSlotLeft - horizontalShift;
               final poojasLeft = homeLeft + slotWidth;
               final calendarLeft = poojasLeft + slotWidth;
               final profileLeft = calendarLeft + slotWidth;
@@ -1332,15 +1336,39 @@ class _HomeHeader extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        SvgPicture.asset(
-                          'assets/svgs/bell.svg',
-                          width: 18,
-                          height: 18,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        ),
+                        Obx(() {
+                          final badgeCtrl =
+                              Get.find<UserNotificationsBadgeController>();
+                          return GestureDetector(
+                            onTap: () => Get.toNamed(AppRoutes.notifications),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/svgs/bell.svg',
+                                  width: 18,
+                                  height: 18,
+                                  colorFilter: const ColorFilter.mode(
+                                    Colors.white,
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
+                                if (badgeCtrl.hasUnread.value)
+                                  const Positioned(
+                                    right: -2,
+                                    top: -2,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFE44D4D),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: SizedBox(width: 8, height: 8),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
                         const SizedBox(width: 12),
                         // Cart icon (with count badge) for Pooja Kit.
                         Obx(() {

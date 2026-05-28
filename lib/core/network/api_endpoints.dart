@@ -46,6 +46,7 @@ class ApiEndpoints {
   static const String search = '/api/v1/search';
   static const String calendar = '/api/v1/calendar';
   static const String subscribeNotification = '/api/v1/notifications/subscribe';
+  static const String userNotifications = '/api/v1/user/notifications';
 
   // ── User Pooja History ────────────────────────────────────
   static const String userPoojaHistory = '/api/v1/user/pooja-history';

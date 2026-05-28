@@ -300,7 +300,7 @@ class _SlokaCard extends StatelessWidget {
         ctrl.selectedDate.day == now.day &&
         ctrl.selectedDate.month == now.month &&
         ctrl.selectedDate.year == now.year;
-    final title = isToday ? "Today's Sloka" : 'Sloka — ${ctrl.selectedDateStr}';
+    final title = isToday ? "Today's Shloka" : 'Shloka — ${ctrl.selectedDateStr}';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -479,7 +479,7 @@ class _RecentList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Recent Slokas',
+            'Recent Shlokas',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -708,8 +708,8 @@ class _SlokaFormState extends State<_SlokaForm> {
                 const SizedBox(width: 12),
                 Text(
                   existing != null
-                      ? 'Edit Sloka — ${widget.ctrl.selectedDateStr}'
-                      : 'Set Sloka — ${widget.ctrl.selectedDateStr}',
+                      ? 'Edit Shloka — ${widget.ctrl.selectedDateStr}'
+                      : 'Set Shloka — ${widget.ctrl.selectedDateStr}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,

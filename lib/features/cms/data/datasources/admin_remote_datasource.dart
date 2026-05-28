@@ -9,6 +9,13 @@ class AdminRemoteDataSource {
   AdminRemoteDataSource(this._apiClient);
   final ApiClient _apiClient;
 
+  int _asInt(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
   List<dynamic> _list(dynamic body) {
     if (body is List) return body;
     if (body is! Map) return [];
@@ -75,6 +82,69 @@ class AdminRemoteDataSource {
     return _list(
       res.data as Map<String, dynamic>,
     ).map((e) => AdminModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// GET /admin/regular-users?page=&limit= — paginated users list.
+  Future<({List<AdminModel> items, int page, int limit, int total, int totalPages})>
+  getRegularUsersPage({
+    int page = 1,
+    int limit = 10,
+  }) async {
+    final res = await _apiClient.dio.get<Map<String, dynamic>>(
+      '/api/v1/admin/regular-users',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final body = res.data;
+    if (body == null) {
+      return (
+        items: const <AdminModel>[],
+        page: page,
+        limit: limit,
+        total: 0,
+        totalPages: 1,
+      );
+    }
+    final items = _list(body)
+        .whereType<Map>()
+        .map((e) => AdminModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
+
+    final data = body['data'];
+    final dataMap = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final pagination = dataMap['pagination'];
+    final paginationMap = pagination is Map<String, dynamic>
+        ? pagination
+        : const <String, dynamic>{};
+
+    final resolvedPage = _asInt(
+      paginationMap['page'] ?? dataMap['page'] ?? body['page'],
+      page,
+    );
+    final resolvedLimit = _asInt(
+      paginationMap['limit'] ?? dataMap['limit'] ?? body['limit'],
+      limit,
+    );
+    final resolvedTotal = _asInt(
+      paginationMap['total'] ?? dataMap['total'] ?? body['total'],
+      items.length,
+    );
+    final fallbackPages = resolvedLimit <= 0
+        ? 1
+        : ((resolvedTotal + resolvedLimit - 1) ~/ resolvedLimit).clamp(1, 999999);
+    final resolvedTotalPages = _asInt(
+      paginationMap['totalPages'] ?? dataMap['totalPages'] ?? body['totalPages'],
+      fallbackPages,
+    );
+
+    return (
+      items: items,
+      page: resolvedPage,
+      limit: resolvedLimit,
+      total: resolvedTotal,
+      totalPages: resolvedTotalPages < 1 ? 1 : resolvedTotalPages,
+    );
   }
 
   /// POST /superadmin/admins — invite a new admin (Super Admin only).

@@ -16,6 +16,10 @@ class AdminController extends GetxController {
   final _isLoadingRegularUsers = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
+  final _regularUsersPage = 1.obs;
+  final _regularUsersPageSize = 10.obs;
+  final _regularUsersTotal = 0.obs;
+  final _regularUsersTotalPages = 1.obs;
   // Admin IDs that are currently mid-flight for the panel-access toggle.
   // The UI watches this set to disable / spin the corresponding switch.
   final _panelAccessPendingIds = <String>{}.obs;
@@ -28,6 +32,10 @@ class AdminController extends GetxController {
   bool get isLoading => _isLoadingAdmins.value || _isLoadingRegularUsers.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
+  int get regularUsersPage => _regularUsersPage.value;
+  int get regularUsersPageSize => _regularUsersPageSize.value;
+  int get regularUsersTotal => _regularUsersTotal.value;
+  int get regularUsersTotalPages => _regularUsersTotalPages.value;
   bool isPanelAccessPending(String id) => _panelAccessPendingIds.contains(id);
   bool isPasswordResetPending(String id) =>
       _passwordResetPendingIds.contains(id);
@@ -75,17 +83,37 @@ class AdminController extends GetxController {
     }
   }
 
-  Future<void> loadRegularUsers() async {
+  Future<void> loadRegularUsers({int? page, int? limit}) async {
     _isLoadingRegularUsers.value = true;
+    final targetPage = page ?? _regularUsersPage.value;
+    final targetLimit = limit ?? _regularUsersPageSize.value;
     try {
-      final result = await _dataSource.getRegularUsers();
-      _regularUsers.assignAll(result);
+      final result = await _dataSource.getRegularUsersPage(
+        page: targetPage,
+        limit: targetLimit,
+      );
+      _regularUsers.assignAll(result.items);
+      _regularUsersPage.value = result.page;
+      _regularUsersPageSize.value = result.limit;
+      _regularUsersTotal.value = result.total;
+      _regularUsersTotalPages.value = result.totalPages;
     } catch (e) {
       _error.value = _parseError(e);
       print('loadRegularUsers error: $e');
     } finally {
       _isLoadingRegularUsers.value = false;
     }
+  }
+
+  Future<void> setRegularUsersPage(int page) async {
+    final target = page.clamp(1, _regularUsersTotalPages.value);
+    if (target == _regularUsersPage.value) return;
+    await loadRegularUsers(page: target);
+  }
+
+  Future<void> setRegularUsersPageSize(int size) async {
+    if (size <= 0 || size == _regularUsersPageSize.value) return;
+    await loadRegularUsers(page: 1, limit: size);
   }
 
   /// Invites a new admin via Super Admin API `POST /superadmin/admins`.

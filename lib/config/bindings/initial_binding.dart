@@ -38,6 +38,8 @@ import 'package:satya_devotte_app/features/admin_notifications/data/admin_notifi
 import 'package:satya_devotte_app/features/admin_notifications/data/admin_notifications_repository.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/notifications/data/notifications_repository.dart';
+import 'package:satya_devotte_app/features/notifications/data/user_notifications_repository.dart';
+import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
@@ -271,6 +273,14 @@ class InitialBinding extends Bindings {
     // ── CMS Notifications (admin broadcast send + history) ───────
     Get.put<NotificationsRepository>(
       NotificationsRepository(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<UserNotificationsRepository>(
+      UserNotificationsRepository(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<UserNotificationsBadgeController>(
+      UserNotificationsBadgeController(Get.find<UserNotificationsRepository>()),
       permanent: true,
     );
     Get.lazyPut<CmsNotificationsController>(
