@@ -885,93 +885,95 @@ class _MapBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        OutlinedButton.icon(
-          onPressed: isLocating ? null : onCurrentLocationTap,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF4A1C00),
-            side: const BorderSide(color: Color(0xFFE8E0D6)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          icon: isLocating
-              ? const SizedBox(
-                  width: 13,
-                  height: 13,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.my_location, size: 14),
-          label: Text(
-            isLocating ? 'Locating...' : 'Current Location',
-            style: AppTypography.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1F000000),
-                blurRadius: 18,
-                offset: Offset(0, 8),
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OutlinedButton.icon(
+            onPressed: isLocating ? null : onCurrentLocationTap,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF4A1C00),
+              side: const BorderSide(color: Color(0xFFE8E0D6)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
+            ),
+            icon: isLocating
+                ? const SizedBox(
+                    width: 13,
+                    height: 13,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.my_location, size: 14),
+            label: Text(
+              isLocating ? 'Locating...' : 'Current Location',
+              style: AppTypography.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isResolvingPin
-                    ? 'Finding address...'
-                    : 'Place the pin at exact delivery location',
-                style: AppTypography.inter(
-                  fontSize: 10,
-                  fontStyle: FontStyle.italic,
-                  color: const Color(0xFF9B958E),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x1F000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    size: 18,
-                    color: Color(0xFF253FA8),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isResolvingPin
+                      ? 'Finding address...'
+                      : 'Place the pin at exact delivery location',
+                  style: AppTypography.inter(
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                    color: const Color(0xFF9B958E),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      locationText,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        height: 1.35,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4A1C00),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                      color: Color(0xFF253FA8),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        locationText,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 10,
+                          height: 1.35,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF4A1C00),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              _GradientButton(label: 'Confirm and Proceed', onTap: onConfirm),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _GradientButton(label: 'Confirm and Proceed', onTap: onConfirm),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -179,18 +179,6 @@ class _LoginPageState extends State<LoginPage>
                       onTap: () => Get.to(() => const EmailLoginPage()),
                     ),
                     const SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: () => Get.offAllNamed(AppRoutes.home),
-                      child: Text(
-                        'Skip for now',
-                        style: TextStyle(
-                          color: const Color(0xFF6B5730).withOpacity(0.7),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
                   ],
                 );
               }),

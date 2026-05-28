@@ -9,7 +9,6 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_about_page.dart';
-import 'package:satya_devotte_app/features/profile/presentation/pages/profile_achievements_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
@@ -24,17 +23,33 @@ class ProfilePage extends StatelessWidget {
 
     return Obx(() {
       final userData = profileController.resolvedUser;
-      final name = (userData?['fullName'] ?? userData?['name'] ?? 'Devotee')
-          .toString();
-      final phone = (userData?['phone'] ?? 'Not provided').toString();
-      final email = (userData?['email'] ?? 'Not provided').toString();
-      final sunSign = (userData?['sunSign'] ?? 'Not provided').toString();
-      final moonSign = (userData?['moonSign'] ?? 'Not provided').toString();
+
+      String? t(dynamic v) {
+        final s = v?.toString().trim();
+        if (s == null || s.isEmpty) return null;
+        return s;
+      }
+
+      // Prefer the real full name. If backend doesn't send it yet, fall back
+      // to other known keys (and ultimately to controller's best-effort name).
+      final name =
+          (t(userData?['fullName']) ??
+                  t(userData?['full_name']) ??
+                  t(userData?['name']) ??
+                  t(userData?['displayName']) ??
+                  t(profileController.userName) ??
+                  'Devotee')
+              .toString();
+
+      final phone = t(userData?['phone']) ?? t(userData?['phoneNumber']);
+      final email = t(userData?['email']);
+      final sunSign = t(userData?['sunSign']);
+      final moonSign = t(userData?['moonSign']);
       final imageUrl = userData?['imageUrl'] ?? userData?['profileImageUrl'];
 
-      String dob = 'Not provided';
+      String? dob;
       final rawDob = userData?['dateOfBirth'];
-      if (rawDob != null) {
+      if (rawDob != null && rawDob.toString().trim().isNotEmpty) {
         try {
           dob = DateFormat(
             'dd MMM yyyy',
@@ -75,7 +90,7 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 50),
                           const ProfileSectionHeading('Spiritual'),
                           ProfileLinkTile(
                             icon: Icons.inventory_2_outlined,
@@ -103,12 +118,12 @@ class ProfilePage extends StatelessWidget {
                             onTap: () =>
                                 Get.to(() => const ProfilePoojaHistoryPage()),
                           ),
-                          ProfileLinkTile(
-                            icon: Icons.emoji_events_outlined,
-                            label: 'Achievements',
-                            onTap: () =>
-                                Get.to(() => const ProfileAchievementsPage()),
-                          ),
+                          // ProfileLinkTile(
+                          //   icon: Icons.emoji_events_outlined,
+                          //   label: 'Achievements',
+                          //   onTap: () =>
+                          //       Get.to(() => const ProfileAchievementsPage()),
+                          // ),
                           const SizedBox(height: 22),
                           const ProfileSectionHeading('Settings'),
                           ProfileLinkTile(
@@ -198,7 +213,7 @@ class _ProfileHeader extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            height: topPadding + 120,
+            height: topPadding + 150,
             child: const Image(
               image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
               fit: BoxFit.fill,
@@ -207,7 +222,7 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: topPadding + 34,
+            top: topPadding + 64,
             left: 20,
             child: Text(
               'My Profile',
@@ -219,7 +234,7 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: topPadding + 82,
+            top: topPadding + 112,
             child: Column(
               children: [
                 _ProfileAvatar(initials: initials, imageUrl: imageUrl),
@@ -233,11 +248,26 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(width: 74, height: 1, color: const Color(0xFFE6B666)),
+                const _HeaderDivider(),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderDivider extends StatelessWidget {
+  const _HeaderDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Image(
+        image: AssetImage('assets/images/home/divider.png'),
+        width: 145,
+        fit: BoxFit.contain,
       ),
     );
   }
@@ -268,7 +298,6 @@ class _ProfileAvatar extends StatelessWidget {
       ),
       child: ClipOval(
         child: Container(
-          color: const Color(0xFFFFF7EA),
           alignment: Alignment.center,
           child: imageUrl != null && imageUrl!.isNotEmpty
               ? Image.network(
@@ -293,12 +322,16 @@ class _AvatarInitials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      initials,
-      style: AppTypography.lora(
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
-        color: AppColors.gradientStart,
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ).createShader(bounds),
+      blendMode: BlendMode.srcIn,
+      child: Text(
+        initials,
+        style: AppTypography.lora(fontSize: 17, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -313,11 +346,11 @@ class _InfoCard extends StatelessWidget {
     required this.moonSign,
   });
 
-  final String phone;
-  final String email;
-  final String dob;
-  final String sunSign;
-  final String moonSign;
+  final String? phone;
+  final String? email;
+  final String? dob;
+  final String? sunSign;
+  final String? moonSign;
 
   void _openEditProfile(BuildContext context) {
     Navigator.of(
@@ -349,17 +382,44 @@ class _InfoCard extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 46),
             child: Column(
               children: [
-                _InfoRow(Icons.phone_outlined, 'Phone Number', phone),
+                _InfoRow(
+                  Icons.phone_outlined,
+                  'Phone Number',
+                  value: phone,
+                  placeholder: 'Not added',
+                ),
                 const SizedBox(height: 16),
-                _InfoRow(Icons.mail_outline, 'Email ID', email),
+                _InfoRow(
+                  Icons.mail_outline,
+                  'Email ID',
+                  value: email,
+                  placeholder: 'Not added',
+                ),
                 const SizedBox(height: 16),
-                _InfoRow(Icons.calendar_today_outlined, 'Date of Birth', dob),
+                _InfoRow(
+                  Icons.calendar_today_outlined,
+                  'Date of Birth',
+                  value: dob,
+                  placeholder: 'Not set',
+                ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    Expanded(child: _SignBadge('Sun Sign', sunSign)),
+                    Expanded(
+                      child: _SignBadge(
+                        'Sun Sign',
+                        value: sunSign,
+                        placeholder: 'Not set',
+                      ),
+                    ),
                     const SizedBox(width: 18),
-                    Expanded(child: _SignBadge('Moon Sign', moonSign)),
+                    Expanded(
+                      child: _SignBadge(
+                        'Moon Sign',
+                        value: moonSign,
+                        placeholder: 'Not set',
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -403,14 +463,24 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.icon, this.label, this.value);
+  const _InfoRow(
+    this.icon,
+    this.label, {
+    required this.value,
+    required this.placeholder,
+  });
 
   final IconData icon;
   final String label;
-  final String value;
+  final String? value;
+  final String placeholder;
 
   @override
   Widget build(BuildContext context) {
+    final v = (value ?? '').trim();
+    final isMissing = v.isEmpty;
+    final shown = isMissing ? placeholder : v;
+
     return Row(
       children: [
         Container(
@@ -420,7 +490,7 @@ class _InfoRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: DonationUi.cardBorder),
           ),
-          child: Icon(icon, size: 20, color: DonationUi.textMuted),
+          child: Icon(icon, size: 16, color: DonationUi.textMuted),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -436,11 +506,14 @@ class _InfoRow extends StatelessWidget {
                 ),
               ),
               Text(
-                value,
+                shown,
                 style: AppTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: Color(0XFF1C1917),
+                  color: isMissing
+                      ? DonationUi.textMuted
+                      : const Color(0XFF1C1917),
+                  fontStyle: isMissing ? FontStyle.italic : FontStyle.normal,
                 ),
               ),
             ],
@@ -452,13 +525,22 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _SignBadge extends StatelessWidget {
-  const _SignBadge(this.label, this.value);
+  const _SignBadge(
+    this.label, {
+    required this.value,
+    required this.placeholder,
+  });
 
   final String label;
-  final String value;
+  final String? value;
+  final String placeholder;
 
   @override
   Widget build(BuildContext context) {
+    final v = (value ?? '').trim();
+    final isMissing = v.isEmpty;
+    final shown = isMissing ? placeholder : v;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,11 +554,12 @@ class _SignBadge extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          value,
+          shown,
           style: AppTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Color(0XFF1C1917),
+            color: isMissing ? DonationUi.textMuted : const Color(0XFF1C1917),
+            fontStyle: isMissing ? FontStyle.italic : FontStyle.normal,
           ),
         ),
       ],

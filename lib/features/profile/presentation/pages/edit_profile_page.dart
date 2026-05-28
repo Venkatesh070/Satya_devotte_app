@@ -34,8 +34,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String _moonSign = 'Aries';
 
   final List<String> _zodiacSigns = [
-    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+    'Aries',
+    'Taurus',
+    'Gemini',
+    'Cancer',
+    'Leo',
+    'Virgo',
+    'Libra',
+    'Scorpio',
+    'Sagittarius',
+    'Capricorn',
+    'Aquarius',
+    'Pisces',
   ];
 
   ProfileController get _profileController => Get.find<ProfileController>();
@@ -45,11 +55,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void initState() {
     super.initState();
     final user = _profileController.resolvedUser;
-    _fullNameController = TextEditingController(text: user?['fullName'] ?? user?['name'] ?? '');
+    _fullNameController = TextEditingController(
+      text: user?['fullName'] ?? user?['name'] ?? '',
+    );
     _phoneController = TextEditingController(text: user?['phone'] ?? '');
-    _birthPlaceController = TextEditingController(text: user?['placeOfBirth'] ?? '');
+    _birthPlaceController = TextEditingController(
+      text: user?['placeOfBirth'] ?? '',
+    );
     _selectedGender = (user?['gender']?.toString().toUpperCase() ?? 'MALE');
-    if (_selectedGender != 'MALE' && _selectedGender != 'FEMALE' && _selectedGender != 'OTHER') {
+    if (_selectedGender != 'MALE' &&
+        _selectedGender != 'FEMALE' &&
+        _selectedGender != 'OTHER') {
       _selectedGender = 'MALE';
     }
 
@@ -63,7 +79,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       try {
         final parts = user!['timeOfBirth'].toString().split(':');
         if (parts.length == 2) {
-          _timeOfBirth = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+          _timeOfBirth = TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
         }
       } catch (_) {}
     }
@@ -146,24 +165,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final success = await _profileController.updateProfile(payload);
     if (success) {
       Get.back();
-      Get.snackbar('Success', 'Profile updated successfully',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Success',
+        'Profile updated successfully',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } else {
-      Get.snackbar('Error', _profileController.error ?? 'Failed to update profile',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Error',
+        _profileController.error ?? 'Failed to update profile',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: AppColors.appBgColor,
       appBar: AppBar(
-        title: const Text('Edit Profile', style: TextStyle(color: _titleColor, fontFamily: 'serif')),
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(color: _titleColor, fontFamily: 'serif'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: _titleColor, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: _titleColor,
+            size: 20,
+          ),
           onPressed: () => Get.back(),
         ),
       ),
@@ -185,12 +217,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         radius: 50,
                         backgroundColor: _fieldBorder,
                         backgroundImage: _pickedImage != null
-                            ? MemoryImage(Uint8List.fromList(_pickedImage!.bytes))
+                            ? MemoryImage(
+                                Uint8List.fromList(_pickedImage!.bytes),
+                              )
                             : (existingImageUrl != null
-                                ? NetworkImage(existingImageUrl.toString())
-                                : null) as ImageProvider?,
-                        child: (_pickedImage == null && existingImageUrl == null)
-                            ? const Icon(Icons.person, size: 50, color: Colors.white)
+                                      ? NetworkImage(
+                                          existingImageUrl.toString(),
+                                        )
+                                      : null)
+                                  as ImageProvider?,
+                        child:
+                            (_pickedImage == null && existingImageUrl == null)
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: Colors.white,
+                              )
                             : null,
                       ),
                       Positioned(
@@ -204,7 +246,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               color: AppColors.gradientStart,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -215,7 +261,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 TextFormField(
                   controller: _fullNameController,
                   decoration: _inputDecoration('Full Name'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Full name is required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Full name is required'
+                      : null,
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
@@ -226,19 +274,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     DropdownMenuItem(value: 'OTHER', child: Text('Other')),
                   ],
                   decoration: _inputDecoration('Gender'),
-                  onChanged: isLoading ? null : (v) => setState(() => _selectedGender = v!),
+                  onChanged: isLoading
+                      ? null
+                      : (v) => setState(() => _selectedGender = v!),
                 ),
                 const SizedBox(height: 15),
                 _PickerField(
                   label: 'Date of Birth',
-                  value: _dateOfBirth == null ? null : DateFormat('dd MMM yyyy').format(_dateOfBirth!),
+                  value: _dateOfBirth == null
+                      ? null
+                      : DateFormat('dd MMM yyyy').format(_dateOfBirth!),
                   icon: Icons.calendar_today,
                   onTap: isLoading ? null : _pickDob,
                 ),
                 const SizedBox(height: 15),
                 _PickerField(
                   label: 'Time of Birth',
-                  value: _timeOfBirth == null ? null : _timeOfBirth!.format(context),
+                  value: _timeOfBirth == null
+                      ? null
+                      : _timeOfBirth!.format(context),
                   icon: Icons.access_time,
                   onTap: isLoading ? null : _pickTob,
                 ),
@@ -246,7 +300,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 TextFormField(
                   controller: _birthPlaceController,
                   decoration: _inputDecoration('Place of Birth'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Place of birth is required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Place of birth is required'
+                      : null,
                 ),
                 const SizedBox(height: 15),
                 Row(
@@ -254,18 +310,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _sunSign,
-                        items: _zodiacSigns.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        items: _zodiacSigns
+                            .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)),
+                            )
+                            .toList(),
                         decoration: _inputDecoration('Sun Sign'),
-                        onChanged: isLoading ? null : (v) => setState(() => _sunSign = v!),
+                        onChanged: isLoading
+                            ? null
+                            : (v) => setState(() => _sunSign = v!),
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _moonSign,
-                        items: _zodiacSigns.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        items: _zodiacSigns
+                            .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)),
+                            )
+                            .toList(),
                         decoration: _inputDecoration('Moon Sign'),
-                        onChanged: isLoading ? null : (v) => setState(() => _moonSign = v!),
+                        onChanged: isLoading
+                            ? null
+                            : (v) => setState(() => _moonSign = v!),
                       ),
                     ),
                   ],
@@ -275,7 +343,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: _inputDecoration('Phone Number'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Phone number is required' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Phone number is required'
+                      : null,
                 ),
                 const SizedBox(height: 40),
                 CustomButton(
@@ -283,7 +353,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   isLoading: isLoading,
                   enabled: !isLoading,
                   borderRadius: 12,
-                  gradientColors: const [AppColors.gradientStart, AppColors.gradientEnd],
+                  gradientColors: const [
+                    AppColors.gradientStart,
+                    AppColors.gradientEnd,
+                  ],
                   textColor: Colors.white,
                   onTap: _submit,
                 ),
@@ -303,16 +376,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
       filled: true,
       fillColor: _fieldColor,
       labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _fieldBorder)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _fieldBorder)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.gradientStart)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _fieldBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _fieldBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.gradientStart),
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
     );
   }
 }
 
 class _PickerField extends StatelessWidget {
-  const _PickerField({required this.label, required this.value, required this.icon, required this.onTap});
+  const _PickerField({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
+  });
   final String label;
   final String? value;
   final IconData icon;
@@ -329,12 +416,26 @@ class _PickerField extends StatelessWidget {
           filled: true,
           fillColor: const Color(0xFFFFFBF3),
           labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0D6C2))),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0D6C2))),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 15,
+            vertical: 15,
+          ),
           suffixIcon: Icon(icon, size: 20, color: const Color(0xFF8F8574)),
         ),
-        child: Text(value ?? 'Select', style: TextStyle(color: value == null ? Colors.black54 : const Color(0xFF1F1F1F))),
+        child: Text(
+          value ?? 'Select',
+          style: TextStyle(
+            color: value == null ? Colors.black54 : const Color(0xFF1F1F1F),
+          ),
+        ),
       ),
     );
   }

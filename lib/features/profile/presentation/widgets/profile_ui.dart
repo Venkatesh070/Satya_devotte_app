@@ -44,19 +44,16 @@ class ProfileLinkTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
+
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF2DC),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: isDestructive
-                        ? const Color(0xFFB45026)
-                        : const Color(0xFFC28335),
-                  ),
+                  child: Icon(icon, size: 16, color: DonationUi.textMuted),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -95,7 +92,7 @@ class ProfileSectionHeading extends StatelessWidget {
       child: Text(
         title,
         style: AppTypography.lora(
-          fontSize: 12,
+          fontSize: 16,
           fontWeight: FontWeight.w500,
           color: Color(0XFF1C1917),
         ),
