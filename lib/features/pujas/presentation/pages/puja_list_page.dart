@@ -409,6 +409,11 @@ class _RitualListPageState extends State<RitualListPage> {
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
                 hintText: 'Search god name...',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,

@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forg
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/screens/forgot_password_screen.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class EmailLoginPage extends StatefulWidget {
   const EmailLoginPage({super.key});
@@ -69,18 +70,18 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: Color(0xFF2A2A2A),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 24,
-                        minHeight: 24,
+                    Material(
+                      color: Colors.white,
+                      elevation: 4,
+                      shadowColor: Colors.black26,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => Get.back(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(9),
+                          child: Icon(Icons.arrow_back, size: 18),
+                        ),
                       ),
                     ),
                     GestureDetector(
@@ -158,12 +159,24 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                                 decoration: _inputDecoration('Enter password')
                                     .copyWith(
                                       suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _obscurePassword
-                                              ? Icons.visibility_off_outlined
-                                              : Icons.visibility_outlined,
-                                          size: 18,
-                                          color: const Color(0xFF8F8574),
+                                        icon: ShaderMask(
+                                          shaderCallback: (bounds) =>
+                                              const LinearGradient(
+                                                colors: [
+                                                  Color(0xFF183EA4),
+                                                  Color(0xFFE35600),
+                                                ],
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                              ).createShader(bounds),
+                                          blendMode: BlendMode.srcIn,
+                                          child: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: const Color(0xFF8F8574),
+                                          ),
                                         ),
                                         onPressed: () => setState(
                                           () => _obscurePassword =
@@ -204,7 +217,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   label: "Login",
                   isLoading: isLoading,
                   enabled: !isLoading,
-                  borderRadius: 8,
+                  borderRadius: 22,
                   gradientColors: const [
                     AppColors.gradientStart,
                     AppColors.gradientEnd,
@@ -270,13 +283,14 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.gradientStart),
       ),

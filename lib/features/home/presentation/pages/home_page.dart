@@ -62,7 +62,9 @@ class _HomePageState extends State<HomePage> {
     _fetchHomeDataIfNeeded();
     _fetchAchievementsData(recordStreak: true);
     if (Get.isRegistered<UserNotificationsBadgeController>()) {
-      unawaited(Get.find<UserNotificationsBadgeController>().refreshUnreadBadge());
+      unawaited(
+        Get.find<UserNotificationsBadgeController>().refreshUnreadBadge(),
+      );
     }
   }
 
@@ -438,14 +440,6 @@ class _HomePageState extends State<HomePage> {
               clean(item['image']) ??
               clean(mediaImage);
 
-          final resolvedImagePath = (image != null && image.isNotEmpty)
-              ? image
-              : fallbackImage;
-
-          final placeholderText =
-              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
-              ? DateFormatters.formatFestivalDate(item['date']?.toString())
-              : null;
           final id = (item['_id'] ?? item['id'])?.toString().trim();
           final description = (item['description'] ?? item['purpose'])
               ?.toString()
@@ -454,6 +448,14 @@ class _HomePageState extends State<HomePage> {
               (item['date'] ?? item['startDate'] ?? item['festivalDate'])
                   ?.toString()
                   .trim();
+          final resolvedImagePath = (image != null && image.isNotEmpty)
+              ? image
+              : fallbackImage;
+
+          final placeholderText =
+              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+              ? DateFormatters.formatFestivalDate(date)
+              : null;
 
           return HomeCircleItem(
             title: (title == null || title.isEmpty) ? 'Untitled' : title,
@@ -902,6 +904,7 @@ class _HomeBodySections extends StatelessWidget {
             title: 'Upcoming Festivals',
             items: festivals,
             useWrap: false,
+            useFestivalStyle: true,
             onItemTap: (item) => onFestivalTap(item),
             onViewMoreTap: onFestivalsViewMore,
           ),
@@ -1013,6 +1016,7 @@ class _HomeCircleSection extends StatelessWidget {
     required this.title,
     required this.items,
     this.useWrap = false,
+    this.useFestivalStyle = false,
     this.onViewMoreTap,
     this.onItemTap,
   });
@@ -1020,6 +1024,7 @@ class _HomeCircleSection extends StatelessWidget {
   final String title;
   final List<HomeCircleItem> items;
   final bool useWrap;
+  final bool useFestivalStyle;
   final Future<void> Function()? onViewMoreTap;
 
   /// Optional per-item tap handler.
@@ -1043,6 +1048,7 @@ class _HomeCircleSection extends StatelessWidget {
                 )
               : _CircleRow(
                   items: items,
+                  useFestivalStyle: useFestivalStyle,
                   onItemTap: onItemTap,
                   onViewMoreTap: onViewMoreTap,
                 ),
@@ -1541,8 +1547,8 @@ class _GlobalSearchField extends StatelessWidget {
     final hasQuery = controller.text.trim().isNotEmpty;
     return Material(
       color: Colors.white,
-      elevation: 3,
-      shadowColor: const Color(0x22000000),
+      elevation: 0,
+      shadowColor: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: TextField(
         controller: controller,
@@ -1594,6 +1600,11 @@ class _GlobalSearchField extends StatelessWidget {
                 )
               : null,
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
+          errorBorder: InputBorder.none,
+          focusedErrorBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 8,
             vertical: 14,
@@ -2227,8 +2238,14 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _CircleRow extends StatelessWidget {
-  const _CircleRow({required this.items, this.onViewMoreTap, this.onItemTap});
+  const _CircleRow({
+    required this.items,
+    this.useFestivalStyle = false,
+    this.onViewMoreTap,
+    this.onItemTap,
+  });
   final List<HomeCircleItem> items;
+  final bool useFestivalStyle;
   final Future<void> Function()? onViewMoreTap;
   final void Function(HomeCircleItem item)? onItemTap;
 
@@ -2253,6 +2270,7 @@ class _CircleRow extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 10),
                 child: _CircleItem(
                   item: item,
+                  useFestivalStyle: useFestivalStyle,
                   onTap: _isMoreTitle(item.title)
                       ? () {
                           onViewMoreTap?.call();
@@ -2311,8 +2329,13 @@ class _CircleWrap extends StatelessWidget {
 }
 
 class _CircleItem extends StatelessWidget {
-  const _CircleItem({required this.item, this.onTap});
+  const _CircleItem({
+    required this.item,
+    this.useFestivalStyle = false,
+    this.onTap,
+  });
   final HomeCircleItem item;
+  final bool useFestivalStyle;
   final VoidCallback? onTap;
 
   @override
@@ -2323,6 +2346,10 @@ class _CircleItem extends StatelessWidget {
     );
     final isMoreItem =
         normalizedTitle == 'view more' || normalizedTitle == 'more';
+    final isDatePlaceholder =
+        useFestivalStyle &&
+        item.imagePath.isEmpty &&
+        (item.placeholderText?.trim().isNotEmpty ?? false);
     return SizedBox(
       width: 80,
       child: InkWell(
@@ -2339,11 +2366,22 @@ class _CircleItem extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.white,
                 border: Border.all(color: Colors.white, width: 2),
+                boxShadow: useFestivalStyle
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x1F4A1C00),
+                          blurRadius: 14,
+                          offset: Offset(0, 5),
+                        ),
+                      ]
+                    : const [],
               ),
               child: ClipOval(
                 child: item.imagePath.isEmpty
                     ? ColoredBox(
-                        color: const Color(0xFFEADCC3),
+                        color: isDatePlaceholder
+                            ? Colors.white
+                            : const Color(0xFFEADCC3),
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -2354,7 +2392,9 @@ class _CircleItem extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.inter(
                                 fontSize: 10,
-                                color: const Color(0xFF4A1C00),
+                                color: isDatePlaceholder
+                                    ? const Color(0xFF5B2B18)
+                                    : const Color(0xFF4A1C00),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),

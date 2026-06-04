@@ -78,7 +78,7 @@ class _CalendarOrangeHeader extends StatelessWidget {
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(8, 8, 16, 52),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -337,20 +337,13 @@ class _MonthGrid extends StatelessWidget {
       return;
     }
 
-    _CalendarDayEventsSheet.show(
-      context,
-      date: date,
-      events: events,
-    );
+    _CalendarDayEventsSheet.show(context, date: date, events: events);
   }
 }
 
 /// Bottom sheet listing every festival / lunar / event on the tapped day.
 class _CalendarDayEventsSheet extends StatelessWidget {
-  const _CalendarDayEventsSheet({
-    required this.date,
-    required this.events,
-  });
+  const _CalendarDayEventsSheet({required this.date, required this.events});
 
   final DateTime date;
   final List<dynamic> events;

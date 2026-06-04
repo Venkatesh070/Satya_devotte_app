@@ -52,9 +52,14 @@ class HomeConstants {
   static const List<HomeCircleItem> upcomingFestivals = [
     HomeCircleItem(
       title: 'Ganesh\nChaturthi',
-      imagePath: 'assets/images/appLogo.png',
+      imagePath: '',
+      placeholderText: '29th\nSep',
     ),
-    HomeCircleItem(title: 'Diwali', imagePath: 'assets/images/appLogo.png'),
+    HomeCircleItem(
+      title: 'Diwali',
+      imagePath: '',
+      placeholderText: '29th\nSep',
+    ),
   ];
 
   static const List<HomeCircleItem> donations = [

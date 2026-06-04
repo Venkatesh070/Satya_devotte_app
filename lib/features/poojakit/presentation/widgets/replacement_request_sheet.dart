@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 class ReplacementRequestSheet extends StatefulWidget {
   const ReplacementRequestSheet({
@@ -45,7 +46,8 @@ class ReplacementRequestSheet extends StatefulWidget {
   }
 
   @override
-  State<ReplacementRequestSheet> createState() => _ReplacementRequestSheetState();
+  State<ReplacementRequestSheet> createState() =>
+      _ReplacementRequestSheetState();
 }
 
 class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
@@ -168,13 +170,20 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                 fillColor: Colors.white.withValues(alpha: 0.08),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
                 ),
-                counterStyle: AppTypography.inter(color: Colors.white38, fontSize: 11),
+                counterStyle: AppTypography.inter(
+                  color: Colors.white38,
+                  fontSize: 11,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -191,7 +200,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                 ),
                 TextButton.icon(
                   onPressed: _submitting ? null : _pickImages,
-                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                  icon: const Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 18,
+                  ),
                   label: const Text('Add photos'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFFFD180),
@@ -210,7 +222,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                 ),
                 child: Text(
                   'Attach clear photos of the damaged package or items.',
-                  style: AppTypography.inter(fontSize: 13, color: Colors.white54),
+                  style: AppTypography.inter(
+                    fontSize: 13,
+                    color: Colors.white54,
+                  ),
                 ),
               )
             else

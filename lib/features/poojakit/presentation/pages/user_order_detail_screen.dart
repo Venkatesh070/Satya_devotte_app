@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replace
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 const _figmaActionGradient = [AppColors.gradientStart, AppColors.gradientEnd];
 
@@ -538,7 +539,8 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
                           color: DonationUi.cardBorder,
                         ),
                       ),
-                      focusedBorder: OutlineInputBorder(
+                      focusedBorder: GradientOutlineInputBorder(
+                        gradient: AppColors.inputBorderGradient,
                         borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Color(0xFFED5A00)),
                       ),

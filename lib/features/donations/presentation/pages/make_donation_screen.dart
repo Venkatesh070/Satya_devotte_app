@@ -8,6 +8,8 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 /// Figma "Make a Donation" bottom sheet.
 class MakeDonationScreen extends StatefulWidget {
@@ -336,13 +338,14 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: DonationUi.cardBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: DonationUi.cardBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: DonationUi.amountBlue, width: 1.5),
       ),

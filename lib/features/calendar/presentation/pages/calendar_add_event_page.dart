@@ -6,6 +6,8 @@ import 'package:satya_devotte_app/features/calendar/presentation/controllers/cal
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 /// Figma "Add new event" form.
 class CalendarAddEventPage extends StatefulWidget {
@@ -87,9 +89,9 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  TextFormField(
                     controller: _nameCtrl,
-                    decoration: _inputDecoration(),
+                    decoration: _inputDecoration('Enter name of the event'),
                     onChanged: (_) {
                       if (_error != null) setState(() => _error = null);
                     },
@@ -107,7 +109,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
                   TextField(
                     controller: _descCtrl,
                     maxLines: 4,
-                    decoration: _inputDecoration(),
+                    decoration: _inputDecoration('Enter description'),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -187,20 +189,23 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
     );
   }
 
-  InputDecoration _inputDecoration() {
+  InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.black.withOpacity(0.25), fontSize: 13),
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: CalendarUi.cardBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: CalendarUi.cardBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
           color: CalendarUi.headerOrange,

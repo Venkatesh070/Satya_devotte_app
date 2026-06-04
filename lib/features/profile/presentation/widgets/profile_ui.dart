@@ -4,6 +4,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 /// Blue → orange gradient used on Figma action buttons.
 const kFigmaActionGradient = [AppColors.gradientStart, AppColors.gradientEnd];
@@ -330,7 +331,8 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                         color: DonationUi.cardBorder,
                       ),
                     ),
-                    focusedBorder: OutlineInputBorder(
+                    focusedBorder: GradientOutlineInputBorder(
+                      gradient: AppColors.inputBorderGradient,
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(color: Color(0xFFED5A00)),
                     ),

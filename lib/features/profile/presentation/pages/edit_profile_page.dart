@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -378,13 +379,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppColors.gradientStart),
       ),
@@ -418,11 +420,11 @@ class _PickerField extends StatelessWidget {
           labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
+            borderSide: const BorderSide(color: AppColors.inputBorderColor),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFFE0D6C2)),
+            borderSide: const BorderSide(color: AppColors.inputBorderColor),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 15,

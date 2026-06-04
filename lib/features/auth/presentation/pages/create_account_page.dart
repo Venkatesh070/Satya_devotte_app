@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key, this.completeProfileOnly = false});
@@ -224,18 +225,18 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                     children: [
-                      IconButton(
-                        onPressed: _handleBack,
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 16,
-                          color: Color(0xFF2A2A2A),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
+                      Material(
+                        color: Colors.white,
+                        elevation: 4,
+                        shadowColor: Colors.black26,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _handleBack(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(9),
+                            child: Icon(Icons.arrow_back, size: 18),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -338,13 +339,25 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                     decoration: _inputDecoration('*******')
                                         .copyWith(
                                           suffixIcon: IconButton(
-                                            icon: Icon(
-                                              _hidePassword
-                                                  ? Icons
-                                                        .visibility_off_outlined
-                                                  : Icons.visibility_outlined,
-                                              size: 18,
-                                              color: const Color(0xFF8F8574),
+                                            icon: ShaderMask(
+                                              shaderCallback: (bounds) =>
+                                                  const LinearGradient(
+                                                    colors: [
+                                                      Color(0xFF183EA4),
+                                                      Color(0xFFE35600),
+                                                    ],
+                                                    begin: Alignment.centerLeft,
+                                                    end: Alignment.centerRight,
+                                                  ).createShader(bounds),
+                                              blendMode: BlendMode.srcIn,
+                                              child: Icon(
+                                                _hidePassword
+                                                    ? Icons
+                                                          .visibility_off_outlined
+                                                    : Icons.visibility_outlined,
+                                                size: 18,
+                                                color: const Color(0xFF8F8574),
+                                              ),
                                             ),
                                             onPressed: () => setState(
                                               () => _hidePassword =
@@ -373,13 +386,25 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                     decoration: _inputDecoration('*******')
                                         .copyWith(
                                           suffixIcon: IconButton(
-                                            icon: Icon(
-                                              _hideConfirmPassword
-                                                  ? Icons
-                                                        .visibility_off_outlined
-                                                  : Icons.visibility_outlined,
-                                              size: 18,
-                                              color: const Color(0xFF8F8574),
+                                            icon: ShaderMask(
+                                              shaderCallback: (bounds) =>
+                                                  const LinearGradient(
+                                                    colors: [
+                                                      Color(0xFF183EA4),
+                                                      Color(0xFFE35600),
+                                                    ],
+                                                    begin: Alignment.centerLeft,
+                                                    end: Alignment.centerRight,
+                                                  ).createShader(bounds),
+                                              blendMode: BlendMode.srcIn,
+                                              child: Icon(
+                                                _hideConfirmPassword
+                                                    ? Icons
+                                                          .visibility_off_outlined
+                                                    : Icons.visibility_outlined,
+                                                size: 18,
+                                                color: const Color(0xFF8F8574),
+                                              ),
                                             ),
                                             onPressed: () => setState(
                                               () => _hideConfirmPassword =
@@ -502,7 +527,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     label: _step == 0 ? 'Next' : 'Get Started',
                     isLoading: isLoading,
                     enabled: !isLoading,
-                    borderRadius: 8,
+                    borderRadius: 22,
                     gradientColors: const [
                       AppColors.gradientStart,
                       AppColors.gradientEnd,
@@ -525,7 +550,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       style: const TextStyle(
         color: Color(0xFF4A1C00),
         fontSize: 12,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -543,13 +568,14 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _fieldBorder),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.gradientStart),
       ),

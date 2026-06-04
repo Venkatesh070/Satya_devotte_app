@@ -38,18 +38,12 @@ class InlineForgotPasswordForm extends StatelessWidget {
             ],
             const Text(
               'Forgot Password',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text(
               'Enter your email address to receive a password reset link',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF666666),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
             ),
             const SizedBox(height: 20),
             TextFormField(
@@ -63,6 +57,9 @@ class InlineForgotPasswordForm extends StatelessWidget {
                 hintText: 'Enter your email',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.inputBorderColor,
+                  ),
                 ),
               ),
               validator: forgotCtrl.validateEmail,
@@ -73,7 +70,8 @@ class InlineForgotPasswordForm extends StatelessWidget {
                   ? 'Send again in ${forgotCtrl.cooldownSeconds.value}s'
                   : 'Send Reset Link',
               isLoading: forgotCtrl.isLoading.value,
-              enabled: !forgotCtrl.isLoading.value &&
+              enabled:
+                  !forgotCtrl.isLoading.value &&
                   forgotCtrl.cooldownSeconds.value == 0,
               gradientColors: const [
                 AppColors.gradientStart,
@@ -93,10 +91,7 @@ class InlineForgotPasswordForm extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'You can request another reset link in ${forgotCtrl.cooldownSeconds.value} seconds.',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF7A7A7A),
-                ),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A7A)),
               ),
             ],
             if (forgotCtrl.isSuccess.value) ...[
@@ -107,9 +102,7 @@ class InlineForgotPasswordForm extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFE9F7EF),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFFB7E5C3),
-                  ),
+                  border: Border.all(color: const Color(0xFFB7E5C3)),
                 ),
                 child: const Row(
                   children: [

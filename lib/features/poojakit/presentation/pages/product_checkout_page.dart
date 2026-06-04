@@ -14,6 +14,7 @@ import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class ProductCheckoutPage extends StatefulWidget {
   const ProductCheckoutPage({super.key});
@@ -1357,9 +1358,10 @@ class _AddressInput extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0x00FFFFFF)),
+          borderSide: const BorderSide(color: AppColors.inputBorderColor),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: GradientOutlineInputBorder(
+          gradient: AppColors.inputBorderGradient,
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFE95700)),
         ),

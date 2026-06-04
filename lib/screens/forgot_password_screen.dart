@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
   const ForgotPasswordScreen({super.key});
@@ -65,6 +66,9 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                                 hintText: 'Enter your email',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.inputBorderColor,
+                                  ),
                                 ),
                               ),
                               validator: controller.validateEmail,
