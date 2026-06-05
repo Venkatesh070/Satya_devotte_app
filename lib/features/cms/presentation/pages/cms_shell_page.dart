@@ -130,6 +130,9 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
   void _onSelect(int index) {
     setState(() {
       _selectedIndex = index;
+      // Collapse manually opened groups when navigating elsewhere; only
+      // re-expand the group that owns the newly selected tab (if any).
+      _expandedGroups.clear();
       final group = _groupLabelForIndex(index);
       if (group != null) _expandedGroups.add(group);
     });
@@ -170,7 +173,7 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
       onWillPop: () async {
         final isDashboardRoute = Get.currentRoute == AppRoutes.cms;
         if (_selectedIndex != 0 || !isDashboardRoute) {
-          setState(() => _selectedIndex = 0);
+          _onSelect(_NavIds.dashboard);
           if (!isDashboardRoute) {
             Get.offNamed(AppRoutes.cms);
           }
@@ -962,28 +965,6 @@ class _WebTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Search bar
-          Container(
-            width: 220,
-            height: 36,
-            decoration: BoxDecoration(
-              color: CmsColors.bg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: CmsColors.border),
-            ),
-            child: const Row(
-              children: [
-                SizedBox(width: 10),
-                Icon(Icons.search, size: 16, color: Color(0xFFAAAAAA)),
-                SizedBox(width: 6),
-                Text(
-                  'Search...',
-                  style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
           const AppMusicControlButton(
             size: 36,
             borderRadius: 8,

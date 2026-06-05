@@ -1568,12 +1568,22 @@ class _PoojaFormState extends State<_PoojaForm> {
                       DropdownButtonFormField<String>(
                         isExpanded: true,
                         value: value,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: CmsColors.textSecond,
+                          size: 20,
+                        ),
+                        dropdownColor: CmsColors.bg,
                         hint: const Text(
                           'Select deity',
                           style: TextStyle(
                             fontSize: 13,
-                            color: CmsColors.textSecond,
+                            color: CmsThemeColors.inputHint,
                           ),
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: CmsThemeColors.inputText,
                         ),
                         items: deities
                             .map(
@@ -1584,7 +1594,10 @@ class _PoojaFormState extends State<_PoojaForm> {
                                       ? d['name']!
                                       : d['id']!,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 13),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: CmsThemeColors.inputText,
+                                  ),
                                 ),
                               ),
                             )
@@ -1759,7 +1772,18 @@ class _PoojaFormState extends State<_PoojaForm> {
                             'festival-dd-${_selectedFestivalIds.join('|')}',
                           ),
                           isDense: true,
+                          isExpanded: true,
                           value: dropdownValue,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: CmsColors.textSecond,
+                            size: 20,
+                          ),
+                          dropdownColor: CmsColors.bg,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: CmsThemeColors.inputText,
+                          ),
                           items: festivals
                               .map(
                                 (f) => DropdownMenuItem<String>(
@@ -1768,7 +1792,10 @@ class _PoojaFormState extends State<_PoojaForm> {
                                     f.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 13),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: CmsThemeColors.inputText,
+                                    ),
                                   ),
                                 ),
                               )
@@ -1785,7 +1812,10 @@ class _PoojaFormState extends State<_PoojaForm> {
                             hintText: festivals.isEmpty
                                 ? 'No approved festivals available'
                                 : 'Select festival',
-                            hintStyle: const TextStyle(fontSize: 13),
+                            hintStyle: const TextStyle(
+                              fontSize: 13,
+                              color: CmsThemeColors.inputHint,
+                            ),
                             filled: true,
                             fillColor: CmsColors.bg,
                             contentPadding: const EdgeInsets.symmetric(

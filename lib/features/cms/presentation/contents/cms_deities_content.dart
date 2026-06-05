@@ -153,6 +153,34 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                     onChanged: (v) => setState(() => _query = v),
                   ),
                 ),
+                const SizedBox(width: 12),
+                Obx(
+                  () => _controller.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: () => _loadDeities(force: true),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: CmsColors.bg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: CmsColors.border),
+                            ),
+                            child: const Icon(
+                              Icons.refresh,
+                              size: 18,
+                              color: CmsColors.textSecond,
+                            ),
+                          ),
+                        ),
+                ),
                 const SizedBox(width: 10),
                 CmsPrimaryButton(
                   label: isWeb ? 'Add New Deity' : 'Add',
@@ -186,10 +214,14 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: sel ? CmsColors.orange : CmsColors.bg,
+                        color: sel
+                            ? CmsColors.orange
+                            : CmsColors.bg,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: sel ? CmsColors.orange : CmsColors.border,
+                          color: sel
+                              ? CmsColors.orange
+                              : CmsColors.border,
                         ),
                       ),
                       child: Text(
@@ -197,7 +229,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: sel ? Colors.white : CmsColors.textSecond,
+                          color: sel
+                              ? Colors.white
+                              : CmsColors.textSecond,
                         ),
                       ),
                     ),
@@ -218,7 +252,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                       children: [
                         Text(
                           _error!,
-                          style: const TextStyle(color: CmsColors.textSecond),
+                          style: TextStyle(
+                            color: CmsColors.textSecond,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -229,10 +265,12 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                     ),
                   )
                 : list.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No deities found.',
-                      style: TextStyle(color: CmsColors.textSecond),
+                      style: TextStyle(
+                        color: CmsColors.textSecond,
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -244,9 +282,11 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFFFFF),
+                          color: CmsColors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: CmsColors.border),
+                          border: Border.all(
+                            color: CmsColors.border,
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,7 +328,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                 children: [
                                   Text(
                                     d.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 19,
                                       fontWeight: FontWeight.w600,
                                       color: CmsColors.textPrimary,
@@ -297,7 +337,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                   const SizedBox(height: 2),
                                   Text(
                                     d.id,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: CmsColors.textSecond,
                                     ),
@@ -453,7 +493,7 @@ class _SmBtn extends StatelessWidget {
 }
 
 typedef _DeitySaveCallback =
-    void Function(Map<String, dynamic> payload, {PickedFile? image});
+    Future<void> Function(Map<String, dynamic> payload, {PickedFile? image});
 
 class _DeityForm extends StatefulWidget {
   const _DeityForm({
@@ -470,6 +510,7 @@ class _DeityForm extends StatefulWidget {
 }
 
 class _DeityFormState extends State<_DeityForm> {
+  bool _isSaving = false;
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _alternateNamesCtrl;
@@ -795,9 +836,12 @@ class _DeityFormState extends State<_DeityForm> {
         ),
         const SizedBox(height: 10),
         if (_ritualIds.isEmpty)
-          const Text(
+          Text(
             'No entries added yet',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            style: TextStyle(
+              fontSize: 12,
+              color: CmsColors.textSecond,
+            ),
           )
         else
           Wrap(
@@ -956,9 +1000,12 @@ class _DeityFormState extends State<_DeityForm> {
         ),
         const SizedBox(height: 10),
         if (_preferredDays.isEmpty)
-          const Text(
+          Text(
             'No entries added yet',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            style: TextStyle(
+              fontSize: 12,
+              color: CmsColors.textSecond,
+            ),
           )
         else
           Wrap(
@@ -1098,15 +1145,20 @@ class _DeityFormState extends State<_DeityForm> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: CmsColors.border),
                   ),
-                  child: const Icon(Icons.arrow_back, size: 18),
+                  child: Icon(
+                    Icons.arrow_back,
+                    size: 18,
+                    color: CmsColors.textPrimary,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 widget.initial == null ? 'Add New Deity' : 'Edit Deity',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
                 ),
               ),
             ],
@@ -1175,24 +1227,62 @@ class _DeityFormState extends State<_DeityForm> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: widget.onCancel,
+                  onPressed: _isSaving ? null : widget.onCancel,
                   child: const Text('Cancel'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_nameCtrl.text.trim().isEmpty) {
-                      showCmsSnackbar(
-                        title: 'Validation',
-                        message: 'Deity name is required',
-                        isError: true,
-                      );
-                      return;
-                    }
-                    widget.onSave(
-                      {
+                  onPressed: _isSaving ? null : _submitDeity,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CmsColors.orange,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: CmsColors.orange.withOpacity(0.6),
+                    disabledForegroundColor: Colors.white,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Text('Save Deity'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitDeity() async {
+    if (_isSaving) return;
+    if (_pickedImage != null &&
+        _pickedImage!.bytes.length > CmsUploadBox.defaultMaxImageBytes) {
+      CmsUploadBox.showFileTooLargeError(
+        actualBytes: _pickedImage!.bytes.length,
+        maxBytes: CmsUploadBox.defaultMaxImageBytes,
+        label: 'Thumbnail image',
+      );
+      return;
+    }
+    if (_nameCtrl.text.trim().isEmpty) {
+      showCmsSnackbar(
+        title: 'Validation',
+        message: 'Deity name is required',
+        isError: true,
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      await widget.onSave(
+        {
                       'name': _nameCtrl.text.trim(),
                       'alternate_names': _valuesWithPending(
                         _alternateNamesCtrl,
@@ -1258,21 +1348,11 @@ class _DeityFormState extends State<_DeityForm> {
                       },
                       'status': _status,
                     },
-                      image: _pickedImage,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: CmsColors.orange,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Save Deity'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+        image: _pickedImage,
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 
@@ -1307,26 +1387,32 @@ class _KeyValueEditor extends StatelessWidget {
             Expanded(
               child: Text(
                 heading,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: CmsColors.textSecond,
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: onToggle,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: CmsColors.orange,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  showEditor ? Icons.remove : Icons.add,
-                  color: Colors.white,
-                  size: 18,
+            Tooltip(
+              message: showEditor ? 'Hide entry form' : 'Show entry form',
+              child: GestureDetector(
+                onTap: onToggle,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: CmsColors.bg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: CmsColors.border),
+                  ),
+                  child: Icon(
+                    showEditor
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: CmsColors.textSecond,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
@@ -1349,19 +1435,30 @@ class _KeyValueEditor extends StatelessWidget {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
+            child: ElevatedButton(
               onPressed: onAdd,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('+ Add'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CmsColors.orange,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Add entry'),
             ),
           ),
         ],
         if (entries.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
               'No entries added yet',
-              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              style: TextStyle(
+                fontSize: 12,
+                color: CmsColors.textSecond,
+              ),
             ),
           )
         else ...[
@@ -1386,7 +1483,7 @@ class _KeyValueEditor extends StatelessWidget {
                       description.isEmpty ? title : '$title\n$description',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: CmsColors.textPrimary,
+                        color: CmsThemeColors.inputText,
                         height: 1.4,
                       ),
                     ),
@@ -1394,7 +1491,7 @@ class _KeyValueEditor extends StatelessWidget {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => onRemove(entry.key),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close,
                       size: 16,
                       color: CmsColors.textSecond,
@@ -1434,7 +1531,7 @@ class _ChipListEditor extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: CmsColors.textSecond,
@@ -1443,11 +1540,14 @@ class _ChipListEditor extends StatelessWidget {
         const SizedBox(height: 8),
         _InputRow(ctrl: controller, hint: hint, onAdd: onAdd),
         if (values.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 10),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
             child: Text(
               'No entries added yet',
-              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              style: TextStyle(
+                fontSize: 12,
+                color: CmsColors.textSecond,
+              ),
             ),
           )
         else ...[
@@ -1490,12 +1590,16 @@ class _InputRow extends StatelessWidget {
             child: TextField(
               controller: ctrl,
               onSubmitted: (_) => onAdd(),
-              style: const TextStyle(fontSize: 13),
+              cursorColor: CmsColors.orange,
+              style: const TextStyle(
+                fontSize: 13,
+                color: CmsThemeColors.inputText,
+              ),
               decoration: InputDecoration(
                 hintText: hint,
                 border: InputBorder.none,
                 hintStyle: const TextStyle(
-                  color: Color(0xFFAAAAAA),
+                  color: CmsThemeColors.inputHint,
                   fontSize: 13,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -1550,7 +1654,7 @@ class _LineChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 12,
-                color: CmsColors.textPrimary,
+                color: CmsThemeColors.inputText,
                 height: 1.4,
               ),
             ),
@@ -1558,7 +1662,7 @@ class _LineChip extends StatelessWidget {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(
+            child: Icon(
               Icons.close,
               size: 16,
               color: CmsColors.textSecond,
@@ -1601,7 +1705,7 @@ class _MultiSelectPickerField extends StatelessWidget {
       children: [
         Text(
           fieldLabel,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: CmsColors.textSecond,
@@ -1626,12 +1730,13 @@ class _MultiSelectPickerField extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Expanded(
+                                Expanded(
                                   child: Text(
                                     'Select options',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
+                                      color: CmsColors.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -1650,7 +1755,12 @@ class _MultiSelectPickerField extends StatelessWidget {
                                   return CheckboxListTile(
                                     dense: true,
                                     value: checked,
-                                    title: Text(o.label),
+                                    title: Text(
+                                      o.label,
+                                      style: const TextStyle(
+                                        color: CmsThemeColors.inputText,
+                                      ),
+                                    ),
                                     onChanged: (v) {
                                       setInnerState(() {
                                         if (v == true) {
@@ -1690,13 +1800,13 @@ class _MultiSelectPickerField extends StatelessWidget {
                     text,
                     style: TextStyle(
                       color: selectedValues.isEmpty
-                          ? const Color(0xFF888888)
-                          : CmsColors.textPrimary,
+                          ? CmsThemeColors.inputHint
+                          : CmsThemeColors.inputText,
                       fontSize: 13,
                     ),
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.keyboard_arrow_down_rounded,
                   color: CmsColors.textSecond,
                 ),
@@ -1734,14 +1844,14 @@ class _CompactChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 12,
-                color: CmsColors.textPrimary,
+                color: CmsThemeColors.inputText,
               ),
             ),
           ),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(
+            child: Icon(
               Icons.close,
               size: 14,
               color: CmsColors.textSecond,

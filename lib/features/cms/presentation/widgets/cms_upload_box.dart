@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 class CmsUploadBox extends StatefulWidget {
   const CmsUploadBox({
@@ -29,17 +30,36 @@ class CmsUploadBox extends StatefulWidget {
     required this.accept,
     required this.mediaType,
     this.initialUrl,
+    this.maxSizeBytes = defaultMaxImageBytes,
     required this.onPicked, // called with PickedFile when user picks
     this.onRemoved, // called when user removes the file
   });
+
+  static const int defaultMaxImageBytes = 5 * 1024 * 1024;
 
   final String label;
   final IconData icon;
   final String accept;
   final PickMediaType mediaType;
   final String? initialUrl; // existing S3 URL (when editing)
+  final int maxSizeBytes;
   final ValueChanged<PickedFile> onPicked;
   final VoidCallback? onRemoved;
+
+  static void showFileTooLargeError({
+    required int actualBytes,
+    required int maxBytes,
+    required String label,
+  }) {
+    final sizeMb = (actualBytes / (1024 * 1024)).toStringAsFixed(1);
+    final maxMb = (maxBytes / (1024 * 1024)).toStringAsFixed(0);
+    showCmsSnackbar(
+      title: 'Image Too Large',
+      message:
+          '$label must be ${maxMb}MB or smaller. The selected file is $sizeMb MB.',
+      isError: true,
+    );
+  }
 
   @override
   State<CmsUploadBox> createState() => _CmsUploadBoxState();
@@ -77,20 +97,12 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
       final service = Get.find<MediaUploadService>();
       final file = await service.pickFile(type: widget.mediaType);
       if (file != null) {
-        // Client-side file size check (e.g., 20MB limit)
-        const maxBytes = 20 * 1024 * 1024; // 20MB
-        if (file.bytes.length > maxBytes) {
-          if (mounted) {
-            Get.snackbar(
-              'File Too Large',
-              'The selected ${widget.mediaType.name} is too large (${(file.bytes.length / (1024 * 1024)).toStringAsFixed(1)}MB). Please select a file smaller than 20MB.',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.redAccent,
-              colorText: Colors.white,
-            );
-          }
-          // IMPORTANT: Reset picking state and return WITHOUT calling onPicked
-          setState(() => _picking = false);
+        if (file.bytes.length > widget.maxSizeBytes) {
+          CmsUploadBox.showFileTooLargeError(
+            actualBytes: file.bytes.length,
+            maxBytes: widget.maxSizeBytes,
+            label: widget.label,
+          );
           return;
         }
 

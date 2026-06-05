@@ -13,6 +13,7 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   final AudioPlayer _player = AudioPlayer();
   bool _prepared = false;
   bool _userPaused = false;
+  bool _cmsMusicSuppressed = false;
 
   final RxBool isPlaying = false.obs;
   final RxBool showFab = false.obs;
@@ -52,7 +53,7 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
         !_isCreateAccountRoute(current) &&
         !isCmsRoute(current);
 
-    if (isCmsRoute(current)) {
+    if (isCmsRoute(current) && !_cmsMusicSuppressed) {
       unawaited(start());
     } else if (kIsWeb) {
       unawaited(pause());
@@ -74,7 +75,7 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     if (_userPaused) return;
     if (state == AppLifecycleState.resumed) {
       final route = Get.currentRoute;
-      if (!kIsWeb || isCmsRoute(route)) {
+      if ((!kIsWeb || (isCmsRoute(route) && !_cmsMusicSuppressed))) {
         unawaited(start());
       }
     }
@@ -102,10 +103,27 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
   /// Default play when an admin enters CMS (login or shell mount).
   Future<void> startOnAdminLogin() async {
+    _cmsMusicSuppressed = false;
     _userPaused = false;
     await start();
     if (kIsWeb) {
       syncControlsVisibility(AppRoutes.cms);
+    }
+  }
+
+  /// Stops CMS background music on admin logout (login page must stay silent).
+  Future<void> stopOnAdminLogout() async {
+    _cmsMusicSuppressed = true;
+    _userPaused = false;
+    try {
+      if (_player.playing) {
+        await _player.pause();
+      }
+    } catch (e, st) {
+      debugPrint('[AppMusicService] stopOnAdminLogout failed: $e\n$st');
+    }
+    if (kIsWeb) {
+      syncControlsVisibility(AppRoutes.login);
     }
   }
 

@@ -3,6 +3,14 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 
+/// Input text colors only. Backgrounds stay on original [CmsColors].
+class CmsThemeColors {
+  CmsThemeColors._();
+
+  static const Color inputText = Colors.black;
+  static const Color inputHint = Color(0xFFAAAAAA);
+}
+
 // ════════════════════════════════════════════════════════════════
 // All shared CMS widgets — used across Dashboard, Rituals,
 // Festivals, Notifications, Users, etc.
@@ -45,7 +53,7 @@ class CmsFormCard extends StatelessWidget {
 }
 
 // ── Text input field ──────────────────────────────────────────────
-class CmsFormField extends StatelessWidget {
+class CmsFormField extends StatefulWidget {
   const CmsFormField({
     super.key,
     required this.label,
@@ -63,12 +71,83 @@ class CmsFormField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
 
   @override
+  State<CmsFormField> createState() => _CmsFormFieldState();
+}
+
+class _CmsFormFieldState extends State<CmsFormField> {
+  ScrollController? _scrollController;
+
+  bool get _isScrollable => widget.maxLines > 1;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isScrollable) {
+      _scrollController = ScrollController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final field = TextFormField(
+      initialValue: widget.controller == null ? widget.initialValue : null,
+      controller: widget.controller,
+      maxLines: widget.maxLines,
+      scrollController: _scrollController,
+      onChanged: widget.onChanged,
+      style: const TextStyle(
+        fontSize: 13,
+        color: CmsThemeColors.inputText,
+      ),
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        hintStyle: const TextStyle(
+          color: CmsThemeColors.inputHint,
+          fontSize: 13,
+        ),
+        filled: true,
+        fillColor: CmsColors.bg,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: CmsColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: CmsColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: CmsColors.orange),
+        ),
+      ),
+    );
+
+    final input = _isScrollable && _scrollController != null
+        ? Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: 6,
+            radius: const Radius.circular(4),
+            child: field,
+          )
+        : field;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -76,35 +155,7 @@ class CmsFormField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        TextFormField(
-          initialValue: controller == null ? initialValue : null,
-          controller: controller,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          style: const TextStyle(fontSize: 13),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
-            filled: true,
-            fillColor: CmsColors.bg,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.orange),
-            ),
-          ),
-        ),
+        input,
       ],
     );
   }
@@ -172,11 +223,28 @@ class _CmsDropdownFieldState extends State<CmsDropdownField> {
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: _value,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: CmsColors.textSecond,
+            size: 20,
+          ),
+          dropdownColor: CmsColors.bg,
+          style: const TextStyle(
+            fontSize: 13,
+            color: CmsThemeColors.inputText,
+          ),
           items: widget.items
               .map(
                 (e) => DropdownMenuItem(
                   value: e,
-                  child: Text(e, style: const TextStyle(fontSize: 13)),
+                  child: Text(
+                    e,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: CmsThemeColors.inputText,
+                    ),
+                  ),
                 ),
               )
               .toList(),
@@ -442,10 +510,16 @@ class CmsSearchBar extends StatelessWidget {
       ),
       child: TextField(
         onChanged: onChanged,
-        style: const TextStyle(fontSize: 13),
+        style: const TextStyle(
+          fontSize: 13,
+          color: CmsThemeColors.inputText,
+        ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
+          hintStyle: const TextStyle(
+            color: CmsThemeColors.inputHint,
+            fontSize: 13,
+          ),
           prefixIcon: const Icon(
             Icons.search,
             size: 16,

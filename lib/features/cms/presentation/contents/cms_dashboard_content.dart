@@ -353,11 +353,11 @@ class _StatsGrid extends StatelessWidget {
       crossAxisCount: isWeb ? 4 : 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: isWeb ? 1.8 : 1.5,
+      childAspectRatio: isWeb ? 2.2 : 1.8,
     ),
     itemCount: stats.length,
     itemBuilder: (_, i) => Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: CmsColors.white,
         borderRadius: BorderRadius.circular(14),
@@ -365,9 +365,7 @@ class _StatsGrid extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -377,26 +375,37 @@ class _StatsGrid extends StatelessWidget {
             ),
             child: Icon(stats[i].icon, color: stats[i].color, size: 18),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                stats[i].value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: stats[i].color,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  stats[i].value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                    color: stats[i].color,
+                  ),
                 ),
-              ),
-              Text(
-                stats[i].label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: CmsColors.textSecond,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 2),
+                Text(
+                  stats[i].label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.2,
+                    color: CmsColors.textSecond,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

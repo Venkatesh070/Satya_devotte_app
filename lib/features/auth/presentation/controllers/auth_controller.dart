@@ -111,6 +111,14 @@ class AuthController extends GetxController {
     Future.microtask(() => unawaited(music.startOnAdminLogin()));
   }
 
+  void _stopCmsBackgroundMusicIfNeeded() {
+    if (!Get.isRegistered<AppMusicService>()) return;
+    final onCms = AppMusicService.isCmsRoute(Get.currentRoute);
+    if (!isAdmin && !onCms) return;
+    final music = Get.find<AppMusicService>();
+    unawaited(music.stopOnAdminLogout());
+  }
+
   void _refreshAdminActivityBadge() {
     if (!isAdmin || !Get.isRegistered<CmsAdminNotificationsController>()) {
       return;
@@ -505,21 +513,19 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
-    // ── 1. Unregister FCM while the session still has a valid access token ──
-    await _unregisterDeviceFromPush();
+    _stopCmsBackgroundMusicIfNeeded();
 
     final refreshToken = _authSessionService.refreshToken;
+    // Give server-side cleanup a short head start, but never block UX.
+    final remoteCleanup = _runBestEffortSignOutCleanup(
+      refreshToken: refreshToken,
+    );
+    await Future.any<void>([
+      remoteCleanup,
+      Future<void>.delayed(const Duration(milliseconds: 350)),
+    ]);
 
-    // ── 2. Backend logout while session is intact (Bearer on the request) ──
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      try {
-        await _authRepository.logout(refreshToken);
-      } catch (e) {
-        debugPrint('AuthController.signOut: logout API failed: $e');
-      }
-    }
-
-    // ── 3. Local session + Firebase ─────────────────────────────────
+    // ── Local session + Firebase ────────────────────────────────────
     _isAuthenticated.value = false;
     _userRole.value = 'user';
     await _authSessionService.clear();
@@ -528,6 +534,22 @@ class AuthController extends GetxController {
     try {
       await _firebaseService.signOut();
     } catch (_) {}
+
+    // Continue best-effort server cleanup in background if still running.
+    unawaited(remoteCleanup);
+  }
+
+  Future<void> _runBestEffortSignOutCleanup({String? refreshToken}) async {
+    // 1) Unregister FCM while the session still has a valid access token.
+    await _unregisterDeviceFromPush();
+
+    // 2) Revoke refresh token on backend while session is intact.
+    if (refreshToken == null || refreshToken.isEmpty) return;
+    try {
+      await _authRepository.logout(refreshToken);
+    } catch (e) {
+      debugPrint('AuthController.signOut: logout API failed: $e');
+    }
   }
 
   /// Deletes the account on the backend, then clears session and signs out of Firebase.
@@ -535,6 +557,8 @@ class AuthController extends GetxController {
     _isAuthLoading.value = true;
     _lastAuthError.value = null;
     try {
+      _stopCmsBackgroundMusicIfNeeded();
+
       final normalizedComment = comment.trim();
       if (normalizedComment.isEmpty) {
         _lastAuthError.value = 'Please provide a deletion comment.';

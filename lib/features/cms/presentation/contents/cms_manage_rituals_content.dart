@@ -927,13 +927,27 @@ class _RitualFormState extends State<_RitualForm> {
         label: 'Deity *',
         child: DropdownButtonFormField<String>(
           value: value,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: CmsColors.textSecond,
+            size: 20,
+          ),
+          dropdownColor: CmsColors.bg,
+          style: const TextStyle(
+            fontSize: 13,
+            color: CmsThemeColors.inputText,
+          ),
           items: deities
               .map(
                 (d) => DropdownMenuItem(
                   value: d['id'],
                   child: Text(
                     d['name'] ?? '',
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: CmsThemeColors.inputText,
+                    ),
                   ),
                 ),
               )
