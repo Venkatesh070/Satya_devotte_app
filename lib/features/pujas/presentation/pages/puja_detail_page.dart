@@ -594,7 +594,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
             child: Material(
-              color: AppColors.appBgColor,
+              color: Colors.white,
               shape: const CircleBorder(),
               elevation: 2,
               child: InkWell(

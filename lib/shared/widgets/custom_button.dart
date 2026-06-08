@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class CustomButton extends StatefulWidget {
   const CustomButton({
@@ -64,14 +65,7 @@ class _CustomButtonState extends State<CustomButton> {
             ),
             child: Center(
               child: widget.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
+                  ? const ChakraLoadingIndicator(size: 22, color: Colors.white)
                   : Text(
                       widget.label,
                       style: TextStyle(
