@@ -471,17 +471,22 @@ class _RitualListPageState extends State<RitualListPage> {
             );
           }
           final item = items[index];
-          return Obx(
-            () => _DeityCard(
+          return Obx(() {
+            String? label;
+            if (_hasInProgressPujaForDeity(item)) {
+              label = 'In Progress';
+            } else if (_hasFinishedPujaForDeity(item)) {
+              label = 'Finished';
+            }
+
+            return _DeityCard(
               item: item,
               isFavorite: _favoriteIds.contains(item.id),
-              statusLabel: _hasInProgressPujaForDeity(item)
-                  ? 'In Progress'
-                  : null,
+              statusLabel: label,
               onFavoriteTap: () => _toggleFavorite(item),
               onTap: () => _openDeityDetail(item),
-            ),
-          );
+            );
+          });
         },
       ),
     );
@@ -491,6 +496,15 @@ class _RitualListPageState extends State<RitualListPage> {
     return _poojaHistoryController.pendingPoojas.any((session) {
       if (session is! Map) return false;
       if (!_isInProgressSession(session)) return false;
+      final pooja = session['pooja'];
+      if (pooja is! Map) return false;
+      return _poojaBelongsToDeity(pooja, item);
+    });
+  }
+
+  bool _hasFinishedPujaForDeity(DeityListItem item) {
+    return _poojaHistoryController.finishedPoojas.any((session) {
+      if (session is! Map) return false;
       final pooja = session['pooja'];
       if (pooja is! Map) return false;
       return _poojaBelongsToDeity(pooja, item);
@@ -757,20 +771,29 @@ class _PujaStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFinished = label.toLowerCase() == 'finished';
+    final color = isFinished
+        ? const Color(0xFF0F8F5F)
+        : const Color(0xFFC06A00);
+    final bg = isFinished ? const Color(0xFFE7F7EF) : const Color(0xFFFFF3D8);
+    final border = isFinished
+        ? const Color(0xFF86D7AE)
+        : const Color(0xFFE8A13A);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3D8),
+        color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE8A13A)),
+        border: Border.all(color: border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.play_circle_outline,
+          Icon(
+            isFinished ? Icons.check_circle_outline : Icons.play_circle_outline,
             size: 13,
-            color: Color(0xFFC06A00),
+            color: color,
           ),
           const SizedBox(width: 4),
           Text(
@@ -778,7 +801,7 @@ class _PujaStatusBadge extends StatelessWidget {
             style: AppTypography.inter(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFFC06A00),
+              color: color,
             ),
           ),
         ],
@@ -930,15 +953,73 @@ class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
               ),
               itemBuilder: (context, index) {
                 final item = _items[index];
-                return _DeityCard(
-                  item: item,
-                  isFavorite: _favoriteIds.contains(item.id),
-                  onFavoriteTap: () => _toggleFavorite(item),
-                  onTap: () => Get.toNamed<dynamic>(
-                    AppRoutes.ritualDetail,
-                    arguments: item.toRitualDetailArgs(),
-                  ),
-                );
+                return Obx(() {
+                  final history = Get.find<PoojaHistoryController>();
+
+                  bool belongs(Map pooja) {
+                    final expectedId = item.id.trim();
+                    final expectedName = item.name.trim().toLowerCase();
+                    final rawDeity =
+                        pooja['deity'] ?? pooja['deityId'] ?? pooja['deity_id'];
+                    if (rawDeity is Map) {
+                      final id = (rawDeity['_id'] ?? rawDeity['id'] ?? '')
+                          .toString()
+                          .trim();
+                      if (id.isNotEmpty && id == expectedId) return true;
+                      final name = (rawDeity['name'] ?? rawDeity['title'] ?? '')
+                          .toString()
+                          .trim()
+                          .toLowerCase();
+                      return expectedName.isNotEmpty && name == expectedName;
+                    }
+                    final value = (rawDeity ?? '').toString().trim();
+                    if (value.isNotEmpty && value == expectedId) return true;
+                    return expectedName.isNotEmpty &&
+                        value.toLowerCase() == expectedName;
+                  }
+
+                  final inProgress = history.pendingPoojas.any((session) {
+                    if (session is! Map) return false;
+                    final status = session['status']
+                        ?.toString()
+                        .toUpperCase()
+                        .trim();
+                    final isPending =
+                        status == 'PENDING' ||
+                        status == 'IN_PROGRESS' ||
+                        status == 'INPROGRESS' ||
+                        status == 'STARTED';
+                    if (!isPending) return false;
+                    final pooja = session['pooja'];
+                    if (pooja is! Map) return false;
+                    return belongs(pooja);
+                  });
+
+                  final finished = history.finishedPoojas.any((session) {
+                    if (session is! Map) return false;
+                    final pooja = session['pooja'];
+                    if (pooja is! Map) return false;
+                    return belongs(pooja);
+                  });
+
+                  String? label;
+                  if (inProgress) {
+                    label = 'In Progress';
+                  } else if (finished) {
+                    label = 'Finished';
+                  }
+
+                  return _DeityCard(
+                    item: item,
+                    isFavorite: _favoriteIds.contains(item.id),
+                    statusLabel: label,
+                    onFavoriteTap: () => _toggleFavorite(item),
+                    onTap: () => Get.toNamed<dynamic>(
+                      AppRoutes.ritualDetail,
+                      arguments: item.toRitualDetailArgs(),
+                    ),
+                  );
+                });
               },
             ),
     );

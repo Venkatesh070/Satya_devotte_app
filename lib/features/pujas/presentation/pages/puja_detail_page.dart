@@ -613,21 +613,49 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             ),
           ),
           if (showGetStartedButton)
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(context).padding.bottom + 16,
-              child: CustomButton(
-                label: 'Get Started',
-                borderRadius: 14,
-                onTap: () => Get.to(() => PoojaStepWizard(pooja: p)),
-                textColor: AppColors.white,
-                gradientColors: const [
-                  AppColors.gradientStart,
-                  AppColors.gradientEnd,
-                ],
-              ),
-            ),
+            Obx(() {
+              final pending = _historyController.pendingPoojas;
+              Map? session;
+              for (final s in pending) {
+                if (s is Map && _sessionMatchesPooja(s, activePooja)) {
+                  session = s;
+                  break;
+                }
+              }
+
+              final isPending = session != null;
+              final label = isPending ? 'Resume Puja' : 'Get Started';
+
+              return Positioned(
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).padding.bottom + 16,
+                child: CustomButton(
+                  label: label,
+                  borderRadius: 14,
+                  onTap: () {
+                    if (isPending) {
+                      final step = _intValue(session!['currentStep']);
+                      final sid = (session['_id'] ?? session['id'])?.toString();
+                      Get.to(
+                        () => PoojaStepWizard(
+                          pooja: p,
+                          initialStep: step,
+                          sessionId: sid,
+                        ),
+                      );
+                    } else {
+                      Get.to(() => PoojaStepWizard(pooja: p));
+                    }
+                  },
+                  textColor: AppColors.white,
+                  gradientColors: const [
+                    AppColors.gradientStart,
+                    AppColors.gradientEnd,
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -665,6 +693,12 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         .toLowerCase();
     final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
     return sessionTitle.isNotEmpty && sessionTitle == title;
+  }
+
+  int _intValue(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

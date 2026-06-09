@@ -12,6 +12,7 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
   final AudioPlayer _player = AudioPlayer();
   bool _prepared = false;
+  Future<void>? _prepareFuture;
   bool _userPaused = false;
   bool _cmsMusicSuppressed = false;
 
@@ -83,9 +84,23 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
   Future<void> _prepare() async {
     if (_prepared) return;
-    await _player.setAsset(assetPath);
-    await _player.setLoopMode(LoopMode.one);
-    _prepared = true;
+    if (_prepareFuture != null) return _prepareFuture!;
+
+    _prepareFuture = _doPrepare();
+    return _prepareFuture!;
+  }
+
+  Future<void> _doPrepare() async {
+    try {
+      await _player.setAsset(assetPath);
+      await _player.setLoopMode(LoopMode.one);
+      _prepared = true;
+    } catch (e) {
+      _prepared = false;
+      rethrow;
+    } finally {
+      _prepareFuture = null;
+    }
   }
 
   /// Starts or resumes background music (idempotent).
@@ -147,4 +162,3 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     }
   }
 }
-
