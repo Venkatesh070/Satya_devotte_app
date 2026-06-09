@@ -61,16 +61,47 @@ class CalendarController extends GetxController {
   final RxSet<String> remindedEventIds = <String>{}.obs;
   final RxSet<String> addedToCalendarIds = <String>{}.obs;
 
+  /// Map of deity ID to their hex color string.
+  final RxMap<String, String> deityColors = <String, String>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
     _loadReminders();
     _loadCalendarStatus();
     _loadUserEvents();
+    _fetchDeityColors();
     fetchData();
 
     // Re-fetch data whenever the focused month/year changes
     ever(focusedDate, (_) => fetchData());
+  }
+
+  Future<void> _fetchDeityColors() async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.deities);
+      final payload = response.data;
+      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+
+      List<dynamic> list = [];
+      if (data is Map<String, dynamic>) {
+        list = data['deities'] ?? [];
+      } else if (payload is Map<String, dynamic>) {
+        list = payload['deities'] ?? [];
+      }
+
+      for (final d in list) {
+        if (d is Map) {
+          final id = (d['_id'] ?? d['id'] ?? '').toString();
+          final color = (d['deity_color'] ?? d['color'] ?? '').toString();
+          if (id.isNotEmpty && color.isNotEmpty) {
+            deityColors[id] = color;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('CalendarController: Error fetching deity colors: $e');
+    }
   }
 
   void setActiveTab(CalendarFilterTab tab) => activeTab.value = tab;

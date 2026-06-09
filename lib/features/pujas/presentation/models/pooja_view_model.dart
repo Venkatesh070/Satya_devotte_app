@@ -20,6 +20,14 @@ class PoojaView {
   String get status => (_raw['status'] ?? '').toString();
   String get date => (_raw['date'] ?? '').toString();
 
+  String get deityColor {
+    final dDoc = deityDoc;
+    if (dDoc != null) {
+      return (dDoc['deity_color'] ?? dDoc['color'] ?? '').toString();
+    }
+    return '';
+  }
+
   Map<String, dynamic>? get deityDoc {
     final d = _raw['deity'];
     if (d is Map<String, dynamic>) return d;

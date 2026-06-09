@@ -293,15 +293,59 @@ class _MonthGrid extends StatelessWidget {
                   if (events.isNotEmpty)
                     Positioned(
                       bottom: 2,
-                      child: Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: isSelected
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: events.map((e) {
+                          Color dotColor = isSelected
                               ? CalendarUi.headerOrange
-                              : Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
+                              : Colors.white.withValues(alpha: 0.9);
+
+                          if (e is PoojaView) {
+                            // ... existing pooja color logic ...
+                            String? hex;
+                            hex = e.deityColor;
+                            if (hex.isEmpty) {
+                              final rawDeity = e.raw['deity'] ??
+                                  e.raw['deityId'] ??
+                                  e.raw['deity_id'];
+                              final id = rawDeity is Map
+                                  ? (rawDeity['_id'] ?? rawDeity['id'])
+                                      ?.toString()
+                                  : rawDeity?.toString();
+                              if (id != null) {
+                                hex = controller.deityColors[id];
+                              }
+                            }
+                            if (hex != null && hex.isNotEmpty) {
+                              try {
+                                final hexColor =
+                                    hex.replaceAll('#', '').padLeft(8, 'ff');
+                                dotColor = Color(int.parse('0x$hexColor'));
+                              } catch (_) {}
+                            }
+                          } else if (e is MoonPhaseModel) {
+                            final isFull =
+                                e.type.toUpperCase().contains('FULL');
+                            dotColor = isFull ? Colors.white : Colors.black;
+                          } else if (e is FestivalModel) {
+                            // Branded Gold/Orange for Festivals
+                            dotColor = const Color(0xFFE8A13A);
+                          }
+
+                          return Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                            decoration: BoxDecoration(
+                              color: dotColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                width: 0.5,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                 ],
