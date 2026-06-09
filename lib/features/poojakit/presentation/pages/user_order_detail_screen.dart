@@ -456,132 +456,127 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    // final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFEF9F3),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFEF9F3),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        // bottom: bottomInset > 0 ? false : true,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DonationUi.cardBorder,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Cancel Order',
+                    style: AppTypography.lora(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: DonationUi.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Are you sure you want to cancel order ${widget.order.orderNumber}? Please enter a reason for cancellation.',
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: DonationUi.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _reasonCtrl,
+                    enabled: !_submitting,
+                    minLines: 3,
+                    maxLines: 4,
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: DonationUi.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your reason for cancellation',
+                      hintStyle: AppTypography.inter(
+                        fontSize: 14,
+                        color: DonationUi.textMuted.withValues(alpha: 0.5),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
                           color: DonationUi.cardBorder,
-                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Cancel Order',
-                      style: AppTypography.lora(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: DonationUi.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Are you sure you want to cancel order ${widget.order.orderNumber}? Please enter a reason for cancellation.',
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: DonationUi.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _reasonCtrl,
-                      enabled: !_submitting,
-                      minLines: 3,
-                      maxLines: 4,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: DonationUi.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Enter your reason for cancellation',
-                        hintStyle: AppTypography.inter(
-                          fontSize: 14,
-                          color: DonationUi.textMuted.withValues(alpha: 0.5),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: DonationUi.cardBorder,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: DonationUi.cardBorder,
-                          ),
-                        ),
-                        focusedBorder: GradientOutlineInputBorder(
-                          gradient: AppColors.inputBorderGradient,
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFED5A00),
-                          ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: DonationUi.cardBorder,
                         ),
                       ),
+                      focusedBorder: GradientOutlineInputBorder(
+                        gradient: AppColors.inputBorderGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFFED5A00)),
+                      ),
                     ),
-                    const SizedBox(height: 24),
-                    CustomButton(
-                      label: _submitting ? 'Cancelling...' : 'Yes, Cancel',
-                      textColor: Colors.white,
-                      gradientColors: _figmaActionGradient,
-                      borderRadius: 14,
-                      enabled: !_submitting,
-                      onTap: _submit,
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                  CustomButton(
+                    label: _submitting ? 'Cancelling...' : 'Yes, Cancel',
+                    textColor: Colors.white,
+                    gradientColors: _figmaActionGradient,
+                    borderRadius: 14,
+                    enabled: !_submitting,
+                    onTap: _submit,
+                  ),
+                ],
               ),
-              Positioned(
-                right: 0,
-                top: 10,
-                child: GestureDetector(
-                  onTap: _submitting ? null : () => Get.back<void>(),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3E5D0),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 18,
-                      color: Color(0xFF3B1E08),
-                    ),
+            ),
+            Positioned(
+              right: 16,
+              top: 16,
+              child: GestureDetector(
+                onTap: _submitting ? null : () => Get.back<void>(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E5D0).withValues(alpha: 0.4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: Color(0xFF3B1E08),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

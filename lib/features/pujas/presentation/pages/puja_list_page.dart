@@ -229,7 +229,10 @@ class _RitualListPageState extends State<RitualListPage> {
     Get.toNamed<dynamic>(
       AppRoutes.ritualDetail,
       arguments: item.toRitualDetailArgs(),
-    )?.then((_) => _poojaHistoryController.fetchHistory());
+    )?.then((_) {
+      _poojaHistoryController.fetchHistory();
+      _loadFavoritesFromApi();
+    });
   }
 
   List<DeityListItem> get _filteredItems {
