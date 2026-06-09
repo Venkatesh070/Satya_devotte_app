@@ -28,12 +28,11 @@ class SathyaApp extends StatelessWidget {
       },
       builder: (context, child) {
         if (kIsWeb || child == null) return child ?? const SizedBox.shrink();
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            const AppMusicFloatingButton(),
-          ],
+        return ApiLoadingOverlay(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [child, const AppMusicFloatingButton()],
+          ),
         );
       },
     );

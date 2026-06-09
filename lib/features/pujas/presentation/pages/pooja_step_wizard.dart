@@ -29,6 +29,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   List<Widget> _screens = [];
   String? _sessionId;
   bool _isLoadingFullPooja = false;
+  bool _isStartingSession = false;
   late PoojaView _currentPooja;
 
   @override
@@ -45,10 +46,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       _currentPage = _clampStep(_currentPage);
     }
     _pageController = PageController(initialPage: _currentPage);
-
-    if (_sessionId == null) {
-      _startSession();
-    }
   }
 
   Future<void> _loadFullPooja() async {
@@ -79,19 +76,28 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   }
 
   Future<void> _startSession() async {
-    final historyCtrl = Get.find<PoojaHistoryController>();
-    final result = await historyCtrl.startPooja(widget.pooja.id);
-    if (result != null) {
-      setState(() {
-        _sessionId = result['_id'] ?? result['id'];
-        if (widget.initialStep == null) {
-          final step = result['currentStep'] as int? ?? 0;
-          if (step > 0 && step < _screens.length) {
-            _currentPage = step;
-            _pageController.jumpToPage(step);
-          }
+    if (_isStartingSession) return;
+    _isStartingSession = true;
+
+    try {
+      final historyCtrl = Get.find<PoojaHistoryController>();
+      final result = await historyCtrl.startPooja(widget.pooja.id);
+      if (result != null) {
+        if (mounted) {
+          setState(() {
+            _sessionId = result['_id'] ?? result['id'];
+            if (widget.initialStep == null) {
+              final step = result['currentStep'] as int? ?? 0;
+              if (step > 0 && step < _screens.length) {
+                _currentPage = step;
+                _pageController.jumpToPage(step);
+              }
+            }
+          });
         }
-      });
+      }
+    } finally {
+      _isStartingSession = false;
     }
   }
 
@@ -219,6 +225,12 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   void _nextPage() {
     if (_currentPage < _screens.length - 1) {
       final nextIdx = _currentPage + 1;
+
+      // Start session lazily if not already started
+      if (_sessionId == null) {
+        _startSession();
+      }
+
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -227,7 +239,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
       // Update progress if we have a session
       if (_sessionId != null) {
-        print('DEBUG: Wizard updating progress to NEXT index: $nextIdx');
         Get.find<PoojaHistoryController>().updateProgress(_sessionId!, nextIdx);
       }
     }

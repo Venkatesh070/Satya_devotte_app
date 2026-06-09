@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/api_loading_service.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
@@ -9,12 +10,22 @@ class ApiLoadingOverlay extends StatelessWidget {
 
   final Widget child;
 
+  static const Set<String> _skipLoaderRoutes = {
+    '',
+    '/',
+    AppRoutes.splash,
+    AppRoutes.onboarding,
+  };
+
   @override
   Widget build(BuildContext context) {
     final loadingService = Get.find<ApiLoadingService>();
 
     return Obx(() {
-      final showLoader = loadingService.isLoading;
+      final currentRoute = Get.currentRoute;
+      final showLoader =
+          loadingService.isLoading && !_skipLoaderRoutes.contains(currentRoute);
+
       return Stack(
         fit: StackFit.expand,
         children: [

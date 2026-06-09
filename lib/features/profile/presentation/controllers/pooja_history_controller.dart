@@ -30,8 +30,18 @@ class PoojaHistoryController extends GetxController {
         history.value = payload;
 
         final pending = payload['pending'];
+        final Set<String> pendingPoojaIds = {};
         if (pending is List) {
           pendingPoojas.assignAll(pending);
+          for (final session in pending) {
+            if (session is Map) {
+              final p = session['pooja'];
+              if (p is Map) {
+                final id = (p['_id'] ?? p['id'] ?? '').toString();
+                if (id.isNotEmpty) pendingPoojaIds.add(id);
+              }
+            }
+          }
           print('DEBUG: Loaded ${pendingPoojas.length} pending items');
         } else {
           pendingPoojas.clear();
@@ -40,8 +50,28 @@ class PoojaHistoryController extends GetxController {
 
         final finished = payload['finished'];
         if (finished is List) {
-          finishedPoojas.assignAll(finished);
-          print('DEBUG: Loaded ${finishedPoojas.length} finished items');
+          // Filter to show only the most recent completion per unique puja,
+          // and only if it's NOT currently in progress (pending).
+          final Map<String, dynamic> uniqueFinished = {};
+          for (final session in finished) {
+            if (session is! Map) continue;
+            final pooja = session['pooja'];
+            if (pooja is! Map) continue;
+
+            final id = (pooja['_id'] ?? pooja['id'] ?? '').toString();
+            if (id.isEmpty) continue;
+
+            // If this puja is currently in progress, don't show its old finished version
+            if (pendingPoojaIds.contains(id)) continue;
+
+            // Since the API usually returns items sorted by date descending,
+            // the first one we encounter for an ID is the most recent.
+            if (!uniqueFinished.containsKey(id)) {
+              uniqueFinished[id] = session;
+            }
+          }
+          finishedPoojas.assignAll(uniqueFinished.values.toList());
+          print('DEBUG: Loaded ${finishedPoojas.length} unique finished items');
         } else {
           finishedPoojas.clear();
           print('DEBUG: No finished list found in payload');
