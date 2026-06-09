@@ -102,7 +102,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
     final adminsCount = d['adminsCount'] as int? ?? 0;
     final festivals = d['festivals'] as Map<String, dynamic>? ?? {};
     final poojas = d['poojas'] as Map<String, dynamic>? ?? {};
-    final donations = d['donations'] as Map<String, dynamic>? ?? {};
+    final deities = d['deities'] as Map<String, dynamic>? ?? {};
     final todaySloka = d['todaySloka'] as Map<String, dynamic>?;
 
     final totalFestivals =
@@ -184,12 +184,12 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _StatusCard(
-                      title: 'Donations',
-                      icon: Icons.volunteer_activism,
-                      color: const Color(0xFF4CAF50),
-                      approved: donations['APPROVED'] as int? ?? 0,
-                      pending: donations['PENDING'] as int? ?? 0,
-                      rejected: donations['REJECTED'] as int? ?? 0,
+                      title: 'Deities',
+                      icon: Icons.auto_awesome,
+                      color: CmsColors.orange,
+                      approved: deities['APPROVED'] as int? ?? 0,
+                      pending: deities['PENDING'] as int? ?? 0,
+                      rejected: deities['REJECTED'] as int? ?? 0,
                     ),
                   ),
                 ],
@@ -216,12 +216,12 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                   ),
                   const SizedBox(height: 12),
                   _StatusCard(
-                    title: 'Donations',
-                    icon: Icons.volunteer_activism,
-                    color: const Color(0xFF4CAF50),
-                    approved: donations['APPROVED'] as int? ?? 0,
-                    pending: donations['PENDING'] as int? ?? 0,
-                    rejected: donations['REJECTED'] as int? ?? 0,
+                    title: 'Deities',
+                    icon: Icons.auto_awesome,
+                    color: CmsColors.orange,
+                    approved: deities['APPROVED'] as int? ?? 0,
+                    pending: deities['PENDING'] as int? ?? 0,
+                    rejected: deities['REJECTED'] as int? ?? 0,
                   ),
                 ],
               ),
