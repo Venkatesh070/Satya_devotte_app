@@ -17,24 +17,6 @@ class LoginFooter extends StatelessWidget {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Sathya v$version',
-              style: AppTypography.inter(
-                fontSize: 12,
-                color: _creamMuted,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Made with devotion for spiritual seekers by',
-              textAlign: TextAlign.center,
-              style: AppTypography.lora(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: _creamMuted,
-              ),
-            ),
-            const SizedBox(height: 10),
             Image.asset(
               'assets/images/redin_consulting.png',
               width: 116,

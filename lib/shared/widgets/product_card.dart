@@ -101,6 +101,29 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (product.isOrderClosed)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'CLOSED',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
 
@@ -154,9 +177,12 @@ class ProductCard extends StatelessWidget {
                       width: double.infinity,
                       height: 32,
                       child: ElevatedButton(
-                        onPressed: product.inStock ? onAddToCartTap : null,
+                        onPressed: product.inStock && !product.isOrderClosed
+                            ? onAddToCartTap
+                            : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: product.inStock
+                          backgroundColor:
+                              product.inStock && !product.isOrderClosed
                               ? AppColors.primary
                               : Colors.grey,
                           foregroundColor: Colors.white,
@@ -167,7 +193,11 @@ class ProductCard extends StatelessWidget {
                           elevation: 0,
                         ),
                         child: Text(
-                          product.inStock ? 'Add to Cart' : 'Out of Stock',
+                          !product.inStock
+                              ? 'Out of Stock'
+                              : product.isOrderClosed
+                              ? 'Closed'
+                              : 'Add to Cart',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

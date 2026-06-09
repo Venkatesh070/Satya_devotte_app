@@ -23,7 +23,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _product = Get.arguments as ProductModel;
+    final args = Get.arguments;
+    if (args is ProductModel) {
+      _product = args;
+    } else {
+      // Fallback to avoid crash if arguments are invalid
+      _product = ProductModel.fromJson({});
+    }
     _cartCtrl = Get.find<CartController>();
   }
 
@@ -47,27 +53,39 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 child: Column(
                   children: [
-                    _ProductHeader(product: _product),
-                    const SizedBox(height: 24),
-                    _KitItemsSection(items: _product.items),
-                    const SizedBox(height: 86),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                      child: Column(
+                        children: [
+                          _ProductHeader(product: _product),
+                          const SizedBox(height: 24),
+                          _KitItemsSection(items: _product.items),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
             ),
             Obx(() {
               final busy = _cartCtrl.isBusy(_product.id);
+              final closed = _product.isOrderClosed;
+
               return _GradientCtaBar(
-                enabled: _product.inStock && !busy,
+                enabled: _product.inStock && !busy && !closed,
                 label: !_product.inStock
                     ? 'Out of stock'
+                    : closed
+                    ? 'Orders closed'
                     : busy
                     ? 'Adding...'
                     : 'Add to cart',
-                onTap: _product.inStock && !busy ? _addToCartAndOpenCart : null,
+                onTap: _product.inStock && !busy && !closed
+                    ? _addToCartAndOpenCart
+                    : null,
               );
             }),
           ],

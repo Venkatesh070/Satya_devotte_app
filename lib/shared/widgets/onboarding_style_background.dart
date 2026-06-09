@@ -10,20 +10,20 @@ class OnboardingStyleBackground extends StatelessWidget {
     required this.rotationController,
     this.chakraVerticalOffset = -55,
     this.wrapInPositioned = true,
+    this.backgroundImage = 'assets/images/onBoardBg3.png',
   });
 
   final AnimationController rotationController;
   final double chakraVerticalOffset;
   final bool wrapInPositioned;
+  final String backgroundImage;
 
   @override
   Widget build(BuildContext context) {
     final stack = Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(
-          child: Image.asset('assets/images/onBoardBg3.png', fit: BoxFit.cover),
-        ),
+        Positioned.fill(child: Image.asset(backgroundImage, fit: BoxFit.cover)),
         Positioned(
           top: -200,
           left: 0,

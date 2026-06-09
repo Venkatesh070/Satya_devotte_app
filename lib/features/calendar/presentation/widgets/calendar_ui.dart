@@ -21,10 +21,7 @@ abstract final class CalendarUi {
 }
 
 /// Figma action buttons — blue (#183EA4) → orange (#E35600), left to right.
-const kCalendarActionGradient = [
-  Color(0xFF183EA4),
-  Color(0xFFE35600),
-];
+const kCalendarActionGradient = [Color(0xFF183EA4), Color(0xFFE35600)];
 
 const kAppHeaderImage = 'assets/images/pooja/pujaHeaderImg.png';
 

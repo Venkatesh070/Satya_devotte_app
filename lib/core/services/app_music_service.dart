@@ -74,11 +74,16 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_userPaused) return;
+
     if (state == AppLifecycleState.resumed) {
       final route = Get.currentRoute;
       if ((!kIsWeb || (isCmsRoute(route) && !_cmsMusicSuppressed))) {
         unawaited(start());
       }
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(pause());
     }
   }
 

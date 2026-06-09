@@ -219,7 +219,6 @@ class _ProfileHeader extends StatelessWidget {
               image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
               fit: BoxFit.fill,
               alignment: Alignment.topCenter,
-              color: Color(0XFFF0650E),
             ),
           ),
           Positioned(

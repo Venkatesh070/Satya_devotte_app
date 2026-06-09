@@ -325,7 +325,9 @@ class _HomePageState extends State<HomePage> {
 
       // Fetch featured products separately as per requirement
       final productDs = ProductRemoteDataSource(apiClient);
-      final products = await productDs.getFeaturedProducts(limit: 10);
+      final products = (await productDs.getFeaturedProducts(limit: 10))
+          .where((p) => !p.isOrderClosed)
+          .toList();
 
       final payload = response.data;
       if (payload is! Map) return;

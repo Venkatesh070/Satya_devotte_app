@@ -19,8 +19,10 @@ class ProductItem {
 
   /// `InventoryItem` ObjectId (24 hex).
   final String inventoryItem;
+
   /// Stock **units** per kit (packs), not grams.
   final num quantity;
+
   /// Populated on GET when `items.inventoryItem` is expanded.
   final String? inventoryName;
   final String? inventoryUnit;
@@ -40,9 +42,9 @@ class ProductItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'inventoryItem': inventoryItem,
-        'quantity': quantity,
-      };
+    'inventoryItem': inventoryItem,
+    'quantity': quantity,
+  };
 
   factory ProductItem.fromJson(Map<String, dynamic> json) {
     var invId = '';
@@ -101,18 +103,16 @@ class ProductItem {
     num? inventoryPrice,
     num? inventorySalePrice,
     String? inventoryCurrency,
-  }) =>
-      ProductItem(
-        inventoryItem: inventoryItem ?? this.inventoryItem,
-        quantity: quantity ?? this.quantity,
-        inventoryName: inventoryName ?? this.inventoryName,
-        inventoryUnit: inventoryUnit ?? this.inventoryUnit,
-        inventoryItemQuantity:
-            inventoryItemQuantity ?? this.inventoryItemQuantity,
-        inventoryPrice: inventoryPrice ?? this.inventoryPrice,
-        inventorySalePrice: inventorySalePrice ?? this.inventorySalePrice,
-        inventoryCurrency: inventoryCurrency ?? this.inventoryCurrency,
-      );
+  }) => ProductItem(
+    inventoryItem: inventoryItem ?? this.inventoryItem,
+    quantity: quantity ?? this.quantity,
+    inventoryName: inventoryName ?? this.inventoryName,
+    inventoryUnit: inventoryUnit ?? this.inventoryUnit,
+    inventoryItemQuantity: inventoryItemQuantity ?? this.inventoryItemQuantity,
+    inventoryPrice: inventoryPrice ?? this.inventoryPrice,
+    inventorySalePrice: inventorySalePrice ?? this.inventorySalePrice,
+    inventoryCurrency: inventoryCurrency ?? this.inventoryCurrency,
+  );
 }
 
 num? _parseNum(dynamic v) {
@@ -139,6 +139,7 @@ class ProductModel {
     this.imageUrl,
     this.associatePujaIds = const [],
     this.associatePujaTitles = const {},
+    this.associatePujaDates = const {},
     this.createdAt,
     this.createdBy,
   });
@@ -148,6 +149,7 @@ class ProductModel {
   final String slug;
   final String description;
   final List<ProductItem> items;
+
   /// Max kits buildable from inventory (computed server-side).
   final int stockQuantity;
   final num price;
@@ -158,10 +160,15 @@ class ProductModel {
   final String productStatus;
   final bool isFeatured;
   final String? imageUrl;
+
   /// Associated puja ObjectIds (`associate_puja` on the API).
   final List<String> associatePujaIds;
+
   /// `id -> title` when GET returns populated puja objects.
   final Map<String, String> associatePujaTitles;
+
+  /// `id -> date` when GET returns populated puja objects.
+  final Map<String, DateTime>? associatePujaDates;
   final String? createdAt;
   final String? createdBy;
 
@@ -174,6 +181,24 @@ class ProductModel {
 
   bool get inStock => stockQuantity > 0;
   num get effectivePrice => salePrice ?? price;
+
+  /// Orders close 7 days before the puja date.
+  bool get isOrderClosed {
+    final dates = associatePujaDates;
+    if (dates == null || dates.isEmpty) return false;
+    final now = DateTime.now();
+    // A kit is considered "closed" if all its associated pujas are in the past
+    // or within the 7-day closing window.
+    bool allClosed = true;
+    for (final date in dates.values) {
+      final diff = date.difference(now).inDays;
+      if (diff >= 7) {
+        allClosed = false;
+        break;
+      }
+    }
+    return allClosed;
+  }
 
   ProductModel copyWith({
     String? id,
@@ -192,6 +217,7 @@ class ProductModel {
     String? imageUrl,
     List<String>? associatePujaIds,
     Map<String, String>? associatePujaTitles,
+    Map<String, DateTime>? associatePujaDates,
     String? createdAt,
     String? createdBy,
   }) {
@@ -212,6 +238,7 @@ class ProductModel {
       imageUrl: imageUrl ?? this.imageUrl,
       associatePujaIds: associatePujaIds ?? this.associatePujaIds,
       associatePujaTitles: associatePujaTitles ?? this.associatePujaTitles,
+      associatePujaDates: associatePujaDates ?? this.associatePujaDates,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
     );
@@ -261,7 +288,9 @@ class ProductModel {
 
   static List<String> _associatePujaIdsFromJson(Map<String, dynamic> json) {
     final raw =
-        json['associate_puja'] ?? json['associatePuja'] ?? json['associated_puja'];
+        json['associate_puja'] ??
+        json['associatePuja'] ??
+        json['associated_puja'];
     if (raw is List) {
       return raw
           .map(_pujaRefId)
@@ -280,15 +309,18 @@ class ProductModel {
   ) {
     final out = <String, String>{};
     final raw =
-        json['associate_puja'] ?? json['associatePuja'] ?? json['associated_puja'];
+        json['associate_puja'] ??
+        json['associatePuja'] ??
+        json['associated_puja'];
     if (raw is List) {
       for (final entry in raw) {
         if (entry is! Map<String, dynamic>) continue;
         final id = _pujaRefId(entry);
         if (id.isEmpty) continue;
-        final title = (entry['title'] ?? entry['name'] ?? entry['poojaName'] ?? '')
-            .toString()
-            .trim();
+        final title =
+            (entry['title'] ?? entry['name'] ?? entry['poojaName'] ?? '')
+                .toString()
+                .trim();
         if (title.isNotEmpty) out[id] = title;
       }
       return out;
@@ -302,6 +334,39 @@ class ProductModel {
               .toString()
               .trim();
       if (id.isNotEmpty && title.isNotEmpty) out[id] = title;
+    }
+    return out;
+  }
+
+  static Map<String, DateTime> _associatePujaDatesFromJson(
+    Map<String, dynamic> json,
+  ) {
+    final out = <String, DateTime>{};
+    final raw =
+        json['associate_puja'] ??
+        json['associatePuja'] ??
+        json['associated_puja'];
+    if (raw is List) {
+      for (final entry in raw) {
+        if (entry is! Map<String, dynamic>) continue;
+        final id = _pujaRefId(entry);
+        if (id.isEmpty) continue;
+        final rawDate = entry['date']?.toString() ?? '';
+        if (rawDate.isNotEmpty) {
+          final parsed = DateTime.tryParse(rawDate);
+          if (parsed != null) out[id] = parsed;
+        }
+      }
+    } else {
+      final legacy = json['puja'] ?? json['pooja'] ?? json['associatedPuja'];
+      if (legacy is Map<String, dynamic>) {
+        final id = _pujaRefId(legacy);
+        final rawDate = legacy['date']?.toString() ?? '';
+        if (id.isNotEmpty && rawDate.isNotEmpty) {
+          final parsed = DateTime.tryParse(rawDate);
+          if (parsed != null) out[id] = parsed;
+        }
+      }
     }
     return out;
   }
@@ -335,6 +400,7 @@ class ProductModel {
           : _str(json, ['imageUrl', 'image']),
       associatePujaIds: _associatePujaIdsFromJson(json),
       associatePujaTitles: _associatePujaTitlesFromJson(json),
+      associatePujaDates: _associatePujaDatesFromJson(json),
       createdAt: json['createdAt']?.toString(),
       createdBy: () {
         final v = json['createdBy'];

@@ -53,15 +53,18 @@ class PoojaKitController extends GetxController {
         limit: _pageSize.value,
       );
 
-      final items = _searchQuery.value.isEmpty
-          ? result.items
-          : result.items
-                .where(
-                  (p) => p.title.toLowerCase().contains(
-                    _searchQuery.value.toLowerCase(),
-                  ),
-                )
-                .toList();
+      final items = result.items.where((p) {
+        // Filter out products where orders are closed (past dates or within 7 days)
+        if (p.isOrderClosed) return false;
+
+        // Apply search query if present
+        if (_searchQuery.value.isNotEmpty) {
+          return p.title.toLowerCase().contains(
+                _searchQuery.value.toLowerCase(),
+              );
+        }
+        return true;
+      }).toList();
 
       if (refresh) {
         _products.assignAll(items);
