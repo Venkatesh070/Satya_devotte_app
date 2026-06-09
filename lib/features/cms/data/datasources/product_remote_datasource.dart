@@ -194,6 +194,7 @@ class ProductRemoteDataSource {
     String status = 'PENDING',
     String productStatus = 'ACTIVE',
     bool isFeatured = false,
+    List<String> associatePuja = const [],
     PickedFile? image,
   }) async {
     final fields = <String, dynamic>{
@@ -208,6 +209,7 @@ class ProductRemoteDataSource {
       'status': status,
       'productStatus': productStatus,
       'isFeatured': isFeatured.toString(),
+      'associate_puja': jsonEncode(associatePuja),
     };
     if (image != null) {
       fields['image'] = MultipartFile.fromBytes(
@@ -254,6 +256,7 @@ class ProductRemoteDataSource {
     String? status,
     String? productStatus,
     bool? isFeatured,
+    List<String>? associatePuja,
     PickedFile? image,
     bool clearSalePrice = false,
   }) async {
@@ -271,6 +274,8 @@ class ProductRemoteDataSource {
       if (status != null) 'status': status,
       if (productStatus != null) 'productStatus': productStatus,
       if (isFeatured != null) 'isFeatured': isFeatured.toString(),
+      if (associatePuja != null)
+        'associate_puja': jsonEncode(associatePuja),
     };
     if (image != null) {
       fields['image'] = MultipartFile.fromBytes(

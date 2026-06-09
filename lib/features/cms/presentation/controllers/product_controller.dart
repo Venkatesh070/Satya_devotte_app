@@ -184,6 +184,7 @@ class ProductController extends GetxController {
     String status = 'PENDING',
     String productStatus = 'ACTIVE',
     bool isFeatured = false,
+    List<String> associatePuja = const [],
     PickedFile? image,
   }) async {
     _isSubmitting.value = true;
@@ -201,6 +202,7 @@ class ProductController extends GetxController {
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,
+        associatePuja: associatePuja,
         image: image,
       );
       _ok('Puja Kit "${created.title}" created');
@@ -231,6 +233,7 @@ class ProductController extends GetxController {
     String? status,
     String? productStatus,
     bool? isFeatured,
+    List<String>? associatePuja,
     PickedFile? image,
     bool clearSalePrice = false,
   }) async {
@@ -250,6 +253,7 @@ class ProductController extends GetxController {
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,
+        associatePuja: associatePuja,
         image: image,
         clearSalePrice: clearSalePrice,
       );

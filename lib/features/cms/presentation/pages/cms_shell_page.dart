@@ -1062,8 +1062,8 @@ class _NavIds {
   static const int poojaKitInventory = 16;
   static const int poojaKitManage = 10;
   static const int poojaKitOrders = 11;
-  // Donations group children. `donations` (4) is kept as "Manage Donations"
-  // so existing routes / deep links continue to work.
+  // Donations group child. `donations` (4) is hidden from the sidebar but
+  // kept so existing routes / deep links to Manage Donations still work.
   static const int donationsAll = 12;
   // Top-level "Manage Rituals" tab (distinct from `pujas` which is the
   // historical "Manage Pujas" entry).
@@ -1115,12 +1115,6 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     icon: Icons.volunteer_activism_outlined,
     activeIcon: Icons.volunteer_activism,
     children: [
-      _NavEntry(
-        label: 'Manage Donations',
-        icon: Icons.volunteer_activism_outlined,
-        activeIcon: Icons.volunteer_activism,
-        index: _NavIds.donations,
-      ),
       _NavEntry(
         label: 'All Donations',
         icon: Icons.list_alt_outlined,

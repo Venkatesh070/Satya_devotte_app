@@ -1348,16 +1348,15 @@ class _WideTable extends StatelessWidget {
   const _WideTable({required this.items});
   final List<DonationContribution> items;
 
-  // Proportional column widths — 8 columns.
+  // Proportional column widths — 7 columns.
   static const _columnWidths = <int, TableColumnWidth>{
     0: FlexColumnWidth(2.2), // Contribution ID
     1: FlexColumnWidth(2.6), // Donor
-    2: FlexColumnWidth(2.4), // Donation
-    3: FlexColumnWidth(1.6), // Amount
-    4: FlexColumnWidth(1.4), // Status
-    5: FlexColumnWidth(2.0), // Date (two lines)
-    6: FlexColumnWidth(2.2), // Note
-    7: FlexColumnWidth(2.0), // Reference (Paystack ref)
+    2: FlexColumnWidth(1.6), // Amount
+    3: FlexColumnWidth(1.4), // Status
+    4: FlexColumnWidth(2.0), // Date (two lines)
+    5: FlexColumnWidth(2.2), // Note
+    6: FlexColumnWidth(2.0), // Reference (Paystack ref)
   };
 
   static const _headerStyle = TextStyle(
@@ -1396,7 +1395,6 @@ class _WideTable extends StatelessWidget {
               children: [
                 _pad(const Text('Contribution ID', style: _headerStyle)),
                 _pad(const Text('Donor', style: _headerStyle)),
-                _pad(const Text('Donation', style: _headerStyle)),
                 _pad(const Text(
                   'Amount',
                   style: _headerStyle,
@@ -1418,12 +1416,6 @@ class _WideTable extends StatelessWidget {
                 children: [
                   _pad(_ContributionIdsBlock(contribution: c)),
                   _pad(_DonorCell(contribution: c)),
-                  _pad(Text(
-                    c.donationTitle.isEmpty ? '—' : c.donationTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: _cellStyle,
-                  )),
                   _pad(Text(
                     c.formattedAmount,
                     maxLines: 1,

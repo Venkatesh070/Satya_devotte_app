@@ -6,6 +6,7 @@ class DeityModel {
     required this.description,
     required this.status,
     this.imageUrl,
+    this.deityColor = '',
     this.audioUrls = const [],
     this.videoUrls = const [],
     this.alternateNames = const [],
@@ -45,6 +46,7 @@ class DeityModel {
   final String description;
   final String status;
   final String? imageUrl;
+  final String deityColor;
   final List<String> audioUrls;
   final List<String> videoUrls;
   final List<String> alternateNames;
@@ -95,6 +97,7 @@ class DeityModel {
                   (json['media']['images'] as List?)?.isNotEmpty == true)
               ? json['media']['images'][0]?.toString()
               : null),
+      deityColor: (json['deity_color'] ?? '').toString().trim(),
       audioUrls: _listOfStrings((json['media'] as Map?)?['audio']),
       videoUrls: _listOfStrings((json['media'] as Map?)?['videos']),
       alternateNames: _listOfStrings(json['alternate_names']),

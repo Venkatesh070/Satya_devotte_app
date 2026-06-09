@@ -576,12 +576,16 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _lineageFormsTitleCtrl;
   late final TextEditingController _lineageFormsDescCtrl;
   PickedFile? _pickedImage;
+  String? _deityColor;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
     _status = (initial?.status ?? 'Pending').toUpperCase();
+    _deityColor = initial?.deityColor.trim().isEmpty == true
+        ? null
+        : initial?.deityColor;
     _nameCtrl = TextEditingController(text: initial?.name ?? '');
     _descCtrl = TextEditingController(text: initial?.description ?? '');
     _alternateNamesCtrl = TextEditingController();
@@ -801,6 +805,11 @@ class _DeityFormState extends State<_DeityForm> {
           hint: 'e.g. Remover of obstacles',
           controller: _descCtrl,
           maxLines: 3,
+        ),
+        const SizedBox(height: 12),
+        _DeityColorField(
+          value: _deityColor,
+          onChanged: (color) => setState(() => _deityColor = color),
         ),
         const SizedBox(height: 12),
         _ChipListEditor(
@@ -1284,6 +1293,7 @@ class _DeityFormState extends State<_DeityForm> {
       await widget.onSave(
         {
                       'name': _nameCtrl.text.trim(),
+                      'deity_color': _deityColor?.trim() ?? '',
                       'alternate_names': _valuesWithPending(
                         _alternateNamesCtrl,
                         _alternateNames,
@@ -1859,6 +1869,355 @@ class _CompactChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Deity color (single color picker) ──────────────────────────────
+const List<Color> _presetDeityColors = <Color>[
+  Color(0xFFE53935),
+  Color(0xFFFF9933),
+  Color(0xFFFDD835),
+  Color(0xFF43A047),
+  Color(0xFF1E88E5),
+  Color(0xFF8E24AA),
+  Color(0xFFE91E63),
+  Color(0xFF795548),
+  Color(0xFFFFFFFF),
+  Color(0xFF212121),
+];
+
+const Map<String, Color> _namedDeityColors = <String, Color>{
+  'red': Color(0xFFE53935),
+  'orange': Color(0xFFFF9933),
+  'saffron': Color(0xFFFF9933),
+  'yellow': Color(0xFFFDD835),
+  'green': Color(0xFF43A047),
+  'blue': Color(0xFF1E88E5),
+  'purple': Color(0xFF8E24AA),
+  'pink': Color(0xFFE91E63),
+  'brown': Color(0xFF795548),
+  'white': Color(0xFFFFFFFF),
+  'black': Color(0xFF212121),
+  'gold': Color(0xFFFFD700),
+};
+
+Color? _tryParseDeityColor(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return null;
+
+  var hex = trimmed;
+  if (hex.startsWith('#')) hex = hex.substring(1);
+  if (RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(hex)) {
+    final parsed = int.tryParse('FF$hex', radix: 16);
+    if (parsed != null) return Color(parsed);
+  }
+  if (RegExp(r'^[0-9A-Fa-f]{8}$').hasMatch(hex)) {
+    final parsed = int.tryParse(hex, radix: 16);
+    if (parsed != null) return Color(parsed);
+  }
+
+  return _namedDeityColors[trimmed.toLowerCase()];
+}
+
+String _colorToHex(Color color) {
+  final r = (color.r * 255).round();
+  final g = (color.g * 255).round();
+  final b = (color.b * 255).round();
+  return '#${r.toRadixString(16).padLeft(2, '0')}'
+      '${g.toRadixString(16).padLeft(2, '0')}'
+      '${b.toRadixString(16).padLeft(2, '0')}'
+      .toUpperCase();
+}
+
+class _DeityColorField extends StatelessWidget {
+  const _DeityColorField({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  Future<void> _openPicker(BuildContext context) async {
+    final initial = value != null ? _tryParseDeityColor(value!) : null;
+    final picked = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => _CmsColorPickerDialog(initialColor: initial),
+    );
+    if (picked != null) onChanged(_colorToHex(picked));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = value != null ? _tryParseDeityColor(value!) : null;
+    final hasColor = value != null && value!.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Deity Color',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () => _openPicker(context),
+          child: Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: CmsColors.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: parsed ?? CmsColors.bg,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: hasColor ? Colors.black12 : CmsColors.border,
+                    ),
+                  ),
+                  child: hasColor
+                      ? null
+                      : const Icon(
+                          Icons.palette_outlined,
+                          size: 14,
+                          color: CmsColors.textSecond,
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    hasColor ? value! : 'Select deity color',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: hasColor
+                          ? CmsThemeColors.inputText
+                          : CmsThemeColors.inputHint,
+                    ),
+                  ),
+                ),
+                if (hasColor)
+                  GestureDetector(
+                    onTap: () => onChanged(null),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: CmsColors.textSecond,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CmsColorPickerDialog extends StatefulWidget {
+  const _CmsColorPickerDialog({this.initialColor});
+
+  final Color? initialColor;
+
+  @override
+  State<_CmsColorPickerDialog> createState() => _CmsColorPickerDialogState();
+}
+
+class _CmsColorPickerDialogState extends State<_CmsColorPickerDialog> {
+  late Color _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialColor ?? const Color(0xFFFF9933);
+  }
+
+  void _setColor(Color color) => setState(() => _selected = color);
+
+  void _updateHsl({double? hue, double? saturation, double? lightness}) {
+    final hsl = HSLColor.fromColor(_selected);
+    setState(() {
+      _selected = hsl
+          .withHue(hue ?? hsl.hue)
+          .withSaturation(saturation ?? hsl.saturation)
+          .withLightness(lightness ?? hsl.lightness)
+          .toColor();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hsl = HSLColor.fromColor(_selected);
+
+    return AlertDialog(
+      backgroundColor: CmsColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: const Text(
+        'Select deity color',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: CmsColors.textPrimary,
+        ),
+      ),
+      content: SizedBox(
+        width: 320,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _selected,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: CmsColors.border, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                _colorToHex(_selected),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textSecond,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Quick picks',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textSecond,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _presetDeityColors.map((color) {
+                final selected = _colorToHex(color) == _colorToHex(_selected);
+                return GestureDetector(
+                  onTap: () => _setColor(color),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: selected ? CmsColors.orange : CmsColors.border,
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Hue',
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: CmsColors.orange,
+                thumbColor: CmsColors.orange,
+                overlayColor: CmsColors.orange.withOpacity(0.12),
+              ),
+              child: Slider(
+                value: hsl.hue,
+                min: 0,
+                max: 360,
+                onChanged: (v) => _updateHsl(hue: v),
+              ),
+            ),
+            const Text(
+              'Saturation',
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: CmsColors.orange,
+                thumbColor: CmsColors.orange,
+                overlayColor: CmsColors.orange.withOpacity(0.12),
+              ),
+              child: Slider(
+                value: hsl.saturation,
+                min: 0,
+                max: 1,
+                onChanged: (v) => _updateHsl(saturation: v),
+              ),
+            ),
+            const Text(
+              'Lightness',
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: CmsColors.orange,
+                thumbColor: CmsColors.orange,
+                overlayColor: CmsColors.orange.withOpacity(0.12),
+              ),
+              child: Slider(
+                value: hsl.lightness,
+                min: 0,
+                max: 1,
+                onChanged: (v) => _updateHsl(lightness: v),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(_selected),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: CmsColors.orange,
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
+          child: const Text('Select'),
+        ),
+      ],
     );
   }
 }

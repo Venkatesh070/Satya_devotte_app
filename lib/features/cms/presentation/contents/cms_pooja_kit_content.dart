@@ -15,8 +15,10 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/models/inventory_models.dart';
+import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -1937,6 +1939,7 @@ bool _inventoryHasSale(InventoryItem inv) {
 
 class _ProductFormState extends State<_ProductForm> {
   late final InventoryController _invCtrl;
+  late final PoojaController _poojaCtrl;
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
   late final TextEditingController _descCtrl;
@@ -1948,6 +1951,7 @@ class _ProductFormState extends State<_ProductForm> {
   late String _productStatus;
   late bool _isFeatured;
   PickedFile? _image;
+  String? _selectedPujaId;
   bool _slugManuallyEdited = false;
   final List<_KitLineEditor> _kitLines = [];
 
@@ -1959,7 +1963,11 @@ class _ProductFormState extends State<_ProductForm> {
   void initState() {
     super.initState();
     _invCtrl = Get.find<InventoryController>();
+    _poojaCtrl = Get.find<PoojaController>();
     final p = widget.product;
+    _selectedPujaId = p?.associatePujaIds.isNotEmpty == true
+        ? p!.associatePujaIds.first
+        : null;
     _titleCtrl = TextEditingController(text: p?.title ?? '');
     _slugCtrl = TextEditingController(text: p?.slug ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
@@ -2004,6 +2012,146 @@ class _ProductFormState extends State<_ProductForm> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _invCtrl.loadPickerItems();
+      if (_poojaCtrl.poojas.isEmpty) {
+        _poojaCtrl.loadPoojas(showErrorSnackbar: false);
+      }
+    });
+  }
+
+  Widget _associatePujaField() {
+    return Obx(() {
+      final loading = _poojaCtrl.isLoading && _poojaCtrl.poojas.isEmpty;
+      final poojas = _poojaCtrl.poojas
+          .where((p) => p.status == 'Approved')
+          .toList(growable: false);
+      final selectedId = _selectedPujaId?.trim() ?? '';
+      final hasSelected = selectedId.isNotEmpty;
+      final selectedInList =
+          hasSelected && poojas.any((p) => p.id == selectedId);
+      final orphanLabel =
+          widget.product?.associatePujaTitles[selectedId] ?? 'Selected puja';
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Associate Puja',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 40,
+            child: loading
+                ? Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: CmsColors.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: CmsColors.border),
+                    ),
+                    child: const Row(
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Loading pujas...',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : DropdownButtonFormField<String?>(
+                    value: hasSelected ? selectedId : null,
+                    isExpanded: true,
+                    isDense: true,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: CmsColors.textSecond,
+                      size: 20,
+                    ),
+                    dropdownColor: CmsColors.white,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: CmsThemeColors.inputText,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: CmsColors.bg,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.orange),
+                      ),
+                    ),
+                    hint: const Text(
+                      'Select puja',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: CmsThemeColors.inputHint,
+                      ),
+                    ),
+                    items: [
+                      if (hasSelected && !selectedInList)
+                        DropdownMenuItem<String?>(
+                          value: selectedId,
+                          child: Text(
+                            orphanLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ...poojas.map(
+                        (PoojaModel p) => DropdownMenuItem<String?>(
+                          value: p.id,
+                          child: Text(
+                            p.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: poojas.isEmpty
+                        ? null
+                        : (value) => setState(() => _selectedPujaId = value),
+                  ),
+          ),
+          if (!loading && poojas.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                'No approved pujas available.',
+                style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+              ),
+            ),
+        ],
+      );
     });
   }
 
@@ -2275,6 +2423,10 @@ class _ProductFormState extends State<_ProductForm> {
       return;
     }
 
+    final selectedPujaId = _selectedPujaId?.trim() ?? '';
+    final associatePuja =
+        selectedPujaId.isNotEmpty ? <String>[selectedPujaId] : <String>[];
+
     bool ok;
     if (_isEdit) {
       ok = await widget.ctrl.updateProduct(
@@ -2289,6 +2441,7 @@ class _ProductFormState extends State<_ProductForm> {
         currency: _currency,
         category: _categoryCtrl.text.trim(),
         isFeatured: _isFeatured,
+        associatePuja: associatePuja,
         image: _image,
       );
     } else {
@@ -2304,6 +2457,7 @@ class _ProductFormState extends State<_ProductForm> {
         status: _reviewStatus,
         productStatus: _productStatus,
         isFeatured: _isFeatured,
+        associatePuja: associatePuja,
         image: _image,
       );
     }
@@ -2342,12 +2496,8 @@ class _ProductFormState extends State<_ProductForm> {
                           controller: _descCtrl,
                           maxLines: 3,
                         ),
-                        // const SizedBox(height: 12),
-                        // CmsFormField(
-                        //   label: 'Category',
-                        //   hint: 'e.g. Ganesh',
-                        //   controller: _categoryCtrl,
-                        // ),
+                        const SizedBox(height: 12),
+                        _associatePujaField(),
                       ],
                     ),
                   ),
@@ -2387,12 +2537,8 @@ class _ProductFormState extends State<_ProductForm> {
                     controller: _descCtrl,
                     maxLines: 3,
                   ),
-                  // const SizedBox(height: 12),
-                  // CmsFormField(
-                  //   label: 'Category',
-                  //   hint: 'e.g. Ganesh',
-                  //   controller: _categoryCtrl,
-                  // ),
+                  const SizedBox(height: 12),
+                  _associatePujaField(),
                 ],
               ),
               const SizedBox(height: 16),

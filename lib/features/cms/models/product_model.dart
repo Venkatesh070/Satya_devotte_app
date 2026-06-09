@@ -137,6 +137,8 @@ class ProductModel {
     this.productStatus = 'ACTIVE',
     this.isFeatured = false,
     this.imageUrl,
+    this.associatePujaIds = const [],
+    this.associatePujaTitles = const {},
     this.createdAt,
     this.createdBy,
   });
@@ -156,6 +158,10 @@ class ProductModel {
   final String productStatus;
   final bool isFeatured;
   final String? imageUrl;
+  /// Associated puja ObjectIds (`associate_puja` on the API).
+  final List<String> associatePujaIds;
+  /// `id -> title` when GET returns populated puja objects.
+  final Map<String, String> associatePujaTitles;
   final String? createdAt;
   final String? createdBy;
 
@@ -184,6 +190,8 @@ class ProductModel {
     String? productStatus,
     bool? isFeatured,
     String? imageUrl,
+    List<String>? associatePujaIds,
+    Map<String, String>? associatePujaTitles,
     String? createdAt,
     String? createdBy,
   }) {
@@ -202,6 +210,8 @@ class ProductModel {
       productStatus: productStatus ?? this.productStatus,
       isFeatured: isFeatured ?? this.isFeatured,
       imageUrl: imageUrl ?? this.imageUrl,
+      associatePujaIds: associatePujaIds ?? this.associatePujaIds,
+      associatePujaTitles: associatePujaTitles ?? this.associatePujaTitles,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
     );
@@ -240,6 +250,62 @@ class ProductModel {
     return fb;
   }
 
+  static String _pujaRefId(dynamic raw) {
+    if (raw == null) return '';
+    if (raw is String) return raw.trim();
+    if (raw is Map<String, dynamic>) {
+      return (raw['_id'] ?? raw['id'])?.toString().trim() ?? '';
+    }
+    return raw.toString().trim();
+  }
+
+  static List<String> _associatePujaIdsFromJson(Map<String, dynamic> json) {
+    final raw =
+        json['associate_puja'] ?? json['associatePuja'] ?? json['associated_puja'];
+    if (raw is List) {
+      return raw
+          .map(_pujaRefId)
+          .where((id) => id.isNotEmpty)
+          .toList(growable: false);
+    }
+
+    final legacy = json['puja'] ?? json['pooja'] ?? json['associatedPuja'];
+    final legacyId = _pujaRefId(legacy);
+    if (legacyId.isNotEmpty) return [legacyId];
+    return const [];
+  }
+
+  static Map<String, String> _associatePujaTitlesFromJson(
+    Map<String, dynamic> json,
+  ) {
+    final out = <String, String>{};
+    final raw =
+        json['associate_puja'] ?? json['associatePuja'] ?? json['associated_puja'];
+    if (raw is List) {
+      for (final entry in raw) {
+        if (entry is! Map<String, dynamic>) continue;
+        final id = _pujaRefId(entry);
+        if (id.isEmpty) continue;
+        final title = (entry['title'] ?? entry['name'] ?? entry['poojaName'] ?? '')
+            .toString()
+            .trim();
+        if (title.isNotEmpty) out[id] = title;
+      }
+      return out;
+    }
+
+    final legacy = json['puja'] ?? json['pooja'] ?? json['associatedPuja'];
+    if (legacy is Map<String, dynamic>) {
+      final id = _pujaRefId(legacy);
+      final title =
+          (legacy['title'] ?? legacy['name'] ?? legacy['poojaName'] ?? '')
+              .toString()
+              .trim();
+      if (id.isNotEmpty && title.isNotEmpty) out[id] = title;
+    }
+    return out;
+  }
+
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];
     final items = <ProductItem>[];
@@ -267,6 +333,8 @@ class ProductModel {
       imageUrl: _str(json, ['imageUrl', 'image']).isEmpty
           ? null
           : _str(json, ['imageUrl', 'image']),
+      associatePujaIds: _associatePujaIdsFromJson(json),
+      associatePujaTitles: _associatePujaTitlesFromJson(json),
       createdAt: json['createdAt']?.toString(),
       createdBy: () {
         final v = json['createdBy'];
