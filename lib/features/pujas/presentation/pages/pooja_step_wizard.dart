@@ -6,6 +6,8 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
+import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 
 class PoojaStepWizard extends StatefulWidget {
@@ -1361,14 +1363,18 @@ class _CompletionScreen extends StatelessWidget {
 
             // Donation Section
             GestureDetector(
-              onTap: () => Get.toNamed(AppRoutes.userDonations),
+              onTap: () => MakeDonationScreen.show(context),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFB10F33), Color(0xFF8E0B2A)],
+                    colors: [
+                      Color(0xFF421204),
+                      Color(0xFF8B2C0F),
+                      Color(0xFFC04E15),
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -1379,7 +1385,7 @@ class _CompletionScreen extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0x22FFFFFF),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -1395,20 +1401,19 @@ class _CompletionScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Make a Donation',
-                            style: AppTypography.lora(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              height: 1.15,
+                            style: AppTypography.inter(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Support noble causes & earn blessings',
-                            style: AppTypography.inter(
-                              color: const Color(0xFFFDE7EC),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+                            'Help us give you an outstanding experience',
+                            style: AppTypography.lora(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                               height: 1.2,
                             ),
                           ),
@@ -1416,16 +1421,21 @@ class _CompletionScreen extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0x26FFFFFF),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 22,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE87C3E),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Donate',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],

@@ -13,13 +13,13 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 /// Figma "Make a Donation" bottom sheet.
 class MakeDonationScreen extends StatefulWidget {
-  const MakeDonationScreen({super.key, required this.donation});
+  const MakeDonationScreen({super.key, this.donation});
 
-  final Donation donation;
+  final Donation? donation;
 
   static const _presetAmounts = <int>[100, 250, 500, 1000, 2000, 5000];
 
-  static Future<void> show(BuildContext context, {required Donation donation}) {
+  static Future<void> show(BuildContext context, {Donation? donation}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -39,10 +39,7 @@ class MakeDonationScreen extends StatefulWidget {
   }
 
   /// Back-compat for call sites that used navigation.
-  static Future<void> open({
-    required Donation donation,
-    BuildContext? context,
-  }) {
+  static Future<void> open({Donation? donation, BuildContext? context}) {
     final ctx = context ?? Get.context;
     if (ctx == null) return Future.value();
     return show(ctx, donation: donation);
@@ -96,7 +93,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     setState(() => _inlineError = null);
 
     final init = await _donateCtrl.initiate(
-      donationId: widget.donation.id,
+      donationId: widget.donation?.id,
       amount: num.parse(_amountCtrl.text.trim()),
       note: _noteCtrl.text.trim(),
     );
@@ -176,15 +173,22 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _SelectedCauseCard(donation: widget.donation),
                   const SizedBox(height: 24),
-                  Text(
-                    'Select Amount',
-                    style: AppTypography.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: DonationUi.text,
+                  if (widget.donation != null) ...[
+                    _SelectedCauseCard(donation: widget.donation!),
+                    const SizedBox(height: 24),
+                  ],
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                    ).createShader(bounds),
+                    child: Text(
+                      'Select Amount',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -204,12 +208,17 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     }).toList(),
                   ),
                   const SizedBox(height: 20),
-                  Text(
-                    'Or Enter Custom Amount',
-                    style: AppTypography.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: DonationUi.text,
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                    ).createShader(bounds),
+                    child: Text(
+                      'Or Enter Custom Amount',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -221,7 +230,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],
-                    decoration: _fieldDecoration(),
+                    decoration: _fieldDecoration(prefixText: 'R '),
                     onChanged: (v) {
                       final parsed = int.tryParse(v.trim());
                       setState(() {
@@ -234,19 +243,24 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  Text(
-                    'Add Note',
-                    style: AppTypography.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: DonationUi.text,
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                    ).createShader(bounds),
+                    child: Text(
+                      'Add Note',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _noteCtrl,
                     minLines: 3,
-                    maxLines: 4,
+                    maxLines: 5,
                     maxLength: 280,
                     textInputAction: TextInputAction.newline,
                     decoration: _fieldDecoration(
@@ -271,6 +285,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -283,37 +298,48 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                 () => SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: FilledButton(
-                    onPressed: _donateCtrl.isInitiating
-                        ? null
-                        : () => _submit(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: DonationUi.amountBlue,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: DonationUi.amountBlue.withValues(
-                        alpha: 0.55,
-                      ),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: _donateCtrl.isInitiating
+                          ? null
+                          : const LinearGradient(
+                              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                            ),
+                      borderRadius: BorderRadius.circular(14),
+                      color: _donateCtrl.isInitiating
+                          ? DonationUi.amountBlue.withOpacity(0.55)
+                          : null,
                     ),
-                    child: _donateCtrl.isInitiating
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
+                    child: ElevatedButton(
+                      onPressed: _donateCtrl.isInitiating
+                          ? null
+                          : () => _submit(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _donateCtrl.isInitiating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'Make Donation',
+                              style: AppTypography.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )
-                        : Text(
-                            'Make Donation',
-                            style: AppTypography.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ),
@@ -325,30 +351,35 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
   }
 
   InputDecoration _fieldDecoration({
-    String hintText = '0000',
+    String? hintText,
     String? prefixText = 'R ',
     bool alignLabelWithHint = false,
   }) {
+    const gradient = LinearGradient(
+      colors: [Color(0xFF421204), Color(0xFF8B2C0F), Color(0xFFC04E15)],
+    );
+
     return InputDecoration(
       hintText: hintText,
       prefixText: prefixText,
-      alignLabelWithHint: alignLabelWithHint,
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+      prefixStyle: AppTypography.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: DonationUi.textPrimary,
       ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      alignLabelWithHint: alignLabelWithHint,
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFF3E5D0)),
       ),
       focusedBorder: GradientOutlineInputBorder(
-        gradient: AppColors.inputBorderGradient,
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: DonationUi.amountBlue, width: 1.5),
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(width: 1.5),
       ),
+      filled: true,
+      fillColor: const Color(0xFFFDF9F2),
     );
   }
 }
@@ -452,31 +483,33 @@ class _AmountPresetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: DonationUi.cardFill,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          height: 46,
-          decoration: BoxDecoration(
-            color: DonationUi.cardFill,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? DonationUi.amountBlue : DonationUi.cardBorder,
-              width: selected ? 1.5 : 1,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? null : Colors.white,
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF421204),
+                    Color(0xFF8B2C0F),
+                    Color(0xFFC04E15),
+                  ],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? Colors.transparent : const Color(0xFFE8E8E8),
+            width: 1,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppTypography.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: DonationUi.textPrimary,
-              ),
-            ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.inter(
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? Colors.white : DonationUi.textPrimary,
           ),
         ),
       ),

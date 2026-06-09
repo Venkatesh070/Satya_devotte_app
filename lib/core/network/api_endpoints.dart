@@ -269,6 +269,10 @@ class ApiEndpoints {
   /// Body: `{ amount, currency?, note?, callbackUrl? }`.
   static String donate(String id) => '/api/v1/donations/$id/donate';
 
+  /// POST — initiate a general Paystack donation.
+  /// Body: `{ amount, currency, note?, callbackUrl? }`.
+  static const String generalDonate = '/api/v1/donations/donate';
+
   /// GET — list all payments. Query: `page`, `limit`, `search` (order # or reference).
   // static const String allPayments = '/api/v1/payments/all';
 

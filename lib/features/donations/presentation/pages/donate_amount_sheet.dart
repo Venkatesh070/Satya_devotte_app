@@ -9,7 +9,7 @@ class DonateAmountSheet {
 
   static Future<void> show(
     BuildContext context, {
-    required Donation donation,
+    Donation? donation,
   }) {
     return MakeDonationScreen.show(context, donation: donation);
   }

@@ -24,30 +24,24 @@ class DonationsRepository {
         ApiEndpoints.donations,
         queryParameters: {'page': page, 'limit': limit},
       );
-      return _extractList(res.data)
-          .map((e) => Donation.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return _extractList(
+        res.data,
+      ).map((e) => Donation.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
-      throw DonationException.fromDio(
-        e,
-        fallback: 'Failed to load donations.',
-      );
+      throw DonationException.fromDio(e, fallback: 'Failed to load donations.');
     }
   }
 
   // ── Initiate Paystack payment for a single donation ─────────
   Future<DonationInitData> initiateDonation({
-    required String donationId,
+    String? donationId,
     required num amount,
     String currency = 'ZAR',
     String? note,
     String? callbackUrl,
   }) async {
-    if (donationId.trim().isEmpty) {
-      throw const DonationException('Invalid donation reference.');
-    }
     if (amount < 10) {
-      throw const DonationException('Minimum donation amount is R 10.');
+      throw const DonationException('Minimum donation amount is ₹ 10.');
     }
     if (note != null && note.length > 280) {
       throw const DonationException('Note must be 280 characters or fewer.');
@@ -60,10 +54,11 @@ class DonationsRepository {
         if (callbackUrl != null && callbackUrl.trim().isNotEmpty)
           'callbackUrl': callbackUrl.trim(),
       };
-      final res = await _apiClient.dio.post<dynamic>(
-        ApiEndpoints.donate(donationId),
-        data: body,
-      );
+      final url = donationId != null && donationId.trim().isNotEmpty
+          ? ApiEndpoints.donate(donationId)
+          : ApiEndpoints.generalDonate;
+
+      final res = await _apiClient.dio.post<dynamic>(url, data: body);
       final data = res.data;
       if (data is! Map<String, dynamic>) {
         throw const DonationException('Unexpected response from server.');
@@ -101,7 +96,7 @@ class DonationsRepository {
 
   // ── Paginated contribution history ──────────────────────────
   Future<({List<DonationContribution> items, int total, int totalPages})>
-      listMyContributions({
+  listMyContributions({
     int page = 1,
     int limit = 10,
     String? paymentStatus,
@@ -124,8 +119,7 @@ class DonationsRepository {
       final totalPages = _readInt(
         body,
         ['totalPages', 'pages'],
-        fallback:
-            (limit > 0) ? ((total / limit).ceil().clamp(1, 1 << 30)) : 1,
+        fallback: (limit > 0) ? ((total / limit).ceil().clamp(1, 1 << 30)) : 1,
       );
       return (items: list, total: total, totalPages: totalPages);
     } on DioException catch (e) {
@@ -168,8 +162,10 @@ class DonationsRepository {
       final data = body['data'];
       if (data is Map) {
         final pag = data['pagination'];
-        if (pag is Map) candidate = pag;
-        else candidate = data;
+        if (pag is Map)
+          candidate = pag;
+        else
+          candidate = data;
       }
     }
     if (candidate == null) return fallback;

@@ -37,7 +37,7 @@ class DonateController extends GetxController {
   }
 
   Future<DonationInitData?> initiate({
-    required String donationId,
+    String? donationId,
     required num amount,
     String currency = 'ZAR',
     String? note,
@@ -94,8 +94,8 @@ class DonateController extends GetxController {
           await Future.delayed(delays[attempt]);
         }
       }
-      _lastError.value = lastErr?.message ??
-          'Could not verify the payment. Please try again.';
+      _lastError.value =
+          lastErr?.message ?? 'Could not verify the payment. Please try again.';
       return null;
     } finally {
       _verifying.value = false;

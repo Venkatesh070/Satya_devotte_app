@@ -39,6 +39,12 @@ class VerifyResult {
 
   bool get isPaid => status == VerifyStatus.success;
 
+  factory VerifyResult.empty() => const VerifyResult(
+    status: VerifyStatus.unknown,
+    alreadyPaid: false,
+    reference: '',
+  );
+
   static String _str(dynamic v) => (v ?? '').toString().trim();
 
   factory VerifyResult.fromJson(
@@ -50,8 +56,9 @@ class VerifyResult {
         : raw;
 
     final payment = root['payment'];
-    final paymentMap =
-        payment is Map<String, dynamic> ? payment : const <String, dynamic>{};
+    final paymentMap = payment is Map<String, dynamic>
+        ? payment
+        : const <String, dynamic>{};
 
     final contribRaw = root['contribution'];
     final contribution = contribRaw is Map<String, dynamic>
@@ -64,8 +71,8 @@ class VerifyResult {
       reference: _str(root['reference']).isNotEmpty
           ? _str(root['reference'])
           : _str(paymentMap['reference']).isNotEmpty
-              ? _str(paymentMap['reference'])
-              : (fallbackReference ?? ''),
+          ? _str(paymentMap['reference'])
+          : (fallbackReference ?? ''),
       amount: () {
         final v = paymentMap['amount'] ?? root['amount'];
         if (v is num) return v;

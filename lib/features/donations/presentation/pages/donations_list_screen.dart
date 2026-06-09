@@ -18,112 +18,121 @@ class DonationsListScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: DonationUi.background,
-      body: Obx(() {
-        final items = ctrl.items;
-        final loading = ctrl.isLoading;
-        final error = ctrl.error;
-        final total = ctrl.totalDonated;
-        final count = ctrl.contributionsCount;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _FigmaDonationsHeader(
-              onBack: () => Get.back(),
-              onHistory: () => Get.toNamed(AppRoutes.userContributions),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _FigmaDonationsHeader(
+            onBack: () => Get.back(),
+            onHistory: () => Get.toNamed(AppRoutes.userContributions),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Donations',
+                    style: AppTypography.lora(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                      color: DonationUi.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _GeneralDonationCard(
+                    onDonate: () => MakeDonationScreen.show(context),
+                  ),
+                ],
+              ),
             ),
-            Expanded(
-              child: RefreshIndicator(
-                color: DonationUi.amountBlue,
-                onRefresh: () async {
-                  await ctrl.refreshDonations();
-                  await ctrl.fetchContributions();
-                },
-                child: CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                        child: Text(
-                          'Donations',
-                          textAlign: TextAlign.left,
-                          style: AppTypography.lora(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
-                            color: DonationUi.textPrimary,
-                            height: 1.15,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: DonationSummaryCard(
-                          totalLabel: 'Total Donated',
-                          totalValue: DonationUi.formatCurrency(total),
-                          countLabel: 'Contributions',
-                          countValue: '$count',
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Offer your donations to',
-                          style: AppTypography.lora(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: DonationUi.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                    if (loading && items.isEmpty)
-                      const SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(child: _ListSkeleton()),
-                      )
-                    else if (error != null && items.isEmpty)
-                      SliverToBoxAdapter(
-                        child: _ErrorState(
-                          message: error,
-                          onRetry: ctrl.refreshDonations,
-                        ),
-                      )
-                    else if (items.isEmpty)
-                      const SliverToBoxAdapter(child: _EmptyState())
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((_, i) {
-                            final d = items[i];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: DonationCard(
-                                donation: d,
-                                onTap: () => MakeDonationScreen.show(
-                                  context,
-                                  donation: d,
-                                ),
-                              ),
-                            );
-                          }, childCount: items.length),
-                        ),
-                      ),
-                  ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GeneralDonationCard extends StatelessWidget {
+  const _GeneralDonationCard({required this.onDonate});
+
+  final VoidCallback onDonate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF421204),
+            Color(0xFF8B2C0F),
+            Color(0xFFC04E15),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Make Donation',
+            style: AppTypography.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Help us give you an outstanding experience for the applications',
+            style: AppTypography.lora(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Your donation helps us improve the experience limitlessly without',
+            style: AppTypography.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 40),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: ElevatedButton(
+              onPressed: onDonate,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE87C3E),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+              child: Text(
+                'Donate Now',
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ],
-        );
-      }),
+          ),
+        ],
+      ),
     );
   }
 }
