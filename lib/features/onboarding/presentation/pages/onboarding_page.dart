@@ -229,7 +229,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ],
               ),
             ),
-            const OnboardingStyleFooter(),
+            OnboardingStyleFooter(rotationController: _rotationController),
             SafeArea(
               child: Align(
                 alignment: Alignment.bottomCenter,

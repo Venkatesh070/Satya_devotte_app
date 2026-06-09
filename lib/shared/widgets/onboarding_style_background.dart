@@ -11,12 +11,14 @@ class OnboardingStyleBackground extends StatelessWidget {
     this.chakraVerticalOffset = -55,
     this.wrapInPositioned = true,
     this.backgroundImage = 'assets/images/onBoardBg3.png',
+    this.chakraScale = 1.0,
   });
 
   final AnimationController rotationController;
   final double chakraVerticalOffset;
   final bool wrapInPositioned;
   final String backgroundImage;
+  final double chakraScale;
 
   @override
   Widget build(BuildContext context) {
@@ -59,60 +61,63 @@ class OnboardingStyleBackground extends StatelessWidget {
           alignment: Alignment.center,
           child: Transform.translate(
             offset: Offset(0, chakraVerticalOffset),
-            child: AnimatedBuilder(
-              animation: rotationController,
-              builder: (context, child) {
-                final spin = rotationController.value * 2 * math.pi;
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Transform.rotate(
-                      angle: spin,
-                      child: Image.asset(
-                        'assets/images/chakra1.png',
-                        filterQuality: FilterQuality.high,
-                      ),
-                    ),
-                    Transform.rotate(
-                      angle: -spin,
-                      child: Transform.scale(
-                        scale: 0.90,
+            child: Transform.scale(
+              scale: chakraScale,
+              child: AnimatedBuilder(
+                animation: rotationController,
+                builder: (context, child) {
+                  final spin = rotationController.value * 2 * math.pi;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Transform.rotate(
+                        angle: spin,
                         child: Image.asset(
-                          'assets/images/chakra2.png',
+                          'assets/images/chakra1.png',
                           filterQuality: FilterQuality.high,
                         ),
                       ),
-                    ),
-                    Transform.rotate(
-                      angle: spin,
-                      child: Transform.scale(
-                        scale: 0.80,
+                      Transform.rotate(
+                        angle: -spin,
+                        child: Transform.scale(
+                          scale: 0.90,
+                          child: Image.asset(
+                            'assets/images/chakra2.png',
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                      ),
+                      Transform.rotate(
+                        angle: spin,
+                        child: Transform.scale(
+                          scale: 0.80,
+                          child: Image.asset(
+                            'assets/images/chakra3.png',
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                      ),
+                      Transform.rotate(
+                        angle: -spin,
+                        child: Transform.scale(
+                          scale: 0.53,
+                          child: Image.asset(
+                            'assets/images/chakra4.png',
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                      ),
+                      Opacity(
+                        opacity: 0.8,
                         child: Image.asset(
-                          'assets/images/chakra3.png',
+                          'assets/images/onBoardBgOverlay.png',
                           filterQuality: FilterQuality.high,
                         ),
                       ),
-                    ),
-                    Transform.rotate(
-                      angle: -spin,
-                      child: Transform.scale(
-                        scale: 0.53,
-                        child: Image.asset(
-                          'assets/images/chakra4.png',
-                          filterQuality: FilterQuality.high,
-                        ),
-                      ),
-                    ),
-                    Opacity(
-                      opacity: 0.8,
-                      child: Image.asset(
-                        'assets/images/onBoardBgOverlay.png',
-                        filterQuality: FilterQuality.high,
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -124,22 +129,35 @@ class OnboardingStyleBackground extends StatelessWidget {
 
 /// Bottom footer image used on onboarding and login.
 class OnboardingStyleFooter extends StatelessWidget {
-  const OnboardingStyleFooter({super.key});
+  const OnboardingStyleFooter({super.key, this.rotationController});
+
+  final AnimationController? rotationController;
 
   @override
   Widget build(BuildContext context) {
+    Widget image = Image.asset(
+      'assets/images/onBoardFooter.png',
+      width: MediaQuery.sizeOf(context).width,
+      fit: BoxFit.fitWidth,
+      alignment: Alignment.bottomCenter,
+    );
+
+    if (rotationController != null) {
+      image = AnimatedBuilder(
+        animation: rotationController!,
+        builder: (context, child) {
+          final spin = -rotationController!.value * 2 * math.pi;
+          return Transform.rotate(angle: spin, child: child);
+        },
+        child: image,
+      );
+    }
+
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
-      child: IgnorePointer(
-        child: Image.asset(
-          'assets/images/onBoardFooter.png',
-          width: MediaQuery.sizeOf(context).width,
-          fit: BoxFit.fitWidth,
-          alignment: Alignment.bottomCenter,
-        ),
-      ),
+      child: IgnorePointer(child: image),
     );
   }
 }

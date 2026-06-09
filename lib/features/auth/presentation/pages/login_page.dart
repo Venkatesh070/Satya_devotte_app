@@ -62,6 +62,7 @@ class _LoginPageState extends State<LoginPage>
               wrapInPositioned: false,
               backgroundImage: 'assets/images/home/login_bg.png',
               chakraVerticalOffset: 5, // Move mandala down to align with logo
+              chakraScale: 0.85, // Reduced mandala width/scale for login screen
             ),
           ),
 
@@ -84,14 +85,14 @@ class _LoginPageState extends State<LoginPage>
           Positioned(
             top:
                 screenHeight *
-                0.23, // Adjusted logo position to be inside mandala
+                0.25, // Adjusted logo position to be inside mandala
             left: 0,
             right: 0,
             child: Center(
               child: SvgPicture.asset(
                 'assets/svgs/whiteLogo.svg',
-                width: 93,
-                height: 112,
+                width: 65,
+                height: 100,
               ),
             ),
           ),
