@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -573,9 +574,22 @@ class _Footer extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          Text(
-            'Sathya v1.2.0',
-            style: AppTypography.inter(fontSize: 12, color: Colors.grey),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final info = snapshot.data;
+              final version = info?.version ?? '';
+              final buildNumber = info?.buildNumber ?? '';
+              final label = version.isEmpty
+                  ? 'Sathya'
+                  : buildNumber.isEmpty
+                  ? 'Sathya v$version'
+                  : 'Sathya v$version ($buildNumber)';
+              return Text(
+                label,
+                style: AppTypography.inter(fontSize: 12, color: Colors.grey),
+              );
+            },
           ),
           const SizedBox(height: 4),
           Text(

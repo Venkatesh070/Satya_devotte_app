@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 /// Design tokens from Sathya Devotee Figma (profile + donations).
 abstract final class DonationUi {
@@ -432,14 +433,7 @@ class DonationOrangeButton extends StatelessWidget {
           ),
         ),
         child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  color: Colors.white,
-                ),
-              )
+            ? const ChakraLoadingIndicator(size: 24, color: Colors.white)
             : Text(
                 label,
                 style: AppTypography.inter(

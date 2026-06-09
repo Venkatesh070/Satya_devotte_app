@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -889,6 +890,7 @@ class _HomeBodySections extends StatelessWidget {
             title: 'Upcoming Puja',
             items: poojas,
             useWrap: false,
+            moreImagePath: 'assets/images/home/morePoojas.png',
             onItemTap: (item) => onPujaTap(item),
             onViewMoreTap: onPoojasViewMore,
           ),
@@ -905,6 +907,7 @@ class _HomeBodySections extends StatelessWidget {
             items: festivals,
             useWrap: false,
             useFestivalStyle: true,
+            moreImagePath: 'assets/images/home/more_festivals.png',
             onItemTap: (item) => onFestivalTap(item),
             onViewMoreTap: onFestivalsViewMore,
           ),
@@ -1017,6 +1020,7 @@ class _HomeCircleSection extends StatelessWidget {
     required this.items,
     this.useWrap = false,
     this.useFestivalStyle = false,
+    this.moreImagePath = 'assets/images/home/more_festivals.png',
     this.onViewMoreTap,
     this.onItemTap,
   });
@@ -1025,6 +1029,7 @@ class _HomeCircleSection extends StatelessWidget {
   final List<HomeCircleItem> items;
   final bool useWrap;
   final bool useFestivalStyle;
+  final String moreImagePath;
   final Future<void> Function()? onViewMoreTap;
 
   /// Optional per-item tap handler.
@@ -1049,6 +1054,7 @@ class _HomeCircleSection extends StatelessWidget {
               : _CircleRow(
                   items: items,
                   useFestivalStyle: useFestivalStyle,
+                  moreImagePath: moreImagePath,
                   onItemTap: onItemTap,
                   onViewMoreTap: onViewMoreTap,
                 ),
@@ -1504,9 +1510,22 @@ class _Footer extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          Text(
-            'Sathya v1.2.0',
-            style: AppTypography.inter(fontSize: 12, color: Colors.grey),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final info = snapshot.data;
+              final version = info?.version ?? '';
+              final buildNumber = info?.buildNumber ?? '';
+              final label = version.isEmpty
+                  ? 'Sathya'
+                  : buildNumber.isEmpty
+                  ? 'Sathya v$version'
+                  : 'Sathya v$version ($buildNumber)';
+              return Text(
+                label,
+                style: AppTypography.inter(fontSize: 12, color: Colors.grey),
+              );
+            },
           ),
           const SizedBox(height: 4),
           Text(
@@ -2241,11 +2260,13 @@ class _CircleRow extends StatelessWidget {
   const _CircleRow({
     required this.items,
     this.useFestivalStyle = false,
+    this.moreImagePath = 'assets/images/home/more_festivals.png',
     this.onViewMoreTap,
     this.onItemTap,
   });
   final List<HomeCircleItem> items;
   final bool useFestivalStyle;
+  final String moreImagePath;
   final Future<void> Function()? onViewMoreTap;
   final void Function(HomeCircleItem item)? onItemTap;
 
@@ -2257,9 +2278,9 @@ class _CircleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseItems = items.where((item) => !_isMoreTitle(item.title)).toList();
-    const staticViewMoreItem = HomeCircleItem(
+    final staticViewMoreItem = HomeCircleItem(
       title: 'View\nMore',
-      imagePath: 'assets/images/home/morePoojas.png',
+      imagePath: moreImagePath,
     );
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
