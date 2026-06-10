@@ -547,10 +547,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   Widget _buildLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF4A1C00),
+      style: AppTypography.inter(
+        color: const Color(0xFF4A1C00),
         fontSize: 12,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
       ),
     );
   }
@@ -611,7 +611,7 @@ class _PickerField extends StatelessWidget {
             Expanded(
               child: Text(
                 value ?? 'Select',
-                style: TextStyle(
+                style: AppTypography.inter(
                   color: value == null
                       ? Colors.black.withValues(alpha: 0.25)
                       : const Color(0xFF1F1F1F),

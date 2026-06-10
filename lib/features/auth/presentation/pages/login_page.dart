@@ -61,31 +61,30 @@ class _LoginPageState extends State<LoginPage>
               rotationController: _rotationController,
               wrapInPositioned: false,
               backgroundImage: 'assets/images/home/login_bg.png',
-              chakraVerticalOffset: 5, // Move mandala down to align with logo
+              chakraVerticalOffset: -10, // Move mandala down to align with logo
               chakraScale: 0.85, // Reduced mandala width/scale for login screen
             ),
           ),
 
-          Positioned(
-            top: topInset + 20,
-            right: 20,
-            child: GestureDetector(
-              onTap: () => Get.offAllNamed(AppRoutes.login),
-              child: const Text(
-                'Skip >>',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-
+          // Positioned(
+          //   top: topInset + 20,
+          //   right: 20,
+          //   child: GestureDetector(
+          //     onTap: () => Get.offAllNamed(AppRoutes.login),
+          //     child: const Text(
+          //       'Skip >>',
+          //       style: TextStyle(
+          //         color: Colors.white,
+          //         fontWeight: FontWeight.w700,
+          //         fontSize: 14,
+          //       ),
+          //     ),
+          //   ),
+          // ),
           Positioned(
             top:
                 screenHeight *
-                0.25, // Adjusted logo position to be inside mandala
+                0.22, // Adjusted logo position to be inside mandala
             left: 0,
             right: 0,
             child: Center(

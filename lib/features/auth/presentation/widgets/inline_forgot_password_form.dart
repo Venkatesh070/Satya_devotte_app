@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 /// Forgot-password UI for use inside login screens (no route push).
 class InlineForgotPasswordForm extends StatelessWidget {
@@ -46,6 +47,15 @@ class InlineForgotPasswordForm extends StatelessWidget {
               style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
             ),
             const SizedBox(height: 20),
+            const Text(
+              'Email ID',
+              style: TextStyle(
+                color: Color(0xFF8A816F),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
             TextFormField(
               controller: forgotCtrl.emailController,
               enabled: !forgotCtrl.isLoading.value,
@@ -53,13 +63,30 @@ class InlineForgotPasswordForm extends StatelessWidget {
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => forgotCtrl.sendResetLink(),
               decoration: InputDecoration(
-                labelText: 'Email',
                 hintText: 'Enter your email',
+                isDense: true,
+                filled: true,
+                fillColor: const Color(0xFFFFFBF3),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(
                     color: AppColors.inputBorderColor,
                   ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.inputBorderColor,
+                  ),
+                ),
+                focusedBorder: GradientOutlineInputBorder(
+                  gradient: AppColors.inputBorderGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.gradientStart),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 15,
                 ),
               ),
               validator: forgotCtrl.validateEmail,

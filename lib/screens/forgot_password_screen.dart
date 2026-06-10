@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
   const ForgotPasswordScreen({super.key});
@@ -54,6 +55,15 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                               ),
                             ),
                             const SizedBox(height: 20),
+                            const Text(
+                              'Email ID',
+                              style: TextStyle(
+                                color: Color(0xFF8A816F),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
                             TextFormField(
                               controller: controller.emailController,
                               enabled: !controller.isLoading.value,
@@ -62,13 +72,32 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                               onFieldSubmitted: (_) =>
                                   controller.sendResetLink(),
                               decoration: InputDecoration(
-                                labelText: 'Email',
                                 hintText: 'Enter your email',
+                                isDense: true,
+                                filled: true,
+                                fillColor: const Color(0xFFFFFBF3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
                                     color: AppColors.inputBorderColor,
                                   ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.inputBorderColor,
+                                  ),
+                                ),
+                                focusedBorder: GradientOutlineInputBorder(
+                                  gradient: AppColors.inputBorderGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.gradientStart,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
+                                  vertical: 15,
                                 ),
                               ),
                               validator: controller.validateEmail,

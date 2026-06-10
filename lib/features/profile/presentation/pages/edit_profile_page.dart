@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
@@ -210,6 +211,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
                   child: Stack(
@@ -259,14 +261,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 30),
+                _buildLabel('Full Name'),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _fullNameController,
-                  decoration: _inputDecoration('Full Name'),
+                  decoration: _inputDecoration('Enter full name'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Full name is required'
                       : null,
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
+                _buildLabel('Gender'),
+                const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
                   items: const [
@@ -274,12 +280,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     DropdownMenuItem(value: 'FEMALE', child: Text('Female')),
                     DropdownMenuItem(value: 'OTHER', child: Text('Other')),
                   ],
-                  decoration: _inputDecoration('Gender'),
+                  decoration: _inputDecoration('Select gender'),
                   onChanged: isLoading
                       ? null
                       : (v) => setState(() => _selectedGender = v!),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
                 _PickerField(
                   label: 'Date of Birth',
                   value: _dateOfBirth == null
@@ -288,7 +294,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   icon: Icons.calendar_today,
                   onTap: isLoading ? null : _pickDob,
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
                 _PickerField(
                   label: 'Time of Birth',
                   value: _timeOfBirth == null
@@ -297,53 +303,77 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   icon: Icons.access_time,
                   onTap: isLoading ? null : _pickTob,
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
+                _buildLabel('Place of Birth'),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _birthPlaceController,
-                  decoration: _inputDecoration('Place of Birth'),
+                  decoration: _inputDecoration('Enter place of birth'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Place of birth is required'
                       : null,
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _sunSign,
-                        items: _zodiacSigns
-                            .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)),
-                            )
-                            .toList(),
-                        decoration: _inputDecoration('Sun Sign'),
-                        onChanged: isLoading
-                            ? null
-                            : (v) => setState(() => _sunSign = v!),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel('Sun Sign'),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: _sunSign,
+                            items: _zodiacSigns
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s),
+                                  ),
+                                )
+                                .toList(),
+                            decoration: _inputDecoration('Select'),
+                            onChanged: isLoading
+                                ? null
+                                : (v) => setState(() => _sunSign = v!),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _moonSign,
-                        items: _zodiacSigns
-                            .map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)),
-                            )
-                            .toList(),
-                        decoration: _inputDecoration('Moon Sign'),
-                        onChanged: isLoading
-                            ? null
-                            : (v) => setState(() => _moonSign = v!),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel('Moon Sign'),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: _moonSign,
+                            items: _zodiacSigns
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s),
+                                  ),
+                                )
+                                .toList(),
+                            decoration: _inputDecoration('Select'),
+                            onChanged: isLoading
+                                ? null
+                                : (v) => setState(() => _moonSign = v!),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 18),
+                _buildLabel('Phone Number'),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: _inputDecoration('Phone Number'),
+                  decoration: _inputDecoration('Enter phone number'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Phone number is required'
                       : null,
@@ -370,13 +400,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: AppTypography.inter(
+        color: const Color(0xFF4A1C00),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
-      labelText: label,
+      hintText: hint,
+      hintStyle: AppTypography.inter(
+        color: Colors.black.withOpacity(0.25),
+        fontSize: 13,
+      ),
       isDense: true,
       filled: true,
       fillColor: _fieldColor,
-      labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppColors.inputBorderColor),
@@ -389,6 +433,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         gradient: AppColors.inputBorderGradient,
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppColors.gradientStart),
+        gapPadding: 8.0,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
     );
@@ -402,6 +447,7 @@ class _PickerField extends StatelessWidget {
     required this.icon,
     required this.onTap,
   });
+
   final String label;
   final String? value;
   final IconData icon;
@@ -409,36 +455,46 @@ class _PickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          isDense: true,
-          filled: true,
-          fillColor: const Color(0xFFFFFBF3),
-          labelStyle: const TextStyle(color: Color(0xFF8A816F), fontSize: 13),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.inputBorderColor),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.inputBorderColor),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 15,
-            vertical: 15,
-          ),
-          suffixIcon: Icon(icon, size: 20, color: const Color(0xFF8F8574)),
-        ),
-        child: Text(
-          value ?? 'Select',
-          style: TextStyle(
-            color: value == null ? Colors.black54 : const Color(0xFF1F1F1F),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.inter(
+            color: const Color(0xFF4A1C00),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBF3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.inputBorderColor),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value ?? 'Select',
+                    style: TextStyle(
+                      color: value == null
+                          ? Colors.black26
+                          : const Color(0xFF1F1F1F),
+                    ),
+                  ),
+                ),
+                Icon(icon, size: 20, color: const Color(0xFF8F8574)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
