@@ -140,7 +140,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                   CmsColors.orange,
                 ),
                 _Stat(
-                  'Total Poojas',
+                  'Total Pujas',
                   '$totalPoojas',
                   Icons.self_improvement_outlined,
                   const Color(0xFF9C27B0),

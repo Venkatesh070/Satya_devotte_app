@@ -2622,7 +2622,7 @@ class _ProductFormState extends State<_ProductForm> {
                         const SizedBox(height: 12),
                         CmsFormField(
                           label: 'Description',
-                          hint: 'Complete Ganesh pooja essentials kit',
+                          hint: 'Complete Ganesh puja essentials kit',
                           controller: _descCtrl,
                           maxLines: 3,
                         ),

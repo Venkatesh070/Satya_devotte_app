@@ -433,7 +433,7 @@ class _PoojaList extends StatelessWidget {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text(
-          'Approve Pooja',
+          'Approve Puja',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         content: Column(
@@ -457,7 +457,7 @@ class _PoojaList extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'This will publish the pooja to all devotees.',
+              'This will publish the puja to all devotees.',
               style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
             ),
           ],
@@ -498,7 +498,7 @@ class _PoojaList extends StatelessWidget {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text(
-          'Reject Pooja',
+          'Reject Puja',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         content: Column(
@@ -1505,8 +1505,8 @@ class _PoojaFormState extends State<_PoojaForm> {
         title: 'Ritual Overview',
         children: [
           CmsFormField(
-            label: 'Pooja Name *',
-            hint: 'e.g. Ganesh Chaturthi Pooja',
+            label: 'Puja Name *',
+            hint: 'e.g. Ganesh Chaturthi Puja',
             controller: _titleCtrl,
           ),
           const SizedBox(height: 12),
