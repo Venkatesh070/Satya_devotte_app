@@ -1,7 +1,7 @@
 class AppEnv {
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'prod',
+    defaultValue: 'uat',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -23,9 +23,9 @@ class AppEnv {
     return k.length >= 80 && !k.contains(' ');
   }
   static const String _productionApiBaseUrl =
-      'https://satya-server-app-2.onrender.com';
-  static const String _testApiBaseUrl = 'http://18.209.102.86';
-  static const String _uatApiBaseUrl = 'https://satya-server-app.onrender.com';
+      'http://13.51.13.112';
+  static const String _testApiBaseUrl = 'http://13.51.13.112:3081';
+  static const String _uatApiBaseUrl = 'https://satya-server-app-2.onrender.com';
 
   // Android emulator reaches host machine via 10.0.2.2.
   static String get resolvedApiBaseUrl => apiBaseUrl.isNotEmpty

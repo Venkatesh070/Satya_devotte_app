@@ -133,6 +133,7 @@ class ProductModel {
     this.salePrice,
     this.currency = 'ZAR',
     this.category = '',
+    this.quantity,
     this.status = 'PENDING',
     this.productStatus = 'ACTIVE',
     this.isFeatured = false,
@@ -156,6 +157,8 @@ class ProductModel {
   final num? salePrice;
   final String currency;
   final String category;
+  /// Stock units for Ayurvedic products (`quantity` on the API).
+  final num? quantity;
   final String status;
   final String productStatus;
   final bool isFeatured;
@@ -211,6 +214,7 @@ class ProductModel {
     num? salePrice,
     String? currency,
     String? category,
+    num? quantity,
     String? status,
     String? productStatus,
     bool? isFeatured,
@@ -232,6 +236,7 @@ class ProductModel {
       salePrice: salePrice ?? this.salePrice,
       currency: currency ?? this.currency,
       category: category ?? this.category,
+      quantity: quantity ?? this.quantity,
       status: status ?? this.status,
       productStatus: productStatus ?? this.productStatus,
       isFeatured: isFeatured ?? this.isFeatured,
@@ -392,6 +397,7 @@ class ProductModel {
           : num.tryParse(json['salePrice']?.toString() ?? ''),
       currency: _str(json, ['currency'], 'ZAR'),
       category: _str(json, ['category']),
+      quantity: _parseNum(json['quantity']),
       status: _str(json, ['status'], 'PENDING').toUpperCase(),
       productStatus: _str(json, ['productStatus'], 'ACTIVE').toUpperCase(),
       isFeatured: json['isFeatured'] == true,

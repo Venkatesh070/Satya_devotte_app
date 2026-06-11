@@ -1135,7 +1135,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         index: _NavIds.poojaKitInventory,
       ),
       _NavEntry(
-        label: 'Manage Puja Kit',
+        label: 'Manage Products',
         icon: Icons.inventory_2_outlined,
         activeIcon: Icons.inventory_2,
         index: _NavIds.poojaKitManage,
@@ -1251,7 +1251,7 @@ String _pageTitle(int i) {
     case _NavIds.poojaKitInventory:
       return 'Manage Inventory';
     case _NavIds.poojaKitManage:
-      return 'Manage Puja Kit';
+      return 'Manage Products';
     case _NavIds.poojaKitOrders:
       return 'Puja Kit Orders';
     case _NavIds.poojaKitRefunds:

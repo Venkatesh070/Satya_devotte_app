@@ -181,6 +181,7 @@ class ProductController extends GetxController {
     num? salePrice,
     String currency = 'ZAR',
     String category = '',
+    num? quantity,
     String status = 'PENDING',
     String productStatus = 'ACTIVE',
     bool isFeatured = false,
@@ -199,13 +200,14 @@ class ProductController extends GetxController {
         salePrice: salePrice,
         currency: currency,
         category: category,
+        quantity: quantity,
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,
         associatePuja: associatePuja,
         image: image,
       );
-      _ok('Puja Kit "${created.title}" created');
+      _ok('"${created.title}" is created');
       // Server is the source of truth for pagination — reload so totals
       // and the current page reflect the newly-created product.
       await loadProducts();
@@ -230,12 +232,14 @@ class ProductController extends GetxController {
     num? salePrice,
     String? currency,
     String? category,
+    num? quantity,
     String? status,
     String? productStatus,
     bool? isFeatured,
     List<String>? associatePuja,
     PickedFile? image,
     bool clearSalePrice = false,
+    bool clearQuantity = false,
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -250,12 +254,14 @@ class ProductController extends GetxController {
         salePrice: salePrice,
         currency: currency,
         category: category,
+        quantity: quantity,
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,
         associatePuja: associatePuja,
         image: image,
         clearSalePrice: clearSalePrice,
+        clearQuantity: clearQuantity,
       );
       _replaceLocal(updated);
       _ok('"${updated.title}" updated');
@@ -276,7 +282,7 @@ class ProductController extends GetxController {
     if (index != -1) _products.removeAt(index);
     try {
       await _dataSource.deleteProduct(id);
-      _ok('Puja Kit deleted');
+      _ok('Product deleted');
       // Refresh from server so totals/pages stay accurate. `loadProducts`
       // clamps the page if we just removed the last item on the last page.
       await loadProducts();

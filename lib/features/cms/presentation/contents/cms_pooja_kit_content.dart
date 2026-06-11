@@ -24,6 +24,27 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
+const _kitCategoryAyurvedic = 'ayurvedic';
+const _kitCategoryPujaKit = 'pujakit';
+const _kitCategories = [_kitCategoryAyurvedic, _kitCategoryPujaKit];
+const _kitCategoryLabels = <String, String>{
+  _kitCategoryAyurvedic: 'Ayurvedic',
+  _kitCategoryPujaKit: 'Puja Kit',
+};
+
+String _resolveKitCategory(String? raw) {
+  final value = raw?.trim().toLowerCase() ?? '';
+  if (value == _kitCategoryAyurvedic) return _kitCategoryAyurvedic;
+  if (value == _kitCategoryPujaKit || value == 'puja kit') {
+    return _kitCategoryPujaKit;
+  }
+  return _kitCategoryPujaKit;
+}
+
+String _kitCategoryDisplayLabel(String? raw) {
+  return _kitCategoryLabels[_resolveKitCategory(raw)] ?? raw?.trim() ?? '';
+}
+
 // ════════════════════════════════════════════════════════════════
 // MANAGE POOJA KIT
 // ════════════════════════════════════════════════════════════════
@@ -120,7 +141,7 @@ class _ProductList extends StatelessWidget {
             children: [
               if (isTablet) ...[
                 const Text(
-                  'Puja Kits',
+                  'Products',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -131,7 +152,7 @@ class _ProductList extends StatelessWidget {
               ],
               Expanded(
                 child: CmsSearchBar(
-                  hint: 'Search Puja Kits...',
+                  hint: 'Search Products...',
                   onChanged: ctrl.setSearch,
                 ),
               ),
@@ -165,7 +186,7 @@ class _ProductList extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               CmsPrimaryButton(
-                label: isTablet ? '+ Add Puja Kit' : 'Add',
+                label: isTablet ? '+ Add Product' : 'Add',
                 onTap: onAdd,
               ),
             ],
@@ -257,14 +278,14 @@ class _ProductList extends StatelessWidget {
               return CmsEmptyState(
                 icon: Icons.shopping_basket_outlined,
                 title: (ctrl.filter == 'All' && ctrl.search.isEmpty)
-                    ? 'No Puja Kits Yet'
-                    : 'No matching Puja Kits',
+                    ? 'No Products Yet'
+                    : 'No matching Products',
                 subtitle:
-                    'Puja Kits you create will appear here. Tap "+ Add Puja Kit" '
+                    'Products you create will appear here. Tap "+ Add Product" '
                     'to create your first kit.',
                 actionLabel:
                     (ctrl.filter == 'All' && ctrl.search.isEmpty)
-                        ? 'Add Puja Kit'
+                        ? 'Add Product'
                         : null,
                 onAction:
                     (ctrl.filter == 'All' && ctrl.search.isEmpty)
@@ -376,7 +397,7 @@ void _approveDialog(
     builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: const Text(
-        'Approve Puja Kit',
+        'Approve Product',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       content: Column(
@@ -400,7 +421,7 @@ void _approveDialog(
           ),
           const SizedBox(height: 10),
           const Text(
-            'This will publish the Puja Kit to all users.',
+            'This will publish the Product to all users.',
             style: TextStyle(color: CmsColors.textSecond, fontSize: 13),
           ),
         ],
@@ -444,7 +465,7 @@ void _rejectDialog(
     builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: const Text(
-        'Reject Puja Kit',
+        'Reject Product',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       content: Column(
@@ -1502,7 +1523,9 @@ class _ProductCard extends StatelessWidget {
                                           const SizedBox(width: 4),
                                           Flexible(
                                             child: Text(
-                                              product.category,
+                                              _kitCategoryDisplayLabel(
+                                                product.category,
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 color: CmsColors.textSecond,
@@ -1943,10 +1966,11 @@ class _ProductFormState extends State<_ProductForm> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
   late final TextEditingController _descCtrl;
-  late final TextEditingController _categoryCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _salePriceCtrl;
+  late final TextEditingController _quantityCtrl;
   late String _currency;
+  late String _kitCategory;
   late String _reviewStatus;
   late String _productStatus;
   late bool _isFeatured;
@@ -1956,6 +1980,8 @@ class _ProductFormState extends State<_ProductForm> {
   final List<_KitLineEditor> _kitLines = [];
 
   bool get _isEdit => widget.product != null;
+  bool get _isPujaKitCategory => _kitCategory == _kitCategoryPujaKit;
+  bool get _isAyurvedicCategory => _kitCategory == _kitCategoryAyurvedic;
 
   static const _reviewStatuses = ['DRAFT', 'PENDING'];
 
@@ -1971,12 +1997,15 @@ class _ProductFormState extends State<_ProductForm> {
     _titleCtrl = TextEditingController(text: p?.title ?? '');
     _slugCtrl = TextEditingController(text: p?.slug ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
-    _categoryCtrl = TextEditingController(text: p?.category ?? '');
+    _kitCategory = _resolveKitCategory(p?.category);
     _priceCtrl = TextEditingController(
       text: p == null ? '' : p.price.toString(),
     );
     _salePriceCtrl = TextEditingController(
       text: p?.salePrice == null ? '' : p!.salePrice.toString(),
+    );
+    _quantityCtrl = TextEditingController(
+      text: p?.quantity == null ? '' : p!.quantity.toString(),
     );
     _currency = p?.currency.isNotEmpty == true ? p!.currency : 'ZAR';
     _reviewStatus = p != null && _reviewStatuses.contains(p.status.toUpperCase())
@@ -2016,6 +2045,78 @@ class _ProductFormState extends State<_ProductForm> {
         _poojaCtrl.loadPoojas(showErrorSnackbar: false);
       }
     });
+  }
+
+  Widget _categoryDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Category',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _kitCategory,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: CmsColors.textSecond,
+            size: 20,
+          ),
+          dropdownColor: CmsColors.bg,
+          style: const TextStyle(
+            fontSize: 13,
+            color: CmsThemeColors.inputText,
+          ),
+          items: _kitCategories
+              .map(
+                (value) => DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    _kitCategoryLabels[value] ?? value,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: CmsThemeColors.inputText,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _kitCategory = value;
+              if (!_isPujaKitCategory) _selectedPujaId = null;
+            });
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: CmsColors.bg,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.orange),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _associatePujaField() {
@@ -2288,11 +2389,11 @@ class _ProductFormState extends State<_ProductForm> {
     _titleCtrl.dispose();
     _slugCtrl.dispose();
     _descCtrl.dispose();
-    _categoryCtrl.dispose();
     _priceCtrl.removeListener(_onPricingFieldsChanged);
     _salePriceCtrl.removeListener(_onPricingFieldsChanged);
     _priceCtrl.dispose();
     _salePriceCtrl.dispose();
+    _quantityCtrl.dispose();
     for (final line in _kitLines) {
       line.dispose();
     }
@@ -2399,31 +2500,57 @@ class _ProductFormState extends State<_ProductForm> {
       return;
     }
 
-    final dupId = _duplicateInventoryId();
-    if (dupId != null) {
-      final dupName = _inventoryForId(dupId)?.name ?? dupId;
-      showCmsSnackbar(
-        title: 'Duplicate component',
-        message:
-            'Each inventory item can only be added once per kit. '
-            'Remove the duplicate "$dupName" line.',
-        isError: true,
-      );
-      return;
+    num? productQuantity;
+    if (_isAyurvedicCategory) {
+      final qtyText = _quantityCtrl.text.trim();
+      if (qtyText.isEmpty) {
+        showCmsSnackbar(
+          title: 'Required',
+          message: 'Quantity is required for Ayurvedic products.',
+          isError: true,
+        );
+        return;
+      }
+      final qty = num.tryParse(qtyText);
+      if (qty == null || qty < 0) {
+        showCmsSnackbar(
+          title: 'Invalid quantity',
+          message: 'Quantity must be a number greater than or equal to 0.',
+          isError: true,
+        );
+        return;
+      }
+      productQuantity = qty;
     }
 
-    final items = _collectItems();
-    if (items.isEmpty) {
-      showCmsSnackbar(
-        title: 'Kit lines required',
-        message:
-            'Add at least one inventory item with units per kit (quantity > 0).',
-        isError: true,
-      );
-      return;
+    final items = _isPujaKitCategory ? _collectItems() : <ProductItem>[];
+
+    if (_isPujaKitCategory) {
+      final dupId = _duplicateInventoryId();
+      if (dupId != null) {
+        final dupName = _inventoryForId(dupId)?.name ?? dupId;
+        showCmsSnackbar(
+          title: 'Duplicate component',
+          message:
+              'Each inventory item can only be added once per kit. '
+              'Remove the duplicate "$dupName" line.',
+          isError: true,
+        );
+        return;
+      }
+      if (items.isEmpty) {
+        showCmsSnackbar(
+          title: 'Kit lines required',
+          message:
+              'Add at least one inventory item with units per kit (quantity > 0).',
+          isError: true,
+        );
+        return;
+      }
     }
 
-    final selectedPujaId = _selectedPujaId?.trim() ?? '';
+    final selectedPujaId =
+        _isPujaKitCategory ? (_selectedPujaId?.trim() ?? '') : '';
     final associatePuja =
         selectedPujaId.isNotEmpty ? <String>[selectedPujaId] : <String>[];
 
@@ -2439,7 +2566,9 @@ class _ProductFormState extends State<_ProductForm> {
         salePrice: salePrice,
         clearSalePrice: salePriceText.isEmpty,
         currency: _currency,
-        category: _categoryCtrl.text.trim(),
+        category: _kitCategory,
+        quantity: productQuantity,
+        clearQuantity: !_isAyurvedicCategory,
         isFeatured: _isFeatured,
         associatePuja: associatePuja,
         image: _image,
@@ -2453,7 +2582,8 @@ class _ProductFormState extends State<_ProductForm> {
         price: price,
         salePrice: salePrice,
         currency: _currency,
-        category: _categoryCtrl.text.trim(),
+        category: _kitCategory,
+        quantity: productQuantity,
         status: _reviewStatus,
         productStatus: _productStatus,
         isFeatured: _isFeatured,
@@ -2497,7 +2627,19 @@ class _ProductFormState extends State<_ProductForm> {
                           maxLines: 3,
                         ),
                         const SizedBox(height: 12),
-                        _associatePujaField(),
+                        _categoryDropdown(),
+                        if (_isAyurvedicCategory) ...[
+                          const SizedBox(height: 12),
+                          CmsFormField(
+                            label: 'Quantity *',
+                            hint: 'e.g. 100',
+                            controller: _quantityCtrl,
+                          ),
+                        ],
+                        if (_isPujaKitCategory) ...[
+                          const SizedBox(height: 12),
+                          _associatePujaField(),
+                        ],
                       ],
                     ),
                   ),
@@ -2538,7 +2680,19 @@ class _ProductFormState extends State<_ProductForm> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 12),
-                  _associatePujaField(),
+                  _categoryDropdown(),
+                  if (_isAyurvedicCategory) ...[
+                    const SizedBox(height: 12),
+                    CmsFormField(
+                      label: 'Quantity *',
+                      hint: 'e.g. 100',
+                      controller: _quantityCtrl,
+                    ),
+                  ],
+                  if (_isPujaKitCategory) ...[
+                    const SizedBox(height: 12),
+                    _associatePujaField(),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -2557,82 +2711,83 @@ class _ProductFormState extends State<_ProductForm> {
                 ],
               ),
             ],
-            const SizedBox(height: 16),
-
-            CmsFormCard(
-              title: 'Kit components (inventory)',
-              children: [
-                const Text(
-                  'Pick warehouse items and how many stock units each kit '
-                  'consumes (packs, not grams).',
-                  style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-                ),
-                const SizedBox(height: 12),
-                Obx(() {
-                  if (_invCtrl.isPickerLoading && _pickerOptions.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: CmsColors.orange,
+            if (_isPujaKitCategory) ...[
+              const SizedBox(height: 16),
+              CmsFormCard(
+                title: 'Kit components (inventory)',
+                children: [
+                  const Text(
+                    'Pick warehouse items and how many stock units each kit '
+                    'consumes (packs, not grams).',
+                    style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+                  ),
+                  const SizedBox(height: 12),
+                  Obx(() {
+                    if (_invCtrl.isPickerLoading && _pickerOptions.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: CmsColors.orange,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    if (_pickerOptions.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'No active inventory items. Add stock under '
+                          'Manage Inventory first.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
+                  ..._kitLines.asMap().entries.map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _KitInventoryLineRow(
+                            line: e.value,
+                            inventoryOptions: _pickerOptions,
+                            usedInventoryIds: _usedInventoryIdsExcept(e.key),
+                            canRemove: _kitLines.length > 1,
+                            onRemove: () => _removeKitLine(e.key),
+                            onInventoryChanged: (id) =>
+                                _onInventoryItemSelected(e.key, id),
                           ),
                         ),
                       ),
-                    );
-                  }
-                  if (_pickerOptions.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        'No active inventory items. Add stock under '
-                        'Manage Inventory first.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: CmsColors.textSecond,
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                }),
-                ..._kitLines.asMap().entries.map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _KitInventoryLineRow(
-                          line: e.value,
-                          inventoryOptions: _pickerOptions,
-                          usedInventoryIds: _usedInventoryIdsExcept(e.key),
-                          canRemove: _kitLines.length > 1,
-                          onRemove: () => _removeKitLine(e.key),
-                          onInventoryChanged: (id) =>
-                              _onInventoryItemSelected(e.key, id),
-                        ),
-                      ),
-                    ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _canAddKitLine ? _addKitLine : null,
-                    icon: const Icon(
-                      Icons.add,
-                      size: 16,
-                      color: CmsColors.orange,
-                    ),
-                    label: const Text(
-                      'Add component',
-                      style: TextStyle(
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _canAddKitLine ? _addKitLine : null,
+                      icon: const Icon(
+                        Icons.add,
+                        size: 16,
                         color: CmsColors.orange,
-                        fontWeight: FontWeight.w600,
+                      ),
+                      label: const Text(
+                        'Add component',
+                        style: TextStyle(
+                          color: CmsColors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
 
             CmsFormCard(
@@ -2748,7 +2903,7 @@ class _ProductFormState extends State<_ProductForm> {
                             ),
                           )
                         : Text(
-                            _isEdit ? 'Save Changes' : 'Create Puja Kit',
+                            _isEdit ? 'Save Changes' : 'Create Product',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                             ),
@@ -2824,7 +2979,7 @@ class _ProductFormState extends State<_ProductForm> {
           ),
           const SizedBox(width: 12),
           Text(
-            _isEdit ? 'Edit Puja Kit' : 'Add Puja Kit',
+            _isEdit ? 'Edit Product' : 'Add Product',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
