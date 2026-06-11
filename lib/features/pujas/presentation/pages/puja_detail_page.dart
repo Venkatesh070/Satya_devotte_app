@@ -1242,6 +1242,54 @@ class _AboutDeityTab extends StatelessWidget {
     final homePractice = deityDoc?['home_practice'] as Map?;
     final devotionalExp = deityDoc?['devotional_experience'] as Map?;
     final structure = deityDoc?['structure'] as List?;
+    final spiritualSignificance = _meaningList(
+      deityDoc?['spiritual_significance'],
+    );
+
+    // Check if sections have content
+    final bool hasConnectingContent =
+        connecting != null &&
+        (_str(connecting['how_to_pray']).isNotEmpty ||
+            _list(connecting['what_pleases']).isNotEmpty ||
+            _list(connecting['displeases']).isNotEmpty ||
+            _list(connecting['ideal_time']).isNotEmpty);
+
+    final bool hasChantingContent =
+        chanting != null &&
+        (_str(chanting['mantra']).isNotEmpty ||
+            _str(chanting['repetitions']).isNotEmpty ||
+            _list(chanting['benefits']).isNotEmpty ||
+            _list(chanting['preferred_days']).isNotEmpty ||
+            _list(chanting['associated_colors']).isNotEmpty);
+
+    final bool hasHomePracticeContent =
+        homePractice != null &&
+        ((homePractice['do_and_dont'] is Map &&
+                (_list((homePractice['do_and_dont'] as Map)['do']).isNotEmpty ||
+                    _list(
+                      (homePractice['do_and_dont'] as Map)['dont'],
+                    ).isNotEmpty)) ||
+            _str(homePractice['placement']).isNotEmpty ||
+            _list(homePractice['offerings']).isNotEmpty);
+
+    final bool hasDevotionalExpContent =
+        devotionalExp != null &&
+        (_str(devotionalExp['sign_of_connection']).isNotEmpty ||
+            _str(devotionalExp['notes']).isNotEmpty);
+
+    // Debug prints
+    debugPrint('AboutDeityTab: deityDoc keys: ${deityDoc?.keys.toList()}');
+    debugPrint('AboutDeityTab: homePractice: $homePractice');
+    debugPrint('AboutDeityTab: devotionalExp: $devotionalExp');
+    debugPrint(
+      'AboutDeityTab: hasHomePracticeContent: $hasHomePracticeContent',
+    );
+    debugPrint(
+      'AboutDeityTab: hasDevotionalExpContent: $hasDevotionalExpContent',
+    );
+    debugPrint(
+      'AboutDeityTab: spiritualSignificance length: ${spiritualSignificance.length}',
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
@@ -1268,7 +1316,10 @@ class _AboutDeityTab extends StatelessWidget {
           const SizedBox(height: 10),
           for (final s in structure.whereType<Map>())
             DeitySectionCard(section: s.cast<String, dynamic>()),
-        ] else ...[
+        ] else if (family.isNotEmpty ||
+            posture.isNotEmpty ||
+            physicalItems.isNotEmpty ||
+            weapons.isNotEmpty) ...[
           // Legacy/Fallback Structure
           if (family.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -1307,12 +1358,28 @@ class _AboutDeityTab extends StatelessWidget {
           ],
         ],
 
+        // Spiritual Significance
+        if (spiritualSignificance.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Spiritual Significance'),
+          const SizedBox(height: 10),
+          for (final item in spiritualSignificance)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: LabeledField(
+                label: item.title,
+                value: item.description,
+                multiline: true,
+              ),
+            ),
+        ],
+
         // 1. Connecting with the Divine
-        if (connecting != null) ...[
+        if (hasConnectingContent) ...[
           const SizedBox(height: 14),
           const SectionHeader(title: 'Connecting with the Divine'),
           const SizedBox(height: 10),
-          if (_str(connecting['how_to_pray']).isNotEmpty)
+          if (_str(connecting!['how_to_pray']).isNotEmpty)
             LabeledField(
               label: 'How to Pray / Connect',
               value: _str(connecting['how_to_pray']),
@@ -1338,11 +1405,11 @@ class _AboutDeityTab extends StatelessWidget {
         ],
 
         // 2. Mantras & Chanting
-        if (chanting != null) ...[
+        if (hasChantingContent) ...[
           const SizedBox(height: 14),
           const SectionHeader(title: 'Mantras & Chanting'),
           const SizedBox(height: 10),
-          if (_str(chanting['mantra']).isNotEmpty)
+          if (_str(chanting!['mantra']).isNotEmpty)
             LabeledField(
               label: 'Main Mantra',
               value: _str(chanting['mantra']),
@@ -1372,11 +1439,11 @@ class _AboutDeityTab extends StatelessWidget {
         ],
 
         // 3. Home Practice
-        if (homePractice != null) ...[
+        if (hasHomePracticeContent) ...[
           const SizedBox(height: 14),
           const SectionHeader(title: 'Home Practice'),
           const SizedBox(height: 10),
-          if (homePractice['do_and_dont'] is Map) ...[
+          if (homePractice!['do_and_dont'] is Map) ...[
             if (_list((homePractice['do_and_dont'] as Map)['do']).isNotEmpty)
               LabeledChipsField(
                 label: 'Do\'s',
@@ -1405,11 +1472,11 @@ class _AboutDeityTab extends StatelessWidget {
         ],
 
         // 4. Devotional Experience
-        if (devotionalExp != null) ...[
+        if (hasDevotionalExpContent) ...[
           const SizedBox(height: 14),
           const SectionHeader(title: 'Devotional Experience'),
           const SizedBox(height: 10),
-          if (_str(devotionalExp['sign_of_connection']).isNotEmpty)
+          if (_str(devotionalExp!['sign_of_connection']).isNotEmpty)
             LabeledField(
               label: 'Signs of Connection',
               value: _str(devotionalExp['sign_of_connection']),
@@ -1567,52 +1634,27 @@ class _RitualsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (rituals.isEmpty) {
+      return const _EmptyView(
+        icon: Icons.event_note_outlined,
+        message: 'No rituals posted',
+      );
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
       children: [
-        if (rituals.isNotEmpty) ...[
-          Text(
-            'Deity Information',
-            style: AppTypography.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF4A1C00),
-            ),
+        Text(
+          'Deity Information',
+          style: AppTypography.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF4A1C00),
           ),
-          const SizedBox(height: 12),
-          for (final rit in rituals) ...[
-            _RitualCard(ritual: rit),
-            const SizedBox(height: 16),
-          ],
-        ],
-
-        if (pooja.purpose.isNotEmpty) ...[
-          if (rituals.isNotEmpty) const SizedBox(height: 12),
-          _SectionCard(
-            icon: Icons.auto_awesome,
-            title: 'Purpose',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (pooja.purpose['why'] != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      pooja.purpose['why'].toString(),
-                      style: AppTypography.inter(
-                        fontSize: 13.5,
-                        height: 1.5,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                  ),
-                BulletList(
-                  heading: 'Benefits',
-                  items: _stringList(pooja.purpose['benefits']),
-                ),
-              ],
-            ),
-          ),
+        ),
+        const SizedBox(height: 12),
+        for (final rit in rituals) ...[
+          _RitualCard(ritual: rit),
+          const SizedBox(height: 16),
         ],
       ],
     );
@@ -2820,11 +2862,24 @@ class _RitualCard extends StatelessWidget {
   const _RitualCard({required this.ritual});
   final Map<String, dynamic> ritual;
 
+  static String _cleanUrl(String url) {
+    return url.replaceAll('`', '').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = (ritual['title'] ?? '').toString();
     final description = (ritual['description'] ?? '').toString();
-    final imageUrl = (ritual['imageUrl'] ?? ritual['image'] ?? '').toString();
+    
+    // Get image from images array first, then imageUrl/image
+    String imageUrl = '';
+    final images = ritual['images'];
+    if (images is List && images.isNotEmpty) {
+      imageUrl = _cleanUrl(images.first.toString());
+    } else {
+      imageUrl = _cleanUrl((ritual['imageUrl'] ?? ritual['image'] ?? '').toString());
+    }
+    
     final List<dynamic> days = ritual['days'] is List ? ritual['days'] : [];
     final List<dynamic> sections = ritual['sections'] is List
         ? ritual['sections']

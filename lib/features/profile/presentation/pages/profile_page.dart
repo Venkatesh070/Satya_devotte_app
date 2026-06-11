@@ -356,7 +356,7 @@ class _AvatarInitials extends StatelessWidget {
       blendMode: BlendMode.srcIn,
       child: Text(
         initials,
-        style: AppTypography.lora(fontSize: 17, fontWeight: FontWeight.w600),
+        style: AppTypography.lora(fontSize: 22, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -44,7 +44,7 @@ Future<void> main() async {
   final notifs = Get.find<NotificationService>();
   await notifs.initialize();
 
-  runApp(const SathyaApp());
+  runApp(SathyaApp());
 
   // Handle cold-start taps AFTER `runApp` so GetX routing is ready to
   // accept `Get.toNamed`. Fire-and-forget; failures are logged inside.

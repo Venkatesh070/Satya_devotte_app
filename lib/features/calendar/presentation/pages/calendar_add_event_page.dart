@@ -32,10 +32,11 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: now.subtract(const Duration(days: 1)),
+      initialDate: _selectedDate ?? today,
+      firstDate: today,
       lastDate: DateTime(now.year + 5),
     );
     if (picked != null) {
@@ -51,6 +52,13 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
     }
     if (_selectedDate == null) {
       setState(() => _error = 'Select a date.');
+      return;
+    }
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDateOnly = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+    if (selectedDateOnly.isBefore(today)) {
+      setState(() => _error = 'Event date cannot be in the past.');
       return;
     }
     await Get.find<CalendarController>().addUserEvent(

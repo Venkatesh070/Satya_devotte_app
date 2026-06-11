@@ -11,8 +11,50 @@ import 'package:satya_devotte_app/shared/widgets/api_loading_overlay.dart';
 import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 
+class _DialogObserver extends NavigatorObserver {
+  final RxBool hasActiveDialog = RxBool(false);
+  final List<Route> _routeStack = [];
+
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    _routeStack.add(route);
+    _updateHasActiveDialog();
+  }
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    _routeStack.remove(route);
+    _updateHasActiveDialog();
+  }
+
+  @override
+  void didRemove(Route route, Route? previousRoute) {
+    _routeStack.remove(route);
+    _updateHasActiveDialog();
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    if (oldRoute != null) _routeStack.remove(oldRoute);
+    if (newRoute != null) _routeStack.add(newRoute);
+    _updateHasActiveDialog();
+  }
+
+  void _updateHasActiveDialog() {
+    // Check if there are any modal routes that are not the first route (dialogs/pickers)
+    final hasModal = _routeStack.any(
+      (route) =>
+          !route.isFirst &&
+          route is ModalRoute &&
+          route.overlayEntries.isNotEmpty,
+    );
+    hasActiveDialog.value = hasModal;
+  }
+}
+
 class SathyaApp extends StatelessWidget {
-  const SathyaApp({super.key});
+  SathyaApp({super.key});
+  final _dialogObserver = _DialogObserver();
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +66,7 @@ class SathyaApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: kIsWeb ? AppRoutes.login : AppRoutes.splash,
       getPages: AppPages.pages,
+      navigatorObservers: [_dialogObserver],
       routingCallback: (routing) {
         if (Get.isRegistered<AppMusicService>()) {
           Get.find<AppMusicService>().syncControlsVisibility(routing?.current);
@@ -36,7 +79,15 @@ class SathyaApp extends StatelessWidget {
             ApiLoadingOverlay(
               child: Stack(
                 fit: StackFit.expand,
-                children: [child, const AppMusicFloatingButton()],
+                children: [
+                  child,
+                  Obx(() {
+                    // Hide FAB if there's an active dialog/picker
+                    if (_dialogObserver.hasActiveDialog.value)
+                      return const SizedBox.shrink();
+                    return const AppMusicFloatingButton();
+                  }),
+                ],
               ),
             ),
             Obx(() {
