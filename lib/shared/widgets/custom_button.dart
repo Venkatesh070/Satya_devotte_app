@@ -65,7 +65,10 @@ class _CustomButtonState extends State<CustomButton> {
             ),
             child: Center(
               child: widget.isLoading
-                  ? const ChakraLoadingIndicator(size: 22, color: Colors.white)
+                  ? const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    )
                   : Text(
                       widget.label,
                       style: TextStyle(

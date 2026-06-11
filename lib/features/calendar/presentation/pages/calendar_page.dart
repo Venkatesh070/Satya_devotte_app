@@ -305,12 +305,13 @@ class _MonthGrid extends StatelessWidget {
                             String? hex;
                             hex = e.deityColor;
                             if (hex.isEmpty) {
-                              final rawDeity = e.raw['deity'] ??
+                              final rawDeity =
+                                  e.raw['deity'] ??
                                   e.raw['deityId'] ??
                                   e.raw['deity_id'];
                               final id = rawDeity is Map
                                   ? (rawDeity['_id'] ?? rawDeity['id'])
-                                      ?.toString()
+                                        ?.toString()
                                   : rawDeity?.toString();
                               if (id != null) {
                                 hex = controller.deityColors[id];
@@ -318,14 +319,16 @@ class _MonthGrid extends StatelessWidget {
                             }
                             if (hex != null && hex.isNotEmpty) {
                               try {
-                                final hexColor =
-                                    hex.replaceAll('#', '').padLeft(8, 'ff');
+                                final hexColor = hex
+                                    .replaceAll('#', '')
+                                    .padLeft(8, 'ff');
                                 dotColor = Color(int.parse('0x$hexColor'));
                               } catch (_) {}
                             }
                           } else if (e is MoonPhaseModel) {
-                            final isFull =
-                                e.type.toUpperCase().contains('FULL');
+                            final isFull = e.type.toUpperCase().contains(
+                              'FULL',
+                            );
                             dotColor = isFull ? Colors.white : Colors.black;
                           } else if (e is FestivalModel) {
                             // Branded Gold/Orange for Festivals
@@ -558,6 +561,7 @@ class _FestivalCard extends StatelessWidget {
         : festival.date;
 
     return Material(
+      color: CalendarUi.background,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -807,6 +811,7 @@ class _CalendarEntryCard extends StatelessWidget {
         : '';
 
     return Material(
+      color: CalendarUi.background,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),

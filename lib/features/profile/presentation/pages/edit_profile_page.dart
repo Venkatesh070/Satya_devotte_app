@@ -30,6 +30,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   PickedFile? _pickedImage;
   DateTime? _dateOfBirth;
+  String? _dobError;
   TimeOfDay? _timeOfBirth;
   String _selectedGender = 'MALE';
   String _sunSign = 'Aries';
@@ -74,6 +75,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (user?['dateOfBirth'] != null) {
       try {
         _dateOfBirth = DateTime.parse(user!['dateOfBirth'].toString());
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final dobDate = DateTime(
+          _dateOfBirth!.year,
+          _dateOfBirth!.month,
+          _dateOfBirth!.day,
+        );
+        if (dobDate.isAfter(today)) {
+          _dobError = 'Date of birth cannot be in the future';
+        }
       } catch (_) {}
     }
 
@@ -107,14 +118,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime(1930),
-      lastDate: now,
-      initialDate: _dateOfBirth ?? DateTime(now.year - 21, now.month, now.day),
+      lastDate: DateTime(2100),
+      initialDate: _dateOfBirth ?? today,
     );
     if (picked != null) {
-      setState(() => _dateOfBirth = picked);
+      final pickedDate = DateTime(picked.year, picked.month, picked.day);
+      if (pickedDate.isAfter(today)) {
+        setState(() {
+          _dateOfBirth = picked;
+          _dobError = 'Date of birth cannot be in the future';
+        });
+      } else {
+        setState(() {
+          _dateOfBirth = picked;
+          _dobError = null;
+        });
+      }
     }
   }
 
@@ -293,6 +316,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       : DateFormat('dd MMM yyyy').format(_dateOfBirth!),
                   icon: Icons.calendar_today,
                   onTap: isLoading ? null : _pickDob,
+                  errorText: _dobError,
                 ),
                 const SizedBox(height: 18),
                 _PickerField(
@@ -446,12 +470,14 @@ class _PickerField extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.onTap,
+    this.errorText,
   });
 
   final String label;
   final String? value;
   final IconData icon;
   final VoidCallback? onTap;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +501,11 @@ class _PickerField extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFFFFBF3),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.inputBorderColor),
+              border: Border.all(
+                color: errorText != null
+                    ? Colors.red
+                    : AppColors.inputBorderColor,
+              ),
             ),
             child: Row(
               children: [
@@ -494,6 +524,18 @@ class _PickerField extends StatelessWidget {
             ),
           ),
         ),
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 4),
+            child: Text(
+              errorText!,
+              style: AppTypography.inter(
+                color: Colors.red,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -1290,12 +1290,6 @@ class _AboutDeityTab extends StatelessWidget {
             _LabeledTitleDescriptionList(
               label: 'Physical Description',
               items: physicalItems,
-            )
-          else if (physical.isNotEmpty)
-            LabeledField(
-              label: 'Physical Description',
-              value: physical,
-              multiline: true,
             ),
           if (weapons.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -1689,14 +1683,7 @@ class _StoriesTab extends StatelessWidget {
     }).toList();
 
     // Primary narrative from the deity object itself
-    final deityNarrative =
-        (deityDoc?['story'] ??
-                deityDoc?['legend'] ??
-                deityDoc?['origin'] ??
-                deityDoc?['description'] ??
-                deityDoc?['about'] ??
-                '')
-            .toString();
+    final deityNarrative = (deityDoc?['story'] ?? '').toString();
 
     // If we have actual deity stories or sections, we DON'T want to show the
     // generic pooja summary "old story" at the top.

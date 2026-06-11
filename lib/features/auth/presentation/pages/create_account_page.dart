@@ -35,6 +35,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _formStepTwoKey = GlobalKey<FormState>();
 
   DateTime? _dateOfBirth;
+  String? _dobError;
   TimeOfDay? _timeOfBirth;
   String _selectedGender = 'MALE';
   int _step = 0;
@@ -83,13 +84,27 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime(1930),
-      lastDate: now,
-      initialDate: DateTime(now.year - 21, now.month, now.day),
+      lastDate: DateTime(2100),
+      initialDate: _dateOfBirth ?? today,
     );
-    if (picked != null) setState(() => _dateOfBirth = picked);
+    if (picked != null) {
+      final pickedDate = DateTime(picked.year, picked.month, picked.day);
+      if (pickedDate.isAfter(today)) {
+        setState(() {
+          _dateOfBirth = picked;
+          _dobError = 'Date of birth cannot be in the future';
+        });
+      } else {
+        setState(() {
+          _dateOfBirth = picked;
+          _dobError = null;
+        });
+      }
+    }
   }
 
   Future<void> _pickTob() async {
@@ -224,7 +239,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   // Top Bar
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                     children: [
                       Material(
                         color: Colors.white,
@@ -307,10 +321,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                               key: _formStepOneKey,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-
                                 children: [
                                   const SizedBox(height: 20),
-
                                   _buildLabel('Email ID'),
                                   const SizedBox(height: 6),
                                   TextFormField(
@@ -333,7 +345,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   const SizedBox(height: 10),
                                   _buildLabel('Password'),
                                   const SizedBox(height: 6),
-
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: _hidePassword,
@@ -379,7 +390,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   ),
                                   const SizedBox(height: 10),
                                   _buildLabel('Confirm Password'),
-
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _confirmPasswordController,
@@ -488,6 +498,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                           ).format(_dateOfBirth!),
                                     icon: Icons.calendar_today_outlined,
                                     onTap: isLoading ? null : _pickDob,
+                                    errorText: _dobError,
                                   ),
                                   const SizedBox(height: 18),
                                   _buildLabel('Time of Birth (optional)'),
@@ -549,7 +560,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ),
       ),
     );
-  } // ← build() closes here
+  }
 
   Widget _buildLabel(String label) {
     return Text(
@@ -595,41 +606,62 @@ class _PickerField extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.onTap,
+    this.errorText,
   });
 
   final String? value;
   final IconData icon;
   final VoidCallback? onTap;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFBF3),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE0D6C2)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                value ?? 'Select',
-                style: AppTypography.inter(
-                  color: value == null
-                      ? Colors.black.withValues(alpha: 0.25)
-                      : const Color(0xFF1F1F1F),
-                  fontSize: 13,
-                ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBF3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: errorText != null ? Colors.red : const Color(0xFFE0D6C2),
               ),
             ),
-            Icon(icon, size: 18, color: const Color(0xFF8F8574)),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value ?? 'Select',
+                    style: AppTypography.inter(
+                      color: value == null
+                          ? Colors.black.withValues(alpha: 0.25)
+                          : const Color(0xFF1F1F1F),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                Icon(icon, size: 18, color: const Color(0xFF8F8574)),
+              ],
+            ),
+          ),
         ),
-      ),
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 4),
+            child: Text(
+              errorText!,
+              style: AppTypography.inter(
+                color: Colors.red,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
