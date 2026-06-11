@@ -1873,7 +1873,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         children: [
           CmsFormField(
             label: 'Purpose: Why',
-            hint: 'Why this pooja is performed',
+            hint: 'Why this puja is performed',
             controller: _purposeWhyCtrl,
             maxLines: 2,
           ),
