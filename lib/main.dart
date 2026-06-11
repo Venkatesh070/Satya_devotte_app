@@ -36,6 +36,7 @@ Future<void> main() async {
   await Hive.initFlutter();
   await Hive.openBox(AppConstants.ritualsBox);
   await Hive.openBox(AppConstants.cacheBox);
+  await Hive.openBox('sync_queue');
 
   InitialBinding().dependencies();
 

@@ -43,72 +43,69 @@ class _ChakraLoaderPageState extends State<ChakraLoaderPage>
         children: [
           Align(
             alignment: Alignment.center,
-            child: Transform.translate(
-              offset: const Offset(0, -55),
-              child: AnimatedBuilder(
-                animation: _rotationController,
-                builder: (context, child) {
-                  final spin = _rotationController.value * 8 * math.pi;
-                  return SizedBox(
-                    width: loaderSize,
-                    height: loaderSize,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Transform.rotate(
-                          angle: spin,
+            child: AnimatedBuilder(
+              animation: _rotationController,
+              builder: (context, child) {
+                final spin = _rotationController.value * 8 * math.pi;
+                return SizedBox(
+                  width: loaderSize,
+                  height: loaderSize,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Transform.rotate(
+                        angle: spin,
+                        child: Image.asset(
+                          'assets/images/chakra1.png',
+                          filterQuality: FilterQuality.high,
+                        ),
+                      ),
+                      Transform.rotate(
+                        angle: -spin,
+                        child: Transform.scale(
+                          scale: 0.90,
                           child: Image.asset(
-                            'assets/images/chakra1.png',
+                            'assets/images/chakra2.png',
                             filterQuality: FilterQuality.high,
                           ),
                         ),
-                        Transform.rotate(
-                          angle: -spin,
-                          child: Transform.scale(
-                            scale: 0.90,
-                            child: Image.asset(
-                              'assets/images/chakra2.png',
-                              filterQuality: FilterQuality.high,
-                            ),
-                          ),
-                        ),
-                        Transform.rotate(
-                          angle: spin,
-                          child: Transform.scale(
-                            scale: 0.80,
-                            child: Image.asset(
-                              'assets/images/chakra3.png',
-                              filterQuality: FilterQuality.high,
-                            ),
-                          ),
-                        ),
-                        Transform.rotate(
-                          angle: -spin,
-                          child: Transform.scale(
-                            scale: 0.53,
-                            child: Image.asset(
-                              'assets/images/chakra4.png',
-                              filterQuality: FilterQuality.high,
-                            ),
-                          ),
-                        ),
-                        Opacity(
-                          opacity: 0.8,
+                      ),
+                      Transform.rotate(
+                        angle: spin,
+                        child: Transform.scale(
+                          scale: 0.80,
                           child: Image.asset(
-                            'assets/images/onBoardBgOverlay.png',
+                            'assets/images/chakra3.png',
                             filterQuality: FilterQuality.high,
                           ),
                         ),
-                        SvgPicture.asset(
-                          'assets/svgs/whiteLogo.svg',
-                          width: 40,
-                          height: 40,
+                      ),
+                      Transform.rotate(
+                        angle: -spin,
+                        child: Transform.scale(
+                          scale: 0.53,
+                          child: Image.asset(
+                            'assets/images/chakra4.png',
+                            filterQuality: FilterQuality.high,
+                          ),
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                      ),
+                      Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/onBoardBgOverlay.png',
+                          filterQuality: FilterQuality.high,
+                        ),
+                      ),
+                      SvgPicture.asset(
+                        'assets/svgs/whiteLogo.svg',
+                        width: 40,
+                        height: 40,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],

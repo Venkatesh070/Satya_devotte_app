@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -8,6 +9,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RitualListPage extends StatefulWidget {
@@ -59,35 +61,68 @@ class _RitualListPageState extends State<RitualListPage> {
       _isLoading = true;
       _error = null;
     });
+
+    final offlineService = Get.find<OfflineService>();
+    const cacheKey = 'deities_list';
+
     try {
-      final response = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.deities,
-      );
-      final payload = response.data;
-      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+      dynamic payload;
+      if (offlineService.isOnline.value) {
+        final response = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.deities,
+        );
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+      }
+
+      final data = (payload is Map) ? payload['data'] : null;
 
       // Handle different response structures
       List<dynamic> list = [];
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         list = data['deities'] ?? data['results'] ?? data['items'] ?? [];
       } else if (data is List) {
         list = data;
       } else if (payload is List) {
         list = payload;
-      } else if (payload is Map<String, dynamic>) {
+      } else if (payload is Map) {
         list =
             payload['deities'] ?? payload['results'] ?? payload['items'] ?? [];
       }
 
       final mapped = list
-          .whereType<Map<String, dynamic>>()
-          .map(DeityListItem.fromJson)
+          .whereType<Map>()
+          .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       if (!mounted) return;
       setState(() => _items = mapped);
     } on DioException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message ?? 'Failed to load deities.');
+      // Try to load from cache if API fails
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached != null) {
+        final data = (cached is Map) ? cached['data'] : null;
+        List<dynamic> list = [];
+        if (data is Map) {
+          list = data['deities'] ?? data['results'] ?? data['items'] ?? [];
+        } else if (data is List) {
+          list = data;
+        } else if (cached is List) {
+          list = cached;
+        } else if (cached is Map) {
+          list =
+              cached['deities'] ?? cached['results'] ?? cached['items'] ?? [];
+        }
+        final mapped = list
+            .whereType<Map>()
+            .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        setState(() => _items = mapped);
+      } else {
+        setState(() => _error = e.message ?? 'Failed to load deities.');
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Failed to load deities.');
@@ -115,12 +150,24 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   Future<void> _loadFavoritesFromApi() async {
+    final offlineService = Get.find<OfflineService>();
+    const cacheKey = 'favorite_deities';
+
     try {
-      final raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+      List<dynamic> raw;
+      if (offlineService.isOnline.value) {
+        raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+        await offlineService.cacheData(cacheKey, raw);
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        raw = cached is List ? cached : const [];
+      }
+
       if (!mounted) return;
       final ids = <String>{};
       final docs = <DeityListItem>[];
       for (final m in raw) {
+        if (m is! Map<String, dynamic>) continue;
         final item = DeityListItem.fromJson(m);
         if (item.id.isEmpty) continue;
         ids.add(item.id);
@@ -132,7 +179,26 @@ class _RitualListPageState extends State<RitualListPage> {
       });
       await _persistFavoritesPrefs();
     } on DioException {
-      await _loadFavoritesFromPrefsOnly();
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is List) {
+        final ids = <String>{};
+        final docs = <DeityListItem>[];
+        for (final m in cached) {
+          if (m is! Map<String, dynamic>) continue;
+          final item = DeityListItem.fromJson(m);
+          if (item.id.isEmpty) continue;
+          ids.add(item.id);
+          docs.add(item);
+        }
+        if (mounted) {
+          setState(() {
+            _favoriteIds = ids;
+            _favoriteDeityDocs = docs;
+          });
+        }
+      } else {
+        await _loadFavoritesFromPrefsOnly();
+      }
     } catch (_) {
       await _loadFavoritesFromPrefsOnly();
     }
@@ -682,12 +748,11 @@ class _DeityCard extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: hasImage
-                              ? Image.network(
-                                  item.imageUrl!,
-
+                              ? CachedNetworkImage(
+                                  imageUrl: item.imageUrl!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _imageFallback(),
+                                  errorWidget: (_, __, ___) => _imageFallback(),
+                                  placeholder: (_, __) => _imageFallback(),
                                 )
                               : _imageFallback(),
                         ),

@@ -8,6 +8,8 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String rituals = '/rituals';
   static const String ritualDetail = '/ritual-detail';
+  static const String poojaHistory = '/pooja-history';
+  static const String poojaWizard = '/pooja-wizard';
   static const String editProfile = '/edit-profile';
 
   // ─── User-facing donations flow ───────────────────────────────

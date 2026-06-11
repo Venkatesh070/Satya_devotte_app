@@ -26,6 +26,8 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profi
 import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
+import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/features/splash/presentation/pages/splash_page.dart';
 
 class AppPages {
@@ -74,6 +76,20 @@ class AppPages {
       name: AppRoutes.ritualDetail,
       page: RitualDetailPage.new,
       binding: RitualBinding(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaHistory,
+      page: () => const ProfilePoojaHistoryPage(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.poojaWizard,
+      page: () => PoojaStepWizard(
+        pooja: Get.arguments['pooja'],
+        initialStep: Get.arguments['initialStep'],
+        sessionId: Get.arguments['sessionId'],
+      ),
       middlewares: [AuthGuard()],
     ),
 

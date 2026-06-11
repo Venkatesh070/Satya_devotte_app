@@ -10,6 +10,8 @@ import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:satya_devotte_app/core/services/offline_service.dart';
+
 enum CalendarFilterTab { festivals, lunarCycle, events }
 
 class MoonPhaseModel {
@@ -78,9 +80,18 @@ class CalendarController extends GetxController {
   }
 
   Future<void> _fetchDeityColors() async {
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'deity_colors';
     try {
-      final response = await _apiClient.dio.get(ApiEndpoints.deities);
-      final payload = response.data;
+      dynamic payload;
+      if (offlineService.isOnline.value) {
+        final response = await _apiClient.dio.get(ApiEndpoints.deities);
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+      }
+
       final data = payload is Map<String, dynamic> ? payload['data'] : null;
 
       List<dynamic> list = [];
@@ -125,7 +136,10 @@ class CalendarController extends GetxController {
     );
     userEvents.add(event);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userEventsKey, UserCalendarEvent.encodeList(userEvents));
+    await prefs.setString(
+      _userEventsKey,
+      UserCalendarEvent.encodeList(userEvents),
+    );
   }
 
   bool _isInFocusedMonth(DateTime date) {
@@ -137,24 +151,22 @@ class CalendarController extends GetxController {
     return festivals.where((f) {
       final d = _parseDate(f.date);
       return d != null && _isInFocusedMonth(d);
-    }).toList()
-      ..sort((a, b) {
-        final da = _parseDate(a.date) ?? DateTime(2100);
-        final db = _parseDate(b.date) ?? DateTime(2100);
-        return da.compareTo(db);
-      });
+    }).toList()..sort((a, b) {
+      final da = _parseDate(a.date) ?? DateTime(2100);
+      final db = _parseDate(b.date) ?? DateTime(2100);
+      return da.compareTo(db);
+    });
   }
 
   List<MoonPhaseModel> get moonPhasesInMonth {
     return moonPhases.where((m) {
       final d = _parseDate(m.date);
       return d != null && _isInFocusedMonth(d);
-    }).toList()
-      ..sort((a, b) {
-        final da = _parseDate(a.date) ?? DateTime(2100);
-        final db = _parseDate(b.date) ?? DateTime(2100);
-        return da.compareTo(db);
-      });
+    }).toList()..sort((a, b) {
+      final da = _parseDate(a.date) ?? DateTime(2100);
+      final db = _parseDate(b.date) ?? DateTime(2100);
+      return da.compareTo(db);
+    });
   }
 
   List<dynamic> get eventsInMonth {
@@ -165,20 +177,18 @@ class CalendarController extends GetxController {
         return d != null && _isInFocusedMonth(d);
       }),
     );
-    list.addAll(
-      userEvents.where((e) => _isInFocusedMonth(e.date)),
-    );
+    list.addAll(userEvents.where((e) => _isInFocusedMonth(e.date)));
     list.sort((a, b) {
       final da = a is PoojaView
           ? _parseDate(a.date)
           : a is UserCalendarEvent
-              ? a.date
-              : null;
+          ? a.date
+          : null;
       final db = b is PoojaView
           ? _parseDate(b.date)
           : b is UserCalendarEvent
-              ? b.date
-              : null;
+          ? b.date
+          : null;
       return (da ?? DateTime(2100)).compareTo(db ?? DateTime(2100));
     });
     return list;
@@ -285,8 +295,11 @@ class CalendarController extends GetxController {
 
     try {
       final start = fields.date;
-      final end = DateTime(start.year, start.month, start.day)
-          .add(const Duration(days: 1));
+      final end = DateTime(
+        start.year,
+        start.month,
+        start.day,
+      ).add(const Duration(days: 1));
       final success = await addEventToCalendar(
         title: fields.title,
         description: fields.description,
@@ -358,9 +371,7 @@ class CalendarController extends GetxController {
       return _CalendarEventFields(
         id: 'moon_${event.type}_${event.date}',
         title: isFull ? 'Full moon' : 'New moon',
-        description: isFull
-            ? 'Purnima — full moon.'
-            : 'Amavasya — new moon.',
+        description: isFull ? 'Purnima — full moon.' : 'Amavasya — new moon.',
         date: DateTime(date.year, date.month, date.day),
         reminderType: 'moon',
       );
@@ -369,21 +380,33 @@ class CalendarController extends GetxController {
   }
 
   Future<void> fetchData() async {
+    if (isLoading.value) return;
     isLoading.value = true;
+
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey =
+        'calendar_${focusedDate.value.year}_${focusedDate.value.month}';
+
     try {
-      // Fetch month-specific data for the Calendar Grid
-      final queryParams = {
-        'month': focusedDate.value.month,
-        'year': focusedDate.value.year,
-      };
+      dynamic payload;
+      if (offlineService.isOnline.value) {
+        // Fetch month-specific data for the Calendar Grid
+        final queryParams = {
+          'month': focusedDate.value.month,
+          'year': focusedDate.value.year,
+        };
 
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.calendar,
-        queryParameters: queryParams,
-        options: Options(headers: {'timezone': DateTime.now().timeZoneName}),
-      );
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.calendar,
+          queryParameters: queryParams,
+          options: Options(headers: {'timezone': DateTime.now().timeZoneName}),
+        );
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+      }
 
-      final payload = response.data;
       if (payload is Map && payload['success'] == true) {
         final data = payload['data'];
         if (data is Map) {
@@ -560,10 +583,12 @@ class CalendarController extends GetxController {
     );
 
     events.addAll(
-      userEvents.where((e) =>
-          e.date.year == dayOnly.year &&
-          e.date.month == dayOnly.month &&
-          e.date.day == dayOnly.day),
+      userEvents.where(
+        (e) =>
+            e.date.year == dayOnly.year &&
+            e.date.month == dayOnly.month &&
+            e.date.day == dayOnly.day,
+      ),
     );
 
     events.sort((a, b) {

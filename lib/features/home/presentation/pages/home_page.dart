@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -28,6 +29,9 @@ import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
+
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -117,17 +121,26 @@ class _HomePageState extends State<HomePage> {
 
   /// `POST /user/streak` with device IANA timezone for daily streak tracking.
   Future<void> _recordUserStreak() async {
+    final offlineService = Get.find<OfflineService>();
     try {
       final apiClient = Get.find<ApiClient>();
       final deviceTimeZone = await _deviceTimeZone();
-      final response = await apiClient.dio.post<dynamic>(
-        ApiEndpoints.userStreak,
-        options: Options(
-          headers: {'X-Timezone': deviceTimeZone},
-          extra: {kSkipApiLoaderKey: true},
-        ),
-      );
-      _updateDayStreakFromPayload(response.data);
+
+      if (offlineService.isOnline.value) {
+        final response = await apiClient.dio.post<dynamic>(
+          ApiEndpoints.userStreak,
+          options: Options(
+            headers: {'X-Timezone': deviceTimeZone},
+            extra: {kSkipApiLoaderKey: true},
+          ),
+        );
+        _updateDayStreakFromPayload(response.data);
+      } else {
+        await offlineService.queueAction('record_streak', {
+          'timezone': deviceTimeZone,
+        });
+        await _fetchUserStreakStatus();
+      }
     } on DioException catch (error) {
       debugPrint('User streak API failed: ${error.message}');
       await _fetchUserStreakStatus();
@@ -138,37 +151,67 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchUserStreakStatus() async {
+    final offlineService = Get.find<OfflineService>();
+    const cacheKey = 'user_streak';
+
     try {
       final apiClient = Get.find<ApiClient>();
       final deviceTimeZone = await _deviceTimeZone();
-      final response = await apiClient.dio.get<dynamic>(
-        ApiEndpoints.userStreak,
-        options: Options(
-          headers: {'X-Timezone': deviceTimeZone},
-          extra: {kSkipApiLoaderKey: true},
-        ),
-      );
-      _updateDayStreakFromPayload(response.data);
+      dynamic payload;
+
+      if (offlineService.isOnline.value) {
+        final response = await apiClient.dio.get<dynamic>(
+          ApiEndpoints.userStreak,
+          options: Options(
+            headers: {'X-Timezone': deviceTimeZone},
+            extra: {kSkipApiLoaderKey: true},
+          ),
+        );
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+      }
+      _updateDayStreakFromPayload(payload);
     } on DioException catch (error) {
       debugPrint('User streak status API failed: ${error.message}');
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached != null) _updateDayStreakFromPayload(cached);
     } catch (error) {
       debugPrint('User streak status API failed: $error');
     }
   }
 
   Future<void> _fetchPoojasCompleted() async {
+    final offlineService = Get.find<OfflineService>();
+    const cacheKey = 'poojas_completed_count';
+
     try {
       final apiClient = Get.find<ApiClient>();
-      final response = await apiClient.dio.get<dynamic>(
-        ApiEndpoints.userPoojaHistoryFinished,
-        queryParameters: const {'page': 1, 'limit': 1},
-        options: Options(extra: {kSkipApiLoaderKey: true}),
-      );
-      final completed = _extractCompletedPoojaCount(response.data);
+      dynamic payload;
+
+      if (offlineService.isOnline.value) {
+        final response = await apiClient.dio.get<dynamic>(
+          ApiEndpoints.userPoojaHistoryFinished,
+          queryParameters: const {'page': 1, 'limit': 1},
+          options: Options(extra: {kSkipApiLoaderKey: true}),
+        );
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+      }
+
+      final completed = _extractCompletedPoojaCount(payload);
       if (!mounted) return;
       setState(() => _poojasCompleted = completed);
     } on DioException catch (error) {
       debugPrint('Pooja completed API failed: ${error.message}');
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached != null) {
+        final completed = _extractCompletedPoojaCount(cached);
+        if (mounted) setState(() => _poojasCompleted = completed);
+      }
     } catch (error) {
       debugPrint('Pooja completed API failed: $error');
     }
@@ -317,19 +360,38 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchHomeDataIfNeeded() async {
     if (_isFetchingHome) return;
     _isFetchingHome = true;
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'home_data';
+    final productsCacheKey = 'featured_products';
+
     try {
       final apiClient = Get.find<ApiClient>();
+      dynamic payload;
+      List<ProductModel> products = [];
 
-      // Fetch home layout data
-      final response = await apiClient.dio.get<dynamic>(ApiEndpoints.home);
+      if (offlineService.isOnline.value) {
+        final response = await apiClient.dio.get<dynamic>(ApiEndpoints.home);
+        payload = response.data;
+        await offlineService.cacheData(cacheKey, payload);
 
-      // Fetch featured products separately as per requirement
-      final productDs = ProductRemoteDataSource(apiClient);
-      final products = (await productDs.getFeaturedProducts(limit: 10))
-          .where((p) => !p.isOrderClosed)
-          .toList();
+        final productDs = ProductRemoteDataSource(apiClient);
+        products = (await productDs.getFeaturedProducts(
+          limit: 10,
+        )).where((p) => !p.isOrderClosed).toList();
+        await offlineService.cacheData(
+          productsCacheKey,
+          products.map((p) => p.toJson()).toList(),
+        );
+      } else {
+        payload = offlineService.getCachedData(cacheKey);
+        final cachedProducts = offlineService.getCachedData(productsCacheKey);
+        if (cachedProducts is List) {
+          products = cachedProducts
+              .map((p) => ProductModel.fromJson(Map<String, dynamic>.from(p)))
+              .toList();
+        }
+      }
 
-      final payload = response.data;
       if (payload is! Map) return;
       final data = payload['data'];
       if (data is! Map) return;
@@ -387,8 +449,6 @@ class _HomePageState extends State<HomePage> {
           _festivals = parsedFestivals;
         }
       });
-    } on DioException catch (error) {
-      debugPrint('Home API failed: ${error.message}');
     } catch (error) {
       debugPrint('Home API failed: $error');
     } finally {
@@ -2425,10 +2485,13 @@ class _CircleItem extends StatelessWidget {
                         ),
                       )
                     : item.imagePath.startsWith('http')
-                    ? Image.network(
-                        item.imagePath,
+                    ? CachedNetworkImage(
+                        imageUrl: item.imagePath,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
+                        errorWidget: (context, error, stackTrace) {
+                          return const ColoredBox(color: Color(0xFFE7D7BC));
+                        },
+                        placeholder: (context, url) {
                           return const ColoredBox(color: Color(0xFFE7D7BC));
                         },
                       )

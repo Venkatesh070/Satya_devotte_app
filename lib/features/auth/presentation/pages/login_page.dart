@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -122,6 +123,9 @@ class _LoginPageState extends State<LoginPage>
                         isLoading: isLoading,
                         isEnabled: !isLoading && !isEmailLoading,
                         onTap: () async {
+                          final offlineService = Get.find<OfflineService>();
+                          if (!offlineService.checkAndShowDialog()) return;
+
                           final isSuccess = await controller.signInWithGoogle();
                           if (isSuccess) _navigateAfterLogin();
                         },
@@ -138,6 +142,9 @@ class _LoginPageState extends State<LoginPage>
                         ),
                         isEnabled: !isLoading && !isEmailLoading,
                         onTap: () async {
+                          final offlineService = Get.find<OfflineService>();
+                          if (!offlineService.checkAndShowDialog()) return;
+
                           await controller.signInWithApple();
                           _navigateAfterLogin();
                         },
@@ -162,7 +169,12 @@ class _LoginPageState extends State<LoginPage>
                         isLoading: isEmailLoading,
                         enabled: !isEmailLoading && !isLoading,
                         borderRadius: 14,
-                        onTap: () => Get.to(() => const EmailLoginPage()),
+                        onTap: () {
+                          final offlineService = Get.find<OfflineService>();
+                          if (!offlineService.checkAndShowDialog()) return;
+
+                          Get.to(() => const EmailLoginPage());
+                        },
                       ),
                       const SizedBox(height: 10),
                       const LoginFooter(),

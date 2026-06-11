@@ -414,4 +414,24 @@ class ProductModel {
       }(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    '_id': id,
+    'title': title,
+    'slug': slug,
+    'description': description,
+    'items': items.map((e) => e.toJson()).toList(),
+    'stockQuantity': stockQuantity,
+    'price': price,
+    'salePrice': salePrice,
+    'currency': currency,
+    'category': category,
+    'status': status,
+    'productStatus': productStatus,
+    'isFeatured': isFeatured,
+    'imageUrl': imageUrl,
+    'associate_puja': associatePujaIds,
+    'createdAt': createdAt,
+    'createdBy': createdBy,
+  };
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:video_player/video_player.dart';
@@ -12,6 +14,7 @@ import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
@@ -96,8 +99,19 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   }
 
   Future<void> _loadFavoritesFromApi() async {
+    final offlineService = Get.find<OfflineService>();
+    const cacheKey = 'favorite_deities';
+
     try {
-      final raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+      List<dynamic> raw;
+      if (offlineService.isOnline.value) {
+        raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+        await offlineService.cacheData(cacheKey, raw);
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        raw = cached is List ? cached : const [];
+      }
+
       if (!mounted) return;
       final ids = <String>{};
       for (final m in raw) {
@@ -105,7 +119,18 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         if (id.isNotEmpty) ids.add(id);
       }
       setState(() => _favoriteDeityIds = ids);
-    } catch (_) {}
+    } catch (_) {
+      final offlineService = Get.find<OfflineService>();
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is List) {
+        final ids = <String>{};
+        for (final m in cached) {
+          final id = (m['_id'] ?? m['id'] ?? '').toString();
+          if (id.isNotEmpty) ids.add(id);
+        }
+        if (mounted) setState(() => _favoriteDeityIds = ids);
+      }
+    }
   }
 
   Future<void> _toggleFavorite(String deityId) async {
@@ -181,38 +206,69 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       _error = null;
     }
 
+    final offlineService = Get.find<OfflineService>();
+    final deityCacheKey = 'deity_detail_$deityId';
+    final poojasCacheKey = 'deity_poojas_$deityId';
+    final ritualsCacheKey = 'deity_rituals_$deityId';
+
     Map<String, dynamic>? deity = _selectedDeity;
     try {
-      final res = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.deity(deityId),
-      );
-      deity = _extractDeity(res.data) ?? deity;
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.deity(deityId),
+        );
+        deity = _extractDeity(res.data) ?? deity;
+        if (deity != null) await offlineService.cacheData(deityCacheKey, deity);
+      } else {
+        final cached = offlineService.getCachedData(deityCacheKey);
+        if (cached is Map) deity = Map<String, dynamic>.from(cached);
+      }
     } catch (e) {
       debugPrint('Deity detail fetch failed: $e');
+      final cached = offlineService.getCachedData(deityCacheKey);
+      if (cached is Map) deity = Map<String, dynamic>.from(cached);
     }
 
     List<Map<String, dynamic>> poojas = const [];
     try {
       poojas = await _loadPoojasForDeity(deityId, deity);
+      if (offlineService.isOnline.value) {
+        await offlineService.cacheData(poojasCacheKey, poojas);
+      }
     } catch (e) {
       debugPrint('Associated pujas fetch failed: $e');
-      if (mounted) {
+      final cached = offlineService.getCachedData(poojasCacheKey);
+      if (cached is List) {
+        poojas = cached.map((e) => Map<String, dynamic>.from(e)).toList();
+      } else if (mounted) {
         setState(() => _error = 'Failed to load calendar pujas.');
       }
     }
 
     List<Map<String, dynamic>> rituals = const [];
     try {
-      final res = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.rituals,
-        queryParameters: {'deity': deityId, 'limit': 50},
-      );
-      rituals = _extractList(res.data);
-      rituals = rituals
-          .where((r) => _poojaBelongsToDeity(r, deityId, deity))
-          .toList(growable: false);
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.rituals,
+          queryParameters: {'deity': deityId, 'limit': 50},
+        );
+        rituals = _extractList(res.data);
+        rituals = rituals
+            .where((r) => _poojaBelongsToDeity(r, deityId, deity))
+            .toList(growable: false);
+        await offlineService.cacheData(ritualsCacheKey, rituals);
+      } else {
+        final cached = offlineService.getCachedData(ritualsCacheKey);
+        if (cached is List) {
+          rituals = cached.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      }
     } catch (e) {
       debugPrint('Associated rituals fetch failed: $e');
+      final cached = offlineService.getCachedData(ritualsCacheKey);
+      if (cached is List) {
+        rituals = cached.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
     }
 
     if (!mounted) return;
@@ -233,7 +289,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     String deityId,
     Map<String, dynamic>? deity,
   ) async {
+    final offlineService = Get.find<OfflineService>();
+    final poojasCacheKey = 'deity_poojas_$deityId';
+
     Future<List<Map<String, dynamic>>> request({String? deityQuery}) async {
+      if (!offlineService.isOnline.value) return const [];
       final res = await Get.find<ApiClient>().dio.get<dynamic>(
         ApiEndpoints.poojas,
         queryParameters: {
@@ -245,15 +305,52 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     }
 
     try {
-      final queried = await request(deityQuery: deityId);
-      return queried
-          .where((p) => _poojaBelongsToDeity(p, deityId, deity))
-          .toList(growable: false);
-    } on DioException {
-      final all = await request();
-      return all
-          .where((p) => _poojaBelongsToDeity(p, deityId, deity))
-          .toList(growable: false);
+      List<Map<String, dynamic>> list = [];
+      if (offlineService.isOnline.value) {
+        final queried = await request(deityQuery: deityId);
+        list = queried
+            .where((p) => _poojaBelongsToDeity(p, deityId, deity))
+            .toList(growable: false);
+      }
+
+      // If online returned nothing or we are offline, try caches
+      if (list.isEmpty) {
+        // 1. Try specific deity cache first (most accurate)
+        final specificCache = offlineService.getCachedData(poojasCacheKey);
+        if (specificCache is List && specificCache.isNotEmpty) {
+          return specificCache
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+
+        // 2. Try global cache as fallback
+        final globalCache = offlineService.getCachedData('all_poojas');
+        if (globalCache != null) {
+          final globalList = _extractList(globalCache);
+          final filtered = globalList
+              .where((p) => _poojaBelongsToDeity(p, deityId, deity))
+              .toList(growable: false);
+          if (filtered.isNotEmpty) return filtered;
+        }
+      }
+      return list;
+    } catch (e) {
+      debugPrint('Associated pujas fetch failed: $e');
+
+      // Error occurred (likely network), try all available caches
+      final specificCache = offlineService.getCachedData(poojasCacheKey);
+      if (specificCache is List && specificCache.isNotEmpty) {
+        return specificCache.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+
+      final globalCache = offlineService.getCachedData('all_poojas');
+      if (globalCache != null) {
+        final globalList = _extractList(globalCache);
+        return globalList
+            .where((p) => _poojaBelongsToDeity(p, deityId, deity))
+            .toList(growable: false);
+      }
+      rethrow;
     }
   }
 
@@ -263,28 +360,60 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       _isLoading = _pooja == null;
       _error = null;
     });
+
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'pooja_detail_$id';
+
     try {
-      final res = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.pooja(id),
-      );
-      final payload = res.data;
       Map<String, dynamic>? pooja;
-      final data = payload is Map<String, dynamic> ? payload['data'] : null;
-      if (data is Map<String, dynamic>) {
-        final inner = data['pooja'];
-        pooja = inner is Map<String, dynamic> ? inner : data;
-      } else if (payload is Map<String, dynamic>) {
-        pooja = payload;
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.pooja(id),
+        );
+        final payload = res.data;
+        final data = (payload is Map) ? payload['data'] : null;
+        if (data is Map) {
+          final inner = data['pooja'];
+          pooja = inner is Map
+              ? Map<String, dynamic>.from(inner)
+              : Map<String, dynamic>.from(data);
+        } else if (payload is Map) {
+          pooja = Map<String, dynamic>.from(payload);
+        }
+        if (pooja != null) await offlineService.cacheData(cacheKey, pooja);
+      } else {
+        // Load pooja from cache!
+        final cached = offlineService.getCachedData(cacheKey);
+        if (cached is Map) pooja = Map<String, dynamic>.from(cached);
       }
+
       if (!mounted) return;
+
+      // Update state with the loaded pooja!
       setState(() => _pooja = pooja ?? _pooja);
+
+      // CRITICAL: Always call _hydrateDeityIfNeeded after loading pooja, even from cache!
       await _hydrateDeityIfNeeded();
     } on DioException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message ?? 'Failed to load pooja.');
+      // On network error, try to load from cache!
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is Map) {
+        setState(() => _pooja = Map<String, dynamic>.from(cached));
+        // Still call _hydrateDeityIfNeeded to get deity info!
+        await _hydrateDeityIfNeeded();
+      } else if (mounted) {
+        setState(() => _error = e.message ?? 'Failed to load pooja.');
+      }
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load pooja.');
+      // Fallback to cache on any error!
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is Map) {
+        setState(() => _pooja = Map<String, dynamic>.from(cached));
+        await _hydrateDeityIfNeeded();
+      } else {
+        setState(() => _error = 'Failed to load pooja.');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -394,16 +523,28 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         .toString()
         .trim()
         .toLowerCase();
-    final raw = pooja['deity'] ?? pooja['deityId'] ?? pooja['deity_id'];
-    if (raw is Map) {
-      final id = _entityId(raw);
-      if (id == expectedId) return true;
-      final name = (raw['name'] ?? raw['title'] ?? '').toString().toLowerCase();
-      return expectedName.isNotEmpty && name == expectedName;
+
+    bool matches(dynamic raw) {
+      if (raw == null) return false;
+      if (raw is Map) {
+        final id = _entityId(raw);
+        if (id == expectedId) return true;
+        final name = (raw['name'] ?? raw['title'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        return expectedName.isNotEmpty && name == expectedName;
+      }
+      if (raw is List) {
+        return raw.any((item) => matches(item));
+      }
+      final value = raw.toString().trim();
+      if (value == expectedId) return true;
+      return expectedName.isNotEmpty && value.toLowerCase() == expectedName;
     }
-    final value = (raw ?? '').toString().trim();
-    if (value == expectedId) return true;
-    return expectedName.isNotEmpty && value.toLowerCase() == expectedName;
+
+    final rawDeity = pooja['deity'] ?? pooja['deityId'] ?? pooja['deity_id'];
+    return matches(rawDeity);
   }
 
   static String _entityId(Map<dynamic, dynamic> map) {
@@ -427,13 +568,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     if (p == null) return;
     final d = p['deity'];
 
-    // If it's already a map, check if it already has the "stories" or "sections" we need.
-    // If it does, we can skip the extra network call.
+    // If it's already a map with detailed info, skip!
     if (d is Map) {
       final stories = d['stories'];
-      debugPrint(
-        'Deity doc already has stories: ${stories is List ? stories.length : 'no'}',
-      );
       final sections = d['sections'];
       final hasDetailedInfo =
           (stories is List && stories.isNotEmpty) ||
@@ -441,87 +578,90 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       if (hasDetailedInfo) return;
     }
 
+    // Get deity ID!
     final id = d is String ? d : (d is Map ? (d['_id'] ?? d['id']) : null);
     if (id is! String || id.isEmpty) return;
 
+    // Verify it's a valid ObjectID!
     final isObjectId =
         id.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(id);
     if (!isObjectId) return;
 
-    try {
-      final res = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.deity(id),
-      );
-      final payload = res.data;
-      if (payload is! Map<String, dynamic>) return;
+    final offlineService = Get.find<OfflineService>();
+    final deityCacheKey = 'deity_detail_$id';
+    final ritualsCacheKey = 'deity_rituals_$id';
 
-      Map<String, dynamic>? deity;
-      final data = payload['data'];
-      if (data is Map<String, dynamic>) {
-        if (data['deity'] is Map) {
-          deity = Map<String, dynamic>.from(data['deity'] as Map);
-        } else if (data['deities'] is List &&
-            (data['deities'] as List).isNotEmpty) {
-          final first = (data['deities'] as List).first;
-          if (first is Map) deity = Map<String, dynamic>.from(first);
-        } else {
-          deity = data;
-        }
-      } else if (payload['deity'] is Map) {
-        deity = Map<String, dynamic>.from(payload['deity'] as Map);
-      } else {
-        deity = payload;
-      }
-
-      if (!mounted || deity == null) return;
-
-      debugPrint('SUCCESS: Fetched detailed deity doc for ${deity['name']}');
-      debugPrint(
-        'Stories count: ${deity['stories'] is List ? (deity['stories'] as List).length : 0}',
-      );
-
-      final hasName = deity['name'] != null || deity['title'] != null;
-      final hasStories =
-          deity['stories'] != null ||
-          deity['sections'] != null ||
-          deity['description'] != null;
-
-      if (hasName || hasStories) {
+    // FIRST: TRY TO LOAD DEITY DETAILS FROM CACHE!
+    final cachedDeity = offlineService.getCachedData(deityCacheKey);
+    if (cachedDeity is Map) {
+      final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
+      if (mounted) {
         setState(() {
+          // Merge cached deity into pooja!
           final Map<String, dynamic> current = Map<String, dynamic>.from(
             _pooja!,
           );
           final Map existingDeity = (current['deity'] is Map)
               ? (current['deity'] as Map)
               : {};
-
-          // Strictly merge into a Map<String, dynamic> to avoid type mismatches
           final Map<String, dynamic> mergedDeity = {};
           existingDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
-          deity!.forEach((k, v) => mergedDeity[k.toString()] = v);
-
+          cachedDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
           current['deity'] = mergedDeity;
           _pooja = current;
-        });
 
-        // Also fetch rituals for this deity
-        try {
-          final ritRes = await Get.find<ApiClient>().dio.get<dynamic>(
-            ApiEndpoints.rituals,
-            queryParameters: {'deity': id, 'limit': 50},
-          );
-          final rituals = _extractList(ritRes.data);
-          if (mounted) {
-            setState(() {
-              _deityRituals = rituals;
-            });
+          // Load cached rituals too!
+          if (cachedRituals is List) {
+            _deityRituals = cachedRituals
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
           }
-        } catch (e) {
-          debugPrint('Hydration: rituals fetch failed: $e');
+        });
+        return; // We're done offline!
+      }
+    }
+
+    // IF NO CACHE, TRY ONLINE!
+    try {
+      final res = await Get.find<ApiClient>().dio.get<dynamic>(
+        ApiEndpoints.deity(id),
+      );
+      final payload = res.data;
+      Map<String, dynamic>? deity = _extractDeity(payload);
+
+      if (!mounted || deity == null) return;
+
+      // Cache it for next time!
+      await offlineService.cacheData(deityCacheKey, deity!);
+
+      setState(() {
+        final Map<String, dynamic> current = Map<String, dynamic>.from(_pooja!);
+        final Map existingDeity = (current['deity'] is Map)
+            ? (current['deity'] as Map)
+            : {};
+        final Map<String, dynamic> mergedDeity = {};
+        existingDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
+        deity!.forEach((k, v) => mergedDeity[k.toString()] = v);
+        current['deity'] = mergedDeity;
+        _pooja = current;
+      });
+
+      // Fetch and cache rituals too!
+      try {
+        final ritRes = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.rituals,
+          queryParameters: {'deity': id, 'limit': 50},
+        );
+        final rituals = _extractList(ritRes.data);
+        await offlineService.cacheData(ritualsCacheKey, rituals);
+        if (mounted) {
+          setState(() => _deityRituals = rituals);
         }
+      } catch (e) {
+        debugPrint('Hydration: rituals fetch failed: $e');
       }
     } catch (e) {
-      debugPrint('Hydration via deity endpoint failed: $e');
+      debugPrint('Hydration: deity fetch failed: $e');
     }
   }
 
@@ -709,15 +849,19 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                     if (isPending) {
                       final step = _intValue(session!['currentStep']);
                       final sid = (session['_id'] ?? session['id'])?.toString();
-                      Get.to(
-                        () => PoojaStepWizard(
-                          pooja: p,
-                          initialStep: step,
-                          sessionId: sid,
-                        ),
+                      Get.toNamed(
+                        AppRoutes.poojaWizard,
+                        arguments: {
+                          'pooja': p,
+                          'initialStep': step,
+                          'sessionId': sid,
+                        },
                       );
                     } else {
-                      Get.to(() => PoojaStepWizard(pooja: p));
+                      Get.toNamed(
+                        AppRoutes.poojaWizard,
+                        arguments: {'pooja': p},
+                      );
                     }
                   },
                   textColor: AppColors.white,
@@ -807,15 +951,16 @@ class _HeroHeader extends StatelessWidget {
 
                     // Network Image (stretched over background)
                     if (pooja.heroImage != null && pooja.heroImage!.isNotEmpty)
-                      Image.network(
-                        pooja.heroImage!,
+                      CachedNetworkImage(
+                        imageUrl: pooja.heroImage!,
                         fit: BoxFit.fill, // IMPORTANT
                         alignment: Alignment.center,
                         color: Colors.black.withOpacity(
                           0.2,
                         ), // optional overlay
                         colorBlendMode: BlendMode.darken,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                        placeholder: (_, __) => const SizedBox.shrink(),
                       ),
                   ],
                 ),
@@ -867,10 +1012,11 @@ class _DeityPortrait extends StatelessWidget {
       ),
       child: ClipOval(
         child: imageUrl != null && imageUrl!.isNotEmpty
-            ? Image.network(
-                imageUrl!,
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _fallback(),
+                errorWidget: (_, __, ___) => _fallback(),
+                placeholder: (_, __) => _fallback(),
               )
             : _fallback(),
       ),
@@ -1797,7 +1943,7 @@ class _CalendarPujaCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _CalendarThumb(
-                  imageUrl: pooja.heroImage,
+                  imageUrl: pooja.poojaImage,
                   isFavorite: isFavorite,
                   onFavoriteTap: onFavoriteTap,
                 ),

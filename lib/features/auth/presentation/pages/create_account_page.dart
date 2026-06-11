@@ -5,6 +5,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -533,7 +534,13 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       AppColors.gradientEnd,
                     ],
                     textColor: Colors.white,
-                    onTap: _step == 0 ? _goNext : _submit,
+                    onTap: _step == 0
+                        ? _goNext
+                        : () async {
+                            final offlineService = Get.find<OfflineService>();
+                            if (!offlineService.checkAndShowDialog()) return;
+                            await _submit();
+                          },
                   ),
                 ],
               ),

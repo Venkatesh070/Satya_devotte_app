@@ -62,13 +62,6 @@ class PoojaView {
   }
 
   String? get heroImage {
-    final media = _decodeMap(_raw['media']);
-    final imgs = media['images'];
-    if (imgs is List && imgs.isNotEmpty) {
-      final first = _cleanUrl(imgs.first.toString());
-      if (first.isNotEmpty) return first;
-    }
-
     final dDoc = deityDoc;
     if (dDoc != null) {
       final dMedia = _decodeMap(dDoc['media']);
@@ -83,10 +76,49 @@ class PoojaView {
       if (dDirect.isNotEmpty) return dDirect;
     }
 
+    final media = _decodeMap(_raw['media']);
+    final imgs = media['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      final first = _cleanUrl(imgs.first.toString());
+      if (first.isNotEmpty) return first;
+    }
+
     final direct = _cleanUrl(
       (_raw['imageUrl'] ?? _raw['image'] ?? '').toString(),
     );
     return direct.isEmpty ? null : direct;
+  }
+
+  String? get poojaImage {
+    // Get the pooja-specific image, NOT the deity's
+    final media = _decodeMap(_raw['media']);
+    final imgs = media['images'];
+    if (imgs is List && imgs.isNotEmpty) {
+      final first = _cleanUrl(imgs.first.toString());
+      if (first.isNotEmpty) return first;
+    }
+
+    final direct = _cleanUrl(
+      (_raw['imageUrl'] ?? _raw['image'] ?? '').toString(),
+    );
+    if (direct.isNotEmpty) return direct;
+
+    // Fallback to deity image if no pooja image
+    final dDoc = deityDoc;
+    if (dDoc != null) {
+      final dMedia = _decodeMap(dDoc['media']);
+      final dImgs = dMedia['images'];
+      if (dImgs is List && dImgs.isNotEmpty) {
+        final first = _cleanUrl(dImgs.first.toString());
+        if (first.isNotEmpty) return first;
+      }
+      final dDirect = _cleanUrl(
+        (dDoc['imageUrl'] ?? dDoc['image'] ?? '').toString(),
+      );
+      if (dDirect.isNotEmpty) return dDirect;
+    }
+
+    return null;
   }
 
   String? get audioUrl {

@@ -14,6 +14,8 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/profile_po
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
+import 'package:satya_devotte_app/core/services/offline_service.dart';
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -96,7 +98,13 @@ class ProfilePage extends StatelessWidget {
                           ProfileLinkTile(
                             icon: Icons.inventory_2_outlined,
                             label: 'My Orders',
-                            onTap: () => Get.toNamed(AppRoutes.userOrders),
+                            onTap: () {
+                              if (!Get.find<OfflineService>()
+                                  .checkAndShowDialog()) {
+                                return;
+                              }
+                              Get.toNamed(AppRoutes.userOrders);
+                            },
                           ),
                           const SizedBox(height: 8),
                           _InfoCard(
@@ -111,13 +119,18 @@ class ProfilePage extends StatelessWidget {
                           ProfileLinkTile(
                             icon: Icons.volunteer_activism_outlined,
                             label: 'Donations',
-                            onTap: () => Get.toNamed(AppRoutes.userDonations),
+                            onTap: () {
+                              if (!Get.find<OfflineService>()
+                                  .checkAndShowDialog()) {
+                                return;
+                              }
+                              Get.toNamed(AppRoutes.userDonations);
+                            },
                           ),
                           ProfileLinkTile(
                             icon: Icons.temple_hindu_outlined,
                             label: 'Puja History',
-                            onTap: () =>
-                                Get.to(() => const ProfilePoojaHistoryPage()),
+                            onTap: () => Get.toNamed(AppRoutes.poojaHistory),
                           ),
                           // ProfileLinkTile(
                           //   icon: Icons.emoji_events_outlined,
@@ -135,40 +148,52 @@ class ProfilePage extends StatelessWidget {
                           ProfileLinkTile(
                             icon: Icons.logout_outlined,
                             label: 'Logout',
-                            onTap: () => showProfileLogoutSheet(
-                              onConfirm: () async {
-                                await authController.signOut();
-                                Get.offAllNamed(AppRoutes.login);
-                              },
-                            ),
+                            onTap: () {
+                              if (!Get.find<OfflineService>()
+                                  .checkAndShowDialog()) {
+                                return;
+                              }
+                              showProfileLogoutSheet(
+                                onConfirm: () async {
+                                  await authController.signOut();
+                                  Get.offAllNamed(AppRoutes.login);
+                                },
+                              );
+                            },
                           ),
                           ProfileLinkTile(
                             icon: Icons.delete_outline,
                             label: 'Delete Account',
                             isDestructive: true,
-                            onTap: () => showProfileDeleteAccountSheet(
-                              userName: profileController.userName,
-                              onConfirm: (comment) async {
-                                final ok = await authController.deleteAccount(
-                                  comment: comment,
-                                );
-                                if (ok) {
-                                  Get.offAllNamed(AppRoutes.login);
-                                  Get.snackbar(
-                                    'Account Deleted',
-                                    'Your account has been deleted successfully.',
-                                    snackPosition: SnackPosition.BOTTOM,
+                            onTap: () {
+                              if (!Get.find<OfflineService>()
+                                  .checkAndShowDialog()) {
+                                return;
+                              }
+                              showProfileDeleteAccountSheet(
+                                userName: profileController.userName,
+                                onConfirm: (comment) async {
+                                  final ok = await authController.deleteAccount(
+                                    comment: comment,
                                   );
-                                } else {
-                                  Get.snackbar(
-                                    'Error',
-                                    authController.lastAuthError ??
-                                        'Failed to delete account.',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                }
-                              },
-                            ),
+                                  if (ok) {
+                                    Get.offAllNamed(AppRoutes.login);
+                                    Get.snackbar(
+                                      'Account Deleted',
+                                      'Your account has been deleted successfully.',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                    );
+                                  } else {
+                                    Get.snackbar(
+                                      'Error',
+                                      authController.lastAuthError ??
+                                          'Failed to delete account.',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                    );
+                                  }
+                                },
+                              );
+                            },
                           ),
                           const SizedBox(height: 70),
                           _Footer(),

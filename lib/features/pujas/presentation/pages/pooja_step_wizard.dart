@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -9,6 +10,8 @@ import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
+import 'package:get/get.dart';
 
 class PoojaStepWizard extends StatefulWidget {
   const PoojaStepWizard({
@@ -435,7 +438,7 @@ class _BaseWizardScreen extends StatelessWidget {
                               onTap: () {
                                 debugPrint('Share button tapped');
                                 const shareText =
-                                    'Check out this Pooja/App on Sathya Devotee! \n\n'
+                                    'Check out this Puja/App on Sathya! \n\n'
                                     'Download for Android: https://play.google.com/store/apps/details?id=com.sathyadevotee.app \n'
                                     'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
                                 Share.share(shareText).catchError((e) {
@@ -465,7 +468,7 @@ class _BaseWizardScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Share App/Pooja',
+                                      'Share App/Puja',
                                       style: AppTypography.inter(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -1340,7 +1343,7 @@ class _CompletionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Pooja Completed\nSuccessfully!',
+              'Puja Completed\nSuccessfully!',
               textAlign: TextAlign.center,
               style: AppTypography.lora(
                 fontSize: 28,
@@ -1363,7 +1366,13 @@ class _CompletionScreen extends StatelessWidget {
 
             // Donation Section
             GestureDetector(
-              onTap: () => MakeDonationScreen.show(context),
+              onTap: () async {
+                if (!Get.find<OfflineService>().checkAndShowDialog()) {
+                  return;
+                }
+
+                MakeDonationScreen.show(context);
+              },
               child: Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(

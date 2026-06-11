@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
@@ -224,6 +225,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   ],
                   textColor: Colors.white,
                   onTap: () async {
+                    final offlineService = Get.find<OfflineService>();
+                    if (!offlineService.checkAndShowDialog()) return;
+
                     final email = _emailController.text.trim();
                     final password = _passwordController.text;
 

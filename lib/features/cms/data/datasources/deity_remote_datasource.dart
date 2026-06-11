@@ -7,6 +7,9 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 
+import 'package:get/get.dart' hide MultipartFile, FormData;
+import 'package:satya_devotte_app/core/services/offline_service.dart';
+
 class DeityRemoteDataSource {
   DeityRemoteDataSource(this._apiClient);
   final ApiClient _apiClient;
@@ -16,29 +19,79 @@ class DeityRemoteDataSource {
     int limit = 10,
     String? status,
   }) async {
-    final response = await _apiClient.dio.get(
-      ApiEndpoints.allDeities,
-      queryParameters: {
-        'page': page,
-        'limit': limit,
-        if (status != null && status.isNotEmpty) 'status': status,
-      },
-    );
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'deities_list_${page}_${limit}_$status';
 
-    final raw = response.data;
-    List<dynamic> list = const [];
-    if (raw is Map<String, dynamic>) {
-      final d = raw['data'];
-      if (d is List) list = d;
-      if (d is Map && d['deities'] is List) list = d['deities'] as List;
-      if (list.isEmpty && raw['deities'] is List) list = raw['deities'] as List;
-    } else if (raw is List) {
-      list = raw;
+    try {
+      dynamic raw;
+      if (offlineService.isOnline.value) {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.allDeities,
+          queryParameters: {
+            'page': page,
+            'limit': limit,
+            if (status != null && status.isNotEmpty) 'status': status,
+          },
+        );
+        raw = response.data;
+        await offlineService.cacheData(cacheKey, raw);
+      } else {
+        raw = offlineService.getCachedData(cacheKey);
+      }
+
+      List<dynamic> list = const [];
+      if (raw is Map<String, dynamic>) {
+        final d = raw['data'];
+        if (d is List) list = d;
+        if (d is Map && d['deities'] is List) list = d['deities'] as List;
+        if (list.isEmpty && raw['deities'] is List)
+          list = raw['deities'] as List;
+      } else if (raw is List) {
+        list = raw;
+      }
+      return list
+          .whereType<Map>()
+          .map((e) => DeityModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (e) {
+      debugPrint('DeityRemoteDataSource: getDeities error: $e');
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached != null) {
+        // ... parse cached data
+      }
+      rethrow;
     }
-    return list
-        .whereType<Map>()
-        .map((e) => DeityModel.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+  }
+
+  Future<DeityModel> getDeityById(String id) async {
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'deity_detail_$id';
+
+    try {
+      dynamic raw;
+      if (offlineService.isOnline.value) {
+        final response = await _apiClient.dio.get(ApiEndpoints.deity(id));
+        raw = response.data;
+        await offlineService.cacheData(cacheKey, raw);
+      } else {
+        raw = offlineService.getCachedData(cacheKey);
+      }
+
+      if (raw is Map<String, dynamic>) {
+        final data = raw['data'] ?? raw;
+        if (data is Map<String, dynamic>) {
+          final deity = data['deity'];
+          if (deity is Map<String, dynamic>) {
+            return DeityModel.fromJson(deity);
+          }
+          return DeityModel.fromJson(data);
+        }
+        return DeityModel.fromJson(raw);
+      }
+      throw Exception('Deity not found');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> createDeity(
@@ -93,23 +146,6 @@ class DeityRemoteDataSource {
     );
   }
 
-  Future<DeityModel> getDeityById(String id) async {
-    final response = await _apiClient.dio.get(ApiEndpoints.deity(id));
-    final raw = response.data;
-    if (raw is Map<String, dynamic>) {
-      final data = raw['data'];
-      if (data is Map<String, dynamic>) {
-        final deity = data['deity'];
-        if (deity is Map<String, dynamic>) {
-          return DeityModel.fromJson(deity);
-        }
-        return DeityModel.fromJson(data);
-      }
-      return DeityModel.fromJson(raw);
-    }
-    return DeityModel.fromJson(const <String, dynamic>{});
-  }
-
   Future<void> updateDeity(
     String id,
     Map<String, dynamic> payload, {
@@ -119,10 +155,7 @@ class DeityRemoteDataSource {
   }) async {
     final hasMedia = image != null || audio != null || video != null;
     if (!hasMedia) {
-      await _apiClient.dio.patch(
-        ApiEndpoints.updateDeity(id),
-        data: payload,
-      );
+      await _apiClient.dio.patch(ApiEndpoints.updateDeity(id), data: payload);
       return;
     }
 

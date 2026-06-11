@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/core/services/location_service.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:satya_devotte_app/core/services/storage_service.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/services/sync_service.dart';
 import 'package:satya_devotte_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:satya_devotte_app/features/auth/data/repositories/auth_repository_impl.dart';
@@ -93,6 +94,7 @@ class InitialBinding extends Bindings {
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<LocationService>(LocationService(), permanent: true);
     Get.put<SyncService>(SyncService(), permanent: true);
+    Get.put<OfflineService>(OfflineService(), permanent: true);
     Get.put<AuthController>(
       AuthController(
         Get.find<FirebaseService>(),
