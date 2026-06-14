@@ -2870,16 +2870,18 @@ class _RitualCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = (ritual['title'] ?? '').toString();
     final description = (ritual['description'] ?? '').toString();
-    
+
     // Get image from images array first, then imageUrl/image
     String imageUrl = '';
     final images = ritual['images'];
     if (images is List && images.isNotEmpty) {
       imageUrl = _cleanUrl(images.first.toString());
     } else {
-      imageUrl = _cleanUrl((ritual['imageUrl'] ?? ritual['image'] ?? '').toString());
+      imageUrl = _cleanUrl(
+        (ritual['imageUrl'] ?? ritual['image'] ?? '').toString(),
+      );
     }
-    
+
     final List<dynamic> days = ritual['days'] is List ? ritual['days'] : [];
     final List<dynamic> sections = ritual['sections'] is List
         ? ritual['sections']

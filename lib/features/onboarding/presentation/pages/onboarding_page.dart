@@ -89,9 +89,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         backgroundColor: const Color(0xFF17191E),
         body: Stack(
           children: [
-            OnboardingStyleBackground(
-              rotationController: _rotationController,
-            ),
+            OnboardingStyleBackground(rotationController: _rotationController),
             Positioned(
               top: topInset + 14,
               left: 14,
@@ -111,7 +109,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       child: const Padding(
                         padding: EdgeInsets.all(9),
-                        child: Icon(Icons.arrow_back, size: 18),
+                        child: Icon(
+                          Icons.arrow_back,
+                          size: 18,
+                          color: Color(0XFF4A1C00),
+                        ),
                       ),
                     ),
                   ),

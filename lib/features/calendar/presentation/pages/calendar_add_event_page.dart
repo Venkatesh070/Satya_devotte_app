@@ -56,7 +56,11 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
     }
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final selectedDateOnly = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+    final selectedDateOnly = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+    );
     if (selectedDateOnly.isBefore(today)) {
       setState(() => _error = 'Event date cannot be in the past.');
       return;
@@ -184,7 +188,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: CustomButton(
-                label: 'Add event',
+                label: 'Add Event',
                 textColor: Colors.white,
                 gradientColors: kCalendarActionGradient,
                 borderRadius: 14,

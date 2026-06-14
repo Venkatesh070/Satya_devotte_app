@@ -81,7 +81,11 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                         onTap: () => Get.back(),
                         child: const Padding(
                           padding: EdgeInsets.all(9),
-                          child: Icon(Icons.arrow_back, size: 18),
+                          child: Icon(
+                            Icons.arrow_back,
+                            size: 18,
+                            color: Color(0xFF1F1F1F),
+                          ),
                         ),
                       ),
                     ),
@@ -145,6 +149,10 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                               TextFormField(
                                 controller: _emailController,
                                 enabled: !isLoading,
+                                style: const TextStyle(
+                                  color: Color(0xFF1F1F1F),
+                                  fontSize: 13,
+                                ),
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: _inputDecoration(
                                   'Enter your email',
@@ -157,6 +165,10 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 enabled: !isLoading,
+                                style: const TextStyle(
+                                  color: Color(0xFF1F1F1F),
+                                  fontSize: 13,
+                                ),
                                 decoration: _inputDecoration('Enter password')
                                     .copyWith(
                                       suffixIcon: IconButton(

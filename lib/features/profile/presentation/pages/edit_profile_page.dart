@@ -349,6 +349,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _fullNameController,
+                  style: const TextStyle(
+                    color: Color(0xFF1F1F1F),
+                    fontSize: 13,
+                  ),
                   decoration: _inputDecoration('Enter full name'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Full name is required'
@@ -393,6 +397,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _birthPlaceController,
+                  style: const TextStyle(
+                    color: Color(0xFF1F1F1F),
+                    fontSize: 13,
+                  ),
                   decoration: _inputDecoration('Enter place of birth'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Place of birth is required'
@@ -458,6 +466,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  style: const TextStyle(
+                    color: Color(0xFF1F1F1F),
+                    fontSize: 13,
+                  ),
                   decoration: _inputDecoration('Enter phone number'),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Phone number is required'

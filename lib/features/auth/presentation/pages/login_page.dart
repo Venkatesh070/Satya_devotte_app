@@ -62,7 +62,7 @@ class _LoginPageState extends State<LoginPage>
               rotationController: _rotationController,
               wrapInPositioned: false,
               backgroundImage: 'assets/images/home/login_bg.png',
-              chakraVerticalOffset: -10, // Move mandala down to align with logo
+              chakraVerticalOffset: -20, // Move mandala down to align with logo
               chakraScale: 0.85, // Reduced mandala width/scale for login screen
             ),
           ),

@@ -261,7 +261,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                           onTap: () => _handleBack(),
                           child: const Padding(
                             padding: EdgeInsets.all(9),
-                            child: Icon(Icons.arrow_back, size: 18),
+                            child: Icon(
+                              Icons.arrow_back,
+                              size: 18,
+                              color: Color(0xFF1F1F1F),
+                            ),
                           ),
                         ),
                       ),
@@ -339,6 +343,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   TextFormField(
                                     controller: _emailController,
                                     keyboardType: TextInputType.emailAddress,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration(
                                       'Enter your email address',
                                     ),
@@ -359,6 +367,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: _hidePassword,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration('*******')
                                         .copyWith(
                                           suffixIcon: IconButton(
@@ -405,6 +417,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   TextFormField(
                                     controller: _confirmPasswordController,
                                     obscureText: _hideConfirmPassword,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration('*******')
                                         .copyWith(
                                           suffixIcon: IconButton(
@@ -457,6 +473,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   TextFormField(
                                     controller: _fullNameController,
                                     enabled: !isLoading,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration(
                                       'Enter your name',
                                     ),
@@ -525,6 +545,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                   TextFormField(
                                     controller: _birthPlaceController,
                                     enabled: !isLoading,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration(
                                       'Enter place of birth',
                                     ),
@@ -536,6 +560,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                     controller: _phoneController,
                                     keyboardType: TextInputType.phone,
                                     enabled: !isLoading,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F1F1F),
+                                      fontSize: 13,
+                                    ),
                                     decoration: _inputDecoration(
                                       'Enter mobile number',
                                     ),

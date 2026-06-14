@@ -101,15 +101,15 @@ class StoryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Container(
-              height: 2,
-              width: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE69138).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-            const SizedBox(height: 16),
+            // Container(
+            //   height: 2,
+            //   width: 40,
+            //   decoration: BoxDecoration(
+            //     color: const Color(0xFFE69138).withOpacity(0.3),
+            //     borderRadius: BorderRadius.circular(1),
+            //   ),
+            // ),
+            // const SizedBox(height: 16),
           ],
           Text(
             description,

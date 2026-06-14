@@ -275,9 +275,16 @@ class _MonthGrid extends StatelessWidget {
                     Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                     ),
                   Text(
@@ -533,16 +540,33 @@ class _FestivalsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final list = controller.festivalsInMonth;
     if (list.isEmpty) {
-      return _empty('No festivals this month');
+      return _empty('That is all for now!');
     }
     return ListView.separated(
       padding: CalendarUi.listScrollPadding(context),
-      itemCount: list.length,
+      itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, i) => _FestivalCard(
-        festival: list[i],
-        onTap: () => CalendarEventDetailPage.show(context, event: list[i]),
-      ),
+      itemBuilder: (_, i) {
+        if (i == list.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              child: Text(
+                'That is all for now!',
+                style: AppTypography.inter(
+                  color: CalendarUi.textMuted,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }
+        return _FestivalCard(
+          festival: list[i],
+          onTap: () => CalendarEventDetailPage.show(context, event: list[i]),
+        );
+      },
     );
   }
 }
@@ -561,24 +585,24 @@ class _FestivalCard extends StatelessWidget {
         : festival.date;
 
     return Material(
-      color: CalendarUi.background,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: CalendarUi.cardBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x08000000),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
+          // decoration: BoxDecoration(
+          //   borderRadius: BorderRadius.circular(16),
+          //   // border: Border.all(color: CalendarUi.cardBorder),
+          //   boxShadow: const [
+          //     BoxShadow(
+          //       color: Color(0x08000000),
+          //       blurRadius: 8,
+          //       offset: Offset(0, 2),
+          //     ),
+          //   ],
+          // ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -672,13 +696,28 @@ class _LunarList extends StatelessWidget {
   Widget build(BuildContext context) {
     final list = controller.moonPhasesInMonth;
     if (list.isEmpty) {
-      return _empty('No lunar events this month');
+      return _empty('That is all for now!');
     }
     return ListView.separated(
       padding: CalendarUi.listScrollPadding(context),
-      itemCount: list.length,
+      itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) {
+        if (i == list.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              child: Text(
+                'That is all for now!',
+                style: AppTypography.inter(
+                  color: CalendarUi.textMuted,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }
         final m = list[i];
         final isFull = m.type.toUpperCase().contains('FULL');
         return _LunarCard(
@@ -726,13 +765,28 @@ class _EventsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final list = controller.eventsInMonth;
     if (list.isEmpty) {
-      return _empty('No events this month');
+      return _empty('That is all for now!');
     }
     return ListView.separated(
       padding: CalendarUi.listScrollPadding(context),
-      itemCount: list.length,
+      itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) {
+        if (i == list.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              child: Text(
+                'That is all for now!',
+                style: AppTypography.inter(
+                  color: CalendarUi.textMuted,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }
         final e = list[i];
         if (e is UserCalendarEvent) {
           return _GenericEventCard(
@@ -811,23 +865,23 @@ class _CalendarEntryCard extends StatelessWidget {
         : '';
 
     return Material(
-      color: CalendarUi.background,
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: CalendarUi.cardBorder),
-          ),
+          // decoration: BoxDecoration(
+          //   borderRadius: BorderRadius.circular(16),
+          //   border: Border.all(color: CalendarUi.cardBorder),
+          // ),
           child: Row(
             children: [
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EEF8),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -906,9 +960,16 @@ class _CalendarEntryCard extends StatelessWidget {
 
 Widget _empty(String message) {
   return Center(
-    child: Text(
-      message,
-      style: AppTypography.inter(color: CalendarUi.textMuted),
+    child: Padding(
+      padding: const EdgeInsets.all(40),
+      child: Text(
+        message,
+        style: AppTypography.inter(
+          color: CalendarUi.textMuted,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     ),
   );
 }

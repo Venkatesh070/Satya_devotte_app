@@ -400,6 +400,7 @@ class _RitualListPageState extends State<RitualListPage> {
                 child: Image.asset(
                   'assets/images/pooja/pujaHeaderImg.png',
                   fit: BoxFit.fill,
+                  color: Color(0XFFCC5307),
                 ),
               ),
             ),
@@ -460,6 +461,13 @@ class _RitualListPageState extends State<RitualListPage> {
       decoration: BoxDecoration(
         color: const Color(0x22FFFFFF),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
@@ -500,7 +508,6 @@ class _RitualListPageState extends State<RitualListPage> {
   Widget _buildList() {
     final items = _filteredItems;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final listBottomPadding = bottomInset + 110;
     if (items.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
@@ -519,7 +526,7 @@ class _RitualListPageState extends State<RitualListPage> {
       );
     }
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(18, 0, 18, listBottomPadding),
+      padding: EdgeInsets.fromLTRB(18, 0, 18, 90),
       sliver: SliverList.separated(
         itemCount: items.length + 1,
         separatorBuilder: (_, __) =>
@@ -527,7 +534,7 @@ class _RitualListPageState extends State<RitualListPage> {
         itemBuilder: (context, index) {
           if (index == items.length) {
             return Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 8),
+              padding: const EdgeInsets.only(top: 16, bottom: 90),
               child: Center(
                 child: Text(
                   'You have reached to the end of the list.',
