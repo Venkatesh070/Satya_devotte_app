@@ -188,23 +188,37 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       }
     }
 
-    final bool isSuccess;
-    if (widget.completeProfileOnly) {
-      isSuccess = await _authController.completeRegistration(
-        profileData: profilePayload,
-        skipProfile: skipProfile,
-      );
-    } else {
-      isSuccess = await _authController.signUpAndCreateProfile(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        profileData: profilePayload,
-      );
-    }
+    try {
+      if (widget.completeProfileOnly) {
+        final isSuccess = await _authController.completeRegistration(
+          profileData: profilePayload,
+          skipProfile: skipProfile,
+        );
 
-    if (!mounted) return;
+        if (!mounted) return;
 
-    if (!isSuccess) {
+        if (!isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _authController.lastAuthError ?? 'Create account failed.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        _authController.navigateAfterLogin();
+      } else {
+        await _authController.signUpAndCreateProfile(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          profileData: profilePayload,
+        );
+        // No snackbar here, we're navigating to verification screen!
+      }
+    } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -212,10 +226,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
           ),
         ),
       );
-      return;
     }
-
-    _authController.navigateAfterLogin();
   }
 
   @override

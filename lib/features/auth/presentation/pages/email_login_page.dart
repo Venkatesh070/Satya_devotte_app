@@ -240,14 +240,13 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                       return;
                     }
 
-                    final success = await controller.signInWithEmailPassword(
-                      email: email,
-                      password: password,
-                    );
-
-                    if (success) {
-                      _navigateAfterLogin();
-                    } else {
+                    try {
+                      await controller.signInWithEmailPassword(
+                        email: email,
+                        password: password,
+                      );
+                      // navigateAfterLogin is called inside signInWithEmailPassword if not verification needed
+                    } catch (error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(

@@ -4,6 +4,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/config/routes/route_guard.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/login_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/web_login_page.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/email_verification_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_details_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_paystack_webview_screen.dart';
@@ -50,6 +51,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => kIsWeb ? const WebLoginPage() : const LoginPage(),
+    ),
+    GetPage(
+      name: AppRoutes.emailVerification,
+      page: () => const EmailVerificationPage(),
     ),
     GetPage(
       name: AppRoutes.home,

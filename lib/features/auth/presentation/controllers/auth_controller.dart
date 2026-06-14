@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/features/admin_notifications/presentation/cont
 import 'package:satya_devotte_app/features/auth/domain/entities/auth_login_result.dart';
 import 'package:satya_devotte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
+import 'package:satya_devotte_app/features/auth/presentation/pages/email_verification_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 
 class AuthController extends GetxController {
@@ -25,6 +26,9 @@ class AuthController extends GetxController {
   final FirebaseService _firebaseService;
   final AuthRepository _authRepository;
   final AuthSessionService _authSessionService;
+
+  // Temporary storage for profile data while waiting for email verification
+  Map<String, dynamic>? _pendingProfileData;
 
   final _isAuthenticated = false.obs;
   final _isGoogleSignInLoading = false.obs;
@@ -68,9 +72,7 @@ class AuthController extends GetxController {
       return;
     }
     if (!isProfileRegistrationComplete) {
-      Get.offAll(
-        () => const CreateAccountPage(completeProfileOnly: true),
-      );
+      Get.offAll(() => const CreateAccountPage(completeProfileOnly: true));
       return;
     }
     Get.offAllNamed(AppRoutes.home);
@@ -123,9 +125,7 @@ class AuthController extends GetxController {
     if (!isAdmin || !Get.isRegistered<CmsAdminNotificationsController>()) {
       return;
     }
-    unawaited(
-      Get.find<CmsAdminNotificationsController>().refreshUnreadCount(),
-    );
+    unawaited(Get.find<CmsAdminNotificationsController>().refreshUnreadCount());
   }
 
   void _refreshProfileControllerAfterAuth() {
@@ -190,7 +190,7 @@ class AuthController extends GetxController {
     _authSessionService.patchRole(_userRole.value);
   }
 
-  Future<void> _persistLoginResult(AuthLoginResult loginResult) async {
+  Future<void> persistLoginResult(AuthLoginResult loginResult) async {
     final user = Map<String, dynamic>.from(loginResult.user);
     user['isRegistered'] = loginResult.isRegistered;
     await _authSessionService.setSession(
@@ -203,6 +203,8 @@ class AuthController extends GetxController {
     await _registerDeviceForPush();
     _refreshProfileControllerAfterAuth();
   }
+
+  AuthRepository get authRepository => _authRepository;
 
   Future<void> _markProfileRegisteredInSession() async {
     final current = _authSessionService.userData;
@@ -248,7 +250,7 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: googleProfile,
       );
-      await _persistLoginResult(loginResult);
+      await persistLoginResult(loginResult);
       return true;
     } catch (error) {
       await _authSessionService.clear();
@@ -337,7 +339,7 @@ class AuthController extends GetxController {
   }
 
   // ─── Email / Password Sign-In ────────────────────────────────
-  Future<bool> signInWithEmailPassword({
+  Future<void> signInWithEmailPassword({
     required String email,
     required String password,
   }) async {
@@ -345,7 +347,7 @@ class AuthController extends GetxController {
         _isGoogleSignInLoading.value ||
         _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
-      return false;
+      return;
     }
     _authApiInFlight = true;
     _isEmailSignInLoading.value = true;
@@ -355,6 +357,12 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
+      await _firebaseService.reloadCurrentUser();
+      if (!_firebaseService.isEmailVerified) {
+        _pendingProfileData = null; // Not a signup, so no profile data pending
+        Get.to(() => const EmailVerificationPage());
+        return;
+      }
       final firebaseIdToken = await _firebaseService.getIdToken(
         forceRefresh: true,
       );
@@ -366,16 +374,16 @@ class AuthController extends GetxController {
         firebaseIdToken,
         userProfile: emailProfile,
       );
-      await _persistLoginResult(loginResult);
+      await persistLoginResult(loginResult);
       await _markProfileRegisteredInSession();
-      return true;
+      navigateAfterLogin();
     } catch (error) {
       await _authSessionService.clear();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignInError(error);
-      return false;
+      rethrow;
     } finally {
       _isEmailSignInLoading.value = false;
       _authApiInFlight = false;
@@ -383,7 +391,7 @@ class AuthController extends GetxController {
   }
 
   // ─── Email / Password Sign-Up ────────────────────────────────
-  Future<bool> signUpWithEmailPassword({
+  Future<void> signUpWithEmailPassword({
     required String email,
     required String password,
   }) async {
@@ -391,7 +399,7 @@ class AuthController extends GetxController {
         _isGoogleSignInLoading.value ||
         _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
-      return false;
+      return;
     }
     _authApiInFlight = true;
     _isEmailSignInLoading.value = true;
@@ -401,26 +409,15 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
-      final firebaseIdToken = await _firebaseService.getIdToken(
-        forceRefresh: true,
-      );
-      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
-        throw Exception('Firebase ID token is missing after email sign up.');
-      }
-      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
-      final loginResult = await _authRepository.loginWithFirebaseToken(
-        firebaseIdToken,
-        userProfile: emailProfile,
-      );
-      await _persistLoginResult(loginResult);
-      return true;
+      _pendingProfileData = null;
+      Get.to(() => const EmailVerificationPage());
     } catch (error) {
       await _authSessionService.clear();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapEmailSignUpError(error);
-      return false;
+      rethrow;
     } finally {
       _isEmailSignInLoading.value = false;
       _authApiInFlight = false;
@@ -457,7 +454,7 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<bool> signUpAndCreateProfile({
+  Future<void> signUpAndCreateProfile({
     required String email,
     required String password,
     Map<String, dynamic>? profileData,
@@ -466,7 +463,7 @@ class AuthController extends GetxController {
         _isGoogleSignInLoading.value ||
         _isEmailSignInLoading.value) {
       _lastAuthError.value = 'Login is already in progress. Please wait.';
-      return false;
+      return;
     }
     _authApiInFlight = true;
     _isEmailSignInLoading.value = true;
@@ -476,30 +473,61 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
-      final firebaseIdToken = await _firebaseService.getIdToken(
-        forceRefresh: true,
-      );
-      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
-        throw Exception('Firebase ID token is missing after email sign up.');
-      }
-      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
-      final loginResult = await _authRepository.loginWithFirebaseToken(
-        firebaseIdToken,
-        userProfile: emailProfile,
-      );
-      await _persistLoginResult(loginResult);
-      if (profileData != null && profileData.isNotEmpty) {
-        await _authRepository.upsertProfile(profileData);
-      }
-      await _markProfileRegisteredInSession();
-      return true;
+      _pendingProfileData = profileData;
+      Get.to(() => const EmailVerificationPage());
     } catch (error) {
       await _authSessionService.clear();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
       _lastAuthError.value = _mapCreateAccountError(error);
-      return false;
+      rethrow;
+    } finally {
+      _isEmailSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
+  }
+
+  /// Called after email is verified to complete signup (including profile data)
+  Future<void> completeSignupAfterVerification() async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Please wait for the current request to finish.';
+      return;
+    }
+    _authApiInFlight = true;
+    _isEmailSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception(
+          'Firebase ID token is missing after email verification.',
+        );
+      }
+      final emailProfile = _firebaseService.getCurrentUserProfileDetails();
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+        userProfile: emailProfile,
+      );
+      await persistLoginResult(loginResult);
+
+      // If we have pending profile data, upsert it now
+      if (_pendingProfileData != null && _pendingProfileData!.isNotEmpty) {
+        await _authRepository.upsertProfile(_pendingProfileData!);
+      }
+      await _markProfileRegisteredInSession();
+      _refreshProfileControllerAfterAuth();
+
+      // Clear pending data
+      _pendingProfileData = null;
+
+      navigateAfterLogin();
+    } catch (error) {
+      _lastAuthError.value = _mapCreateAccountError(error);
     } finally {
       _isEmailSignInLoading.value = false;
       _authApiInFlight = false;

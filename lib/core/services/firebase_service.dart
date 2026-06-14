@@ -192,10 +192,44 @@ class FirebaseService {
     required String email,
     required String password,
   }) async {
-    await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    print("FirebaseService.createUserWithEmailAndPassword: Starting for email: ${email.trim()}");
+    try {
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      print("FirebaseService.createUserWithEmailAndPassword: User created! UID: ${userCredential.user?.uid}");
+
+      if (userCredential.user != null) {
+        print("FirebaseService.createUserWithEmailAndPassword: Sending verification email...");
+        await userCredential.user!.sendEmailVerification();
+        print("FirebaseService.createUserWithEmailAndPassword: Verification email sent successfully!");
+      } else {
+        print("FirebaseService.createUserWithEmailAndPassword: User is null, can't send verification email!");
+      }
+    } catch (e) {
+      print("FirebaseService.createUserWithEmailAndPassword: ERROR: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> reloadCurrentUser() async {
+    print("FirebaseService.reloadCurrentUser: Reloading user...");
+    await _firebaseAuth.currentUser?.reload();
+    print("FirebaseService.reloadCurrentUser: User reloaded! emailVerified: ${_firebaseAuth.currentUser?.emailVerified}");
+  }
+
+  bool get isEmailVerified => _firebaseAuth.currentUser?.emailVerified ?? false;
+
+  Future<void> sendEmailVerification() async {
+    print("FirebaseService.sendEmailVerification: Sending verification email...");
+    try {
+      await _firebaseAuth.currentUser?.sendEmailVerification();
+      print("FirebaseService.sendEmailVerification: Verification email sent successfully!");
+    } catch (e) {
+      print("FirebaseService.sendEmailVerification: ERROR: $e");
+      rethrow;
+    }
   }
 
   Future<void> signInWithOtp({

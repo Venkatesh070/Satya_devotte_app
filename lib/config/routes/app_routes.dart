@@ -4,6 +4,7 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String createAccount = '/create-account';
+  static const String emailVerification = '/email-verification';
   static const String home = '/home';
   static const String notifications = '/notifications';
   static const String rituals = '/rituals';

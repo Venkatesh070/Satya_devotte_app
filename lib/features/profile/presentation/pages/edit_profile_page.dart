@@ -158,6 +158,50 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  Future<void> _deleteProfilePicture() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Photo'),
+        content: const Text(
+          'Are you sure you want to delete your profile picture?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _pickedImage = null;
+    });
+
+    final success = await _profileController.deleteProfilePicture();
+    if (success) {
+      Get.snackbar(
+        'Success',
+        'Profile picture deleted',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } else {
+      Get.snackbar(
+        'Error',
+        _profileController.error ?? 'Failed to delete profile picture',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
 
@@ -237,49 +281,66 @@ class _EditProfilePageState extends State<EditProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
-                  child: Stack(
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: _fieldBorder,
-                        backgroundImage: _pickedImage != null
-                            ? MemoryImage(
-                                Uint8List.fromList(_pickedImage!.bytes),
-                              )
-                            : (existingImageUrl != null
-                                      ? NetworkImage(
-                                          existingImageUrl.toString(),
-                                        )
-                                      : null)
-                                  as ImageProvider?,
-                        child:
-                            (_pickedImage == null && existingImageUrl == null)
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: InkWell(
-                          onTap: isLoading ? null : _pickImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: AppColors.gradientStart,
-                              shape: BoxShape.circle,
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: _fieldBorder,
+                            backgroundImage: _pickedImage != null
+                                ? MemoryImage(
+                                    Uint8List.fromList(_pickedImage!.bytes),
+                                  )
+                                : (existingImageUrl != null
+                                          ? NetworkImage(
+                                              existingImageUrl.toString(),
+                                            )
+                                          : null)
+                                      as ImageProvider?,
+                            child:
+                                (_pickedImage == null &&
+                                    existingImageUrl == null)
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: InkWell(
+                              onTap: isLoading ? null : _pickImage,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.gradientStart,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 20,
-                              color: Colors.white,
+                          ),
+                        ],
+                      ),
+                      if (existingImageUrl != null || _pickedImage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: TextButton.icon(
+                            onPressed: isLoading ? null : _deleteProfilePicture,
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: const Text('Delete Photo'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
