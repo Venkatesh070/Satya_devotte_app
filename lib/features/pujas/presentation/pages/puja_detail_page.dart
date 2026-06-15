@@ -1041,26 +1041,65 @@ class _DeityPortrait extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 //  Segmented Pill Tabs
 // ════════════════════════════════════════════════════════════════
-class _SegmentedTabs extends StatelessWidget {
+class _SegmentedTabs extends StatefulWidget {
   const _SegmentedTabs({required this.controller, required this.tabs});
   final TabController controller;
   final List<String> tabs;
+
+  @override
+  State<_SegmentedTabs> createState() => _SegmentedTabsState();
+}
+
+class _SegmentedTabsState extends State<_SegmentedTabs> {
+  final _scrollController = ScrollController();
+  final _keys = <GlobalKey>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _keys.addAll(List.generate(widget.tabs.length, (_) => GlobalKey()));
+    widget.controller.addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTabChanged);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (mounted && !widget.controller.indexIsChanging) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (_keys[widget.controller.index].currentContext != null) {
+          Scrollable.ensureVisible(
+            _keys[widget.controller.index].currentContext!,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: 0.5,
+          );
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 38,
       child: AnimatedBuilder(
-        animation: controller,
+        animation: widget.controller,
         builder: (_, __) {
           return ListView.separated(
+            controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            itemCount: tabs.length,
+            itemCount: widget.tabs.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (_, i) {
-              final selected = controller.index == i;
+              final selected = widget.controller.index == i;
               return GestureDetector(
-                onTap: () => controller.animateTo(i),
+                key: _keys[i],
+                onTap: () => widget.controller.animateTo(i),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
                   padding: const EdgeInsets.symmetric(
@@ -1095,7 +1134,7 @@ class _SegmentedTabs extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    tabs[i],
+                    widget.tabs[i],
                     style: AppTypography.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,

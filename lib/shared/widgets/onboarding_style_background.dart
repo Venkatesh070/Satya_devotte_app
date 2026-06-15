@@ -135,21 +135,25 @@ class OnboardingStyleFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = Image.asset(
+    // Fixed footer image
+    final footerImage = Image.asset(
       'assets/images/onBoardFooter.png',
       width: MediaQuery.sizeOf(context).width,
       fit: BoxFit.fitWidth,
       alignment: Alignment.bottomCenter,
     );
 
+    // Rotating flower image at bottom (anti-clockwise)
+    Widget? rotatingFlower;
     if (rotationController != null) {
-      image = AnimatedBuilder(
+      rotatingFlower = AnimatedBuilder(
         animation: rotationController!,
         builder: (context, child) {
-          final spin = -rotationController!.value * 2 * math.pi;
+          final spin =
+              -rotationController!.value * 2 * math.pi; // Anti-clockwise
           return Transform.rotate(angle: spin, child: child);
         },
-        child: image,
+        child: Image.asset('assets/images/flowerImg.png'),
       );
     }
 
@@ -157,7 +161,23 @@ class OnboardingStyleFooter extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: 0,
-      child: IgnorePointer(child: image),
+      child: Stack(
+        children: [
+          // Fixed footer image
+          IgnorePointer(child: footerImage),
+          // Rotating flower at bottom (same as top, but anti-clockwise)
+          if (rotatingFlower != null)
+            Positioned(
+              bottom: -200, // Same offset as top flower (but from bottom)
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: IgnorePointer(child: rotatingFlower),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
