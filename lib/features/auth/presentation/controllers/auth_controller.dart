@@ -15,6 +15,7 @@ import 'package:satya_devotte_app/features/auth/domain/repositories/auth_reposit
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_verification_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 
 class AuthController extends GetxController {
   AuthController(
@@ -102,6 +103,8 @@ class AuthController extends GetxController {
       // tokens that rotated while the app was closed get reconciled.
       await _registerDeviceForPush();
       _refreshProfileControllerAfterAuth();
+      // Refresh cart and pooja history for restored session
+      unawaited(_refreshCartAfterAuth());
     }
   }
 
@@ -143,6 +146,23 @@ class AuthController extends GetxController {
     try {
       if (!Get.isRegistered<ProfileController>()) return;
       Get.find<ProfileController>().clearCachedUser();
+    } catch (_) {}
+  }
+
+  void _clearCartOnLogout() {
+    try {
+      if (!Get.isRegistered<CartController>()) return;
+      final cartController = Get.find<CartController>();
+      // Clear cart locally
+      cartController.clearLocalCart();
+    } catch (_) {}
+  }
+
+  Future<void> _refreshCartAfterAuth() async {
+    try {
+      if (!Get.isRegistered<CartController>()) return;
+      final cartController = Get.find<CartController>();
+      await cartController.fetchCart();
     } catch (_) {}
   }
 
@@ -202,6 +222,8 @@ class AuthController extends GetxController {
     _isAuthenticated.value = true;
     await _registerDeviceForPush();
     _refreshProfileControllerAfterAuth();
+    // Refresh cart and pooja history for new user
+    unawaited(_refreshCartAfterAuth());
   }
 
   AuthRepository get authRepository => _authRepository;
@@ -558,6 +580,7 @@ class AuthController extends GetxController {
     _userRole.value = 'user';
     await _authSessionService.clear();
     _clearProfileControllerCache();
+    _clearCartOnLogout();
 
     try {
       await _firebaseService.signOut();

@@ -99,6 +99,10 @@ class CartController extends GetxController {
     }
   }
 
+  void clearLocalCart() {
+    _cart.value = null;
+  }
+
   void _updateLocalQuantity(String productId, int quantity) {
     final current = _cart.value;
     if (current == null) return;
