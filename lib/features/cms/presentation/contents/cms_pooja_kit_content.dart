@@ -26,10 +26,18 @@ import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_b
 
 const _kitCategoryAyurvedic = 'ayurvedic';
 const _kitCategoryPujaKit = 'pujakit';
-const _kitCategories = [_kitCategoryAyurvedic, _kitCategoryPujaKit];
+const _kitCategoryBook = 'book';
+
+const _kitCategories = [
+  _kitCategoryAyurvedic,
+  _kitCategoryPujaKit,
+  _kitCategoryBook,
+];
+
 const _kitCategoryLabels = <String, String>{
   _kitCategoryAyurvedic: 'Ayurvedic',
   _kitCategoryPujaKit: 'Puja Kit',
+  _kitCategoryBook: 'Book',
 };
 
 String _resolveKitCategory(String? raw) {
@@ -37,6 +45,9 @@ String _resolveKitCategory(String? raw) {
   if (value == _kitCategoryAyurvedic) return _kitCategoryAyurvedic;
   if (value == _kitCategoryPujaKit || value == 'puja kit') {
     return _kitCategoryPujaKit;
+  }
+  if (value == _kitCategoryBook || value == 'books') {
+    return _kitCategoryBook;
   }
   return _kitCategoryPujaKit;
 }
@@ -1982,6 +1993,9 @@ class _ProductFormState extends State<_ProductForm> {
   bool get _isEdit => widget.product != null;
   bool get _isPujaKitCategory => _kitCategory == _kitCategoryPujaKit;
   bool get _isAyurvedicCategory => _kitCategory == _kitCategoryAyurvedic;
+  bool get _isBookCategory => _kitCategory == _kitCategoryBook;
+  bool get _requiresQuantityCategory =>
+      _isAyurvedicCategory || _isBookCategory;
 
   static const _reviewStatuses = ['DRAFT', 'PENDING'];
 
@@ -2501,12 +2515,14 @@ class _ProductFormState extends State<_ProductForm> {
     }
 
     num? productQuantity;
-    if (_isAyurvedicCategory) {
+    if (_requiresQuantityCategory) {
       final qtyText = _quantityCtrl.text.trim();
       if (qtyText.isEmpty) {
         showCmsSnackbar(
           title: 'Required',
-          message: 'Quantity is required for Ayurvedic products.',
+          message:
+              'Quantity is required for '
+              '${_kitCategoryLabels[_kitCategory] ?? _kitCategory} products.',
           isError: true,
         );
         return;
@@ -2568,7 +2584,7 @@ class _ProductFormState extends State<_ProductForm> {
         currency: _currency,
         category: _kitCategory,
         quantity: productQuantity,
-        clearQuantity: !_isAyurvedicCategory,
+        clearQuantity: !_requiresQuantityCategory,
         isFeatured: _isFeatured,
         associatePuja: associatePuja,
         image: _image,
@@ -2628,7 +2644,7 @@ class _ProductFormState extends State<_ProductForm> {
                         ),
                         const SizedBox(height: 12),
                         _categoryDropdown(),
-                        if (_isAyurvedicCategory) ...[
+                        if (_requiresQuantityCategory) ...[
                           const SizedBox(height: 12),
                           CmsFormField(
                             label: 'Quantity *',
@@ -2681,7 +2697,7 @@ class _ProductFormState extends State<_ProductForm> {
                   ),
                   const SizedBox(height: 12),
                   _categoryDropdown(),
-                  if (_isAyurvedicCategory) ...[
+                  if (_requiresQuantityCategory) ...[
                     const SizedBox(height: 12),
                     CmsFormField(
                       label: 'Quantity *',
