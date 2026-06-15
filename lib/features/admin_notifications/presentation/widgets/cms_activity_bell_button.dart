@@ -94,11 +94,16 @@ class CmsActivitySidebarBadge extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return Obx(() {
-      final count = Get.find<CmsAdminNotificationsController>().unreadCount.value;
+      final count =
+          Get.find<CmsAdminNotificationsController>().unreadCount.value;
       if (count <= 0) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(left: 8),
-        child: _CmsNotificationCountBadge(count: count, diameter: 16, fontSize: 9),
+        child: _CmsNotificationCountBadge(
+          count: count,
+          diameter: 16,
+          fontSize: 9,
+        ),
       );
     });
   }
@@ -149,7 +154,7 @@ class _CmsNotificationBellShell extends StatelessWidget {
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 4,
-                      offset: const Offset(0, 1),
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -165,10 +170,8 @@ class _CmsNotificationBellShell extends StatelessWidget {
                   top: 0,
                   child: AnimatedBuilder(
                     animation: badgeScale,
-                    builder: (context, child) => Transform.scale(
-                      scale: badgeScale.value,
-                      child: child,
-                    ),
+                    builder: (context, child) =>
+                        Transform.scale(scale: badgeScale.value, child: child),
                     child: _CmsNotificationCountBadge(count: count),
                   ),
                 ),

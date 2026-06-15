@@ -77,7 +77,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     if (raw.isEmpty) return 'Enter an amount.';
     final parsed = num.tryParse(raw);
     if (parsed == null) return 'Enter a valid amount.';
-    if (parsed < 10) return 'Minimum donation is R 10.';
+    if (parsed < 10) return 'Minimum contribution is R 10.';
     if (_noteCtrl.text.trim().length > 280) {
       return 'Note must be 280 characters or fewer.';
     }
@@ -101,8 +101,8 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
     if (!mounted) return;
     if (init == null) {
       setState(
-        () =>
-            _inlineError = _donateCtrl.lastError ?? 'Could not start donation.',
+        () => _inlineError =
+            _donateCtrl.lastError ?? 'Could not start contribution.',
       );
       return;
     }
@@ -157,7 +157,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     ],
                   ),
                   Text(
-                    'Make a Donation',
+                    'Make a Contribution',
                     style: AppTypography.lora(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -333,7 +333,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                               ),
                             )
                           : Text(
-                              'Make Donation',
+                              'Make Contribution',
                               style: AppTypography.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

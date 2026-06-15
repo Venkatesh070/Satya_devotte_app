@@ -218,7 +218,12 @@ class _DeliveryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.location_on, size: 16, color: Color(0xFF253FA8)),
+          ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+            ).createShader(bounds),
+            child: const Icon(Icons.location_on, size: 16, color: Colors.white),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -688,7 +693,12 @@ class _RowLine extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: const Color(0xFF253FA8)),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+              ).createShader(bounds),
+              child: Icon(icon, size: 14, color: Colors.white),
+            ),
             const SizedBox(width: 7),
           ],
           Expanded(

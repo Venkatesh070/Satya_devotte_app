@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -129,7 +130,7 @@ class _HomePageState extends State<HomePage> {
       if (offlineService.isOnline.value) {
         final response = await apiClient.dio.post<dynamic>(
           ApiEndpoints.userStreak,
-          options: Options(
+          options: dio.Options(
             headers: {'X-Timezone': deviceTimeZone},
             extra: {kSkipApiLoaderKey: true},
           ),
@@ -141,7 +142,7 @@ class _HomePageState extends State<HomePage> {
         });
         await _fetchUserStreakStatus();
       }
-    } on DioException catch (error) {
+    } on dio.DioException catch (error) {
       debugPrint('User streak API failed: ${error.message}');
       await _fetchUserStreakStatus();
     } catch (error) {
@@ -162,7 +163,7 @@ class _HomePageState extends State<HomePage> {
       if (offlineService.isOnline.value) {
         final response = await apiClient.dio.get<dynamic>(
           ApiEndpoints.userStreak,
-          options: Options(
+          options: dio.Options(
             headers: {'X-Timezone': deviceTimeZone},
             extra: {kSkipApiLoaderKey: true},
           ),
@@ -173,7 +174,7 @@ class _HomePageState extends State<HomePage> {
         payload = offlineService.getCachedData(cacheKey);
       }
       _updateDayStreakFromPayload(payload);
-    } on DioException catch (error) {
+    } on dio.DioException catch (error) {
       debugPrint('User streak status API failed: ${error.message}');
       final cached = offlineService.getCachedData(cacheKey);
       if (cached != null) _updateDayStreakFromPayload(cached);
@@ -194,7 +195,7 @@ class _HomePageState extends State<HomePage> {
         final response = await apiClient.dio.get<dynamic>(
           ApiEndpoints.userPoojaHistoryFinished,
           queryParameters: const {'page': 1, 'limit': 1},
-          options: Options(extra: {kSkipApiLoaderKey: true}),
+          options: dio.Options(extra: {kSkipApiLoaderKey: true}),
         );
         payload = response.data;
         await offlineService.cacheData(cacheKey, payload);
@@ -868,7 +869,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
         return false;
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 120),
+        padding: const EdgeInsets.only(bottom: 20),
         child: Column(
           children: [
             _HomeHeader(
@@ -908,9 +909,9 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                       onFestivalTap: widget.onFestivalTap,
                     ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
             _Footer(),
-            const SizedBox(height: 40),
+            const SizedBox(height: 10),
           ],
         ),
       ),

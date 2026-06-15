@@ -18,8 +18,8 @@ class DonationDetailsScreen extends StatelessWidget {
     if (arg is! Donation) {
       return Scaffold(
         backgroundColor: DonationUi.background,
-        appBar: DonationSimpleAppBar(title: 'Donation', onBack: Get.back),
-        body: const Center(child: Text('Donation not found.')),
+        appBar: DonationSimpleAppBar(title: 'Contribution', onBack: Get.back),
+        body: const Center(child: Text('Contribution not found.')),
       );
     }
     final donation = arg;
@@ -61,7 +61,7 @@ class DonationDetailsScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: CustomButton(
-                label: 'Donate Now',
+                label: 'Contribute Now',
                 textColor: Colors.white,
                 gradientColors: kFigmaActionGradient,
                 borderRadius: 14,

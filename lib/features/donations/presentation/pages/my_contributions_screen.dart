@@ -54,9 +54,9 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'History of Donations',
+          'History of Contributions',
           style: AppTypography.lora(
-            fontSize: 24,
+            fontSize: 18,
             fontWeight: FontWeight.w500,
             color: DonationUi.textPrimary,
           ),
@@ -86,21 +86,7 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate((context, i) {
                     final item = _ctrl.items[i];
-                    final isLast = i == _ctrl.items.length - 1;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ContributionTile(contribution: item),
-                        if (!isLast)
-                          const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: DonationUi.cardBorder,
-                            indent: 20,
-                            endIndent: 20,
-                          ),
-                      ],
-                    );
+                    return ContributionTile(contribution: item);
                   }, childCount: _ctrl.items.length),
                 ),
                 if (_ctrl.isLoadingMore)

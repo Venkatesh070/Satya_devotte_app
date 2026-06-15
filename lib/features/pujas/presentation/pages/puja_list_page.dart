@@ -534,10 +534,10 @@ class _RitualListPageState extends State<RitualListPage> {
         itemBuilder: (context, index) {
           if (index == items.length) {
             return Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 90),
+              padding: const EdgeInsets.only(top: 16, bottom: 30),
               child: Center(
                 child: Text(
-                  'You have reached to the end of the list.',
+                  'You have reached to the end of the screen.',
                   style: AppTypography.inter(
                     fontSize: 12,
                     color: const Color(0xFF8A6B4A),

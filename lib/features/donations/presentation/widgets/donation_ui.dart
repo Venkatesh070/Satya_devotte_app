@@ -397,7 +397,7 @@ class DonationsOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          DonationOrangeButton(label: 'Donate Now', onPressed: onDonate),
+          DonationOrangeButton(label: 'Contribute Now', onPressed: onDonate),
         ],
       ),
     );
@@ -534,70 +534,86 @@ class RecordDonationTile extends StatelessWidget {
     final dateLine = contribution.formattedDateHistoryLine;
     final txnLine = contribution.displayTransactionLine;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Material(
+        color: DonationUi.cardFill,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: DonationUi.cardFill,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: DonationUi.textPrimary,
+                        ),
+                      ),
+                      if (dateLine.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          dateLine,
+                          style: AppTypography.inter(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: DonationUi.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      contribution.formattedAmount,
                       style: AppTypography.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: DonationUi.textPrimary,
                       ),
                     ),
-                    if (dateLine.isNotEmpty) ...[
+                    if (txnLine.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        dateLine,
+                        txnLine,
+                        textAlign: TextAlign.right,
                         style: AppTypography.inter(
-                          fontSize: 12,
-                          height: 1.35,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                           color: DonationUi.textMuted,
                         ),
                       ),
                     ],
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    contribution.formattedAmount,
-                    style: AppTypography.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: DonationUi.textPrimary,
-                    ),
-                  ),
-                  if (txnLine.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      txnLine,
-                      textAlign: TextAlign.right,
-                      style: AppTypography.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: DonationUi.textMuted,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

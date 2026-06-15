@@ -32,7 +32,7 @@ class DonationsListScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Donations',
+                    'Contributions',
                     style: AppTypography.lora(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,
@@ -68,18 +68,14 @@ class _GeneralDonationCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF421204),
-            Color(0xFF8B2C0F),
-            Color(0xFFC04E15),
-          ],
+          colors: [Color(0xFF421204), Color(0xFF8B2C0F), Color(0xFFC04E15)],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Make Donation',
+            'Make Contribution',
             style: AppTypography.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -123,7 +119,7 @@ class _GeneralDonationCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Donate Now',
+                'Contribute Now',
                 style: AppTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
