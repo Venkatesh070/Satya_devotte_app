@@ -174,29 +174,35 @@ class _HomePageState extends State<HomePage> {
     final offlineService = Get.find<OfflineService>();
     const cacheKey = 'user_streak';
 
+    // First, try to load cached data immediately
+    try {
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached != null) {
+        _updateDayStreakFromPayload(cached);
+      }
+    } catch (error) {
+      debugPrint('Error loading cached streak: $error');
+    }
+
+    // If offline, we're done
+    if (!offlineService.isOnline.value) {
+      return;
+    }
+
     try {
       final apiClient = Get.find<ApiClient>();
       final deviceTimeZone = await _deviceTimeZone();
-      dynamic payload;
-
-      if (offlineService.isOnline.value) {
-        final response = await apiClient.dio.get<dynamic>(
-          ApiEndpoints.userStreak,
-          options: dio.Options(
-            headers: {'X-Timezone': deviceTimeZone},
-            extra: {kSkipApiLoaderKey: true},
-          ),
-        );
-        payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
-      } else {
-        payload = offlineService.getCachedData(cacheKey);
-      }
-      _updateDayStreakFromPayload(payload);
+      final response = await apiClient.dio.get<dynamic>(
+        ApiEndpoints.userStreak,
+        options: dio.Options(
+          headers: {'X-Timezone': deviceTimeZone},
+          extra: {kSkipApiLoaderKey: true},
+        ),
+      );
+      await offlineService.cacheData(cacheKey, response.data);
+      _updateDayStreakFromPayload(response.data);
     } on dio.DioException catch (error) {
       debugPrint('User streak status API failed: ${error.message}');
-      final cached = offlineService.getCachedData(cacheKey);
-      if (cached != null) _updateDayStreakFromPayload(cached);
     } catch (error) {
       debugPrint('User streak status API failed: $error');
     }
@@ -395,96 +401,121 @@ class _HomePageState extends State<HomePage> {
     final cacheKey = 'home_data';
     final productsCacheKey = 'featured_products';
 
+    // First, try to load cached data immediately
     try {
-      final apiClient = Get.find<ApiClient>();
-      dynamic payload;
-      List<ProductModel> products = [];
+      final cachedPayload = offlineService.getCachedData(cacheKey);
+      final cachedProductsData = offlineService.getCachedData(productsCacheKey);
 
-      if (offlineService.isOnline.value) {
-        final response = await apiClient.dio.get<dynamic>(ApiEndpoints.home);
-        payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
-
-        final productDs = ProductRemoteDataSource(apiClient);
-        products = (await productDs.getFeaturedProducts(
-          limit: 10,
-        )).where((p) => !p.isOrderClosed).toList();
-        await offlineService.cacheData(
-          productsCacheKey,
-          products.map((p) => p.toJson()).toList(),
-        );
-      } else {
-        payload = offlineService.getCachedData(cacheKey);
-        final cachedProducts = offlineService.getCachedData(productsCacheKey);
-        if (cachedProducts is List) {
-          products = cachedProducts
-              .map((p) => ProductModel.fromJson(Map<String, dynamic>.from(p)))
-              .toList();
-        }
+      List<ProductModel> cachedProducts = [];
+      if (cachedProductsData is List) {
+        cachedProducts = cachedProductsData
+            .map((p) => ProductModel.fromJson(Map<String, dynamic>.from(p)))
+            .toList();
       }
 
-      if (payload is! Map) return;
-      final data = payload['data'];
-      if (data is! Map) return;
+      if (cachedPayload is Map && mounted) {
+        _updateUIWithData(cachedPayload, cachedProducts);
+      }
+    } catch (error) {
+      debugPrint('Error loading cached home data: $error');
+    }
 
-      final slokaData = data['dailySloka'];
-      final poojasData = data['poojas'];
-      final festivalsData = data['festivals'];
-      final todayDateAndTithi = data['todayDateAndTithi']?.toString().trim();
+    // If offline, we're done after showing cache
+    if (!offlineService.isOnline.value) {
+      _isFetchingHome = false;
+      return;
+    }
 
-      final parsedSloka = slokaData is Map
-          ? slokaData['sloka']?.toString().trim()
-          : null;
-      final parsedAuthor = slokaData is Map
-          ? slokaData['author']?.toString().trim()
-          : null;
-      final parsedMeaning = slokaData is Map
-          ? slokaData['meaning']?.toString().trim()
-          : null;
-      final parsedContemplation = slokaData is Map
-          ? slokaData['contemplation']?.toString().trim()
-          : null;
-      final parsedPrayer = slokaData is Map
-          ? slokaData['prayer']?.toString().trim()
-          : null;
+    try {
+      final apiClient = Get.find<ApiClient>();
+      // Fetch home and products in parallel
+      final responses = await Future.wait([
+        apiClient.dio.get<dynamic>(ApiEndpoints.home),
+        ProductRemoteDataSource(apiClient).getFeaturedProducts(limit: 10),
+      ]);
 
-      final parsedPoojas = _mapHomeItems(
-        poojasData,
-        fallbackImage: 'assets/images/home/morePoojas.png',
-      );
-      final parsedFestivals = _mapHomeItems(
-        festivalsData,
-        fallbackImage: '',
-        useDatePlaceholderWhenImageMissing: true,
-      );
+      final homeResponse = responses[0] as dio.Response<dynamic>;
+      final allProducts = responses[1] as List<ProductModel>;
+      final filteredProducts = allProducts
+          .where((p) => !p.isOrderClosed)
+          .toList();
+
+      // Update cache
+      await Future.wait([
+        offlineService.cacheData(cacheKey, homeResponse.data),
+        offlineService.cacheData(
+          productsCacheKey,
+          filteredProducts.map((p) => p.toJson()).toList(),
+        ),
+      ]);
 
       if (!mounted) return;
-      setState(() {
-        _featuredProducts = products;
-        if (todayDateAndTithi != null && todayDateAndTithi.isNotEmpty) {
-          _todayDateAndTithi = todayDateAndTithi;
-        }
-        if (parsedSloka != null && parsedSloka.isNotEmpty) {
-          _dailySloka = parsedSloka;
-        }
-        if (parsedAuthor != null && parsedAuthor.isNotEmpty) {
-          _slokaAuthor = '- $parsedAuthor';
-        }
-        _slokaMeaning = parsedMeaning ?? '';
-        _slokaContemplation = parsedContemplation ?? '';
-        _slokaPrayer = parsedPrayer ?? '';
-        if (parsedPoojas.isNotEmpty) {
-          _poojas = parsedPoojas;
-        }
-        if (parsedFestivals.isNotEmpty) {
-          _festivals = parsedFestivals;
-        }
-      });
+      _updateUIWithData(homeResponse.data, filteredProducts);
     } catch (error) {
       debugPrint('Home API failed: $error');
     } finally {
       _isFetchingHome = false;
     }
+  }
+
+  void _updateUIWithData(dynamic payload, List<ProductModel> products) {
+    if (payload is! Map) return;
+    final data = payload['data'];
+    if (data is! Map) return;
+
+    final slokaData = data['dailySloka'];
+    final poojasData = data['poojas'];
+    final festivalsData = data['festivals'];
+    final todayDateAndTithi = data['todayDateAndTithi']?.toString().trim();
+
+    final parsedSloka = slokaData is Map
+        ? slokaData['sloka']?.toString().trim()
+        : null;
+    final parsedAuthor = slokaData is Map
+        ? slokaData['author']?.toString().trim()
+        : null;
+    final parsedMeaning = slokaData is Map
+        ? slokaData['meaning']?.toString().trim()
+        : null;
+    final parsedContemplation = slokaData is Map
+        ? slokaData['contemplation']?.toString().trim()
+        : null;
+    final parsedPrayer = slokaData is Map
+        ? slokaData['prayer']?.toString().trim()
+        : null;
+
+    final parsedPoojas = _mapHomeItems(
+      poojasData,
+      fallbackImage: 'assets/images/home/morePoojas.png',
+    );
+    final parsedFestivals = _mapHomeItems(
+      festivalsData,
+      fallbackImage: '',
+      useDatePlaceholderWhenImageMissing: true,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _featuredProducts = products;
+      if (todayDateAndTithi != null && todayDateAndTithi.isNotEmpty) {
+        _todayDateAndTithi = todayDateAndTithi;
+      }
+      if (parsedSloka != null && parsedSloka.isNotEmpty) {
+        _dailySloka = parsedSloka;
+      }
+      if (parsedAuthor != null && parsedAuthor.isNotEmpty) {
+        _slokaAuthor = '- $parsedAuthor';
+      }
+      _slokaMeaning = parsedMeaning ?? '';
+      _slokaContemplation = parsedContemplation ?? '';
+      _slokaPrayer = parsedPrayer ?? '';
+      if (parsedPoojas.isNotEmpty) {
+        _poojas = parsedPoojas;
+      }
+      if (parsedFestivals.isNotEmpty) {
+        _festivals = parsedFestivals;
+      }
+    });
   }
 
   List<HomeCircleItem> _mapHomeItems(

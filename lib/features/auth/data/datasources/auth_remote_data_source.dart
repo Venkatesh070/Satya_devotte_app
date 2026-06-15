@@ -31,7 +31,12 @@ class AuthRemoteDataSource {
   Future<void> upsertProfile(Map<String, dynamic> profileData) async {
     final formDataMap = <String, dynamic>{};
     profileData.forEach((key, value) {
-      if (value == null) return;
+      if (value == null) {
+        if (key == 'image' || key == 'profileImage' || key == 'imageUrl') {
+          formDataMap[key] = null;
+        }
+        return;
+      }
       if (value is MultipartFile) {
         formDataMap[key] = value;
       } else {
@@ -61,7 +66,12 @@ class AuthRemoteDataSource {
   Future<void> updateProfile(Map<String, dynamic> profileData) async {
     final formDataMap = <String, dynamic>{};
     profileData.forEach((key, value) {
-      if (value == null) return;
+      if (value == null) {
+        if (key == 'image' || key == 'profileImage' || key == 'imageUrl') {
+          formDataMap[key] = null;
+        }
+        return;
+      }
       if (value is MultipartFile) {
         formDataMap[key] = value;
       } else {

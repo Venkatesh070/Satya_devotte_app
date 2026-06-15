@@ -61,11 +61,61 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _pickFromGallery() async {
     final service = Get.find<MediaUploadService>();
     final picked = await service.pickImages();
     if (picked.isEmpty) return;
     setState(() => _images.addAll(picked));
+  }
+
+  Future<void> _takeFromCamera() async {
+    final service = Get.find<MediaUploadService>();
+    final picked = await service.captureImage();
+    if (picked == null) return;
+    setState(() => _images.add(picked));
+  }
+
+  Future<void> _showImageOptions() async {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.white),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.white),
+                title: const Text(
+                  'Take Photo',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _takeFromCamera();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _removeImage(int index) {
@@ -199,7 +249,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: _submitting ? null : _pickImages,
+                  onPressed: _submitting ? null : _showImageOptions,
                   icon: const Icon(
                     Icons.add_photo_alternate_outlined,
                     size: 18,

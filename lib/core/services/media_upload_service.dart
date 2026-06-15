@@ -4,11 +4,14 @@
 // The picked file bytes are sent directly in the create/update API calls.
 // e.g. POST /poojas/create-pooja (multipart) includes image/audio/video bytes.
 
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum PickMediaType { image, audio, video }
 
@@ -24,6 +27,8 @@ class PickedFile {
 }
 
 class MediaUploadService extends GetxService {
+  final ImagePicker _imagePicker = ImagePicker();
+
   /// Pick one or more image files (e.g. damage photos for replacement requests).
   Future<List<PickedFile>> pickImages({bool allowMultiple = true}) async {
     try {
@@ -48,8 +53,45 @@ class MediaUploadService extends GetxService {
         );
       }
       return picked;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('pickImages error: $e');
       return const [];
+    }
+  }
+
+  /// Capture image from camera
+  Future<PickedFile?> captureImage() async {
+    try {
+      // Request camera permission first
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        debugPrint('Camera permission not granted');
+        return null;
+      }
+
+      final XFile? xFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+      if (xFile == null) {
+        debugPrint('No image captured from camera');
+        return null;
+      }
+
+      final bytes = await xFile.readAsBytes();
+      if (bytes.isEmpty) {
+        debugPrint('Captured image has no bytes');
+        return null;
+      }
+
+      return PickedFile(
+        bytes: bytes,
+        filename: xFile.name,
+        mimeType: _mimeType(xFile.name, PickMediaType.image),
+      );
+    } catch (e) {
+      debugPrint('captureImage error: $e');
+      return null;
     }
   }
 

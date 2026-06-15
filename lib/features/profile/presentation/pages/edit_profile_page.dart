@@ -151,11 +151,71 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImageFromGallery() async {
     final picked = await _mediaService.pickFile(type: PickMediaType.image);
     if (picked != null) {
       setState(() => _pickedImage = picked);
     }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final picked = await _mediaService.captureImage();
+    if (picked != null) {
+      setState(() => _pickedImage = picked);
+    }
+  }
+
+  Future<void> _showProfileImageOptions() async {
+    final user = _profileController.resolvedUser;
+    final existingImageUrl = user?['imageUrl'] ?? user?['profileImageUrl'];
+    final hasImage = existingImageUrl != null || _pickedImage != null;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickImageFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickImageFromCamera();
+                },
+              ),
+              if (hasImage)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text(
+                    'Delete Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _deleteProfilePicture();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteProfilePicture() async {
@@ -312,15 +372,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             bottom: 0,
                             right: 0,
                             child: InkWell(
-                              onTap: isLoading ? null : _pickImage,
+                              onTap: isLoading
+                                  ? null
+                                  : ((existingImageUrl != null ||
+                                            _pickedImage != null)
+                                        ? _showProfileImageOptions
+                                        : _showProfileImageOptions),
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: const BoxDecoration(
                                   color: AppColors.gradientStart,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.camera_alt,
+                                child: Icon(
+                                  (existingImageUrl != null ||
+                                          _pickedImage != null)
+                                      ? Icons.edit
+                                      : Icons.camera_alt,
                                   size: 20,
                                   color: Colors.white,
                                 ),
@@ -329,18 +397,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ],
                       ),
-                      if (existingImageUrl != null || _pickedImage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: TextButton.icon(
-                            onPressed: isLoading ? null : _deleteProfilePicture,
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            label: const Text('Delete Photo'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.red,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
