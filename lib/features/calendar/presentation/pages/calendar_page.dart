@@ -666,9 +666,9 @@ class _FestivalImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ph = Container(
-      color: const Color(0xFFEADCC3),
-      child: const Icon(Icons.temple_hindu, color: Color(0xFF8C5A2A)),
+    final ph = Image.asset(
+      'assets/images/default_img.png',
+      fit: BoxFit.cover,
     );
     if (url == null || url!.isEmpty) return ph;
     if (url!.startsWith('http')) {

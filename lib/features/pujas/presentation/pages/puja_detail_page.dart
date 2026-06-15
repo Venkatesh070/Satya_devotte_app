@@ -1024,17 +1024,7 @@ class _DeityPortrait extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFD89A), Color(0xFFE0884A)],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: const Icon(Icons.temple_hindu, size: 52, color: Colors.white),
-    );
+    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
   }
 }
 
@@ -2220,11 +2210,7 @@ class _CalendarThumb extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Container(
-      color: const Color(0xFFE8C27A),
-      alignment: Alignment.center,
-      child: const Icon(Icons.temple_hindu, size: 34, color: Colors.white),
-    );
+    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
   }
 }
 

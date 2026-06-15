@@ -24,6 +24,8 @@ import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
@@ -60,11 +62,27 @@ class _HomePageState extends State<HomePage> {
   List<ProductModel> _featuredProducts = [];
   int _poojasCompleted = 0;
   int _dayStreak = 0;
+  late PoojaHistoryController _poojaHistoryController;
+  Worker? _finishedPoojasWorker;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+
+    // Initialize PoojaHistoryController
+    if (Get.isRegistered<PoojaHistoryController>()) {
+      _poojaHistoryController = Get.find<PoojaHistoryController>();
+    } else {
+      final repo = Get.find<PoojaHistoryRepository>();
+      _poojaHistoryController = Get.put(PoojaHistoryController(repo));
+    }
+
+    // Add listener to finishedPoojas
+    _finishedPoojasWorker = ever(_poojaHistoryController.finishedPoojas, (_) {
+      _fetchPoojasCompleted();
+    });
+
     _fetchHomeDataIfNeeded();
     _fetchAchievementsData(recordStreak: true);
     if (Get.isRegistered<UserNotificationsBadgeController>()) {
@@ -78,6 +96,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _hideNavDebounceTimer?.cancel();
     _pageController.dispose();
+    _finishedPoojasWorker?.dispose();
     super.dispose();
   }
 
@@ -184,37 +203,48 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchPoojasCompleted() async {
-    final offlineService = Get.find<OfflineService>();
-    const cacheKey = 'poojas_completed_count';
-
     try {
-      final apiClient = Get.find<ApiClient>();
-      dynamic payload;
-
-      if (offlineService.isOnline.value) {
-        final response = await apiClient.dio.get<dynamic>(
-          ApiEndpoints.userPoojaHistoryFinished,
-          queryParameters: const {'page': 1, 'limit': 1},
-          options: dio.Options(extra: {kSkipApiLoaderKey: true}),
-        );
-        payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
+      debugPrint('HomePage._fetchPoojasCompleted(): starting...');
+      // Use PoojaHistoryController which already fetches and de-duplicates finished poojas
+      PoojaHistoryController? historyController;
+      if (Get.isRegistered<PoojaHistoryController>()) {
+        historyController = Get.find<PoojaHistoryController>();
       } else {
-        payload = offlineService.getCachedData(cacheKey);
+        // Initialize it if not yet registered
+        final repo = Get.find<PoojaHistoryRepository>();
+        historyController = Get.put(PoojaHistoryController(repo));
       }
 
-      final completed = _extractCompletedPoojaCount(payload);
-      if (!mounted) return;
-      setState(() => _poojasCompleted = completed);
-    } on DioException catch (error) {
-      debugPrint('Pooja completed API failed: ${error.message}');
-      final cached = offlineService.getCachedData(cacheKey);
-      if (cached != null) {
-        final completed = _extractCompletedPoojaCount(cached);
-        if (mounted) setState(() => _poojasCompleted = completed);
+      if (historyController == null) return;
+
+      debugPrint(
+        'HomePage._fetchPoojasCompleted(): finishedPoojas length = ${historyController!.finishedPoojas.length}',
+      );
+
+      // Count unique pooja IDs from the already de-duplicated list
+      final Set<String> seenIds = {};
+      for (final session in historyController!.finishedPoojas) {
+        debugPrint('HomePage._fetchPoojasCompleted(): session = $session');
+        if (session is Map) {
+          final pooja = session['pooja'];
+          if (pooja is Map) {
+            final id = (pooja['_id'] ?? pooja['id'])?.toString().trim();
+            debugPrint('HomePage._fetchPoojasCompleted(): id = $id');
+            if (id != null && id.isNotEmpty) {
+              seenIds.add(id);
+            }
+          }
+        }
       }
+
+      debugPrint(
+        'HomePage._fetchPoojasCompleted(): seenIds.length = ${seenIds.length}',
+      );
+
+      if (!mounted) return;
+      setState(() => _poojasCompleted = seenIds.length);
     } catch (error) {
-      debugPrint('Pooja completed API failed: $error');
+      debugPrint('Failed to fetch completed poojas count: $error');
     }
   }
 
@@ -477,64 +507,72 @@ class _HomePageState extends State<HomePage> {
 
     if (list.isEmpty) return const [];
 
-    return list
-        .map((raw) {
-          if (raw is! Map) return null;
-          final item = raw.map((k, v) => MapEntry(k.toString(), v));
+    final Set<String> seenIds = {};
+    final List<HomeCircleItem> result = [];
 
-          final title = (item['title'] ?? item['name'])?.toString().trim();
+    for (final raw in list) {
+      if (raw is! Map) continue;
+      final item = raw.map((k, v) => MapEntry(k.toString(), v));
 
-          // Clean URL: remove spaces and backticks
-          String? clean(dynamic v) {
-            final s = v?.toString().trim() ?? '';
-            if (s.isEmpty) return null;
-            return s.replaceAll('`', '').trim();
-          }
+      final title = (item['title'] ?? item['name'])?.toString().trim();
 
-          final media = item['media'];
-          String? mediaImage;
-          if (media is Map) {
-            final images = media['images'];
-            if (images is List && images.isNotEmpty) {
-              mediaImage = images.first?.toString();
-            }
-          }
-          final image =
-              clean(item['imageUrl']) ??
-              clean(item['image']) ??
-              clean(mediaImage);
+      // Clean URL: remove spaces and backticks
+      String? clean(dynamic v) {
+        final s = v?.toString().trim() ?? '';
+        if (s.isEmpty) return null;
+        return s.replaceAll('`', '').trim();
+      }
 
-          final id = (item['_id'] ?? item['id'])?.toString().trim();
-          final description = (item['description'] ?? item['purpose'])
-              ?.toString()
-              .trim();
-          final date =
-              (item['date'] ?? item['startDate'] ?? item['festivalDate'])
-                  ?.toString()
-                  .trim();
-          final resolvedImagePath = (image != null && image.isNotEmpty)
-              ? image
-              : fallbackImage;
+      final media = item['media'];
+      String? mediaImage;
+      if (media is Map) {
+        final images = media['images'];
+        if (images is List && images.isNotEmpty) {
+          mediaImage = images.first?.toString();
+        }
+      }
+      final image =
+          clean(item['imageUrl']) ?? clean(item['image']) ?? clean(mediaImage);
 
-          final placeholderText =
-              useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
-              ? DateFormatters.formatFestivalDate(date)
-              : null;
+      final id = (item['_id'] ?? item['id'])?.toString().trim();
+      final description = (item['description'] ?? item['purpose'])
+          ?.toString()
+          .trim();
+      final date = (item['date'] ?? item['startDate'] ?? item['festivalDate'])
+          ?.toString()
+          .trim();
+      final resolvedImagePath = (image != null && image.isNotEmpty)
+          ? image
+          : fallbackImage;
 
-          return HomeCircleItem(
-            title: (title == null || title.isEmpty) ? 'Untitled' : title,
-            imagePath: resolvedImagePath,
-            placeholderText: placeholderText,
-            id: id == null || id.isEmpty ? null : id,
-            description: description == null || description.isEmpty
-                ? null
-                : description,
-            date: date == null || date.isEmpty ? null : date,
-            raw: Map<String, dynamic>.from(item),
-          );
-        })
-        .whereType<HomeCircleItem>()
-        .toList();
+      final placeholderText =
+          useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+          ? DateFormatters.formatFestivalDate(date)
+          : null;
+
+      // Skip if we already added an item with this id
+      if (id != null && id.isNotEmpty) {
+        if (seenIds.contains(id)) {
+          continue;
+        }
+        seenIds.add(id);
+      }
+
+      result.add(
+        HomeCircleItem(
+          title: (title == null || title.isEmpty) ? 'Untitled' : title,
+          imagePath: resolvedImagePath,
+          placeholderText: placeholderText,
+          id: id == null || id.isEmpty ? null : id,
+          description: description == null || description.isEmpty
+              ? null
+              : description,
+          date: date == null || date.isEmpty ? null : date,
+          raw: Map<String, dynamic>.from(item),
+        ),
+      );
+    }
+    return result;
   }
 
   void _onHomeScrollDirectionChanged(ScrollDirection direction) {
@@ -2462,38 +2500,47 @@ class _CircleItem extends StatelessWidget {
               ),
               child: ClipOval(
                 child: item.imagePath.isEmpty
-                    ? ColoredBox(
-                        color: isDatePlaceholder
-                            ? Colors.white
-                            : const Color(0xFFEADCC3),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Text(
-                              item.placeholderText ?? '',
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.inter(
-                                fontSize: 10,
-                                color: isDatePlaceholder
-                                    ? const Color(0xFF5B2B18)
-                                    : const Color(0xFF4A1C00),
-                                fontWeight: FontWeight.w700,
+                    ? isDatePlaceholder
+                          ? ColoredBox(
+                              color: Colors.white,
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                  child: Text(
+                                    item.placeholderText ?? '',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.inter(
+                                      fontSize: 10,
+                                      color: const Color(0xFF5B2B18),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
-                      )
+                            )
+                          : Image.asset(
+                              'assets/images/default_img.png',
+                              fit: BoxFit.cover,
+                            )
                     : item.imagePath.startsWith('http')
                     ? CachedNetworkImage(
                         imageUrl: item.imagePath,
                         fit: BoxFit.cover,
                         errorWidget: (context, error, stackTrace) {
-                          return const ColoredBox(color: Color(0xFFE7D7BC));
+                          return Image.asset(
+                            'assets/images/default_img.png',
+                            fit: BoxFit.cover,
+                          );
                         },
                         placeholder: (context, url) {
-                          return const ColoredBox(color: Color(0xFFE7D7BC));
+                          return Image.asset(
+                            'assets/images/default_img.png',
+                            fit: BoxFit.cover,
+                          );
                         },
                       )
                     : Image(

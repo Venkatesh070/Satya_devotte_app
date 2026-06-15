@@ -36,11 +36,13 @@ class PoojaHistoryController extends GetxController {
         payload = offlineService.getCachedData(cacheKey);
       }
 
+      debugPrint('PoojaHistoryController.fetchHistory(): payload = $payload');
+
       if (payload is Map<String, dynamic>) {
         history.value = payload;
-        // ... (processing remains the same)
         final pending = payload['pending'];
         final Set<String> pendingPoojaIds = {};
+        debugPrint('PoojaHistoryController.fetchHistory(): pending = $pending');
         if (pending is List) {
           pendingPoojas.assignAll(pending);
           for (final session in pending) {
@@ -48,6 +50,7 @@ class PoojaHistoryController extends GetxController {
               final p = session['pooja'];
               if (p is Map) {
                 final id = (p['_id'] ?? p['id'] ?? '').toString();
+                debugPrint('PoojaHistoryController.fetchHistory(): pending pooja id = $id');
                 if (id.isNotEmpty) pendingPoojaIds.add(id);
               }
             }
@@ -57,6 +60,7 @@ class PoojaHistoryController extends GetxController {
         }
 
         final finished = payload['finished'];
+        debugPrint('PoojaHistoryController.fetchHistory(): finished = $finished');
         if (finished is List) {
           final Map<String, dynamic> uniqueFinished = {};
           for (final session in finished) {
@@ -64,11 +68,13 @@ class PoojaHistoryController extends GetxController {
             final pooja = session['pooja'];
             if (pooja is! Map) continue;
             final id = (pooja['_id'] ?? pooja['id'] ?? '').toString();
+            debugPrint('PoojaHistoryController.fetchHistory(): finished pooja id = $id');
             if (id.isEmpty || pendingPoojaIds.contains(id)) continue;
             if (!uniqueFinished.containsKey(id)) {
               uniqueFinished[id] = session;
             }
           }
+          debugPrint('PoojaHistoryController.fetchHistory(): unique finished count = ${uniqueFinished.length}');
           finishedPoojas.assignAll(uniqueFinished.values.toList());
         } else {
           finishedPoojas.clear();

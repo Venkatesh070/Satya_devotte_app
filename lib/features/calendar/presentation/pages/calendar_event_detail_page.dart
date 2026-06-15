@@ -330,10 +330,9 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = Container(
-      color: const Color(0xFFEADCC3),
-      alignment: Alignment.center,
-      child: const Icon(Icons.temple_hindu, size: 64, color: Color(0xFF8C5A2A)),
+    final placeholder = Image.asset(
+      'assets/images/default_img.png',
+      fit: BoxFit.cover,
     );
     if (url == null || url!.isEmpty) return placeholder;
     if (url!.startsWith('http')) {
