@@ -58,12 +58,17 @@ class AppRoutes {
   static const String cmsDeities = '/cms/deities';
   static const String cmsDeityCreate = '/cms/deities/create';
   static const String cmsDeityEdit = '/cms/deities/edit';
+  static const String cmsPujas = '/cms/pujas';
+  static const String cmsPujaCreate = '/cms/pujas/create';
+  static const String cmsPujaEdit = '/cms/pujas/edit';
+
+  /// Legacy paths kept for bookmarked URLs.
   static const String cmsRituals = '/cms/rituals';
   static const String cmsRitualCreate = '/cms/rituals/create';
   static const String cmsRitualEdit = '/cms/rituals/edit';
 
-  /// Top-level "Manage Rituals" sidebar tab. Distinct from `cmsRituals`
-  /// which is the historical "Manage Pujas" entry.
+  /// Top-level "Manage Rituals" sidebar tab. Distinct from [cmsPujas]
+  /// which is the "Manage Pujas" entry.
   static const String cmsManageRituals = '/cms/manage-rituals';
   static const String cmsFestivals = '/cms/festivals';
   static const String cmsFestivalCreate = '/cms/festivals/create';
@@ -77,25 +82,25 @@ class AppRoutes {
 
   // ─── Pooja Kit (admin + superadmin) ──────────────────────────
   /// Stock levels for approved Puja Kit products.
-  static const String cmsPoojaKitInventory = '/cms/pooja-kit/inventory';
+  static const String cmsPoojaKitInventory = '/cms/products/inventory';
 
   /// Manage Pooja Kit listing / create / edit.
-  static const String cmsPoojaKit = '/cms/pooja-kit';
+  static const String cmsPoojaKit = '/cms/products';
 
   /// Pooja Kit orders placed by devotees.
-  static const String cmsPoojaKitOrders = '/cms/pooja-kit/orders';
+  static const String cmsPoojaKitOrders = '/cms/products/orders';
 
   /// In-shell order detail (web hash). Use [cmsPoojaKitOrderPath] for URLs.
-  static const String cmsPoojaKitOrderDetail = '/cms/pooja-kit/orders/:orderId';
+  static const String cmsPoojaKitOrderDetail = '/cms/products/orders/:orderId';
 
   static String cmsPoojaKitOrderPath(String orderId) =>
       '$cmsPoojaKitOrders/$orderId';
 
   /// Pooja Kit refund requests / processed refunds.
-  static const String cmsPoojaKitRefunds = '/cms/pooja-kit/refunds';
+  static const String cmsPoojaKitRefunds = '/cms/products/replacements';
 
   /// Pooja Kit payments overview.
-  static const String cmsPoojaKitPayments = '/cms/pooja-kit/payments';
+  static const String cmsPoojaKitPayments = '/cms/products/payments';
 
   // ─── Donations (admin + superadmin) ──────────────────────────
   /// Admin's own donation campaigns (create / edit / review).

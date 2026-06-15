@@ -177,6 +177,27 @@ class AppPages {
       transitionDuration: Duration.zero,
     ),
     GetPage(
+      name: AppRoutes.cmsPujas,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsPujaCreate,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
+      name: AppRoutes.cmsPujaEdit,
+      page: CmsShellPage.new,
+      middlewares: [AdminGuard()],
+      transition: Transition.noTransition,
+      transitionDuration: Duration.zero,
+    ),
+    GetPage(
       name: AppRoutes.cmsRituals,
       page: CmsShellPage.new,
       middlewares: [AdminGuard()],

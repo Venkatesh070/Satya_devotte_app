@@ -6,6 +6,8 @@ import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/core/url_strategy/url_strategy.dart';
 import 'package:get/get.dart';
 
@@ -18,6 +20,14 @@ Future<void> main() async {
   // and asset files are fetched from the server. On native platforms
   // `configureUrlStrategy` resolves to a no-op stub via conditional import.
   configureUrlStrategy();
+  if (kIsWeb) {
+    // `initialRoute` renders `/login` but hash strategy may leave the URL at
+    // `/#/` until the first GetX navigation. Normalise on cold start.
+    final fragment = Uri.base.fragment;
+    if (fragment.isEmpty || fragment == '/') {
+      updateCmsHashRoute(AppRoutes.login);
+    }
+  }
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(

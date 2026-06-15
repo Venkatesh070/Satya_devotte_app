@@ -252,7 +252,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                       color: const Color(0xFF9C27B0),
                       onTap: () {
                         if (!CmsShellNavigation.openAddPuja()) {
-                          Get.offNamed(AppRoutes.cmsRitualCreate);
+                          Get.offNamed(AppRoutes.cmsPujaCreate);
                         }
                       },
                     ),
@@ -301,7 +301,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                           color: const Color(0xFF9C27B0),
                           onTap: () {
                             if (!CmsShellNavigation.openAddPuja()) {
-                              Get.offNamed(AppRoutes.cmsRitualCreate);
+                              Get.offNamed(AppRoutes.cmsPujaCreate);
                             }
                           },
                         ),

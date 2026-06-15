@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_pages.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/theme/app_theme.dart';
 import 'package:satya_devotte_app/shared/widgets/app_music_floating_button.dart';
@@ -68,6 +69,12 @@ class SathyaApp extends StatelessWidget {
       getPages: AppPages.pages,
       navigatorObservers: [_dialogObserver],
       routingCallback: (routing) {
+        if (kIsWeb) {
+          final current = routing?.current?.trim();
+          if (current != null && current.isNotEmpty) {
+            updateCmsHashRoute(current);
+          }
+        }
         if (Get.isRegistered<AppMusicService>()) {
           Get.find<AppMusicService>().syncControlsVisibility(routing?.current);
         }

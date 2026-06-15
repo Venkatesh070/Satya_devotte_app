@@ -46,7 +46,8 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _controller.resetAndLoad();
-      if (Get.currentRoute == AppRoutes.cmsRitualCreate) {
+      if (Get.currentRoute == AppRoutes.cmsPujaCreate ||
+          Get.currentRoute == AppRoutes.cmsRitualCreate) {
         _openAddForm();
       }
     });

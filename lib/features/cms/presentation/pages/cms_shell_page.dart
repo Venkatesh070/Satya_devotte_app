@@ -148,8 +148,11 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     }
     if (index == _NavIds.activity) {
       _onActivityFocus();
-      if (kIsWeb) {
-        updateCmsHashRoute(AppRoutes.cmsActivity);
+    }
+    if (kIsWeb) {
+      final route = _routeFromIndex(index);
+      if (route != null) {
+        updateCmsHashRoute(route);
       }
     }
   }
@@ -1308,12 +1311,56 @@ Widget _buildContent(int i) {
   }
 }
 
+String? _routeFromIndex(int index) {
+  switch (index) {
+    case _NavIds.dashboard:
+      return AppRoutes.cms;
+    case _NavIds.deities:
+      return AppRoutes.cmsDeities;
+    case _NavIds.pujas:
+      return AppRoutes.cmsPujas;
+    case _NavIds.festivals:
+      return AppRoutes.cmsFestivals;
+    case _NavIds.donations:
+      return AppRoutes.cmsDonations;
+    case _NavIds.notifications:
+      return AppRoutes.cmsNotifications;
+    case _NavIds.users:
+      return AppRoutes.cmsUsers;
+    case _NavIds.shlokas:
+      return AppRoutes.cmsShlokas;
+    case _NavIds.admins:
+      return AppRoutes.cmsAdmins;
+    case _NavIds.poojaKitInventory:
+      return AppRoutes.cmsPoojaKitInventory;
+    case _NavIds.poojaKitManage:
+      return AppRoutes.cmsPoojaKit;
+    case _NavIds.poojaKitOrders:
+      return AppRoutes.cmsPoojaKitOrders;
+    case _NavIds.donationsAll:
+      return AppRoutes.cmsDonationsAll;
+    case _NavIds.manageRituals:
+      return AppRoutes.cmsManageRituals;
+    case _NavIds.poojaKitRefunds:
+      return AppRoutes.cmsPoojaKitRefunds;
+    case _NavIds.poojaKitPayments:
+      return AppRoutes.cmsPoojaKitPayments;
+    case _NavIds.activity:
+      return AppRoutes.cmsActivity;
+    default:
+      return null;
+  }
+}
+
 int _indexFromRoute(String route, bool isSuperAdmin) {
   switch (route) {
     case AppRoutes.cmsDeities:
     case AppRoutes.cmsDeityCreate:
     case AppRoutes.cmsDeityEdit:
       return _NavIds.deities;
+    case AppRoutes.cmsPujas:
+    case AppRoutes.cmsPujaCreate:
+    case AppRoutes.cmsPujaEdit:
     case AppRoutes.cmsRituals:
     case AppRoutes.cmsRitualCreate:
     case AppRoutes.cmsRitualEdit:
