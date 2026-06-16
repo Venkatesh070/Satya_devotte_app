@@ -2584,7 +2584,9 @@ class _ProductFormState extends State<_ProductForm> {
         currency: _currency,
         category: _kitCategory,
         quantity: productQuantity,
-        clearQuantity: !_requiresQuantityCategory,
+        // Backend rejects empty `quantity` for Puja Kit updates.
+        // For Puja Kit, omit `quantity` entirely instead of sending ''.
+        clearQuantity: !_requiresQuantityCategory && !_isPujaKitCategory,
         isFeatured: _isFeatured,
         associatePuja: associatePuja,
         image: _image,

@@ -1419,7 +1419,7 @@ class _CompletionScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Make a Donation',
+                            'Make a Contribution',
                             style: AppTypography.inter(
                               color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 12,
@@ -1431,7 +1431,7 @@ class _CompletionScreen extends StatelessWidget {
                             'Help us give you an outstanding experience',
                             style: AppTypography.lora(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                               height: 1.2,
                             ),
@@ -1449,7 +1449,7 @@ class _CompletionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Donate',
+                        'Contribute',
                         style: AppTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

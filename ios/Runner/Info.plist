@@ -22,6 +22,23 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSCameraUsageDescription</key>
@@ -32,8 +49,18 @@
 	<string>Satya uses your current location to fill your delivery address.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to add events to your calendar</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to add events to your calendar</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Satya uses your current location to fill your delivery address.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Required to pick images</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

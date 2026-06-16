@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>1053803605697-08ffqoh0298iim8r0s9j1v8e1jcqdgem.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBOXwi8rDmeDc0OhUxuvjOFqSWnsdzeh34</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1053803605697</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.sathyaApp</string>
+	<key>PROJECT_ID</key>
+	<string>satya-devotte-app</string>
+	<key>STORAGE_BUCKET</key>
+	<string>satya-devotte-app.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1053803605697:ios:564a9932a15f0c9a2a6e40</string>
+</dict>
+</plist>

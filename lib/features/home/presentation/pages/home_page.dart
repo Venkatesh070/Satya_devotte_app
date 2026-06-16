@@ -640,6 +640,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    const navHeight = 74.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2EBDC),
       extendBody: true,
@@ -671,44 +674,55 @@ class _HomePageState extends State<HomePage> {
           const ProfilePage(),
         ],
       ),
-      bottomNavigationBar: SizedBox(
-        height: 94 + MediaQuery.paddingOf(context).bottom,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            AnimatedSlide(
-              duration: const Duration(milliseconds: 380),
-              curve: Curves.easeInOutCubicEmphasized,
-              offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
-              onEnd: _onBottomNavSlideEnd,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeInOutCubic,
-                opacity: _showBottomNav ? 1 : 0,
-                child: _hideNavContent
-                    ? const SizedBox.shrink()
-                    : SafeArea(
-                        top: false,
-                        bottom: true,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 0),
-                          child: _BottomNavBar(
+      bottomNavigationBar: MediaQuery.removePadding(
+        context: context,
+        removeBottom: true,
+        child: SizedBox(
+          height: navHeight + bottomSafe,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (bottomSafe > 0)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: bottomSafe,
+                  child: const ColoredBox(color: Color(0xFFF8F1E2)),
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: bottomSafe,
+                height: navHeight,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 380),
+                  curve: Curves.easeInOutCubicEmphasized,
+                  offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
+                  onEnd: _onBottomNavSlideEnd,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOutCubic,
+                    opacity: _showBottomNav ? 1 : 0,
+                    child: _hideNavContent
+                        ? const SizedBox.shrink()
+                        : _BottomNavBar(
                             currentIndex: _currentIndex,
                             pageController: _pageController,
                             onTap: _onTabSelected,
                           ),
-                        ),
-                      ),
+                  ),
+                ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              bottom: MediaQuery.paddingOf(context).bottom + 26,
-              child: _StickyShopButton(
-                onTap: () => Get.to(() => const PoojaKitPage()),
+              Positioned(
+                left: 0,
+                bottom: bottomSafe + 5,
+                child: _StickyShopButton(
+                  onTap: () => Get.to(() => const PoojaKitPage()),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1281,7 +1295,7 @@ class _BottomNavBarState extends State<_BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 94,
+      height: 90,
       child: LayoutBuilder(
         builder: (context, constraints) {
           const slotWidth = 72.0;
@@ -1575,7 +1589,7 @@ class _HomeHeader extends StatelessWidget {
                       'Namaste',
                       style: AppTypography.inter(
                         color: Color(0xFFE4B8AB),
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -1584,12 +1598,12 @@ class _HomeHeader extends StatelessWidget {
                       displayName,
                       style: AppTypography.lora(
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w400,
                         height: 1.15,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _GlobalSearchField(
                       controller: searchController,
                       onChanged: onSearchChanged,
@@ -1597,9 +1611,9 @@ class _HomeHeader extends StatelessWidget {
                       onClear: onClearSearch,
                     ),
                     if (!isSearchMode) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       const _HeaderDivider(),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       _QuoteCard(
                         quote: dailySloka,
                         author: slokaAuthor,
@@ -1607,7 +1621,7 @@ class _HomeHeader extends StatelessWidget {
                         contemplation: slokaContemplation,
                         prayer: slokaPrayer,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 5),
                       const _HeaderDivider(),
                     ],
                   ],
@@ -1707,7 +1721,7 @@ class _GlobalSearchField extends StatelessWidget {
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,
         style: AppTypography.inter(
-          fontSize: 14,
+          fontSize: 12,
           color: const Color(0xFF3D2B1F),
           fontWeight: FontWeight.w500,
         ),
@@ -1715,7 +1729,7 @@ class _GlobalSearchField extends StatelessWidget {
           isDense: true,
           hintText: 'Search pujas, deities, festivals...',
           hintStyle: AppTypography.inter(
-            fontSize: 13,
+            fontSize: 12,
             color: const Color(0xFF9B8B7B),
             fontWeight: FontWeight.w400,
           ),
@@ -1729,12 +1743,12 @@ class _GlobalSearchField extends StatelessWidget {
             child: Icon(
               Icons.search_rounded,
               // color: Color(0xFF8E5C25),
-              size: 22,
+              size: 20,
             ),
           ),
           prefixIconConstraints: const BoxConstraints(
             minWidth: 44,
-            minHeight: 48,
+            minHeight: 44,
           ),
           suffixIcon: hasQuery
               ? ShaderMask(
@@ -2076,8 +2090,8 @@ class _QuoteCardState extends State<_QuoteCard> {
   static const double _cardRadius = 16;
   static const double _flowerSize = 100;
   static const double _horizontalAttach = 22;
-  static const double _tabHeight = 40;
-  static const double _contentHeight = 122;
+  static const double _tabHeight = 35;
+  static const double _contentHeight = 120;
 
   String get _tabText {
     switch (_selectedTab) {
@@ -2104,7 +2118,7 @@ class _QuoteCardState extends State<_QuoteCard> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: SizedBox(
         width: double.infinity,
-        height: _tabHeight + _contentHeight + 6,
+        height: _tabHeight + _contentHeight ,
         child: Column(
           children: [
             ClipRRect(
@@ -2138,7 +2152,7 @@ class _QuoteCardState extends State<_QuoteCard> {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 1),
             Expanded(
               child: Container(
                 width: double.infinity,

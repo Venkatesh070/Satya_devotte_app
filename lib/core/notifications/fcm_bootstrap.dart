@@ -111,14 +111,23 @@ class FcmBootstrap {
   }
 
   Future<void> _registerMobile() async {
+    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+
     if (np.notificationPlatformIsIOS || np.notificationPlatformIsMacOS) {
       final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
+      debugPrint('[FCM] iOS permission status: ${settings.authorizationStatus}');
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         debugPrint('[FCM] permission denied — skipping register.');
+        return;
+      }
+      // iOS can return null FCM token until APNs token is available.
+      final apnsToken = await _waitForApnsToken();
+      if (apnsToken == null) {
+        debugPrint('[FCM] APNs token unavailable — skipping register for now.');
         return;
       }
     }
@@ -131,6 +140,7 @@ class FcmBootstrap {
       debugPrint('[FCM] getToken() returned no token; skipping register.');
       return;
     }
+    debugPrint('[FCM] getToken() success (${token.substring(0, 12)}…).');
 
     final platform = _platformLabel();
     final deviceId = await _deviceId();
@@ -142,6 +152,12 @@ class FcmBootstrap {
       );
       _lastRegisteredToken = token;
       debugPrint('[FCM] registered token (${token.substring(0, 12)}…).');
+      try {
+        final count = await _api.registeredCount();
+        debugPrint('[FCM] backend token count: $count');
+      } catch (e) {
+        debugPrint('[FCM] count check failed: $e');
+      }
     } on FcmException catch (e) {
       debugPrint('[FCM] register failed: $e');
     }
@@ -163,6 +179,21 @@ class FcmBootstrap {
         debugPrint('[FCM] refresh register failed: $e');
       }
     }, onError: (e) => debugPrint('[FCM] onTokenRefresh error: $e'));
+  }
+
+  Future<String?> _waitForApnsToken() async {
+    if (!np.notificationPlatformIsIOS && !np.notificationPlatformIsMacOS) {
+      return null;
+    }
+    for (var i = 0; i < 20; i++) {
+      final token = await FirebaseMessaging.instance.getAPNSToken();
+      if (token != null && token.isNotEmpty) {
+        debugPrint('[FCM] APNs token ready (${token.substring(0, 10)}…).');
+        return token;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    return null;
   }
 
   Future<void> unregisterFromBackend() async {
