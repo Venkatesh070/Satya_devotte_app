@@ -105,6 +105,10 @@ class AuthController extends GetxController {
       _refreshProfileControllerAfterAuth();
       // Refresh cart and pooja history for restored session
       unawaited(_refreshCartAfterAuth());
+      // Start music if user is regular user
+      if (isRegularUser) {
+        _startRegularUserBackgroundMusic();
+      }
     }
   }
 
@@ -210,6 +214,18 @@ class AuthController extends GetxController {
     _authSessionService.patchRole(_userRole.value);
   }
 
+  void _startRegularUserBackgroundMusic() {
+    if (!Get.isRegistered<AppMusicService>()) return;
+    final music = Get.find<AppMusicService>();
+    Future.microtask(() => unawaited(music.start()));
+  }
+
+  void _stopRegularUserBackgroundMusic() {
+    if (!Get.isRegistered<AppMusicService>()) return;
+    final music = Get.find<AppMusicService>();
+    Future.microtask(() => unawaited(music.pause()));
+  }
+
   Future<void> persistLoginResult(AuthLoginResult loginResult) async {
     final user = Map<String, dynamic>.from(loginResult.user);
     user['isRegistered'] = loginResult.isRegistered;
@@ -224,6 +240,10 @@ class AuthController extends GetxController {
     _refreshProfileControllerAfterAuth();
     // Refresh cart and pooja history for new user
     unawaited(_refreshCartAfterAuth());
+    // Start music for regular users
+    if (isRegularUser) {
+      _startRegularUserBackgroundMusic();
+    }
   }
 
   AuthRepository get authRepository => _authRepository;
@@ -564,6 +584,7 @@ class AuthController extends GetxController {
 
   Future<void> signOut() async {
     _stopCmsBackgroundMusicIfNeeded();
+    _stopRegularUserBackgroundMusic();
 
     final refreshToken = _authSessionService.refreshToken;
     // Give server-side cleanup a short head start, but never block UX.
@@ -609,6 +630,7 @@ class AuthController extends GetxController {
     _lastAuthError.value = null;
     try {
       _stopCmsBackgroundMusicIfNeeded();
+      _stopRegularUserBackgroundMusic();
 
       final normalizedComment = comment.trim();
       if (normalizedComment.isEmpty) {

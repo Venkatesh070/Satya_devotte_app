@@ -390,9 +390,9 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF6),
+        color: const Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF2E6D1)),
+        // border: Border.all(color: const Color(0xFFF2E6D1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A7A4E12),

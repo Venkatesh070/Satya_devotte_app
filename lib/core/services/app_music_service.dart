@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 /// Loops [assetPath] across the mobile app and web CMS admin.
 class AppMusicService extends GetxService with WidgetsBindingObserver {
@@ -15,6 +16,10 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   Future<void>? _prepareFuture;
   bool _userPaused = false;
   bool _cmsMusicSuppressed = false;
+
+  bool get _isUserAuthenticated =>
+      Get.isRegistered<AuthController>() &&
+      Get.find<AuthController>().isAuthenticated;
 
   final RxBool isPlaying = false.obs;
   final RxBool showFab = false.obs;
@@ -77,8 +82,12 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       final route = Get.currentRoute;
-      if ((!kIsWeb || (isCmsRoute(route) && !_cmsMusicSuppressed))) {
-        unawaited(start());
+      final isCms = isCmsRoute(route);
+      if ((!kIsWeb || (isCms && !_cmsMusicSuppressed))) {
+        // Only start if user is authenticated OR it's CMS
+        if (isCms || _isUserAuthenticated) {
+          unawaited(start());
+        }
       }
     } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
@@ -111,6 +120,10 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   /// Starts or resumes background music (idempotent).
   Future<void> start() async {
     if (_userPaused) return;
+    final route = Get.currentRoute;
+    final isCms = isCmsRoute(route);
+    // Only start if user is authenticated OR it's CMS
+    if (!isCms && !_isUserAuthenticated) return;
     try {
       await _prepare();
       if (!_player.playing) {

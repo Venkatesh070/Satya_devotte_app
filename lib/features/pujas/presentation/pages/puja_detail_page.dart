@@ -700,7 +700,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         _entityId(activePooja).isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.appBgColor,
+      backgroundColor: Color(0XFFFFF4E0),
       body: Stack(
         children: [
           NestedScrollView(

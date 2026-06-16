@@ -211,7 +211,7 @@ class _HistoryList extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Material(
-              color: Colors.white,
+              color: Color(0XFFFCF7EF),
               borderRadius: BorderRadius.circular(16),
               elevation: 0,
               child: InkWell(

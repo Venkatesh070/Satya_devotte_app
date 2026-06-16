@@ -47,11 +47,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       vsync: this,
       duration: const Duration(seconds: 24),
     )..repeat();
-    if (!kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.find<AppMusicService>().start();
-      });
-    }
+    // Don't start music here — wait until user logs in!
   }
 
   void _goNext() {

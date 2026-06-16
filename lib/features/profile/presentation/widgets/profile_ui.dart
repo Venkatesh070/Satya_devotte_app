@@ -28,7 +28,7 @@ class ProfileLinkTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: const Color(0xFFFFFCF6),
+        color: const Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(14),
         elevation: 5,
         shadowColor: const Color(0x1A7A4E12),
