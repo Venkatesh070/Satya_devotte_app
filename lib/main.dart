@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/config/env/app_env.dart';
 import 'package:satya_devotte_app/config/firebase/firebase_options.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
@@ -30,6 +31,13 @@ Future<void> main() async {
     }
   }
   await _ensureFirebaseInitialized();
+  if (kDebugMode) {
+    debugPrint(
+      'APP_ENV=${AppEnv.environment} '
+      'api=${AppEnv.resolvedApiBaseUrl} '
+      'firebase=${DefaultFirebaseOptions.currentPlatform.projectId}',
+    );
+  }
   await Hive.initFlutter();
   await Hive.openBox(AppConstants.ritualsBox);
   await Hive.openBox(AppConstants.cacheBox);

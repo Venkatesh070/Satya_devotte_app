@@ -2,13 +2,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "CMS (Chrome, web push)",
+      "name": "Sathya (uses config/app_env.json)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file=config/app_env.json"
+      ]
+    },
+    {
+      "name": "CMS (Chrome, uses config/app_env.json)",
       "request": "launch",
       "type": "dart",
       "deviceId": "chrome",
       "args": [
         "--web-port=3001",
-        "--dart-define=FIREBASE_VAPID_KEY=BAQl5XzrLFPnWDA9nuf2a2KG6IM2wYaEcQrqMpj4CiELt_RtaHXyKj1KKy-08CzZymNY-fCaEIIHfF05cPx3Pis"
+        "--dart-define-from-file=config/app_env.json"
       ]
     }
   ]

@@ -1,9 +1,11 @@
 class AppEnv {
-  /// Default environment when `--dart-define=APP_ENV=...` is omitted.
-  /// Keep in sync with [config/app_env.default] (read by Android/iOS build scripts).
+  /// Switch environment by editing [config/app_env.json] (`APP_ENV`: `prod`|`test`|`uat`).
+  /// Cursor/VS Code picks it up via `dart.flutterRunAdditionalArgs` in `.vscode/settings.json`.
+  /// CLI: `flutter run --dart-define-from-file=config/app_env.json`
+  /// Keep [config/app_env.default] in sync for native-only builds without dart-defines.
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'test',
+    defaultValue: 'prod',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',

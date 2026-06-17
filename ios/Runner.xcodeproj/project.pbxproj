@@ -207,8 +207,8 @@
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
 			buildPhases = (
 				4E8F76DBD5718132AEED190B /* [CP] Check Pods Manifest.lock */,
-				9740EEB61CF901F6004384FC /* Run Script */,
 				AABB0011CCDD22EEFF003346 /* Select GoogleService-Info.plist */,
+				9740EEB61CF901F6004384FC /* Run Script */,
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
@@ -301,6 +301,8 @@
 			files = (
 			);
 			inputPaths = (
+				"${SRCROOT}/../config/app_env.json",
+				"${SRCROOT}/../config/app_env.default",
 				"${SRCROOT}/Runner/GoogleService-Info.prod.plist",
 				"${SRCROOT}/Runner/GoogleService-Info(test).plist",
 				"${SRCROOT}/Flutter/Generated.xcconfig",

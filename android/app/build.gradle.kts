@@ -10,8 +10,13 @@ plugins {
 }
 
 // Matches `AppEnv.environment` (`--dart-define=APP_ENV=prod|test|uat`).
-// When APP_ENV is not in dart-defines, reads `config/app_env.default`.
+// Priority: dart-defines → config/app_env.json → config/app_env.default.
 fun readDefaultAppEnv(): String {
+    val jsonFile = rootProject.file("../config/app_env.json")
+    if (jsonFile.exists()) {
+        val match = Regex(""""APP_ENV"\s*:\s*"(\w+)"""").find(jsonFile.readText())
+        if (match != null) return match.groupValues[1]
+    }
     val configFile = rootProject.file("../config/app_env.default")
     if (configFile.exists()) {
         val value = configFile.readText().trim()

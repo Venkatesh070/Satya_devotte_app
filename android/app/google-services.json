@@ -1,58 +1,86 @@
 {
   "project_info": {
-    "project_number": "1053803605697",
-    "project_id": "satya-devotte-app",
-    "storage_bucket": "satya-devotte-app.firebasestorage.app"
+    "project_number": "460042314237",
+    "firebase_url": "https://sathyatest-4b2b1-default-rtdb.firebaseio.com",
+    "project_id": "sathyatest-4b2b1",
+    "storage_bucket": "sathyatest-4b2b1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1053803605697:android:d5a06b41628f6c282a6e40",
+        "mobilesdk_app_id": "1:460042314237:android:3077f815024c825b847994",
         "android_client_info": {
-          "package_name": "com.satya_devotte_app"
+          "package_name": "com.developer.sathya"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1053803605697-08ffqoh0298iim8r0s9j1v8e1jcqdgem.apps.googleusercontent.com",
+          "client_id": "460042314237-5t9kmkfc520ls0v614vsq3li4khmn7p8.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.satya_devotte_app",
-            "certificate_hash": "a390b044c3513189f3eb69c3f68926bcace041dd"
-          }
-        },
-        {
-          "client_id": "1053803605697-minjpob41bvbunkbjqj447rk1602m0rf.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.satya_devotte_app",
+            "package_name": "com.developer.sathya",
             "certificate_hash": "2436c8d34b61d8606230f73ac0b9ced00dd3afa4"
           }
         },
         {
-          "client_id": "1053803605697-sodmaguuu1isirhmabemu22ji2843k4d.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.satya_devotte_app",
-            "certificate_hash": "16ff46ea614b854810e1195452b71e436ccf8e17"
-          }
-        },
-        {
-          "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+          "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCNHVrp9X3h6g4qFoOuNFWnyWvnOdcZu6U"
+          "current_key": "AIzaSyBKd3xfIGpsxSUhsoNwPf5O3D4HQEc0QCs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+              "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sathyaApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460042314237:android:2dfce106f585b513847994",
+        "android_client_info": {
+          "package_name": "com.satya_devotte_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKd3xfIGpsxSUhsoNwPf5O3D4HQEc0QCs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sathyaApp"
+              }
             }
           ]
         }
