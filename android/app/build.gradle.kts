@@ -101,7 +101,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.satya_devotte_app"
+         applicationId = if (resolveAppEnv() == "prod") {
+        "com.developer.sathya"
+    } else {
+        "com.satya_devotte_app"
+    }
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

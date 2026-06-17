@@ -23,41 +23,13 @@
           }
         },
         {
-          "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBKd3xfIGpsxSUhsoNwPf5O3D4HQEc0QCs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.sathyaApp"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:460042314237:android:2dfce106f585b513847994",
-        "android_client_info": {
-          "package_name": "com.satya_devotte_app"
-        }
-      },
-      "oauth_client": [
+          "client_id": "460042314237-of964vd0g1k73t7bk8qa7uv73sn7o4nh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.developer.sathya",
+            "certificate_hash": "4d447abb21398544357beaae50def9455dc779d4"
+          }
+        },
         {
           "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
           "client_type": 3
