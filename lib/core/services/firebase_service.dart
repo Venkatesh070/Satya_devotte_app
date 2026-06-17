@@ -1,11 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:satya_devotte_app/config/env/app_env.dart';
 
 class FirebaseService {
-  static const String _defaultWebGoogleClientId =
-      '1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com';
-
   FirebaseService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
     : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
       _googleSignIn =
@@ -14,7 +12,7 @@ class FirebaseService {
               ? GoogleSignIn(
                   clientId: const String.fromEnvironment(
                     'GOOGLE_WEB_CLIENT_ID',
-                    defaultValue: _defaultWebGoogleClientId,
+                    defaultValue: AppEnv.googleWebClientId,
                   ),
                 )
               : GoogleSignIn());

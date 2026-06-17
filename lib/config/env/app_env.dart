@@ -1,4 +1,6 @@
 class AppEnv {
+  /// Default environment when `--dart-define=APP_ENV=...` is omitted.
+  /// Keep in sync with [config/app_env.default] (read by Android/iOS build scripts).
   static const String environment = String.fromEnvironment(
     'APP_ENV',
     defaultValue: 'test',
@@ -8,14 +10,21 @@ class AppEnv {
     defaultValue: '',
   );
 
+  static const String _testFirebaseVapidKey =
+      'BAQl5XzrLFPnWDA9nuf2a2KG6IM2wYaEcQrqMpj4CiELt_RtaHXyKj1KKy-08CzZymNY-fCaEIIHfF05cPx3Pis';
+  static const String _prodFirebaseVapidKey =
+      'BJL_cbHU5oarw58Cl5wsUFtWD_38YRJmoF2CxSRFNxx36ntfXPbD3GHCHqe_lBWp48Nr95-DKquJPUkkhDNYotI';
+
   /// Web Push VAPID **public** key (Firebase Console → Cloud Messaging →
   /// Web configuration → Key pair). Usually ~88 chars, often starts with `B`.
   /// Pass at run/build: `--dart-define=FIREBASE_VAPID_KEY=<full public key>`
   static const String firebaseVapidKey = String.fromEnvironment(
     'FIREBASE_VAPID_KEY',
-    defaultValue:
-        'BAQl5XzrLFPnWDA9nuf2a2KG6IM2wYaEcQrqMpj4CiELt_RtaHXyKj1KKy-08CzZymNY-fCaEIIHfF05cPx3Pis',
+    defaultValue: environment == 'prod'
+        ? _prodFirebaseVapidKey
+        : _testFirebaseVapidKey,
   );
+
 
   /// Rough sanity check — invalid keys cause PushManager subscribe errors.
   static bool get hasPlausibleFirebaseVapidKey {
@@ -25,7 +34,7 @@ class AppEnv {
   static const String _productionApiBaseUrl =
       'https://api.sathya.co.za';
   static const String _testApiBaseUrl = 'https://api-test.sathya.co.za';
-  static const String _uatApiBaseUrl = 'https://satya-server-app-2.onrender.com';
+  static const String _uatApiBaseUrl = 'https://satya-server-app.onrender.com';
 
   // Android emulator reaches host machine via 10.0.2.2.
   static String get resolvedApiBaseUrl => apiBaseUrl.isNotEmpty
@@ -39,4 +48,21 @@ class AppEnv {
   static bool get isProduction => environment == 'prod';
   static bool get isTest => environment == 'test';
   static bool get isUat => environment == 'uat';
+
+  /// Google Sign-In web OAuth client (Firebase Console → Authentication → Google).
+  /// `prod` → `sathyatest-4b2b1`; `test` / `uat` → `satya-devotte-app`.
+  /// Android: Gradle copies `google-services.prod.json` or
+  /// `google-services(test).json` → `google-services.json` using the same
+  /// `APP_ENV` dart-define before each build.
+  /// iOS: Xcode run script copies `GoogleService-Info.prod.plist` or
+  /// `GoogleService-Info(test).plist` → `Runner/GoogleService-Info.plist`.
+  /// Override: `--dart-define=GOOGLE_WEB_CLIENT_ID=<client id>`
+  static const String _testWebGoogleClientId =
+      '1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com';
+  static const String _prodWebGoogleClientId =
+      '460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com';
+
+  static const String googleWebClientId = environment == 'prod'
+      ? _prodWebGoogleClientId
+      : _testWebGoogleClientId;
 }

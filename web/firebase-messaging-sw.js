@@ -5,13 +5,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyA-eEji6_kLAAN8nw6I-SuiYRfa84B58dU',
-  authDomain: 'satya-devotte-app.firebaseapp.com',
-  projectId: 'satya-devotte-app',
-  storageBucket: 'satya-devotte-app.firebasestorage.app',
-  messagingSenderId: '1053803605697',
-  appId: '1:1053803605697:web:b3cddc97158a26852a6e40',
-  measurementId: 'G-18Z1BB36SF',
+  apiKey: 'AIzaSyBKd3xfIGpsxSUhsoNwPf5O3D4HQEc0QCs',
+  authDomain: 'sathyatest-4b2b1.firebaseapp.com',
+  projectId: 'sathyatest-4b2b1',
+  storageBucket: 'sathyatest-4b2b1.firebasestorage.app',
+  messagingSenderId: '460042314237',
+  appId: '1:460042314237:android:2dfce106f585b513847994',
 });
 
 const messaging = firebase.messaging();

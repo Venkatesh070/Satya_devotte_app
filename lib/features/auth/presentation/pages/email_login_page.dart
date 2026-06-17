@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
+import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -244,10 +245,10 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                     final password = _passwordController.text;
 
                     if (email.isEmpty || password.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter email and password'),
-                        ),
+                      showAppSnackbar(
+                        title: 'Required',
+                        message: 'Please enter email and password.',
+                        isError: true,
                       );
                       return;
                     }
@@ -259,12 +260,10 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                       );
                       // navigateAfterLogin is called inside signInWithEmailPassword if not verification needed
                     } catch (error) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            controller.lastAuthError ?? 'Login failed',
-                          ),
-                        ),
+                      showAppSnackbar(
+                        title: 'Login Failed',
+                        message: controller.lastAuthError ?? 'Login failed',
+                        isError: true,
                       );
                     }
                   },

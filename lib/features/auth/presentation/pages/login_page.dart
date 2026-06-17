@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
@@ -127,7 +128,15 @@ class _LoginPageState extends State<LoginPage>
                           if (!offlineService.checkAndShowDialog()) return;
 
                           final isSuccess = await controller.signInWithGoogle();
-                          if (isSuccess) _navigateAfterLogin();
+                          if (isSuccess) {
+                            _navigateAfterLogin();
+                          } else if (controller.lastAuthError != null) {
+                            showAppSnackbar(
+                              title: 'Login Failed',
+                              message: controller.lastAuthError!,
+                              isError: true,
+                            );
+                          }
                         },
                       ),
                       const SizedBox(height: 12),

@@ -1,11 +1,65 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.util.Base64
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+}
+
+// Matches `AppEnv.environment` (`--dart-define=APP_ENV=prod|test|uat`).
+// When APP_ENV is not in dart-defines, reads `config/app_env.default`.
+fun readDefaultAppEnv(): String {
+    val configFile = rootProject.file("../config/app_env.default")
+    if (configFile.exists()) {
+        val value = configFile.readText().trim()
+        if (value.isNotEmpty()) return value
+    }
+    return "test"
+}
+
+fun resolveAppEnv(): String {
+    val dartDefines = project.findProperty("dart-defines") as String?
+    if (dartDefines != null) {
+        for (encoded in dartDefines.split(",")) {
+            if (encoded.isBlank()) continue
+            try {
+                val decoded = String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+                val separator = decoded.indexOf('=')
+                if (separator <= 0) continue
+                val key = decoded.substring(0, separator)
+                val value = decoded.substring(separator + 1)
+                if (key == "APP_ENV") return value
+            } catch (_: IllegalArgumentException) {
+                // Ignore malformed dart-define entries.
+            }
+        }
+    }
+    return readDefaultAppEnv()
+}
+
+val prodGoogleServicesFile = file("google-services.prod.json")
+val testGoogleServicesFile = file("google-services(test).json")
+val activeGoogleServicesFile = file("google-services.json")
+
+tasks.register("selectGoogleServicesJson") {
+    doLast {
+        val source = if (resolveAppEnv() == "prod") {
+            prodGoogleServicesFile
+        } else {
+            testGoogleServicesFile
+        }
+        check(source.exists()) {
+            "Missing Firebase config for APP_ENV=${resolveAppEnv()}: ${source.path}"
+        }
+        source.copyTo(activeGoogleServicesFile, overwrite = true)
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("selectGoogleServicesJson")
 }
 
 // Load keystore properties
@@ -31,11 +85,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
@@ -52,7 +108,9 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release") // ✅ Fixed
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
         }

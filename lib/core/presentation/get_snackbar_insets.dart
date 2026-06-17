@@ -36,3 +36,36 @@ class GetSnackbarInsets {
     );
   }
 }
+
+void showAppSnackbar({
+  required String title,
+  required String message,
+  bool isError = false,
+}) {
+  final inset = GetSnackbarInsets.platformDefault();
+
+  Get.snackbar(
+    title,
+    message,
+    snackPosition: SnackPosition.TOP,
+    maxWidth: inset.maxWidth,
+    backgroundColor: isError
+        ? const Color(0xFFF44336)
+        : const Color(0xFF4CAF50),
+    colorText: Colors.white,
+    margin: inset.margin,
+    borderRadius: 10,
+    icon: Icon(
+      isError ? Icons.error_outline : Icons.check_circle_outline,
+      color: Colors.white,
+    ),
+    duration: const Duration(seconds: 3),
+    boxShadows: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.2),
+        blurRadius: 8,
+        offset: const Offset(0, 3),
+      ),
+    ],
+  );
+}

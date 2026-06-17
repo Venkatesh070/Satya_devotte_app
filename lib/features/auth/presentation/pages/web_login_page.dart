@@ -175,13 +175,10 @@ class _WebLoginPageState extends State<WebLoginPage>
                         final email = _emailController.text.trim();
                         final password = _passwordController.text;
                         if (email.isEmpty || password.isEmpty) {
-                          final inset = GetSnackbarInsets.platformDefault();
-                          Get.snackbar(
-                            'Required',
-                            'Please enter email and password.',
-                            snackPosition: SnackPosition.TOP,
-                            maxWidth: inset.maxWidth,
-                            margin: inset.margin,
+                          showAppSnackbar(
+                            title: 'Required',
+                            message: 'Please enter email and password.',
+                            isError: true,
                           );
                           return;
                         }
@@ -192,14 +189,12 @@ class _WebLoginPageState extends State<WebLoginPage>
                         if (ok) {
                           _navigateByRole();
                         } else {
-                          final inset = GetSnackbarInsets.platformDefault();
-                          Get.snackbar(
-                            'Login Failed',
-                            controller.lastAuthError ??
+                          showAppSnackbar(
+                            title: 'Login Failed',
+                            message:
+                                controller.lastAuthError ??
                                 'Admin sign in failed. Please try again.',
-                            snackPosition: SnackPosition.TOP,
-                            maxWidth: inset.maxWidth,
-                            margin: inset.margin,
+                            isError: true,
                           );
                         }
                       },

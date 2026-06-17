@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/config/firebase/firebase_options.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/core/url_strategy/url_strategy.dart';
@@ -28,21 +29,7 @@ Future<void> main() async {
       updateCmsHashRoute(AppRoutes.login);
     }
   }
-  if (kIsWeb) {
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: "AIzaSyA-eEji6_kLAAN8nw6I-SuiYRfa84B58dU",
-        authDomain: "satya-devotte-app.firebaseapp.com",
-        projectId: "satya-devotte-app",
-        storageBucket: "satya-devotte-app.firebasestorage.app",
-        messagingSenderId: "1053803605697",
-        appId: "1:1053803605697:web:b3cddc97158a26852a6e40",
-        measurementId: "G-18Z1BB36SF",
-      ),
-    );
-  } else {
-    await Firebase.initializeApp();
-  }
+  await _ensureFirebaseInitialized();
   await Hive.initFlutter();
   await Hive.openBox(AppConstants.ritualsBox);
   await Hive.openBox(AppConstants.cacheBox);
@@ -59,4 +46,20 @@ Future<void> main() async {
   // Handle cold-start taps AFTER `runApp` so GetX routing is ready to
   // accept `Get.toNamed`. Fire-and-forget; failures are logged inside.
   notifs.handleColdStart();
+}
+
+/// Initializes Firebase from Dart using env-specific [DefaultFirebaseOptions].
+/// Native auto-init is disabled (Android manifest + iOS Info.plist) to avoid
+/// `[core/duplicate-app]` vs `[core/no-app]` races.
+Future<void> _ensureFirebaseInitialized() async {
+  if (Firebase.apps.isNotEmpty) return;
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
+    // Native already configured (e.g. iOS Messaging before Dart init).
+  }
 }

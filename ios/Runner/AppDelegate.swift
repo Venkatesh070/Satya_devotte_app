@@ -11,7 +11,10 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
-    application.registerForRemoteNotifications()
+    // Do not call registerForRemoteNotifications() here. That can deliver an
+    // APNs token before Dart runs Firebase.initializeApp(), which auto-inits
+    // Firebase from GoogleService-Info.plist and causes [core/duplicate-app].
+    // FCM registers after Dart init via NotificationService.
 
     return super.application(
       application,
