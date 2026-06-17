@@ -6,9 +6,11 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class WebLoginPage extends StatefulWidget {
   const WebLoginPage({super.key});
@@ -19,6 +21,8 @@ class WebLoginPage extends StatefulWidget {
 
 class _WebLoginPageState extends State<WebLoginPage>
     with SingleTickerProviderStateMixin {
+  static const Color _fieldColor = Color(0xFFFFFBF3);
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final AnimationController _rotationController;
@@ -119,23 +123,30 @@ class _WebLoginPageState extends State<WebLoginPage>
                       ),
                     ),
                     const SizedBox(height: 14),
-                    TextField(
+                    _buildLabel('Email'),
+                    const SizedBox(height: 6),
+                    TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !isEmailLoading,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
+                      style: const TextStyle(
+                        color: Color(0xFF1F1F1F),
+                        fontSize: 13,
                       ),
+                      decoration: _inputDecoration('Enter your email'),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
+                    const SizedBox(height: 18),
+                    _buildLabel('Password'),
+                    const SizedBox(height: 6),
+                    TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       enabled: !isEmailLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
+                      style: const TextStyle(
+                        color: Color(0xFF1F1F1F),
+                        fontSize: 13,
+                      ),
+                      decoration: _inputDecoration('Enter password').copyWith(
                         suffixIcon: IconButton(
                           tooltip: _obscurePassword
                               ? 'Show password'
@@ -144,6 +155,8 @@ class _WebLoginPageState extends State<WebLoginPage>
                             _obscurePassword
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
+                            size: 18,
+                            color: const Color(0xFF8F8574),
                           ),
                           onPressed: isEmailLoading
                               ? null
@@ -310,6 +323,41 @@ class _WebLoginPageState extends State<WebLoginPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: AppTypography.inter(
+        color: const Color(0xFF4A1C00),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.black.withOpacity(0.25), fontSize: 13),
+      isDense: true,
+      filled: true,
+      fillColor: _fieldColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+      ),
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.gradientStart),
+      ),
     );
   }
 }

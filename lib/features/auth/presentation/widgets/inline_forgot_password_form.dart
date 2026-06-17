@@ -11,10 +11,12 @@ class InlineForgotPasswordForm extends StatelessWidget {
     super.key,
     required this.onBack,
     this.showYogaImage = false,
+    this.showTopBackButton = true,
   });
 
   final VoidCallback onBack;
   final bool showYogaImage;
+  final bool showTopBackButton;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +27,27 @@ class InlineForgotPasswordForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (showTopBackButton) ...[
+              Material(
+                color: Colors.white,
+                elevation: 4,
+                shadowColor: Colors.black26,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: forgotCtrl.isLoading.value ? null : onBack,
+                  child: const Padding(
+                    padding: EdgeInsets.all(9),
+                    child: Icon(
+                      Icons.arrow_back,
+                      size: 18,
+                      color: Color(0xFF1F1F1F),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
             if (showYogaImage) ...[
               const SizedBox(height: 14),
               SizedBox(
@@ -107,19 +130,12 @@ class InlineForgotPasswordForm extends StatelessWidget {
               textColor: AppColors.white,
               onTap: forgotCtrl.sendResetLink,
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: forgotCtrl.isLoading.value ? null : onBack,
-                child: const Text('Back to Login'),
-              ),
-            ),
             if (forgotCtrl.cooldownSeconds.value > 0) ...[
               const SizedBox(height: 8),
-              Text(
-                'You can request another reset link in ${forgotCtrl.cooldownSeconds.value} seconds.',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A7A)),
-              ),
+              // Text(
+              //   'You can request another reset link in ${forgotCtrl.cooldownSeconds.value} seconds.',
+              //   style: const TextStyle(fontSize: 12, color: Color(0xFF7A7A7A)),
+              // ),
             ],
             if (forgotCtrl.isSuccess.value) ...[
               const SizedBox(height: 16),

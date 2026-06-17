@@ -79,7 +79,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: () => Get.back(),
+                        onTap: _showForgotPassword
+                            ? _closeForgotPassword
+                            : () => Get.back(),
                         child: const Padding(
                           padding: EdgeInsets.all(9),
                           child: Icon(
@@ -118,30 +120,35 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                 ),
                 const SizedBox(height: 14),
 
-                /// Title
-                Text(
-                  'Continue with email',
-                  style: AppTypography.lora(
-                    color: const Color(0xFF4A1C00),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w500,
+                if (!_showForgotPassword) ...[
+                  /// Title
+                  Text(
+                    'Continue with email',
+                    style: AppTypography.lora(
+                      color: const Color(0xFF4A1C00),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Enter your email id and password to continue',
-                  style: AppTypography.inter(
-                    color: const Color(0xFF4A1C00),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                  const SizedBox(height: 4),
+                  Text(
+                    'Enter your email id and password to continue',
+                    style: AppTypography.inter(
+                      color: const Color(0xFF4A1C00),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
+                ],
 
                 Expanded(
                   child: SingleChildScrollView(
                     child: _showForgotPassword
-                        ? InlineForgotPasswordForm(onBack: _closeForgotPassword)
+                        ? InlineForgotPasswordForm(
+                            onBack: _closeForgotPassword,
+                            showTopBackButton: false,
+                          )
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

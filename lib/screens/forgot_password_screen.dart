@@ -140,13 +140,13 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                             ),
                             if (controller.cooldownSeconds.value > 0) ...[
                               const SizedBox(height: 8),
-                              Text(
-                                'You can request another reset link in ${controller.cooldownSeconds.value} seconds.',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF7A7A7A),
-                                ),
-                              ),
+                              // Text(
+                              //   'You can request another reset link in ${controller.cooldownSeconds.value} seconds.',
+                              //   style: const TextStyle(
+                              //     fontSize: 12,
+                              //     color: Color(0xFF7A7A7A),
+                              //   ),
+                              // ),
                             ],
                             if (controller.isSuccess.value) ...[
                               const SizedBox(height: 16),
