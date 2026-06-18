@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -33,8 +34,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String? _dobError;
   TimeOfDay? _timeOfBirth;
   String _selectedGender = 'MALE';
-  String _sunSign = 'Aries';
-  String _moonSign = 'Aries';
+  String? _sunSign;
+  String? _moonSign;
 
   final List<String> _zodiacSigns = [
     'Aries',
@@ -201,7 +202,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 if (hasImage)
                   ListTile(
-                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                    leading: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                    ),
                     title: const Text(
                       'Delete Photo',
                       style: TextStyle(color: Colors.red),
@@ -271,10 +275,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'gender': _selectedGender,
       'phone': _phoneController.text.trim(),
       'placeOfBirth': _birthPlaceController.text.trim(),
-      'sunSign': _sunSign,
-      'moonSign': _moonSign,
       'countryCode': '+91',
     };
+
+    if (_sunSign != null) payload['sunSign'] = _sunSign;
+    if (_moonSign != null) payload['moonSign'] = _moonSign;
 
     if (_dateOfBirth != null) {
       payload['dateOfBirth'] = DateFormat('yyyy-MM-dd').format(_dateOfBirth!);
@@ -474,6 +479,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                             value: _sunSign,
+                            hint: const Text('Select'),
                             items: _zodiacSigns
                                 .map(
                                   (s) => DropdownMenuItem(
@@ -485,7 +491,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             decoration: _inputDecoration('Select'),
                             onChanged: isLoading
                                 ? null
-                                : (v) => setState(() => _sunSign = v!),
+                                : (v) => setState(() => _sunSign = v),
                           ),
                         ],
                       ),
@@ -499,6 +505,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                             value: _moonSign,
+                            hint: const Text('Select'),
                             items: _zodiacSigns
                                 .map(
                                   (s) => DropdownMenuItem(
@@ -510,13 +517,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             decoration: _inputDecoration('Select'),
                             onChanged: isLoading
                                 ? null
-                                : (v) => setState(() => _moonSign = v!),
+                                : (v) => setState(() => _moonSign = v),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                const SunMoonSignCalculatorLink(),
                 const SizedBox(height: 18),
                 _buildLabel('Phone Number'),
                 const SizedBox(height: 6),

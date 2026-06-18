@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
@@ -8,6 +9,60 @@ import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.d
 
 /// Blue → orange gradient used on Figma action buttons.
 const kFigmaActionGradient = [AppColors.gradientStart, AppColors.gradientEnd];
+
+/// Third-party Sun / Moon / Rising sign calculator (opened in browser).
+const kSunMoonSignCalculatorUrl =
+    'https://www.nextastrology.com/sign-calculators/sun-moon-rising-sign-calculator';
+
+Future<void> openSunMoonSignCalculator() async {
+  final uri = Uri.parse(kSunMoonSignCalculatorUrl);
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched) {
+    Get.snackbar(
+      'Could not open link',
+      'Please try again or open the calculator in your browser.',
+      snackPosition: SnackPosition.TOP,
+    );
+  }
+}
+
+/// Tappable link that opens the external Sun & Moon sign calculator.
+class SunMoonSignCalculatorLink extends StatelessWidget {
+  const SunMoonSignCalculatorLink({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: openSunMoonSignCalculator,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(
+              Icons.open_in_new,
+              size: 14,
+              color: AppColors.gradientStart,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Find your Sun & Moon signs using an external calculator',
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.gradientStart,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.gradientStart,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class ProfileLinkTile extends StatelessWidget {
   const ProfileLinkTile({

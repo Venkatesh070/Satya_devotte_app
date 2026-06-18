@@ -447,6 +447,8 @@ class _InfoCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                const SunMoonSignCalculatorLink(),
               ],
             ),
           ),
