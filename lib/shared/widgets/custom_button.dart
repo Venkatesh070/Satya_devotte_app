@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class CustomButton extends StatefulWidget {
   const CustomButton({

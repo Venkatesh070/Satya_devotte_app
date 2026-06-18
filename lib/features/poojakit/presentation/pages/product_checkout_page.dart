@@ -15,7 +15,6 @@ import 'package:satya_devotte_app/features/poojakit/data/models/address_model.da
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ProductCheckoutPage extends StatefulWidget {
   const ProductCheckoutPage({super.key});
@@ -786,7 +785,7 @@ class _SearchWithSuggestions extends StatelessWidget {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: ChakraLoadingIndicator(size: 16),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.search, size: 20),
               ),
@@ -905,7 +904,7 @@ class _MapBottomSheet extends StatelessWidget {
                 ? const SizedBox(
                     width: 13,
                     height: 13,
-                    child: ChakraLoadingIndicator(size: 13),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location, size: 14),
             label: Text(

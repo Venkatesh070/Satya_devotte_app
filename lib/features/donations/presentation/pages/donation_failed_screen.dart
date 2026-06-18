@@ -12,7 +12,6 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class DonationFailedArgs {
   const DonationFailedArgs({
@@ -171,9 +170,13 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
                       elevation: 0,
                     ),
                     child: loading
-                        ? const ChakraLoadingIndicator(
-                            size: 22,
-                            color: Colors.white,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
                         : const Text(
                             'Try again',

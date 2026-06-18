@@ -206,9 +206,9 @@ class _CartItemTile extends StatelessWidget {
                         key: ValueKey('busy'),
                         width: 14,
                         height: 14,
-                        child: ChakraLoadingIndicator(
-                          size: 14,
+                        child: CircularProgressIndicator(
                           color: Color(0xFFDC5B0A),
+                          strokeWidth: 2,
                         ),
                       )
                     : Text(

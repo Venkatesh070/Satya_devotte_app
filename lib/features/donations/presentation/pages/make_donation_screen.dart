@@ -10,7 +10,6 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 /// Figma "Make a Donation" bottom sheet.
 class MakeDonationScreen extends StatefulWidget {
@@ -325,9 +324,13 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                         ),
                       ),
                       child: _donateCtrl.isInitiating
-                          ? const ChakraLoadingIndicator(
-                              size: 20,
-                              color: Colors.white,
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : Text(
                               'Make Contribution',

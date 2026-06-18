@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
   const ForgotPasswordScreen({super.key});
@@ -121,9 +120,13 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                                   ),
                                 ),
                                 child: controller.isLoading.value
-                                    ? const ChakraLoadingIndicator(
-                                        size: 20,
-                                        color: Colors.white,
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
                                       )
                                     : Text(
                                         controller.cooldownSeconds.value > 0

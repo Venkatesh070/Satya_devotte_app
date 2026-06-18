@@ -8,7 +8,6 @@ import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ReplacementRequestSheet extends StatefulWidget {
   const ReplacementRequestSheet({
@@ -335,7 +334,14 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                   ),
                 ),
                 child: _submitting
-                    ? const ChakraLoadingIndicator(size: 22, color: Colors.white)
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                     : const Text(
                         'Submit replacement request',
                         style: TextStyle(fontWeight: FontWeight.bold),
