@@ -59,6 +59,41 @@ String _kitCategoryDisplayLabel(String? raw) {
 // ════════════════════════════════════════════════════════════════
 // MANAGE POOJA KIT
 // ════════════════════════════════════════════════════════════════
+
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsPoojaKitContent extends StatefulWidget {
   const CmsPoojaKitContent({super.key});
 
@@ -178,7 +213,7 @@ class _ProductList extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: ctrl.loadProducts,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -231,7 +266,7 @@ class _ProductList extends StatelessWidget {
                   ];
                   return [
                     ...leading,
-                    GestureDetector(
+                    _cmsClickable(
                     onTap: () => ctrl.setFilter(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -458,7 +493,7 @@ void _approveDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
-          ),
+          ).copyWith(mouseCursor: _cmsButtonClickCursor),
         ),
       ],
     ),
@@ -564,7 +599,7 @@ void _rejectDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
-          ),
+          ).copyWith(mouseCursor: _cmsButtonClickCursor),
         ),
       ],
     ),
@@ -1315,9 +1350,11 @@ class _PagerBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
@@ -1333,6 +1370,7 @@ class _PagerBtn extends StatelessWidget {
                 : CmsColors.textSecond.withOpacity(0.5),
           ),
         ),
+        ),
       );
 }
 
@@ -1347,7 +1385,7 @@ class _PageNumberBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           width: 32,
@@ -1866,7 +1904,7 @@ class _SmBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -2890,7 +2928,7 @@ class _ProductFormState extends State<_ProductForm> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: const Text(
                       'Cancel',
                       style: TextStyle(color: CmsColors.textSecond),
@@ -2910,7 +2948,7 @@ class _ProductFormState extends State<_ProductForm> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 0,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: loading
                         ? const SizedBox(
                             width: 18,
@@ -2979,7 +3017,7 @@ class _ProductFormState extends State<_ProductForm> {
 
   Widget _formHeader() => Row(
         children: [
-          GestureDetector(
+          _cmsClickable(
             onTap: widget.onCancel,
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -3273,7 +3311,7 @@ class _InventoryPickerField extends StatelessWidget {
     return Material(
       color: CmsColors.white,
       borderRadius: BorderRadius.circular(8),
-      child: InkWell(
+      child: _cmsClickableInk(
         onTap: () => _openPicker(context),
         borderRadius: BorderRadius.circular(8),
         child: Container(
@@ -3391,6 +3429,9 @@ class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
                     ),
                   ),
                   IconButton(
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, size: 20),
@@ -3452,7 +3493,7 @@ class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
                         final isSelected = item.id == widget.selectedId;
                         final alreadyInKit =
                             widget.usedInventoryIds.contains(item.id);
-                        return InkWell(
+                        return _cmsClickableInk(
                           onTap: () {
                             if (alreadyInKit) {
                               showCmsSnackbar(
@@ -3736,7 +3777,7 @@ class _KitComponentsCostSummary extends StatelessWidget {
                 foregroundColor: CmsColors.orangeDark,
                 side: const BorderSide(color: CmsColors.orange),
                 padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               icon: const Icon(Icons.price_check_outlined, size: 18),
               label: Text(
                 cost.hasInventorySale

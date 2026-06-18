@@ -19,10 +19,59 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
+
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableOptional({
+  required VoidCallback? onTap,
+  required Widget child,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: GestureDetector(
+      onTap: onTap,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
 
 class CmsPoojaKitOrdersContent extends StatelessWidget {
   const CmsPoojaKitOrdersContent({super.key});
@@ -119,15 +168,20 @@ class _OrdersFiltersBar extends StatefulWidget {
 
 class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
   late final TextEditingController _search;
+  late final CmsSearchScheduler _searchScheduler;
 
   @override
   void initState() {
     super.initState();
     _search = TextEditingController(text: widget.controller.search);
+    _searchScheduler = CmsSearchScheduler(
+      onSearch: widget.controller.setSearch,
+    );
   }
 
   @override
   void dispose() {
+    _searchScheduler.dispose();
     _search.dispose();
     super.dispose();
   }
@@ -170,7 +224,7 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
                   height: 38,
                   child: TextField(
                     controller: _search,
-                    onSubmitted: widget.controller.setSearch,
+                    onSubmitted: _searchScheduler.searchNow,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Search by order number…',
@@ -186,10 +240,13 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
                       suffixIcon: _search.text.isEmpty
                           ? null
                           : IconButton(
+                              style: IconButton.styleFrom().copyWith(
+                                mouseCursor: _cmsButtonClickCursor,
+                              ),
                               icon: const Icon(Icons.close, size: 16),
                               onPressed: () {
                                 _search.clear();
-                                widget.controller.setSearch('');
+                                _searchScheduler.searchNow('');
                                 setState(() {});
                               },
                             ),
@@ -210,7 +267,10 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
                         borderSide: const BorderSide(color: CmsColors.orange),
                       ),
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (v) {
+                      setState(() {});
+                      _searchScheduler.onQueryChanged(v);
+                    },
                   ),
                 ),
               ),
@@ -218,6 +278,9 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
               Obx(
                 () => IconButton(
                   tooltip: 'Reload',
+                  style: IconButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
                   onPressed: widget.controller.isLoading
                       ? null
                       : widget.controller.refresh,
@@ -317,7 +380,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -404,7 +467,7 @@ class _OrdersTable extends StatelessWidget {
             ),
             const Divider(height: 1, color: CmsColors.border),
             for (final o in orders)
-              InkWell(
+              _cmsClickableInk(
                 onTap: () => controller.openOrder(o.id),
                 child: _OrderRow(order: o),
               ),
@@ -603,7 +666,7 @@ class _OrdersCardList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {
         final o = orders[i];
-        return InkWell(
+        return _cmsClickableInk(
           borderRadius: BorderRadius.circular(12),
           onTap: () => controller.openOrder(o.id),
           child: Container(
@@ -848,9 +911,11 @@ class _OrdersPagerBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
@@ -866,6 +931,7 @@ class _OrdersPagerBtnMini extends StatelessWidget {
                 : CmsColors.textSecond.withOpacity(0.5),
           ),
         ),
+        ),
       );
 }
 
@@ -880,7 +946,7 @@ class _OrdersPageNumberBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           width: 32,
@@ -973,6 +1039,9 @@ class _DetailHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
+            style: IconButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             tooltip: 'Back to orders',
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: controller.closeDetail,
@@ -1003,6 +1072,9 @@ class _DetailHeader extends StatelessWidget {
             ),
           ),
           IconButton(
+            style: IconButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             tooltip: 'Refresh',
             onPressed: controller.fetchDetail,
             icon: const Icon(Icons.refresh_rounded),
@@ -1300,7 +1372,7 @@ class _TrackingCard extends StatelessWidget {
           _MetaPair(label: 'Tracking #', value: t.trackingNumber),
           if (t.trackingUrl.isNotEmpty) ...[
             const SizedBox(height: 4),
-            InkWell(
+            _cmsClickableInk(
               onTap: () => _openUrl(t.trackingUrl),
               child: Text(
                 t.trackingUrl,
@@ -1537,7 +1609,7 @@ class _OutlinedAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1655,7 +1727,7 @@ Future<void> _showTrackingDialog(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                ),
+                ).copyWith(mouseCursor: _cmsButtonClickCursor),
                 onPressed: () async {
                   final c = courier.text.trim();
                   final n = number.text.trim();
@@ -1767,7 +1839,7 @@ Future<void> _showDispatchDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             onPressed: () async {
               final c = courier.text.trim();
               final n = number.text.trim();
@@ -1850,7 +1922,7 @@ Future<void> _showInitiateRefundDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             onPressed: () async {
               final reasonText = reason.text.trim();
               if (reasonText.isEmpty) return;
@@ -1927,7 +1999,7 @@ Future<void> _showCancelDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             onPressed: () async {
               Navigator.pop(dialogContext);
               await controller.cancelOrder(

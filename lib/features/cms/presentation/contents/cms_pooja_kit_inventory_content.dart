@@ -3,6 +3,7 @@
 // GET /inventory/categories, POST .../adjust-stock.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
@@ -11,6 +12,54 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/inventor
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
+
+
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableOptional({
+  required VoidCallback? onTap,
+  required Widget child,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: GestureDetector(
+      onTap: onTap,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
 
 class CmsPoojaKitInventoryContent extends StatefulWidget {
   const CmsPoojaKitInventoryContent({super.key});
@@ -139,7 +188,7 @@ class _InventoryListView extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: ctrl.refresh,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -300,7 +349,7 @@ class _FilterStrip extends StatelessWidget {
                     ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
                 ),
               ),
             ],
@@ -323,7 +372,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -394,7 +443,7 @@ class _CategoryFilterButton extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
+      child: _cmsClickableInk(
         onTap: () => _openFilter(context),
         borderRadius: BorderRadius.circular(20),
         child: Container(
@@ -543,6 +592,9 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
                     ),
                   ),
                   IconButton(
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, size: 20),
@@ -605,7 +657,7 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
                             ? _draft.isEmpty
                             : _draft.contains(code);
                         final subtitle = _subtitleAt(index);
-                        return InkWell(
+                        return _cmsClickableInk(
                           onTap: () {
                             setState(() {
                               if (code == 'ALL') {
@@ -686,7 +738,7 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
                         Navigator.pop(context, _draft.toList(growable: false)),
                     style: FilledButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: const Text('Apply'),
                   ),
                 ],
@@ -773,9 +825,8 @@ class _InventoryBody extends StatelessWidget {
               if (delta != 0) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'After: ${item.stockQuantity + delta} in stock → '
-                  '${_fmtQty((item.stockQuantity + delta) * item.itemQuantity)} '
-                  '${item.unit} total',
+                  'After: ${item.stockQuantity + delta} in stock '
+                      '(${item.itemSizeLabel} each)\n',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -793,7 +844,7 @@ class _InventoryBody extends StatelessWidget {
                     style: IconButton.styleFrom(
                       backgroundColor: CmsColors.bg,
                       foregroundColor: CmsColors.textPrimary,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -812,7 +863,7 @@ class _InventoryBody extends StatelessWidget {
                     style: IconButton.styleFrom(
                       backgroundColor: CmsColors.orange,
                       foregroundColor: Colors.white,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   ),
                 ],
               ),
@@ -834,7 +885,7 @@ class _InventoryBody extends StatelessWidget {
             ),
             FilledButton(
               onPressed: delta == 0 ? null : () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: CmsColors.orange),
+              style: FilledButton.styleFrom(backgroundColor: CmsColors.orange).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: const Text('Apply'),
             ),
           ],
@@ -877,7 +928,7 @@ class _InventoryBody extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: CmsColors.red),
+            style: FilledButton.styleFrom(backgroundColor: CmsColors.red).copyWith(mouseCursor: _cmsButtonClickCursor),
             child: const Text('Delete'),
           ),
         ],
@@ -1700,9 +1751,12 @@ class _InventoryFormState extends State<_InventoryForm> {
           const SizedBox(width: 12),
           Expanded(
             child: CmsFormField(
-              label: 'Unit *',
-              hint: 'grams, pieces, ml',
+              label: 'Unit *(eg. grams, ml)',
+              hint: 'grams, ml',
               controller: _unitCtrl,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+              ],
             ),
           ),
         ],
@@ -1776,7 +1830,7 @@ class _InventoryFormState extends State<_InventoryForm> {
             ),
             child: Row(
               children: [
-                GestureDetector(
+                _cmsClickable(
                   onTap: widget.onCancel,
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -1943,7 +1997,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
-                          ),
+                          ).copyWith(mouseCursor: _cmsButtonClickCursor),
                           child: const Text(
                             'Cancel',
                             style: TextStyle(color: CmsColors.textSecond),
@@ -1963,7 +2017,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             elevation: 0,
-                          ),
+                          ).copyWith(mouseCursor: _cmsButtonClickCursor),
                           child: loading
                               ? const SizedBox(
                                   width: 18,
@@ -2089,7 +2143,7 @@ class _CategoryPickerField extends StatelessWidget {
         Material(
           color: CmsColors.white,
           borderRadius: BorderRadius.circular(8),
-          child: InkWell(
+          child: _cmsClickableInk(
             onTap: categories.isEmpty ? null : () => _openPicker(context),
             borderRadius: BorderRadius.circular(8),
             child: Container(
@@ -2194,6 +2248,9 @@ class _CategoryPickerDialogState extends State<_CategoryPickerDialog> {
                     ),
                   ),
                   IconButton(
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, size: 20),
@@ -2253,7 +2310,7 @@ class _CategoryPickerDialogState extends State<_CategoryPickerDialog> {
                       itemBuilder: (context, index) {
                         final cat = filtered[index];
                         final isSelected = cat.code == widget.selectedCode;
-                        return InkWell(
+                        return _cmsClickableInk(
                           onTap: () => Navigator.pop(context, cat.code),
                           child: Container(
                             color: isSelected
@@ -2403,12 +2460,18 @@ class _InventoryPaginationBar extends StatelessWidget {
             ),
             const Spacer(),
             IconButton(
+              style: IconButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               onPressed: page > 1 ? controller.prevPage : null,
               icon: const Icon(Icons.chevron_left),
             ),
             Text('Page $page of $tp',
                 style: const TextStyle(fontSize: 12, color: CmsColors.textSecond)),
             IconButton(
+              style: IconButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               onPressed: page < tp ? controller.nextPage : null,
               icon: const Icon(Icons.chevron_right),
             ),

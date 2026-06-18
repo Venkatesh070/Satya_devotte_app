@@ -253,11 +253,13 @@ class AdminOrdersRemoteDataSource {
     int page = 1,
     int limit = 20,
     String? status,
+    String? search,
   }) async {
     final query = <String, dynamic>{
       'page': page,
       'limit': limit,
       if (status != null && status.isNotEmpty) 'status': status,
+      if (search != null && search.isNotEmpty) 'search': search,
     };
     final res = await _apiClient.dio.get(
       ApiEndpoints.adminReplacements,

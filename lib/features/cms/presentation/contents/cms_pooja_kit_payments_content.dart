@@ -10,12 +10,61 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart'
     show CmsKitOrderDateCell, PaymentStatusBadge;
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
+
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableOptional({
+  required VoidCallback? onTap,
+  required Widget child,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: GestureDetector(
+      onTap: onTap,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
 
 class CmsPoojaKitPaymentsContent extends StatelessWidget {
   const CmsPoojaKitPaymentsContent({super.key});
@@ -81,15 +130,20 @@ class _FiltersBar extends StatefulWidget {
 
 class _FiltersBarState extends State<_FiltersBar> {
   late final TextEditingController _search;
+  late final CmsSearchScheduler _searchScheduler;
 
   @override
   void initState() {
     super.initState();
     _search = TextEditingController(text: widget.controller.search);
+    _searchScheduler = CmsSearchScheduler(
+      onSearch: widget.controller.setSearch,
+    );
   }
 
   @override
   void dispose() {
+    _searchScheduler.dispose();
     _search.dispose();
     super.dispose();
   }
@@ -148,7 +202,7 @@ class _FiltersBarState extends State<_FiltersBar> {
                   height: 38,
                   child: TextField(
                     controller: _search,
-                    onSubmitted: widget.controller.setSearch,
+                    onSubmitted: _searchScheduler.searchNow,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Search by order number or reference…',
@@ -164,10 +218,13 @@ class _FiltersBarState extends State<_FiltersBar> {
                       suffixIcon: _search.text.isEmpty
                           ? null
                           : IconButton(
+                              style: IconButton.styleFrom().copyWith(
+                                mouseCursor: _cmsButtonClickCursor,
+                              ),
                               icon: const Icon(Icons.close, size: 16),
                               onPressed: () {
                                 _search.clear();
-                                widget.controller.setSearch('');
+                                _searchScheduler.searchNow('');
                                 setState(() {});
                               },
                             ),
@@ -188,7 +245,10 @@ class _FiltersBarState extends State<_FiltersBar> {
                         borderSide: const BorderSide(color: CmsColors.orange),
                       ),
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (v) {
+                      setState(() {});
+                      _searchScheduler.onQueryChanged(v);
+                    },
                   ),
                 ),
               ),
@@ -196,6 +256,9 @@ class _FiltersBarState extends State<_FiltersBar> {
               Obx(
                 () => IconButton(
                   tooltip: 'Reload',
+                  style: IconButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
                   onPressed: widget.controller.isLoading
                       ? null
                       : widget.controller.refresh,
@@ -235,7 +298,7 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -584,7 +647,7 @@ class _VerifyButton extends StatelessWidget {
     return Obx(() {
       final busy = controller.isVerifying(order.id);
       final hasRef = order.paystackReference.trim().isNotEmpty;
-      return GestureDetector(
+      return _cmsClickableOptional(
         onTap: (busy || !hasRef)
             ? null
             : () => controller.verifyByReference(order),
@@ -805,9 +868,11 @@ class _PaymentsPagerBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
@@ -823,6 +888,7 @@ class _PaymentsPagerBtnMini extends StatelessWidget {
                 : CmsColors.textSecond.withOpacity(0.5),
           ),
         ),
+        ),
       );
 }
 
@@ -837,7 +903,7 @@ class _PaymentsPageNumberBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           width: 32,

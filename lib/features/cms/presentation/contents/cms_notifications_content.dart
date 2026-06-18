@@ -18,6 +18,40 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/notifications/data/models/app_notification.dart';
 import 'package:satya_devotte_app/features/notifications/data/models/send_notification_request.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsNotificationsContent extends StatefulWidget {
   const CmsNotificationsContent({super.key});
 
@@ -212,10 +246,15 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text('Keep'),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: CmsColors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: CmsColors.red,
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Cancel broadcast'),
           ),
@@ -375,7 +414,7 @@ class _SendNotificationCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                ),
+                ).copyWith(mouseCursor: _cmsButtonClickCursor),
                 icon: isSending()
                     ? const SizedBox(
                         width: 16,
@@ -421,7 +460,7 @@ class _SendNotificationCard extends StatelessWidget {
 
   Widget _scheduleField(String scheduleText) => _LabeledField(
         label: 'Schedule (optional)',
-        child: InkWell(
+        child: _cmsClickableInk(
           onTap: onPickSchedule,
           child: InputDecorator(
             decoration: InputDecoration(
@@ -431,6 +470,9 @@ class _SendNotificationCard extends StatelessWidget {
                   ? const Icon(Icons.calendar_today, size: 18)
                   : IconButton(
                       tooltip: 'Clear schedule',
+                      style: IconButton.styleFrom().copyWith(
+                        mouseCursor: _cmsButtonClickCursor,
+                      ),
                       icon: const Icon(Icons.close, size: 18),
                       onPressed: onClearSchedule,
                     ),
@@ -502,6 +544,9 @@ class _StatusFilterBar extends StatelessWidget {
             IconButton(
               tooltip: 'Reload',
               onPressed: ctrl.isLoading ? null : ctrl.refreshList,
+              style: IconButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               icon: ctrl.isLoading
                   ? const SizedBox(
                       width: 16,
@@ -557,7 +602,7 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return _cmsClickableInk(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -702,7 +747,7 @@ class _NotificationCard extends StatelessWidget {
                           horizontal: 14,
                           vertical: 8,
                         ),
-                      ),
+                      ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     ),
                   ),
                 ],
@@ -957,22 +1002,25 @@ class _PagerBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: CmsColors.border),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: enabled
-                ? CmsColors.textPrimary
-                : CmsColors.textSecond.withOpacity(0.5),
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: enabled
+                  ? CmsColors.textPrimary
+                  : CmsColors.textSecond.withOpacity(0.5),
+            ),
           ),
         ),
       );
@@ -989,7 +1037,7 @@ class _PageNumberBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           width: 32,
@@ -1102,7 +1150,7 @@ class _ListError extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: CmsColors.orange,
               foregroundColor: Colors.white,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),

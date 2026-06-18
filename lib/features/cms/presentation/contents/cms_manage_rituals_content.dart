@@ -9,6 +9,25 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsManageRitualsContent extends StatefulWidget {
   const CmsManageRitualsContent({super.key});
 
@@ -118,7 +137,7 @@ class _RitualList extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: controller.loadRituals,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -152,7 +171,7 @@ class _RitualList extends StatelessWidget {
               () => Row(
                 children: _filters.map((f) {
                   final isSel = controller.filter == f;
-                  return GestureDetector(
+                  return _cmsClickable(
                     onTap: () => controller.setFilter(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -649,7 +668,7 @@ class _RitualFormState extends State<_RitualForm> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                      ),
+                      ).copyWith(mouseCursor: _cmsButtonClickCursor),
                       child: const Text(
                         'Cancel',
                         style: TextStyle(color: CmsColors.textSecond),
@@ -669,7 +688,7 @@ class _RitualFormState extends State<_RitualForm> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         elevation: 0,
-                      ),
+                      ).copyWith(mouseCursor: _cmsButtonClickCursor),
                       child: loading
                           ? const SizedBox(
                               width: 18,
@@ -699,7 +718,7 @@ class _RitualFormState extends State<_RitualForm> {
 
   Widget _formHeader() => Row(
         children: [
-          GestureDetector(
+          _cmsClickable(
             onTap: widget.onCancel,
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -737,11 +756,11 @@ class _RitualFormState extends State<_RitualForm> {
           controller: _titleCtrl,
         ),
         const SizedBox(height: 12),
-        CmsFormField(
-          label: 'Slug *',
-          hint: 'e.g. 7-day-lakshmi-abundance-ritual',
-          controller: _slugCtrl,
-        ),
+        // CmsFormField(
+        //   label: 'Slug *',
+        //   hint: 'e.g. 7-day-lakshmi-abundance-ritual',
+        //   controller: _slugCtrl,
+        // ),
         const SizedBox(height: 12),
         CmsFormField(
           label: 'Description',
@@ -1026,6 +1045,9 @@ class _RitualFormState extends State<_RitualForm> {
           children: [
             TextButton.icon(
               onPressed: _addDay,
+              style: TextButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
               label: const Text(
                 'Add day',
@@ -1106,6 +1128,9 @@ class _RitualFormState extends State<_RitualForm> {
           children: [
             TextButton.icon(
               onPressed: _addSection,
+              style: TextButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
               label: const Text(
                 'Add section',
@@ -1191,6 +1216,9 @@ class _DayTile extends StatelessWidget {
                 ),
               ),
               IconButton(
+                style: IconButton.styleFrom().copyWith(
+                  mouseCursor: _cmsButtonClickCursor,
+                ),
                 icon: const Icon(
                   Icons.delete_outline,
                   size: 18,
@@ -1304,23 +1332,41 @@ class _SectionEditorTile extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
+                style: IconButton.styleFrom().copyWith(
+                  mouseCursor: _cmsButtonClickCursor,
+                ),
                 icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                 onPressed: onRemove,
               ),
             ],
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            initialValue: section.label,
-            style: const TextStyle(fontSize: 13),
-            decoration: const InputDecoration(
-              labelText: 'Section label',
-              hintText: 'Overview',
-              filled: true,
-              fillColor: CmsColors.white,
-            ),
-            onChanged: (v) => onUpdate(
-              section.copyWith(label: v, key: ''),
+          _RitualLabeled(
+            label: 'Section label',
+            child: TextFormField(
+              initialValue: section.label,
+              style: const TextStyle(fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'Overview',
+                filled: true,
+                fillColor: CmsColors.white,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: CmsColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: CmsColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: CmsColors.orange),
+                ),
+              ),
+              onChanged: (v) => onUpdate(
+                section.copyWith(label: v, key: ''),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -1337,37 +1383,77 @@ class _SectionEditorTile extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    TextFormField(
-                      initialValue: content.title,
-                      decoration: const InputDecoration(
-                        labelText: 'Content title',
-                        hintText: 'What you will need',
-                        isDense: true,
+                    _RitualLabeled(
+                      label: 'Content title',
+                      child: TextFormField(
+                        initialValue: content.title,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'What you will need',
+                          filled: true,
+                          fillColor: CmsColors.bg,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.orange),
+                          ),
+                        ),
+                        onChanged: (v) {
+                          final list = List<RitualSectionContent>.from(
+                            section.contents,
+                          );
+                          list[e.key] = content.copyWith(title: v);
+                          onUpdate(section.copyWith(contents: list));
+                        },
                       ),
-                      onChanged: (v) {
-                        final list = List<RitualSectionContent>.from(
-                          section.contents,
-                        );
-                        list[e.key] = content.copyWith(title: v);
-                        onUpdate(section.copyWith(contents: list));
-                      },
                     ),
                     const SizedBox(height: 8),
-                    TextFormField(
-                      initialValue: content.description,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Lamp, ghee, flowers, coins, red cloth.',
-                        isDense: true,
+                    _RitualLabeled(
+                      label: 'Description',
+                      child: TextFormField(
+                        initialValue: content.description,
+                        maxLines: 3,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'Lamp, ghee, flowers, coins, red cloth.',
+                          filled: true,
+                          fillColor: CmsColors.bg,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: CmsColors.orange),
+                          ),
+                        ),
+                        onChanged: (v) {
+                          final list = List<RitualSectionContent>.from(
+                            section.contents,
+                          );
+                          list[e.key] = content.copyWith(description: v);
+                          onUpdate(section.copyWith(contents: list));
+                        },
                       ),
-                      onChanged: (v) {
-                        final list = List<RitualSectionContent>.from(
-                          section.contents,
-                        );
-                        list[e.key] = content.copyWith(description: v);
-                        onUpdate(section.copyWith(contents: list));
-                      },
                     ),
                   ],
                 ),
@@ -1380,6 +1466,9 @@ class _SectionEditorTile extends StatelessWidget {
                 ..add(const RitualSectionContent());
               onUpdate(section.copyWith(contents: list));
             },
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             icon: const Icon(Icons.add, size: 16, color: CmsColors.orange),
             label: const Text(
               'Add content item',
@@ -1392,7 +1481,7 @@ class _SectionEditorTile extends StatelessWidget {
   }
 }
 
-Widget _SmBtn(String label, Color color, VoidCallback onTap) => GestureDetector(
+Widget _SmBtn(String label, Color color, VoidCallback onTap) => _cmsClickable(
   onTap: onTap,
   child: Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

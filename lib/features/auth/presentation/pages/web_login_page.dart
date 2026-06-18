@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
@@ -9,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
+import 'package:satya_devotte_app/shared/widgets/animated_chakra_stack.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
@@ -25,6 +25,7 @@ class _WebLoginPageState extends State<WebLoginPage>
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FocusNode _passwordFocusNode = FocusNode();
   late final AnimationController _rotationController;
   bool _obscurePassword = true;
   bool _showForgotPassword = false;
@@ -44,6 +45,37 @@ class _WebLoginPageState extends State<WebLoginPage>
     setState(() => _showForgotPassword = false);
   }
 
+  Future<void> _signIn() async {
+    if (controller.isEmailSignInLoading) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      showAppSnackbar(
+        title: 'Required',
+        message: 'Please enter email and password.',
+        isError: true,
+      );
+      return;
+    }
+
+    final ok = await controller.signInAsAdmin(
+      email: email,
+      password: password,
+    );
+    if (ok) {
+      _navigateByRole();
+    } else {
+      showAppSnackbar(
+        title: 'Login Failed',
+        message:
+            controller.lastAuthError ??
+            'Admin sign in failed. Please try again.',
+        isError: true,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +90,7 @@ class _WebLoginPageState extends State<WebLoginPage>
     _rotationController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -83,15 +116,15 @@ class _WebLoginPageState extends State<WebLoginPage>
           SafeArea(
             child: isWide
                 ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: _buildLoginCard(isFullHeight: true),
-                        ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildLoginCard(isFullHeight: true),
                       ),
-                  
-                      Expanded(child: _buildChakraAnimation()),
+                      Expanded(
+                        child: Center(child: _buildChakraAnimation()),
+                      ),
                     ],
                   )
                 : Center(child: _buildLoginCard()),
@@ -128,7 +161,11 @@ class _WebLoginPageState extends State<WebLoginPage>
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       enabled: !isEmailLoading,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(_passwordFocusNode);
+                      },
                       style: const TextStyle(
                         color: Color(0xFF1F1F1F),
                         fontSize: 13,
@@ -140,8 +177,13 @@ class _WebLoginPageState extends State<WebLoginPage>
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _passwordController,
+                      focusNode: _passwordFocusNode,
                       obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
                       enabled: !isEmailLoading,
+                      onFieldSubmitted: (_) {
+                        if (!isEmailLoading) _signIn();
+                      },
                       style: const TextStyle(
                         color: Color(0xFF1F1F1F),
                         fontSize: 13,
@@ -184,33 +226,7 @@ class _WebLoginPageState extends State<WebLoginPage>
                         AppColors.gradientEnd,
                       ],
                       textColor: AppColors.white,
-                      onTap: () async {
-                        final email = _emailController.text.trim();
-                        final password = _passwordController.text;
-                        if (email.isEmpty || password.isEmpty) {
-                          showAppSnackbar(
-                            title: 'Required',
-                            message: 'Please enter email and password.',
-                            isError: true,
-                          );
-                          return;
-                        }
-                        final ok = await controller.signInAsAdmin(
-                          email: email,
-                          password: password,
-                        );
-                        if (ok) {
-                          _navigateByRole();
-                        } else {
-                          showAppSnackbar(
-                            title: 'Login Failed',
-                            message:
-                                controller.lastAuthError ??
-                                'Admin sign in failed. Please try again.',
-                            isError: true,
-                          );
-                        }
-                      },
+                      onTap: _signIn,
                     ),
                   ],
                 );
@@ -257,72 +273,16 @@ class _WebLoginPageState extends State<WebLoginPage>
   }
 
   Widget _buildChakraAnimation() {
-    return AnimatedBuilder(
-      animation: _rotationController,
-      builder: (context, child) {
-        final spin = _rotationController.value * 2 * math.pi;
-        return Center(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.rotate(
-                angle: spin,
-                child: Image.asset(
-                  'assets/images/chakra1.png',
-                  filterQuality: FilterQuality.high,
-                ),
-              ),
-              Transform.rotate(
-                angle: -spin,
-                child: Transform.scale(
-                  scale: 0.90,
-                  child: Image.asset(
-                    'assets/images/chakra2.png',
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-              ),
-              Transform.rotate(
-                angle: spin,
-                child: Transform.scale(
-                  scale: 0.80,
-                  child: Image.asset(
-                    'assets/images/chakra3.png',
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-              ),
-              Transform.rotate(
-                angle: -spin,
-                child: Transform.scale(
-                  scale: 0.53,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/chakra4.png',
-                        filterQuality: FilterQuality.high,
-                      ),
-                      Opacity(
-                        opacity: 0.8,
-                        child: Image.asset(
-                          'assets/images/onBoardBgOverlay.png',
-                          filterQuality: FilterQuality.high,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SvgPicture.asset(
-                'assets/svgs/whiteLogo.svg',
-                width: 84,
-                height: 102,
-              ),
-            ],
-          ),
-        );
-      },
+    return Transform.scale(
+      scale: 0.9,
+      child: AnimatedChakraStack(
+        rotationController: _rotationController,
+        logo: SvgPicture.asset(
+          'assets/svgs/whiteLogo.svg',
+          width: 84,
+          height: 102,
+        ),
+      ),
     );
   }
 

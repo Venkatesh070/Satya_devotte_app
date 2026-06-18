@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -62,6 +63,7 @@ class CmsFormField extends StatefulWidget {
     this.maxLines = 1,
     this.controller,
     this.onChanged,
+    this.inputFormatters,
   });
   final String label;
   final String hint;
@@ -69,6 +71,7 @@ class CmsFormField extends StatefulWidget {
   final int maxLines;
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<CmsFormField> createState() => _CmsFormFieldState();
@@ -101,6 +104,7 @@ class _CmsFormFieldState extends State<CmsFormField> {
       maxLines: widget.maxLines,
       scrollController: _scrollController,
       onChanged: widget.onChanged,
+      inputFormatters: widget.inputFormatters,
       style: const TextStyle(
         fontSize: 13,
         color: CmsThemeColors.inputText,
@@ -377,15 +381,18 @@ class CmsActionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final btn = GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(6),
+    final btn = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, color: color, size: 16),
         ),
-        child: Icon(icon, color: color, size: 16),
       ),
     );
     if (tooltip != null) {
@@ -549,49 +556,52 @@ class CmsPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isLoading
-              ? CmsColors.orange.withOpacity(0.6)
-              : CmsColors.orange,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: CmsColors.orange.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+    return MouseRegion(
+      cursor: isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: isLoading ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isLoading
+                ? CmsColors.orange.withOpacity(0.6)
+                : CmsColors.orange,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: CmsColors.orange.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
+            ],
+          ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }

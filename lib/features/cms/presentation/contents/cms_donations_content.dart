@@ -11,6 +11,40 @@ import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_w
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsDonationsContent extends StatefulWidget {
   const CmsDonationsContent({super.key});
 
@@ -156,7 +190,7 @@ class _DonationList extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: ctrl.loadDonations,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -193,7 +227,7 @@ class _DonationList extends StatelessWidget {
               () => Row(
                 children: _filters.map((f) {
                   final isSel = ctrl.filter == f;
-                  return GestureDetector(
+                  return _cmsClickable(
                     onTap: () => ctrl.setFilter(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -473,6 +507,9 @@ void _approveDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
+          style: TextButton.styleFrom().copyWith(
+            mouseCursor: _cmsButtonClickCursor,
+          ),
           child: const Text(
             'Cancel',
             style: TextStyle(color: CmsColors.textSecond),
@@ -492,7 +529,7 @@ void _approveDialog(
               borderRadius: BorderRadius.circular(8),
             ),
             elevation: 0,
-          ),
+          ).copyWith(mouseCursor: _cmsButtonClickCursor),
         ),
       ],
     ),
@@ -568,6 +605,9 @@ void _rejectDialog(BuildContext ctx, DonationModel d, DonationController ctrl) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
+          style: TextButton.styleFrom().copyWith(
+            mouseCursor: _cmsButtonClickCursor,
+          ),
           child: const Text(
             'Cancel',
             style: TextStyle(color: CmsColors.textSecond),
@@ -598,7 +638,7 @@ void _rejectDialog(BuildContext ctx, DonationModel d, DonationController ctrl) {
               borderRadius: BorderRadius.circular(8),
             ),
             elevation: 0,
-          ),
+          ).copyWith(mouseCursor: _cmsButtonClickCursor),
         ),
       ],
     ),
@@ -791,7 +831,7 @@ class _SmBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.all(6),
@@ -812,7 +852,7 @@ class _TextBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -914,7 +954,7 @@ class _DonationFormState extends State<_DonationForm> {
           children: [
             Row(
               children: [
-                GestureDetector(
+                _cmsClickable(
                   onTap: widget.onCancel,
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -1014,7 +1054,7 @@ class _DonationFormState extends State<_DonationForm> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: const Text(
                       'Cancel',
                       style: TextStyle(color: CmsColors.textSecond),
@@ -1034,7 +1074,7 @@ class _DonationFormState extends State<_DonationForm> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 0,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: loading
                         ? const SizedBox(
                             width: 18,
@@ -1165,6 +1205,9 @@ class _AllDonationsFilterBar extends StatelessWidget {
               IconButton(
                 tooltip: 'Reload',
                 onPressed: ctrl.isLoading ? null : ctrl.refreshContributions,
+                style: IconButton.styleFrom().copyWith(
+                  mouseCursor: _cmsButtonClickCursor,
+                ),
                 icon: ctrl.isLoading
                     ? const SizedBox(
                         width: 16,
@@ -1215,7 +1258,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return _cmsClickableInk(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -1394,7 +1437,7 @@ class _WideTable extends StatelessWidget {
               decoration: BoxDecoration(color: CmsColors.bg.withOpacity(.6)),
               children: [
                 _pad(const Text('Contribution ID', style: _headerStyle)),
-                _pad(const Text('Donor', style: _headerStyle)),
+                _pad(const Text('Contributor', style: _headerStyle)),
                 _pad(const Text(
                   'Amount',
                   style: _headerStyle,
@@ -1873,22 +1916,25 @@ class _PagerBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: CmsColors.border),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: enabled
-                ? CmsColors.textPrimary
-                : CmsColors.textSecond.withOpacity(0.5),
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: enabled
+                  ? CmsColors.textPrimary
+                  : CmsColors.textSecond.withOpacity(0.5),
+            ),
           ),
         ),
       );
@@ -1905,7 +1951,7 @@ class _PageNumberBtnMini extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
         onTap: onTap,
         child: Container(
           width: 32,
@@ -1980,7 +2026,7 @@ class _ContributionsError extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
                 foregroundColor: Colors.white,
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
             ),
           ],
         ),

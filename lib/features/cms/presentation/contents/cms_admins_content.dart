@@ -7,6 +7,25 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_co
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsAdminsContent extends StatefulWidget {
   const CmsAdminsContent({super.key});
 
@@ -68,7 +87,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: _ctrl.loadAdmins,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -242,6 +261,9 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -313,7 +335,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 elevation: 0,
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
             ),
           ),
         ],
@@ -378,6 +400,9 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dCtx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Close',
               style: TextStyle(color: CmsColors.textSecond),
@@ -402,7 +427,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -464,6 +489,9 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -483,7 +511,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -739,9 +767,13 @@ class _UserCard extends StatelessWidget {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  GestureDetector(
-                    onTap: resendPending ? null : onResendPasswordReset,
-                    child: Container(
+                  MouseRegion(
+                    cursor: resendPending
+                        ? SystemMouseCursors.basic
+                        : SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: resendPending ? null : onResendPasswordReset,
+                      child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
@@ -783,6 +815,7 @@ class _UserCard extends StatelessWidget {
                                 ],
                               ],
                             ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -791,7 +824,7 @@ class _UserCard extends StatelessWidget {
             }),
 
           // Action button
-          GestureDetector(
+          _cmsClickable(
             onTap: onAction,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

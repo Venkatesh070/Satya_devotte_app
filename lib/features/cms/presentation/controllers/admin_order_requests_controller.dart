@@ -30,6 +30,7 @@ class AdminOrderRequestsController extends GetxController {
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _status = 'ALL'.obs;
+  final _search = ''.obs;
 
   final _selectedId = RxnString();
   final _detail = Rxn<OrderRequest>();
@@ -45,6 +46,7 @@ class AdminOrderRequestsController extends GetxController {
   int get total => _total.value;
   int get totalPages => _totalPages.value;
   String get status => _status.value;
+  String get search => _search.value;
   bool get isEmpty =>
       !_isLoading.value && _error.value == null && _items.isEmpty;
 
@@ -71,6 +73,21 @@ class AdminOrderRequestsController extends GetxController {
     _load(page: 1);
   }
 
+  void setSearch(String v) {
+    if (_search.value == v) return;
+    _search.value = v;
+    _load(page: 1);
+  }
+
+  /// Clears search when the CMS tab is opened again after navigating away.
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    _selectedId.value = null;
+    _detail.value = null;
+    _detailError.value = null;
+    await _load(page: 1);
+  }
+
   void setLimit(int v) {
     if (v <= 0 || v == _limit.value) return;
     _limit.value = v;
@@ -85,6 +102,7 @@ class AdminOrderRequestsController extends GetxController {
         page: page,
         limit: _limit.value,
         status: _status.value == 'ALL' ? null : _status.value,
+        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
       );
       _items.assignAll(res.items);
       _page.value = res.page;

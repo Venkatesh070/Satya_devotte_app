@@ -10,6 +10,40 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsDeitiesContent extends StatefulWidget {
   const CmsDeitiesContent({super.key});
 
@@ -164,7 +198,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                             color: CmsColors.orange,
                           ),
                         )
-                      : GestureDetector(
+                      : _cmsClickable(
                           onTap: () => _loadDeities(force: true),
                           child: Container(
                             padding: const EdgeInsets.all(10),
@@ -201,7 +235,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
               child: Row(
                 children: filters.map((f) {
                   final sel = _filter == f;
-                  return GestureDetector(
+                  return _cmsClickable(
                     onTap: () {
                       setState(() => _filter = f);
                       _loadDeities(force: true);
@@ -259,6 +293,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: () => _loadDeities(force: true),
+                          style: TextButton.styleFrom().copyWith(
+                            mouseCursor: _cmsButtonClickCursor,
+                          ),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -470,8 +507,9 @@ class _SmBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return _cmsClickableInk(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
@@ -1145,7 +1183,7 @@ class _DeityFormState extends State<_DeityForm> {
         children: [
           Row(
             children: [
-              GestureDetector(
+              _cmsClickable(
                 onTap: widget.onCancel,
                 child: Container(
                   padding: const EdgeInsets.all(8),
@@ -1237,6 +1275,9 @@ class _DeityFormState extends State<_DeityForm> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _isSaving ? null : widget.onCancel,
+                  style: OutlinedButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
                   child: const Text('Cancel'),
                 ),
               ),
@@ -1249,7 +1290,7 @@ class _DeityFormState extends State<_DeityForm> {
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: CmsColors.orange.withOpacity(0.6),
                     disabledForegroundColor: Colors.white,
-                  ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   child: _isSaving
                       ? const SizedBox(
                           width: 18,
@@ -1406,7 +1447,7 @@ class _KeyValueEditor extends StatelessWidget {
             ),
             Tooltip(
               message: showEditor ? 'Hide entry form' : 'Show entry form',
-              child: GestureDetector(
+              child: _cmsClickable(
                 onTap: onToggle,
                 child: Container(
                   width: 34,
@@ -1455,7 +1496,7 @@ class _KeyValueEditor extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: const Text('Add entry'),
             ),
           ),
@@ -1499,7 +1540,7 @@ class _KeyValueEditor extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  GestureDetector(
+                  _cmsClickable(
                     onTap: () => onRemove(entry.key),
                     child: Icon(
                       Icons.close,
@@ -1621,7 +1662,7 @@ class _InputRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        GestureDetector(
+        _cmsClickable(
           onTap: onAdd,
           child: Container(
             width: 40,
@@ -1670,7 +1711,7 @@ class _LineChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
+          _cmsClickable(
             onTap: onRemove,
             child: Icon(
               Icons.close,
@@ -1722,7 +1763,7 @@ class _MultiSelectPickerField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        InkWell(
+        _cmsClickableInk(
           onTap: () async {
             final current = List<String>.from(selectedValues);
             final picked = await showModalBottomSheet<List<String>>(
@@ -1752,6 +1793,9 @@ class _MultiSelectPickerField extends StatelessWidget {
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(temp),
+                                  style: TextButton.styleFrom().copyWith(
+                                    mouseCursor: _cmsButtonClickCursor,
+                                  ),
                                   child: const Text('Done'),
                                 ),
                               ],
@@ -1859,7 +1903,7 @@ class _CompactChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
+          _cmsClickable(
             onTap: onRemove,
             child: Icon(
               Icons.close,
@@ -1965,7 +2009,7 @@ class _DeityColorField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        GestureDetector(
+        _cmsClickable(
           onTap: () => _openPicker(context),
           child: Container(
             height: 42,
@@ -2010,7 +2054,7 @@ class _DeityColorField extends StatelessWidget {
                   ),
                 ),
                 if (hasColor)
-                  GestureDetector(
+                  _cmsClickable(
                     onTap: () => onChanged(null),
                     child: const Padding(
                       padding: EdgeInsets.all(4),
@@ -2131,7 +2175,7 @@ class _CmsColorPickerDialogState extends State<_CmsColorPickerDialog> {
               runSpacing: 8,
               children: _presetDeityColors.map((color) {
                 final selected = _colorToHex(color) == _colorToHex(_selected);
-                return GestureDetector(
+                return _cmsClickable(
                   onTap: () => _setColor(color),
                   child: Container(
                     width: 28,
@@ -2206,6 +2250,9 @@ class _CmsColorPickerDialogState extends State<_CmsColorPickerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom().copyWith(
+            mouseCursor: _cmsButtonClickCursor,
+          ),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
@@ -2214,7 +2261,7 @@ class _CmsColorPickerDialogState extends State<_CmsColorPickerDialog> {
             backgroundColor: CmsColors.orange,
             foregroundColor: Colors.white,
             elevation: 0,
-          ),
+          ).copyWith(mouseCursor: _cmsButtonClickCursor),
           child: const Text('Select'),
         ),
       ],

@@ -6,6 +6,25 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_co
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsUsersContent extends StatefulWidget {
   const CmsUsersContent({super.key});
 
@@ -56,7 +75,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: _ctrl.loadRegularUsers,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -278,6 +297,9 @@ class _UsersTable extends StatelessWidget {
                                   Tooltip(
                                     message: 'View Profile',
                                     child: IconButton(
+                                      style: IconButton.styleFrom().copyWith(
+                                        mouseCursor: _cmsButtonClickCursor,
+                                      ),
                                       icon: const Icon(
                                         Icons.visibility_outlined,
                                         size: 18,
@@ -348,7 +370,7 @@ class _UsersTable extends StatelessWidget {
                     // Close button top-right
                     Align(
                       alignment: Alignment.topRight,
-                      child: GestureDetector(
+                      child: _cmsClickable(
                         onTap: () => Navigator.pop(ctx),
                         child: Container(
                           padding: const EdgeInsets.all(4),
@@ -882,20 +904,23 @@ class _UsersPagerBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: enabled ? onTap : null,
-    child: Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: enabled ? CmsColors.white : CmsColors.bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: CmsColors.border),
-      ),
-      child: Icon(
-        icon,
-        size: 18,
-        color: enabled ? CmsColors.textPrimary : CmsColors.textSecond,
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: enabled ? CmsColors.white : CmsColors.bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? CmsColors.textPrimary : CmsColors.textSecond,
+        ),
       ),
     ),
   );
@@ -913,7 +938,7 @@ class _UsersPageNumberBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
     onTap: onTap,
     child: Container(
       width: 32,

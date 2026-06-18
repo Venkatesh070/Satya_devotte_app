@@ -38,6 +38,7 @@ class AuthController extends GetxController {
   final _lastAuthError = RxnString();
   final _userRole = RxString('user');
   final _isAuthLoading = false.obs;
+  final _sessionUser = Rxn<Map<String, dynamic>>();
   bool _authApiInFlight = false;
 
   bool get isAuthenticated => _isAuthenticated.value;
@@ -51,6 +52,59 @@ class AuthController extends GetxController {
   bool get isSuperAdmin => _userRole.value == 'superadmin';
   bool get isAdmin => _userRole.value == 'admin' || isSuperAdmin;
   bool get isRegularUser => _userRole.value == 'user';
+
+  /// Backend user payload from the latest login / restored session.
+  Map<String, dynamic>? get sessionUser => _sessionUser.value;
+
+  /// Display name from admin login response (`fullName`, `name`, etc.).
+  String get displayName =>
+      ProfileController.displayNameFromUserMap(sessionUser);
+
+  /// First letter for avatar chips in CMS chrome.
+  String get displayInitial {
+    final name = displayName;
+    if (name.isNotEmpty && name != 'User') {
+      return name[0].toUpperCase();
+    }
+    return isSuperAdmin ? 'S' : 'A';
+  }
+
+  String get displayEmail {
+    final u = sessionUser;
+    if (u == null) return '';
+    final email = u['email']?.toString().trim();
+    return (email != null && email.isNotEmpty) ? email : '';
+  }
+
+  String get displayPhone {
+    final u = sessionUser;
+    if (u == null) return '';
+    for (final key in ['phoneNumber', 'phone', 'mobile']) {
+      final value = u[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  /// Hover tooltip for CMS avatar / name (email + phone from login response).
+  String get contactHoverText {
+    final lines = <String>[];
+    if (displayEmail.isNotEmpty) lines.add('Email: $displayEmail');
+    if (displayPhone.isNotEmpty) lines.add('Phone: $displayPhone');
+    if (lines.isEmpty) return displayName;
+    return lines.join('\n');
+  }
+
+  void _syncSessionUser() {
+    final data = _authSessionService.userData;
+    _sessionUser.value =
+        data == null ? null : Map<String, dynamic>.from(data);
+  }
+
+  Future<void> _clearAuthSession() async {
+    await _authSessionService.clear();
+    _syncSessionUser();
+  }
 
   /// `false` when the backend login response requires profile completion.
   bool get isProfileRegistrationComplete {
@@ -100,6 +154,7 @@ class AuthController extends GetxController {
     if (restored) {
       _isAuthenticated.value = true;
       _userRole.value = _authSessionService.userRole;
+      _syncSessionUser();
       // Re-register the device with the backend on a cold start so any
       // tokens that rotated while the app was closed get reconciled.
       await _registerDeviceForPush();
@@ -235,6 +290,7 @@ class AuthController extends GetxController {
       refreshToken: loginResult.refreshToken,
       userData: user,
     );
+    _syncSessionUser();
     _applyRole(user);
     _isAuthenticated.value = true;
     await _registerDeviceForPush();
@@ -267,6 +323,7 @@ class AuthController extends GetxController {
       refreshToken: refresh,
       userData: user,
     );
+    _syncSessionUser();
   }
 
   // ─── Google Sign-In ──────────────────────────────────────────
@@ -296,7 +353,7 @@ class AuthController extends GetxController {
       await persistLoginResult(loginResult);
       return true;
     } catch (error) {
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
@@ -363,13 +420,14 @@ class AuthController extends GetxController {
         refreshToken: loginResult.refreshToken,
         userData: loginResult.user,
       );
+      _syncSessionUser();
       _applyRole(loginResult.user);
       _isAuthenticated.value = true;
       await _registerDeviceForPush();
       _refreshProfileControllerAfterAuth();
       return true;
     } catch (error) {
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
@@ -421,7 +479,7 @@ class AuthController extends GetxController {
       await _markProfileRegisteredInSession();
       navigateAfterLogin();
     } catch (error) {
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
@@ -455,7 +513,7 @@ class AuthController extends GetxController {
       _pendingProfileData = null;
       Get.to(() => const EmailVerificationPage());
     } catch (error) {
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
@@ -519,7 +577,7 @@ class AuthController extends GetxController {
       _pendingProfileData = profileData;
       Get.to(() => const EmailVerificationPage());
     } catch (error) {
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
       await _firebaseService.signOut();
       _isAuthenticated.value = false;
@@ -600,7 +658,7 @@ class AuthController extends GetxController {
     // ── Local session + Firebase ────────────────────────────────────
     _isAuthenticated.value = false;
     _userRole.value = 'user';
-    await _authSessionService.clear();
+    await _clearAuthSession();
     _clearProfileControllerCache();
     _clearCartOnLogout();
 
@@ -644,7 +702,7 @@ class AuthController extends GetxController {
 
       _isAuthenticated.value = false;
       _userRole.value = 'user';
-      await _authSessionService.clear();
+      await _clearAuthSession();
       _clearProfileControllerCache();
 
       try {

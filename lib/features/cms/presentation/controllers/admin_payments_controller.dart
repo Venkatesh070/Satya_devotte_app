@@ -71,6 +71,12 @@ class AdminPaymentsController extends GetxController {
     _load(page: 1);
   }
 
+  /// Clears search when the CMS tab is opened again after navigating away.
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await _load(page: 1);
+  }
+
   void setLimit(int v) {
     if (v <= 0 || v == _limit.value) return;
     _limit.value = v;

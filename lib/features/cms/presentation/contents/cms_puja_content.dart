@@ -11,6 +11,25 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 // ════════════════════════════════════════════════════════════════
 // CMS RITUALS CONTENT — main widget
 // Uses the real PoojaController registered in InitialBinding
@@ -194,7 +213,7 @@ class _PoojaList extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: controller.loadPoojas,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -231,7 +250,7 @@ class _PoojaList extends StatelessWidget {
               () => Row(
                 children: _filters.map((f) {
                   final isSel = controller.filter == f;
-                  return GestureDetector(
+                  return _cmsClickable(
                     onTap: () => controller.setFilter(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -466,6 +485,9 @@ class _PoojaList extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -485,7 +507,7 @@ class _PoojaList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -561,6 +583,9 @@ class _PoojaList extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -591,7 +616,7 @@ class _PoojaList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -1438,7 +1463,7 @@ class _PoojaFormState extends State<_PoojaForm> {
             // Back + title
             Row(
               children: [
-                GestureDetector(
+                _cmsClickable(
                   onTap: widget.onCancel,
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -1473,7 +1498,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: CmsColors.orange.withOpacity(0.45)),
                     foregroundColor: CmsColors.orangeDark,
-                  ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
                 ),
               ],
             ),
@@ -1675,7 +1700,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                 ),
               ),
               const SizedBox(height: 6),
-              GestureDetector(
+              _cmsClickable(
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -1732,7 +1757,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                       ),
                       const Spacer(),
                       if (_selectedDate != null)
-                        GestureDetector(
+                        _cmsClickable(
                           onTap: () => setState(() => _selectedDate = null),
                           child: const Icon(
                             Icons.close,
@@ -2114,7 +2139,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                   ),
                 ),
               ),
-              GestureDetector(
+              _cmsClickable(
                 onTap: () => setState(() => _showStepEditor = !_showStepEditor),
                 child: Container(
                   width: 34,
@@ -2153,6 +2178,9 @@ class _PoojaFormState extends State<_PoojaForm> {
                 onPressed: _addStepEntry,
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Add Step'),
+                style: OutlinedButton.styleFrom().copyWith(
+                  mouseCursor: _cmsButtonClickCursor,
+                ),
               ),
             ),
           ],
@@ -2533,7 +2561,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: const Text(
                 'Cancel',
                 style: TextStyle(color: CmsColors.textSecond),
@@ -2550,7 +2578,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: Text(
                 'Save Draft',
                 style: TextStyle(
@@ -2573,7 +2601,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 elevation: 0,
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: loading
                   ? const SizedBox(
                       width: 18,
@@ -2641,7 +2669,7 @@ class _KeyValueEditor extends StatelessWidget {
               ),
             ),
           ),
-          GestureDetector(
+          _cmsClickable(
             onTap: onToggle,
             child: Container(
               width: 34,
@@ -2680,6 +2708,9 @@ class _KeyValueEditor extends StatelessWidget {
             onPressed: onAdd,
             icon: const Icon(Icons.add, size: 16),
             label: const Text('Add'),
+            style: OutlinedButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
           ),
         ),
       ],
@@ -2747,7 +2778,7 @@ class _InputRow extends StatelessWidget {
         ),
       ),
       const SizedBox(width: 8),
-      GestureDetector(
+      _cmsClickable(
         onTap: onAdd,
         child: Container(
           width: 40,
@@ -2792,7 +2823,7 @@ class _Chip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 5),
-          GestureDetector(
+          _cmsClickable(
             onTap: onRemove,
             child: const Icon(
               Icons.close,
@@ -2839,7 +2870,7 @@ class _LineChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
+          _cmsClickable(
             onTap: onRemove,
             child: const Icon(
               Icons.close,
@@ -2920,7 +2951,7 @@ class _StepRow extends StatelessWidget {
               ),
             ),
           ),
-          GestureDetector(
+          _cmsClickable(
             onTap: onRemove,
             child: const Icon(Icons.close, size: 16, color: Colors.grey),
           ),
@@ -2937,7 +2968,7 @@ class _SmBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

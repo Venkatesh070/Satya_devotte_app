@@ -11,6 +11,25 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsFestivalsContent extends StatefulWidget {
   const CmsFestivalsContent({super.key});
 
@@ -188,7 +207,7 @@ class _FestivalList extends StatelessWidget {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: ctrl.loadFestivals,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -225,7 +244,7 @@ class _FestivalList extends StatelessWidget {
               () => Row(
                 children: _filters.map((f) {
                   final isSel = ctrl.filter == f;
-                  return GestureDetector(
+                  return _cmsClickable(
                     onTap: () => ctrl.setFilter(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -339,7 +358,7 @@ class _FestivalList extends StatelessWidget {
                     () => Row(
                       children: List.generate(12, (i) {
                         final isSel = ctrl.selectedMonth == i + 1;
-                        return GestureDetector(
+                        return _cmsClickable(
                           onTap: () => ctrl.setMonth(i + 1),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
@@ -527,6 +546,9 @@ class _FestivalList extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -546,7 +568,7 @@ class _FestivalList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -626,6 +648,9 @@ class _FestivalList extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(color: CmsColors.textSecond),
@@ -656,7 +681,7 @@ class _FestivalList extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],
       ),
@@ -903,7 +928,7 @@ class _SmBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _cmsClickable(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1112,7 +1137,7 @@ class _FestivalFormState extends State<_FestivalForm> {
           children: [
             Row(
               children: [
-                GestureDetector(
+                _cmsClickable(
                   onTap: widget.onCancel,
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -1349,7 +1374,7 @@ class _FestivalFormState extends State<_FestivalForm> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: const Text(
                 'Cancel',
                 style: TextStyle(color: CmsColors.textSecond),
@@ -1369,7 +1394,7 @@ class _FestivalFormState extends State<_FestivalForm> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 elevation: 0,
-              ),
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: loading
                   ? const SizedBox(
                       width: 18,
@@ -1422,7 +1447,7 @@ class _DatePickerField extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 6),
-      GestureDetector(
+      _cmsClickable(
         onTap: onTap,
         child: Container(
           height: 44,
@@ -1513,7 +1538,7 @@ class _PoojaPickerField extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        GestureDetector(
+        _cmsClickable(
           onTap: () => _showPoojaSelector(context),
           child: Container(
             width: double.infinity,

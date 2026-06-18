@@ -162,7 +162,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                 children: [
                   Expanded(
                     child: _StatusCard(
-                      title: 'Poojas',
+                      title: 'Pujas',
                       icon: Icons.self_improvement,
                       color: const Color(0xFF9C27B0),
                       approved: poojas['APPROVED'] as int? ?? 0,
@@ -198,7 +198,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
               Column(
                 children: [
                   _StatusCard(
-                    title: 'Poojas',
+                    title: 'Pujas',
                     icon: Icons.self_improvement,
                     color: const Color(0xFF9C27B0),
                     approved: poojas['APPROVED'] as int? ?? 0,
@@ -547,9 +547,9 @@ class _TodaySlokaCard extends StatefulWidget {
 }
 
 class _TodaySlokaCardState extends State<_TodaySlokaCard> {
-  int _selectedTab = -1; // -1 Sloka, 0 Meaning, 1 Contemplation, 2 Prayer
+  int _selectedTab = -1; // -1 hidden, 0 Meaning, 1 Contemplation, 2 Prayer
 
-  String _tabText() {
+  String _secondaryText() {
     switch (_selectedTab) {
       case 1:
         return (widget.sloka['contemplation'] as String? ?? '').trim();
@@ -561,14 +561,34 @@ class _TodaySlokaCardState extends State<_TodaySlokaCard> {
     }
   }
 
+  Widget _slokaTextBox(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Text(
+        text.isNotEmpty ? text : '—',
+        style: const TextStyle(
+          fontSize: 15,
+          color: Colors.white,
+          height: 1.7,
+          fontWeight: FontWeight.w400,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final fallback = (widget.sloka['sloka'] as String? ?? '').trim();
-    final text = _selectedTab == -1
-        ? fallback
-        : (_tabText().isNotEmpty ? _tabText() : fallback);
+    final shlokaText = (widget.sloka['sloka'] as String? ?? '').trim();
     final author = widget.sloka['author'] as String? ?? '';
     final date = widget.sloka['dateKey'] as String? ?? '';
+    final showSecondary = _selectedTab >= 0;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -635,25 +655,11 @@ class _TodaySlokaCardState extends State<_TodaySlokaCard> {
             ],
           ),
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.white,
-                height: 1.7,
-                fontWeight: FontWeight.w400,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
+          _slokaTextBox(shlokaText),
+          if (showSecondary) ...[
+            const SizedBox(height: 10),
+            _slokaTextBox(_secondaryText()),
+          ],
           if (author.isNotEmpty) ...[
             const SizedBox(height: 10),
             Row(
@@ -725,37 +731,40 @@ class _SlokaActionBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: selected ? Colors.white.withOpacity(0.35) : Colors.white.withOpacity(0.12),
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? Colors.white.withOpacity(0.35) : Colors.white.withOpacity(0.12),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: selected ? CmsColors.orange : Colors.white70,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              color: selected ? Colors.white : Colors.white70,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? CmsColors.orange : Colors.white70,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                color: selected ? Colors.white : Colors.white70,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -777,31 +786,34 @@ class _QuickAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

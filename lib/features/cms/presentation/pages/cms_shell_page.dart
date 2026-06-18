@@ -30,6 +30,7 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_inventory_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
@@ -138,9 +139,19 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     });
     // Tab switches only update local state so the shell (and sidebar scroll
     // position) are not recreated via Get.offNamed on every menu click.
+    if (index == _NavIds.poojaKitOrders &&
+        Get.isRegistered<AdminOrdersController>()) {
+      unawaited(Get.find<AdminOrdersController>().resetSearchOnTabFocus());
+    }
     if (index == _NavIds.poojaKitRefunds &&
         Get.isRegistered<AdminOrderRequestsController>()) {
-      Get.find<AdminOrderRequestsController>().refresh();
+      unawaited(
+        Get.find<AdminOrderRequestsController>().resetSearchOnTabFocus(),
+      );
+    }
+    if (index == _NavIds.poojaKitPayments &&
+        Get.isRegistered<AdminPaymentsController>()) {
+      unawaited(Get.find<AdminPaymentsController>().resetSearchOnTabFocus());
     }
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
@@ -304,17 +315,22 @@ class _MobileLayout extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Obx(
-            () => Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white.withOpacity(0.3),
-                child: Text(
-                  auth.isSuperAdmin ? 'S' : 'A',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+            () => Tooltip(
+              message: auth.contactHoverText,
+              preferBelow: false,
+              waitDuration: const Duration(milliseconds: 300),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white.withOpacity(0.3),
+                  child: Text(
+                    auth.displayInitial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
@@ -361,7 +377,7 @@ class _Sidebar extends StatelessWidget {
         children: [
           // ── Logo area ───────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
             child: Row(
               children: [
                 // Satya app logo — same image used on mobile
@@ -392,7 +408,7 @@ class _Sidebar extends StatelessWidget {
                   'Sathya',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -984,30 +1000,36 @@ class _WebTopBar extends StatelessWidget {
           const SizedBox(width: 12),
           // Avatar
           Obx(
-            () => Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: CmsColors.orange,
-                  child: Text(
-                    auth.isSuperAdmin ? 'S' : 'A',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+            () => Tooltip(
+              message: auth.contactHoverText,
+              preferBelow: false,
+              waitDuration: const Duration(milliseconds: 300),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: CmsColors.orange,
+                    child: Text(
+                      auth.displayInitial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  auth.isSuperAdmin ? 'Sathya' : 'Admin',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CmsColors.textPrimary,
+                  const SizedBox(width: 8),
+                  Text(
+                    auth.displayName,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: CmsColors.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1080,7 +1102,7 @@ class _NavIds {
 }
 
 const String _poojaKitGroupLabel = 'Ecommerce';
-const String _donationsGroupLabel = 'Donations';
+const String _donationsGroupLabel = 'Contributions';
 
 List<_NavEntry> _navItems(bool isSuperAdmin) => [
   const _NavEntry(
@@ -1119,7 +1141,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     activeIcon: Icons.volunteer_activism,
     children: [
       _NavEntry(
-        label: 'All Donations',
+        label: 'All Contributions',
         icon: Icons.list_alt_outlined,
         activeIcon: Icons.list_alt,
         index: _NavIds.donationsAll,
@@ -1164,7 +1186,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     ],
   ),
   const _NavEntry(
-    label: 'Notifications',
+    label: 'Send Notifications',
     icon: Icons.notifications_outlined,
     activeIcon: Icons.notifications,
     index: _NavIds.notifications,

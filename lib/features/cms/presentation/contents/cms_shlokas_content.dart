@@ -8,6 +8,25 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_co
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
+
 class CmsShlokaContent extends StatefulWidget {
   const CmsShlokaContent({super.key});
 
@@ -67,7 +86,7 @@ class _CmsShlokaContentState extends State<CmsShlokaContent> {
                           color: CmsColors.orange,
                         ),
                       )
-                    : GestureDetector(
+                    : _cmsClickable(
                         onTap: _ctrl.loadAll,
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -100,7 +119,7 @@ class _CmsShlokaContentState extends State<CmsShlokaContent> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                  ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
                 ),
               ),
               const SizedBox(width: 10),
@@ -193,7 +212,7 @@ class _DateSelector extends StatelessWidget {
     final d = ctrl.selectedDate;
     final display = SlokaModel.formatDate(d); // DD-MM-YYYY
 
-    return GestureDetector(
+    return _cmsClickable(
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
@@ -342,7 +361,7 @@ class _SlokaCard extends StatelessWidget {
                 ),
               ),
               if (sloka != null)
-                GestureDetector(
+                _cmsClickable(
                   onTap: onEdit,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -501,7 +520,7 @@ class _RecentList extends StatelessWidget {
             ...ctrl.slokas
                 .take(10)
                 .map(
-                  (s) => GestureDetector(
+                  (s) => _cmsClickable(
                     onTap: () {
                       try {
                         final p = s.date.split('-');
@@ -689,7 +708,7 @@ class _SlokaFormState extends State<_SlokaForm> {
             // Back + title
             Row(
               children: [
-                GestureDetector(
+                _cmsClickable(
                   onTap: widget.onCancel,
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -803,7 +822,7 @@ class _SlokaFormState extends State<_SlokaForm> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: const Text(
                       'Cancel',
                       style: TextStyle(color: CmsColors.textSecond),
@@ -823,7 +842,7 @@ class _SlokaFormState extends State<_SlokaForm> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 0,
-                    ),
+                    ).copyWith(mouseCursor: _cmsButtonClickCursor),
                     child: loading
                         ? const SizedBox(
                             width: 18,

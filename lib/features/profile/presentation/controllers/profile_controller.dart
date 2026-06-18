@@ -49,9 +49,20 @@ class ProfileController extends GetxController {
       return email.substring(0, at);
     }
 
+    String? fromNestedMap(dynamic nested) {
+      if (nested is! Map<String, dynamic>) return null;
+      return t(nested['fullName']) ??
+          t(nested['name']) ??
+          t(nested['displayName']) ??
+          t(nested['userName']);
+    }
+
     return t(u['fullName']) ??
         t(u['name']) ??
         t(u['displayName']) ??
+        t(u['userName']) ??
+        fromNestedMap(u['profile']) ??
+        fromNestedMap(u['details']) ??
         fromFirstLast() ??
         fromEmail() ??
         'User';

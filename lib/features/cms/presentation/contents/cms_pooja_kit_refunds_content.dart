@@ -13,12 +13,61 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart'
     show CmsKitOrderDateCell, OrderStatusBadge, PaymentStatusBadge;
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
+
+Widget _cmsClickable({
+  required VoidCallback onTap,
+  required Widget child,
+  HitTestBehavior behavior = HitTestBehavior.deferToChild,
+}) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableInk({
+  required VoidCallback? onTap,
+  required Widget child,
+  BorderRadius? borderRadius,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
+}
+
+Widget _cmsClickableOptional({
+  required VoidCallback? onTap,
+  required Widget child,
+}) {
+  return MouseRegion(
+    cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+    child: GestureDetector(
+      onTap: onTap,
+      child: child,
+    ),
+  );
+}
+
+const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
+  SystemMouseCursors.click,
+);
 
 class CmsPoojaKitRefundsContent extends StatelessWidget {
   const CmsPoojaKitRefundsContent({super.key});
@@ -54,14 +103,6 @@ class _RequestsListView extends StatelessWidget {
           subtitle:
               'Review replacement requests from devotees. Approve to create a '
               'linked replacement order, or reject with a note.',
-          trailing: IconButton(
-            tooltip: 'Refresh',
-            onPressed: controller.refresh,
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: CmsColors.textPrimary,
-            ),
-          ),
         ),
         const Divider(height: 1, color: CmsColors.border),
         _FiltersBar(controller: controller),
@@ -73,9 +114,33 @@ class _RequestsListView extends StatelessWidget {
   }
 }
 
-class _FiltersBar extends StatelessWidget {
+class _FiltersBar extends StatefulWidget {
   const _FiltersBar({required this.controller});
   final AdminOrderRequestsController controller;
+
+  @override
+  State<_FiltersBar> createState() => _FiltersBarState();
+}
+
+class _FiltersBarState extends State<_FiltersBar> {
+  late final TextEditingController _search;
+  late final CmsSearchScheduler _searchScheduler;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController(text: widget.controller.search);
+    _searchScheduler = CmsSearchScheduler(
+      onSearch: widget.controller.setSearch,
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,9 +158,95 @@ class _FiltersBar extends StatelessWidget {
             () => _Pills(
               label: 'Status',
               options: AdminOrderRequestsController.statusFilters,
-              selected: controller.status,
-              onSelect: controller.setStatusFilter,
+              selected: widget.controller.status,
+              onSelect: widget.controller.setStatusFilter,
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: TextField(
+                    controller: _search,
+                    onSubmitted: _searchScheduler.searchNow,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Search by order number…',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFAAAAAA),
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              style: IconButton.styleFrom().copyWith(
+                                mouseCursor: _cmsButtonClickCursor,
+                              ),
+                              icon: const Icon(Icons.close, size: 16),
+                              onPressed: () {
+                                _search.clear();
+                                _searchScheduler.searchNow('');
+                                setState(() {});
+                              },
+                            ),
+                      filled: true,
+                      fillColor: CmsColors.bg,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: CmsColors.orange),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      setState(() {});
+                      _searchScheduler.onQueryChanged(v);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Obx(
+                () => IconButton(
+                  tooltip: 'Reload',
+                  style: IconButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
+                  onPressed: widget.controller.isLoading
+                      ? null
+                      : widget.controller.refresh,
+                  icon: widget.controller.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh,
+                          size: 20,
+                          color: CmsColors.textSecond,
+                        ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -164,7 +315,7 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -259,7 +410,7 @@ class _ReplacementsTable extends StatelessWidget {
             const _ReqTableHeader(columns: _kReplacementTableColumns),
             const Divider(height: 1, color: CmsColors.border),
             for (final r in requests)
-              InkWell(
+              _cmsClickableInk(
                 onTap: () => controller.openRequest(r.id),
                 child: _ReplacementTableRow(
                   request: r,
@@ -453,11 +604,17 @@ class _PaginationBar extends StatelessWidget {
             ),
             const Spacer(),
             IconButton(
+              style: IconButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               tooltip: 'Previous',
               onPressed: controller.page > 1 ? controller.prevPage : null,
               icon: const Icon(Icons.chevron_left_rounded),
             ),
             IconButton(
+              style: IconButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
               tooltip: 'Next',
               onPressed: controller.page < controller.totalPages
                   ? controller.nextPage
@@ -539,6 +696,9 @@ class _DetailHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
+            style: IconButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             tooltip: 'Back',
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: controller.closeDetail,
@@ -569,6 +729,9 @@ class _DetailHeader extends StatelessWidget {
             ),
           ),
           IconButton(
+            style: IconButton.styleFrom().copyWith(
+              mouseCursor: _cmsButtonClickCursor,
+            ),
             tooltip: 'Refresh',
             onPressed: controller.fetchDetail,
             icon: const Icon(Icons.refresh_rounded),
@@ -715,7 +878,7 @@ class _AttachmentsCard extends StatelessWidget {
           runSpacing: 10,
           children: [
             for (final url in attachments)
-              GestureDetector(
+              _cmsClickable(
                 onTap: () => _openUrl(url),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -984,7 +1147,7 @@ Future<void> _showDecisionDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-            ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             onPressed: () async {
               Navigator.pop(dialogContext);
               await onSubmit(
@@ -1094,7 +1257,7 @@ class _OutlinedAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
