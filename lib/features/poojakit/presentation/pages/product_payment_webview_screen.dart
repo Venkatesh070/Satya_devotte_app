@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/order_init_data.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 
 class ProductPaymentWebViewScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _ProductPaymentWebViewScreenState
     extends State<ProductPaymentWebViewScreen>
     with WidgetsBindingObserver {
   late final PoojaKitCheckoutController _ctrl;
+  late final CartController _cartCtrl;
   OrderInitData? _init;
 
   WebViewController? _webview;
@@ -50,6 +52,7 @@ class _ProductPaymentWebViewScreenState
     }
     _init = arg;
     _ctrl = Get.find<PoojaKitCheckoutController>();
+    _cartCtrl = Get.find<CartController>();
     WidgetsBinding.instance.addObserver(this);
     if (kIsWeb) {
       _launchWebPopup();
@@ -165,6 +168,7 @@ class _ProductPaymentWebViewScreenState
     }
     if (r.isPaid) {
       _completed = true;
+      await _cartCtrl.clearCart();
       Get.offNamed(AppRoutes.poojaKitOrderSuccess, arguments: r);
     } else if (_isTerminalVerify(r)) {
       _completed = true;

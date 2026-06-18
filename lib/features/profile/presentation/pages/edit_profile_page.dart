@@ -174,44 +174,45 @@ class _EditProfilePageState extends State<EditProfilePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-        child: SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _pickImageFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Take Photo'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _pickImageFromCamera();
-                },
-              ),
-              if (hasImage)
+      builder: (ctx) => Material(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: SafeArea(
+            child: Wrap(
+              children: [
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text(
-                    'Delete Photo',
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Choose from Gallery'),
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    _deleteProfilePicture();
+                    _pickImageFromGallery();
                   },
                 ),
-            ],
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Take Photo'),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _pickImageFromCamera();
+                  },
+                ),
+                if (hasImage)
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                    title: const Text(
+                      'Delete Photo',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _deleteProfilePicture();
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -101,7 +101,6 @@ class CartScreen extends StatelessWidget {
       shippingAddress: address,
     );
     if (init != null) {
-      await cartCtrl.clearCart();
       Get.toNamed(AppRoutes.poojaKitPayment, arguments: init);
       return;
     }

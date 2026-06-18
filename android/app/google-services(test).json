@@ -14,27 +14,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "1053803605697-08ffqoh0298iim8r0s9j1v8e1jcqdgem.apps.googleusercontent.com",
+          "client_id": "1053803605697-9heqrgj4kqgk98cqgl9ag1hiop16ck3u.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.satya_devotte_app",
-            "certificate_hash": "a390b044c3513189f3eb69c3f68926bcace041dd"
+            "certificate_hash": "4d447abb21398544357beaae50def9455dc779d4"
           }
         },
         {
-          "client_id": "1053803605697-minjpob41bvbunkbjqj447rk1602m0rf.apps.googleusercontent.com",
+          "client_id": "1053803605697-gprltm02l8a8elktar2af8el9kqqoojc.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.satya_devotte_app",
-            "certificate_hash": "2436c8d34b61d8606230f73ac0b9ced00dd3afa4"
-          }
-        },
-        {
-          "client_id": "1053803605697-sodmaguuu1isirhmabemu22ji2843k4d.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.satya_devotte_app",
-            "certificate_hash": "16ff46ea614b854810e1195452b71e436ccf8e17"
+            "certificate_hash": "0ebb22dd03384a58897eb61eb86d3ea8d7b5c34e"
           }
         },
         {
@@ -53,6 +45,13 @@
             {
               "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sathyaApp"
+              }
             }
           ]
         }

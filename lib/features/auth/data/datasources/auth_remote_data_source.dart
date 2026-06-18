@@ -31,9 +31,10 @@ class AuthRemoteDataSource {
   Future<void> upsertProfile(Map<String, dynamic> profileData) async {
     final formDataMap = <String, dynamic>{};
     profileData.forEach((key, value) {
-      if (value == null) {
-        if (key == 'image' || key == 'profileImage' || key == 'imageUrl') {
-          formDataMap[key] = null;
+      if (value == null || (value is String && value.trim().isEmpty)) {
+        if (key == 'image' || key == 'profileImage' || key == 'imageUrl' || key == 'profileImageUrl') {
+          // Send as is (either null or empty string)
+          formDataMap[key] = value;
         }
         return;
       }
@@ -66,9 +67,10 @@ class AuthRemoteDataSource {
   Future<void> updateProfile(Map<String, dynamic> profileData) async {
     final formDataMap = <String, dynamic>{};
     profileData.forEach((key, value) {
-      if (value == null) {
-        if (key == 'image' || key == 'profileImage' || key == 'imageUrl') {
-          formDataMap[key] = null;
+      if (value == null || (value is String && value.trim().isEmpty)) {
+        if (key == 'image' || key == 'profileImage' || key == 'imageUrl' || key == 'profileImageUrl') {
+          // Send as is (either null or empty string)
+          formDataMap[key] = value;
         }
         return;
       }

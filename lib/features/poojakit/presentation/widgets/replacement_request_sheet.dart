@@ -80,38 +80,39 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-        child: SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text(
-                  'Choose from Gallery',
-                  style: TextStyle(color: Colors.white),
+      builder: (ctx) => Material(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: SafeArea(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Colors.white),
+                  title: const Text(
+                    'Choose from Gallery',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _pickFromGallery();
+                  },
                 ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _pickFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text(
-                  'Take Photo',
-                  style: TextStyle(color: Colors.white),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.white),
+                  title: const Text(
+                    'Take Photo',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _takeFromCamera();
+                  },
                 ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _takeFromCamera();
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -5,7 +5,7 @@ class AppEnv {
   /// Keep [config/app_env.default] in sync for native-only builds without dart-defines.
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'prod',
+    defaultValue: 'test',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -27,14 +27,13 @@ class AppEnv {
         : _testFirebaseVapidKey,
   );
 
-
   /// Rough sanity check — invalid keys cause PushManager subscribe errors.
   static bool get hasPlausibleFirebaseVapidKey {
     final k = firebaseVapidKey.trim();
     return k.length >= 80 && !k.contains(' ');
   }
-  static const String _productionApiBaseUrl =
-      'https://api.sathya.co.za';
+
+  static const String _productionApiBaseUrl = 'https://api.sathya.co.za';
   static const String _testApiBaseUrl = 'https://api-test.sathya.co.za';
   static const String _uatApiBaseUrl = 'https://satya-server-app.onrender.com';
 

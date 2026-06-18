@@ -113,7 +113,8 @@ class ProfileController extends GetxController {
     await _authSessionService.getUserData();
     if (_authSessionService.isAdmin) return true;
 
-    if (Get.isRegistered<AuthController>() && Get.find<AuthController>().isAdmin) {
+    if (Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isAdmin) {
       return true;
     }
 
@@ -142,16 +143,6 @@ class ProfileController extends GetxController {
 
   Future<void> loadProfile() async {
     if (await _shouldSkipProfileApi()) return;
-
-    // ── DEBUG: Print Bearer Token for manual API testing ──
-    if (kDebugMode) {
-      final token = await _authSessionService.getAccessToken();
-      print('╔══════════════════════════════════════════════════════════╗');
-      print('║             CURRENT USER BEARER TOKEN                    ║');
-      print('╠══════════════════════════════════════════════════════════╣');
-      print('  $token');
-      print('╚══════════════════════════════════════════════════════════╝');
-    }
 
     _isLoading.value = true;
     _error.value = null;
