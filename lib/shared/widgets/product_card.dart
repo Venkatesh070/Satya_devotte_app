@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -55,9 +56,7 @@ class ProductCard extends StatelessWidget {
                             placeholder: (context, url) => Container(
                               color: Colors.grey[200],
                               child: const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: ChakraLoadingIndicator(size: 22),
                               ),
                             ),
                             errorWidget: (context, url, error) => Container(

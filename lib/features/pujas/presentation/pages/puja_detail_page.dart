@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:video_player/video_player.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
@@ -568,19 +569,14 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     if (p == null) return;
     final d = p['deity'];
 
-    // If it's already a map with detailed info, skip!
-    if (d is Map) {
-      final stories = d['stories'];
-      final sections = d['sections'];
-      final hasDetailedInfo =
-          (stories is List && stories.isNotEmpty) ||
-          (sections is List && sections.isNotEmpty);
-      if (hasDetailedInfo) return;
-    }
-
-    // Get deity ID!
-    final id = d is String ? d : (d is Map ? (d['_id'] ?? d['id']) : null);
-    if (id is! String || id.isEmpty) return;
+    // Get deity ID from populated field or pooja reference.
+    final rawId = d is String
+        ? d
+        : (d is Map ? (d['_id'] ?? d['id']) : null) ??
+              p['deityId'] ??
+              p['deity_id'];
+    final id = rawId?.toString().trim() ?? '';
+    if (id.isEmpty) return;
 
     // Verify it's a valid ObjectID!
     final isObjectId =
@@ -591,77 +587,69 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final deityCacheKey = 'deity_detail_$id';
     final ritualsCacheKey = 'deity_rituals_$id';
 
-    // FIRST: TRY TO LOAD DEITY DETAILS FROM CACHE!
-    final cachedDeity = offlineService.getCachedData(deityCacheKey);
-    if (cachedDeity is Map) {
-      final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
-      if (mounted) {
-        setState(() {
-          // Merge cached deity into pooja!
-          final Map<String, dynamic> current = Map<String, dynamic>.from(
-            _pooja!,
-          );
-          final Map existingDeity = (current['deity'] is Map)
-              ? (current['deity'] as Map)
-              : {};
-          final Map<String, dynamic> mergedDeity = {};
-          existingDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
-          cachedDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
-          current['deity'] = mergedDeity;
-          _pooja = current;
-
-          // Load cached rituals too!
-          if (cachedRituals is List) {
-            _deityRituals = cachedRituals
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList();
-          }
-        });
-        return; // We're done offline!
-      }
+    void applyDeity(
+      Map<String, dynamic> deity, {
+      List<Map<String, dynamic>>? rituals,
+    }) {
+      _pooja = _mergeDeityIntoPooja(_pooja!, deity);
+      if (rituals != null) _deityRituals = rituals;
     }
 
-    // IF NO CACHE, TRY ONLINE!
+    // Offline: use cached deity/rituals only.
+    if (!offlineService.isOnline.value) {
+      final cachedDeity = offlineService.getCachedData(deityCacheKey);
+      if (cachedDeity is! Map || !mounted) return;
+
+      final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
+      setState(() {
+        applyDeity(Map<String, dynamic>.from(cachedDeity));
+        if (cachedRituals is List) {
+          _deityRituals = cachedRituals
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      });
+      return;
+    }
+
+    // Online: always fetch fresh deity data (embedded pooja deity may be stale).
     try {
       final res = await Get.find<ApiClient>().dio.get<dynamic>(
         ApiEndpoints.deity(id),
       );
-      final payload = res.data;
-      Map<String, dynamic>? deity = _extractDeity(payload);
-
+      final deity = _extractDeity(res.data);
       if (!mounted || deity == null) return;
 
-      // Cache it for next time!
-      await offlineService.cacheData(deityCacheKey, deity!);
+      await offlineService.cacheData(deityCacheKey, deity);
 
-      setState(() {
-        final Map<String, dynamic> current = Map<String, dynamic>.from(_pooja!);
-        final Map existingDeity = (current['deity'] is Map)
-            ? (current['deity'] as Map)
-            : {};
-        final Map<String, dynamic> mergedDeity = {};
-        existingDeity.forEach((k, v) => mergedDeity[k.toString()] = v);
-        deity!.forEach((k, v) => mergedDeity[k.toString()] = v);
-        current['deity'] = mergedDeity;
-        _pooja = current;
-      });
-
-      // Fetch and cache rituals too!
+      List<Map<String, dynamic>>? rituals;
       try {
         final ritRes = await Get.find<ApiClient>().dio.get<dynamic>(
           ApiEndpoints.rituals,
           queryParameters: {'deity': id, 'limit': 50},
         );
-        final rituals = _extractList(ritRes.data);
+        rituals = _extractList(ritRes.data);
         await offlineService.cacheData(ritualsCacheKey, rituals);
-        if (mounted) {
-          setState(() => _deityRituals = rituals);
-        }
       } catch (e) {
         debugPrint('Hydration: rituals fetch failed: $e');
       }
+
+      if (!mounted) return;
+      setState(() => applyDeity(deity, rituals: rituals));
     } catch (e) {
       debugPrint('Hydration: deity fetch failed: $e');
+      final cachedDeity = offlineService.getCachedData(deityCacheKey);
+      if (cachedDeity is! Map || !mounted) return;
+
+      final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
+      setState(() {
+        applyDeity(Map<String, dynamic>.from(cachedDeity));
+        if (cachedRituals is List) {
+          _deityRituals = cachedRituals
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      });
     }
   }
 
@@ -671,7 +659,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     if (_isLoading && _pooja == null) {
       return const Scaffold(
         backgroundColor: AppColors.appBgColor,
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: ChakraLoadingIndicator()),
       );
     }
     if (_pooja == null) {

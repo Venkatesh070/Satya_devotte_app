@@ -41,7 +41,7 @@ class CalendarPage extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
+                return const SizedBox.shrink();
               }
               // Read observables here so GetX tracks them (not in child widgets).
               controller.focusedDate.value;

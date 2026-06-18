@@ -38,6 +38,7 @@ import 'package:satya_devotte_app/features/donations/data/models/donation_init_d
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class DonationPaystackWebViewScreen extends StatefulWidget {
   const DonationPaystackWebViewScreen({super.key});
@@ -254,7 +255,7 @@ class _DonationPaystackWebViewScreenState
     if (_init == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFFAF1DD),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: ChakraLoadingIndicator(size: 32)),
       );
     }
     return PopScope(
@@ -290,7 +291,7 @@ class _DonationPaystackWebViewScreenState
             else if (_webview != null)
               WebViewWidget(controller: _webview!)
             else
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: ChakraLoadingIndicator(size: 32)),
             if (!kIsWeb && _pageLoading && !_verifyOverlay)
               const _LoadingOverlay(label: 'Loading payment page…'),
             if (_verifyOverlay)
@@ -314,13 +315,9 @@ class _LoadingOverlay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
-            width: 56,
-            height: 56,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: Color(0xFFB10F33),
-            ),
+          const ChakraLoadingIndicator(
+            size: 56,
+            color: Color(0xFFB10F33),
           ),
           const SizedBox(height: 18),
           Text(

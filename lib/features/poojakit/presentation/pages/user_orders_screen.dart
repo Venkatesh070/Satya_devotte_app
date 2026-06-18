@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class UserOrdersScreen extends StatelessWidget {
   const UserOrdersScreen({super.key});
@@ -37,9 +38,7 @@ class UserOrdersScreen extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (c.isLoading && c.orders.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
+                  return const SizedBox.shrink();
                 }
 
                 if (c.error != null && c.orders.isEmpty) {
@@ -76,7 +75,8 @@ class UserOrdersScreen extends StatelessWidget {
                         return const Padding(
                           padding: EdgeInsets.all(16),
                           child: Center(
-                            child: CircularProgressIndicator(
+                            child: ChakraLoadingIndicator(
+                              size: 24,
                               color: AppColors.primary,
                             ),
                           ),

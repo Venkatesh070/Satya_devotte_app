@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class PoojaKitPage extends GetView<PoojaKitController> {
   const PoojaKitPage({super.key, this.onBack});
@@ -22,9 +23,7 @@ class PoojaKitPage extends GetView<PoojaKitController> {
       body: SafeArea(
         child: Obx(() {
           if (controller.isLoading && controller.products.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
+            return const SizedBox.shrink();
           }
 
           if (controller.error != null && controller.products.isEmpty) {
@@ -71,8 +70,8 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 18),
                       child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: ChakraLoadingIndicator(
+                          size: 24,
                           color: AppColors.primary,
                         ),
                       ),
@@ -267,10 +266,10 @@ class _ProductListTile extends StatelessWidget {
                             child: SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                              ),
+                            child: ChakraLoadingIndicator(
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
                             ),
                           ),
                         ),

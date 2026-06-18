@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/features/poojakit/data/models/order_init_data.
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 
 class ProductPaymentWebViewScreen extends StatefulWidget {
@@ -201,7 +202,7 @@ class _ProductPaymentWebViewScreenState
         children: [
           if (_webview != null) WebViewWidget(controller: _webview!),
           if (_pageLoading || _verifyOverlay)
-            const Center(child: CircularProgressIndicator()),
+            const Center(child: ChakraLoadingIndicator(size: 32)),
         ],
       ),
     );

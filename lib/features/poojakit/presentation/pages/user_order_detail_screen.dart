@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
@@ -616,7 +617,7 @@ class _ActionButton extends StatelessWidget {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: ChakraLoadingIndicator(size: 16),
                 )
               : Icon(icon, size: 17),
           label: Text(label),

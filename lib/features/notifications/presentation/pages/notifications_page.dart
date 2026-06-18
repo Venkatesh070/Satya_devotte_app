@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/features/notifications/data/notifications_exce
 import 'package:satya_devotte_app/features/notifications/data/user_notifications_repository.dart';
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -160,7 +161,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
               child: RefreshIndicator(
                 onRefresh: _loadFirstPage,
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [SizedBox(height: 400)],
+                      )
                     : _error != null
                     ? ListView(
                         children: [
@@ -199,7 +203,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           if (i >= _items.length) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(
+                                child: ChakraLoadingIndicator(size: 24),
+                              ),
                             );
                           }
                           final item = _items[i];

@@ -365,17 +365,12 @@ class _RitualListPageState extends State<RitualListPage> {
                   child: _buildHeader(),
                 ),
               ),
-              if (_isLoading)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_error != null)
+              if (_error != null && !_isLoading)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _buildErrorState(),
                 )
-              else
+              else if (!_isLoading)
                 _buildList(),
             ],
           ),

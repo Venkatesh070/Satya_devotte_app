@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/contribution_tile.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/donations/state/my_contributions_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class MyContributionsScreen extends StatefulWidget {
   const MyContributionsScreen({super.key});
@@ -97,7 +98,7 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
                         child: SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.4),
+                          child: ChakraLoadingIndicator(size: 22),
                         ),
                       ),
                     ),

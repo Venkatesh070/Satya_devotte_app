@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({super.key});
@@ -292,8 +293,8 @@ class _ProductHeroImage extends StatelessWidget {
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      child: ChakraLoadingIndicator(
+                        size: 18,
                         color: AppColors.primary,
                       ),
                     ),

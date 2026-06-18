@@ -32,6 +32,7 @@ import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -394,8 +395,18 @@ class _HomePageState extends State<HomePage> {
     return null;
   }
 
-  Future<void> _fetchHomeDataIfNeeded() async {
-    if (_isFetchingHome) return;
+  Future<void> _refreshHomeData() async {
+    await Future.wait([
+      _fetchHomeDataIfNeeded(forceRefresh: true),
+      _fetchAchievementsData(recordStreak: false),
+    ]);
+    if (Get.isRegistered<UserNotificationsBadgeController>()) {
+      await Get.find<UserNotificationsBadgeController>().refreshUnreadBadge();
+    }
+  }
+
+  Future<void> _fetchHomeDataIfNeeded({bool forceRefresh = false}) async {
+    if (_isFetchingHome && !forceRefresh) return;
     _isFetchingHome = true;
     final offlineService = Get.find<OfflineService>();
     final cacheKey = 'home_data';
@@ -652,6 +663,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           _HomeTabContent(
             onScrollDirectionChanged: _onHomeScrollDirectionChanged,
+            onRefresh: _refreshHomeData,
             onOpenTab: _onTabSelected,
             todayDateAndTithi: _todayDateAndTithi,
             dailySloka: _dailySloka,
@@ -732,6 +744,7 @@ class _HomePageState extends State<HomePage> {
 class _HomeTabContent extends StatefulWidget {
   const _HomeTabContent({
     required this.onScrollDirectionChanged,
+    required this.onRefresh,
     required this.onOpenTab,
     required this.todayDateAndTithi,
     required this.dailySloka,
@@ -751,6 +764,7 @@ class _HomeTabContent extends StatefulWidget {
   });
 
   final ValueChanged<ScrollDirection> onScrollDirectionChanged;
+  final Future<void> Function() onRefresh;
   final Future<void> Function(int index) onOpenTab;
   final String todayDateAndTithi;
   final String dailySloka;
@@ -951,51 +965,56 @@ class _HomeTabContentState extends State<_HomeTabContent> {
         widget.onScrollDirectionChanged(notification.direction);
         return false;
       },
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(
-          children: [
-            _HomeHeader(
-              isSearchMode: _isSearchMode,
-              searchController: _searchController,
-              onSearchChanged: _onSearchChanged,
-              onSearchSubmitted: (value) {
-                final q = value.trim();
-                if (q.length >= 2) _search(q);
-              },
-              onClearSearch: _clearSearch,
-              todayDateAndTithi: widget.todayDateAndTithi,
-              dailySloka: widget.dailySloka,
-              slokaAuthor: widget.slokaAuthor,
-              slokaMeaning: widget.slokaMeaning,
-              slokaContemplation: widget.slokaContemplation,
-              slokaPrayer: widget.slokaPrayer,
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-              child: _isSearchMode
-                  ? _GlobalSearchResultsSection(
-                      isSearching: _isSearching,
-                      error: _searchError,
-                      results: _searchResults,
-                      onResultTap: _openSearchResult,
-                    )
-                  : _HomeBodySections(
-                      poojas: widget.poojas,
-                      festivals: widget.festivals,
-                      featuredProducts: widget.featuredProducts,
-                      poojasCompleted: widget.poojasCompleted,
-                      dayStreak: widget.dayStreak,
-                      onPoojasViewMore: widget.onPoojasViewMore,
-                      onFestivalsViewMore: widget.onFestivalsViewMore,
-                      onPujaTap: widget.onPujaTap,
-                      onFestivalTap: widget.onFestivalTap,
-                    ),
-            ),
-            const SizedBox(height: 16),
-            _Footer(),
-            const SizedBox(height: 10),
-          ],
+      child: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: widget.onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            children: [
+              _HomeHeader(
+                isSearchMode: _isSearchMode,
+                searchController: _searchController,
+                onSearchChanged: _onSearchChanged,
+                onSearchSubmitted: (value) {
+                  final q = value.trim();
+                  if (q.length >= 2) _search(q);
+                },
+                onClearSearch: _clearSearch,
+                todayDateAndTithi: widget.todayDateAndTithi,
+                dailySloka: widget.dailySloka,
+                slokaAuthor: widget.slokaAuthor,
+                slokaMeaning: widget.slokaMeaning,
+                slokaContemplation: widget.slokaContemplation,
+                slokaPrayer: widget.slokaPrayer,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
+                child: _isSearchMode
+                    ? _GlobalSearchResultsSection(
+                        isSearching: _isSearching,
+                        error: _searchError,
+                        results: _searchResults,
+                        onResultTap: _openSearchResult,
+                      )
+                    : _HomeBodySections(
+                        poojas: widget.poojas,
+                        festivals: widget.festivals,
+                        featuredProducts: widget.featuredProducts,
+                        poojasCompleted: widget.poojasCompleted,
+                        dayStreak: widget.dayStreak,
+                        onPoojasViewMore: widget.onPoojasViewMore,
+                        onFestivalsViewMore: widget.onFestivalsViewMore,
+                        onPujaTap: widget.onPujaTap,
+                        onFestivalTap: widget.onFestivalTap,
+                      ),
+              ),
+              const SizedBox(height: 16),
+              _Footer(),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );
@@ -1817,7 +1836,7 @@ class _GlobalSearchResultsSection extends StatelessWidget {
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                  child: ChakraLoadingIndicator(size: 24),
                 ),
               ),
             )
@@ -2118,7 +2137,7 @@ class _QuoteCardState extends State<_QuoteCard> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: SizedBox(
         width: double.infinity,
-        height: _tabHeight + _contentHeight ,
+        height: _tabHeight + _contentHeight,
         child: Column(
           children: [
             ClipRRect(

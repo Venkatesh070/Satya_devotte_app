@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/login_footer.dart';
@@ -242,14 +243,7 @@ class _SocialButton extends StatelessWidget {
           ),
           child: Center(
             child: isLoading
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                    ),
-                  )
+                ? ChakraLoadingIndicator(size: 18, color: textColor)
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

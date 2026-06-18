@@ -68,7 +68,7 @@ class _ProfilePoojaHistoryPageState extends State<ProfilePoojaHistoryPage> {
           if (c.isLoading.value &&
               c.finishedPoojas.isEmpty &&
               c.pendingPoojas.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SizedBox.shrink();
           }
 
           if (c.error.value != null &&

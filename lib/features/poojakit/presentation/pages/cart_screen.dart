@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/poojakit/data/models/address_model.da
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -28,9 +29,7 @@ class CartScreen extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (c.isLoading && c.cart == null) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
+                  return const SizedBox.shrink();
                 }
 
                 final cart = c.cart;
@@ -207,8 +206,8 @@ class _CartItemTile extends StatelessWidget {
                         key: ValueKey('busy'),
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: ChakraLoadingIndicator(
+                          size: 14,
                           color: Color(0xFFDC5B0A),
                         ),
                       )
@@ -328,8 +327,8 @@ class _ProductThumb extends StatelessWidget {
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      child: ChakraLoadingIndicator(
+                        size: 18,
                         color: AppColors.primary,
                       ),
                     ),
