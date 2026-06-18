@@ -29,8 +29,10 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_refunds_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_inventory_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_payments_content.dart';
+import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_settings_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/ecommerce_settings_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
@@ -152,6 +154,10 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     if (index == _NavIds.poojaKitPayments &&
         Get.isRegistered<AdminPaymentsController>()) {
       unawaited(Get.find<AdminPaymentsController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.poojaKitSettings &&
+        Get.isRegistered<EcommerceSettingsController>()) {
+      unawaited(Get.find<EcommerceSettingsController>().load());
     }
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
@@ -1099,6 +1105,7 @@ class _NavIds {
   static const int poojaKitPayments = 15;
   // Operational alerts inbox (orders, donations, refunds).
   static const int activity = 17;
+  static const int poojaKitSettings = 18;
 }
 
 const String _poojaKitGroupLabel = 'Ecommerce';
@@ -1183,6 +1190,12 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         activeIcon: Icons.payments,
         index: _NavIds.poojaKitPayments,
       ),
+      _NavEntry(
+        label: 'Settings',
+        icon: Icons.settings_outlined,
+        activeIcon: Icons.settings,
+        index: _NavIds.poojaKitSettings,
+      ),
     ],
   ),
   const _NavEntry(
@@ -1238,6 +1251,7 @@ String? _groupLabelForIndex(int index) {
     case _NavIds.poojaKitOrders:
     case _NavIds.poojaKitRefunds:
     case _NavIds.poojaKitPayments:
+    case _NavIds.poojaKitSettings:
       return _poojaKitGroupLabel;
     case _NavIds.donations:
     case _NavIds.donationsAll:
@@ -1278,11 +1292,13 @@ String _pageTitle(int i) {
     case _NavIds.poojaKitManage:
       return 'Manage Products';
     case _NavIds.poojaKitOrders:
-      return 'Puja Kit Orders';
+      return 'Orders';
     case _NavIds.poojaKitRefunds:
       return 'Replace Requests';
     case _NavIds.poojaKitPayments:
       return 'Puja Kit Payments';
+    case _NavIds.poojaKitSettings:
+      return 'Ecommerce Settings';
     case _NavIds.manageRituals:
       return 'Manage Rituals';
     default:
@@ -1326,6 +1342,8 @@ Widget _buildContent(int i) {
       return const CmsPoojaKitRefundsContent();
     case _NavIds.poojaKitPayments:
       return const CmsPoojaKitPaymentsContent();
+    case _NavIds.poojaKitSettings:
+      return const CmsPoojaKitSettingsContent();
     case _NavIds.manageRituals:
       return const CmsManageRitualsContent();
     default:
@@ -1367,6 +1385,8 @@ String? _routeFromIndex(int index) {
       return AppRoutes.cmsPoojaKitRefunds;
     case _NavIds.poojaKitPayments:
       return AppRoutes.cmsPoojaKitPayments;
+    case _NavIds.poojaKitSettings:
+      return AppRoutes.cmsPoojaKitSettings;
     case _NavIds.activity:
       return AppRoutes.cmsActivity;
     default:
@@ -1408,6 +1428,8 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
       return _NavIds.poojaKitRefunds;
     case AppRoutes.cmsPoojaKitPayments:
       return _NavIds.poojaKitPayments;
+    case AppRoutes.cmsPoojaKitSettings:
+      return _NavIds.poojaKitSettings;
     case AppRoutes.cmsManageRituals:
       return _NavIds.manageRituals;
     case AppRoutes.cmsDonations:

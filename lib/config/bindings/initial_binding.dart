@@ -29,9 +29,11 @@ import 'package:satya_devotte_app/features/cms/data/datasources/sloka_remote_dat
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/inventory_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/ecommerce_settings_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/ecommerce_settings_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_notifications_controller.dart';
@@ -236,6 +238,16 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<AdminPaymentsController>(
       () => AdminPaymentsController(Get.find<AdminOrdersRemoteDataSource>()),
+      fenix: true,
+    );
+    Get.put<EcommerceSettingsRemoteDataSource>(
+      EcommerceSettingsRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.lazyPut<EcommerceSettingsController>(
+      () => EcommerceSettingsController(
+        Get.find<EcommerceSettingsRemoteDataSource>(),
+      ),
       fenix: true,
     );
     Get.put<PoojaKitController>(

@@ -102,6 +102,9 @@ class AppRoutes {
   /// Pooja Kit payments overview.
   static const String cmsPoojaKitPayments = '/cms/products/payments';
 
+  /// Ecommerce store settings (delivery fee, etc.).
+  static const String cmsPoojaKitSettings = '/cms/products/settings';
+
   // ─── Donations (admin + superadmin) ──────────────────────────
   /// Admin's own donation campaigns (create / edit / review).
   static const String cmsDonations = '/cms/donations';

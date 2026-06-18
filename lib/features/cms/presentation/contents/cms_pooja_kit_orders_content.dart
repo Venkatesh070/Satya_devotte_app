@@ -444,36 +444,46 @@ class _OrdersTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: CmsColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: CmsColors.border),
-        ),
-        child: Column(
-          children: [
-            const _TableHeader(
-              columns: [
-                _ColSpec('Order #', 160),
-                _ColSpec('Customer', 200),
-                _ColSpec('Total', 100),
-                _ColSpec('Payment', 92),
-                _ColSpec('Status', 100),
-                _ColSpec('Date', 152),
-                _ColSpec('', 56),
-              ],
-            ),
-            const Divider(height: 1, color: CmsColors.border),
-            for (final o in orders)
-              _cmsClickableInk(
-                onTap: () => controller.openOrder(o.id),
-                child: _OrderRow(order: o),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: CmsColors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: CmsColors.border),
               ),
-          ],
-        ),
-      ),
+              child: Column(
+                children: [
+                  const _TableHeader(
+                    columns: [
+                      _ColSpec('Order #', width: 160),
+                      _ColSpec('Customer', flex: 1),
+                      _ColSpec('Subtotal', width: 88),
+                      _ColSpec('Delivery', width: 88),
+                      _ColSpec('Total', width: 88),
+                      _ColSpec('Payment', width: 92),
+                      _ColSpec('Status', width: 100),
+                      _ColSpec('Date', width: 152),
+                      _ColSpec('', width: 56),
+                    ],
+                  ),
+                  const Divider(height: 1, color: CmsColors.border),
+                  for (final o in orders)
+                    _cmsClickableInk(
+                      onTap: () => controller.openOrder(o.id),
+                      child: _OrderRow(order: o),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -570,10 +580,9 @@ class _OrderRow extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(
-            width: 200,
+          Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 2, right: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -599,17 +608,24 @@ class _OrderRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 100,
+            width: 88,
             child: Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                order.formattedTotal,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
+              child: _OrderPriceCell(value: order.formattedSubtotal),
+            ),
+          ),
+          SizedBox(
+            width: 88,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: _OrderPriceCell(value: order.formattedShipping),
+            ),
+          ),
+          SizedBox(
+            width: 88,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: _OrderPriceCell(value: order.formattedTotal, bold: true),
             ),
           ),
           SizedBox(
@@ -717,21 +733,11 @@ class _OrdersCardList extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        o.formattedTotal,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: CmsColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    CmsKitOrderDateCell(at: o.createdAt, textAlign: TextAlign.end),
-                  ],
+                _OrderPriceBreakdownLines(order: o),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: CmsKitOrderDateCell(at: o.createdAt, textAlign: TextAlign.end),
                 ),
               ],
             ),
@@ -1101,6 +1107,8 @@ class _OrderDetailBody extends StatelessWidget {
           const SizedBox(height: 14),
           _LineItemsCard(order: order),
           const SizedBox(height: 14),
+          _OrderTotalsCard(order: order),
+          const SizedBox(height: 14),
           _ShippingCard(order: order),
           const SizedBox(height: 14),
           if (order.isPaymentPaid) ...[
@@ -1139,10 +1147,6 @@ class _SummaryCard extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _MetaPair(label: 'Total', value: order.formattedTotal),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
               child: _MetaPair(label: 'Currency', value: order.currency),
             ),
             const SizedBox(width: 16),
@@ -1150,6 +1154,13 @@ class _SummaryCard extends StatelessWidget {
               child: _MetaPair(
                 label: 'Method',
                 value: order.paymentMethod.isEmpty ? '—' : order.paymentMethod,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _MetaPair(
+                label: 'Payment',
+                value: order.paymentStatus.label,
               ),
             ),
           ],
@@ -1206,6 +1217,124 @@ class _LineItemsCard extends StatelessWidget {
             if (i != items.length - 1)
               const Divider(height: 16, color: CmsColors.border),
           ],
+      ],
+    );
+  }
+}
+
+class _OrderTotalsCard extends StatelessWidget {
+  const _OrderTotalsCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return CmsFormCard(
+      title: 'Amounts',
+      children: [
+        _OrderAmountRow(label: 'Subtotal', value: order.formattedSubtotal),
+        const SizedBox(height: 8),
+        _OrderAmountRow(
+          label: 'Delivery charges',
+          value: order.formattedShipping,
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: Divider(height: 1, color: CmsColors.border),
+        ),
+        _OrderAmountRow(
+          label: 'Total',
+          value: order.formattedTotal,
+          bold: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _OrderPriceBreakdownLines extends StatelessWidget {
+  const _OrderPriceBreakdownLines({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _OrderAmountRow(
+          label: 'Subtotal',
+          value: order.formattedSubtotal,
+          compact: true,
+        ),
+        const SizedBox(height: 4),
+        _OrderAmountRow(
+          label: 'Delivery',
+          value: order.formattedShipping,
+          compact: true,
+        ),
+        const SizedBox(height: 4),
+        _OrderAmountRow(
+          label: 'Total',
+          value: order.formattedTotal,
+          compact: true,
+          bold: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _OrderPriceCell extends StatelessWidget {
+  const _OrderPriceCell({required this.value, this.bold = false});
+  final String value;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      value,
+      style: TextStyle(
+        fontSize: 12.5,
+        fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+        color: CmsColors.textPrimary,
+      ),
+    );
+  }
+}
+
+class _OrderAmountRow extends StatelessWidget {
+  const _OrderAmountRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+    this.compact = false,
+  });
+  final String label;
+  final String value;
+  final bool bold;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: compact ? 11.5 : 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: compact ? 12 : 13,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+            color: CmsColors.textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -2034,29 +2163,46 @@ class _TableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (final col in columns)
-            SizedBox(
-              width: col.width,
-              child: Text(
-                col.label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: CmsColors.textSecond,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ),
+          for (final col in columns) _TableHeaderCell(spec: col),
         ],
       ),
     );
   }
 }
 
+class _TableHeaderCell extends StatelessWidget {
+  const _TableHeaderCell({required this.spec});
+  final _ColSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(
+      spec.label,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: CmsColors.textSecond,
+        letterSpacing: 0.2,
+      ),
+    );
+    if (spec.flex != null) {
+      return Expanded(
+        flex: spec.flex!,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: label,
+        ),
+      );
+    }
+    return SizedBox(width: spec.width, child: label);
+  }
+}
+
 class _ColSpec {
-  const _ColSpec(this.label, this.width);
+  const _ColSpec(this.label, {this.width, this.flex});
   final String label;
-  final double width;
+  final double? width;
+  final int? flex;
 }
 
 class _MetaPair extends StatelessWidget {

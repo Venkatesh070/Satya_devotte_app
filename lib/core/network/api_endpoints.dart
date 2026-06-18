@@ -280,6 +280,10 @@ class ApiEndpoints {
   static String verifyPayment(String reference) =>
       '/api/v1/payments/verify/$reference';
 
+  // ── Ecommerce settings (admin) ────────────────────────────────
+  /// GET/PUT — store settings (`delivery_charges` block).
+  static const String ecommerceSettings = '/api/v1/admin/ecommerce/settings';
+
   /// GET — paginated history of the signed-in user's contributions.
   /// Query: `page`, `limit`, `paymentStatus`.
   static const String myContributions = '/api/v1/donations/contributions/my';
