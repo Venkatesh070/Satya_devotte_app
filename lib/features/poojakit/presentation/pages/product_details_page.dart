@@ -61,8 +61,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       child: Column(
                         children: [
                           _ProductHeader(product: _product),
-                          const SizedBox(height: 24),
-                          _KitItemsSection(items: _product.items),
+                          if (_product.category.toLowerCase() == 'pujakit') ...[
+                            const SizedBox(height: 24),
+                            _KitItemsSection(items: _product.items),
+                          ],
                         ],
                       ),
                     ),
@@ -217,10 +219,13 @@ class _ProductHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPujakit = product.category.toLowerCase() == 'pujakit';
     final itemCount = product.items.length;
-    final detailText = itemCount == 0
-        ? product.description
-        : '$itemCount items required for performing the puja.';
+    final detailText = isPujakit
+        ? (itemCount == 0
+              ? product.description
+              : '$itemCount items required for performing the puja.')
+        : product.description;
 
     return Column(
       children: [
@@ -236,26 +241,53 @@ class _ProductHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          detailText.trim().isEmpty ? 'Complete puja essentials.' : detailText,
-          textAlign: TextAlign.center,
-          style: AppTypography.inter(
-            fontSize: 12,
-            height: 1.35,
-            color: const Color(0xFF78716C),
+        if (isPujakit) ...[
+          Text(
+            detailText.trim().isEmpty
+                ? 'Complete puja essentials.'
+                : detailText,
+            textAlign: TextAlign.center,
+            style: AppTypography.inter(
+              fontSize: 12,
+              height: 1.35,
+              color: const Color(0xFF78716C),
+            ),
           ),
-        ),
-        Text(
-          product.inStock
-              ? 'Sufficient for 2 members.'
-              : 'Currently out of stock.',
-          textAlign: TextAlign.center,
-          style: AppTypography.inter(
-            fontSize: 12,
-            height: 1.35,
-            color: const Color(0xFF78716C),
+          Text(
+            product.inStock
+                ? 'Sufficient for 2 members.'
+                : 'Currently out of stock.',
+            textAlign: TextAlign.center,
+            style: AppTypography.inter(
+              fontSize: 12,
+              height: 1.35,
+              color: const Color(0xFF78716C),
+            ),
           ),
-        ),
+        ] else ...[
+          // For non-pujakit categories
+          Text(
+            product.displayPrice,
+            textAlign: TextAlign.center,
+            style: AppTypography.lora(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          if (detailText.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              detailText,
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                fontSize: 12,
+                height: 1.35,
+                color: const Color(0xFF78716C),
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }

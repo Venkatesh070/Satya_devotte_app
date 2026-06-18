@@ -142,6 +142,20 @@ class CalendarController extends GetxController {
     );
   }
 
+  Future<void> removeUserEvent(String id) async {
+    userEvents.removeWhere((e) => e.id == id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _userEventsKey,
+      UserCalendarEvent.encodeList(userEvents),
+    );
+    // Clean up any associated reminder/calendar state
+    remindedEventIds.remove(id);
+    addedToCalendarIds.remove(id);
+    await _saveReminders();
+    await _saveCalendarStatus();
+  }
+
   bool _isInFocusedMonth(DateTime date) {
     return date.year == focusedDate.value.year &&
         date.month == focusedDate.value.month;

@@ -210,69 +210,167 @@ class _EventDetailActions extends StatelessWidget {
 
       final canAct = eventId.isNotEmpty;
 
-      return Row(
+      final isUserEvent = event is UserCalendarEvent;
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: _GradientActionButton(
-              height: 48,
-              borderRadius: 20,
-              enabled: canAct,
-              onTap: canAct
-                  ? () => controller.addToDeviceCalendar(event)
-                  : null,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isAdded ? Icons.check_circle_outline : Icons.event,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      isAdded ? 'Added to Calendar' : 'Add to Google Calendar',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              Expanded(
+                child: _GradientActionButton(
+                  height: 48,
+                  borderRadius: 20,
+                  enabled: canAct,
+                  onTap: canAct
+                      ? () => controller.addToDeviceCalendar(event)
+                      : null,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isAdded ? Icons.check_circle_outline : Icons.event,
                         color: Colors.white,
+                        size: 20,
                       ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          isAdded
+                              ? 'Added to Calendar'
+                              : 'Add to Google Calendar',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Material(
+                color: isReminded ? kCalendarActionGradient[0] : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: canAct ? () => controller.toggleReminder(event) : null,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: isReminded
+                          ? null
+                          : Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 0.66,
+                            ),
+                    ),
+                    child: Icon(
+                      isReminded
+                          ? Icons.notifications_active
+                          : Icons.notifications_outlined,
+                      color: isReminded
+                          ? Colors.white
+                          : kCalendarActionGradient[0],
+                      size: 24,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Material(
-            color: isReminded ? kCalendarActionGradient[0] : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              onTap: canAct ? () => controller.toggleReminder(event) : null,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: isReminded
-                      ? null
-                      : Border.all(color: const Color(0xFFE5E7EB), width: 0.66),
-                ),
-                child: Icon(
-                  isReminded
-                      ? Icons.notifications_active
-                      : Icons.notifications_outlined,
-                  color: isReminded ? Colors.white : kCalendarActionGradient[0],
-                  size: 24,
                 ),
               ),
-            ),
+            ],
           ),
+          if (isUserEvent) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(
+                        'Remove Event',
+                        style: AppTypography.lora(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: CalendarUi.textPrimary,
+                        ),
+                      ),
+                      content: Text(
+                        'Are you sure you want to remove this event?',
+                        style: AppTypography.inter(
+                          fontSize: 14,
+                          color: CalendarUi.textPrimary,
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(
+                            'Cancel',
+                            style: AppTypography.inter(
+                              fontSize: 14,
+                              color: CalendarUi.textMuted,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: Text(
+                            'Remove',
+                            style: AppTypography.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFB10F1A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ).then((confirmed) {
+                    if (confirmed == true) {
+                      final userEvent = event as UserCalendarEvent;
+                      controller.removeUserEvent(userEvent.id);
+                      Navigator.of(context).pop();
+                      Get.snackbar(
+                        'Event removed',
+                        userEvent.name,
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
+                    }
+                  });
+                },
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: Color(0xFFB10F1A),
+                ),
+                label: Text(
+                  'Remove Event',
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFB10F1A),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFB10F1A), width: 1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       );
     });

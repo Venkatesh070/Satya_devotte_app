@@ -238,6 +238,7 @@ class _ProductListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPujakit = product.category.toLowerCase() == 'pujakit';
     final itemCount = product.items.length;
     final description = product.description.trim().isEmpty
         ? 'Complete puja essentials.'
@@ -294,13 +295,18 @@ class _ProductListTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  _ProductBullet(
-                    text: itemCount == 0
-                        ? description
-                        : '$itemCount ${itemCount == 1 ? 'item' : 'items'} required for performing the puja.',
-                  ),
-                  const SizedBox(height: 7),
-                  _ProductBullet(text: 'Sufficient for 2 members.'),
+                  if (isPujakit) ...[
+                    _ProductBullet(
+                      text: itemCount == 0
+                          ? description
+                          : '$itemCount ${itemCount == 1 ? 'item' : 'items'} required for performing the puja.',
+                    ),
+                    const SizedBox(height: 7),
+                    _ProductBullet(text: 'Sufficient for 2 members.'),
+                  ] else ...[
+                    if (product.description.trim().isNotEmpty)
+                      _ProductBullet(text: product.description.trim()),
+                  ],
                   const SizedBox(height: 7),
                   Row(
                     children: [

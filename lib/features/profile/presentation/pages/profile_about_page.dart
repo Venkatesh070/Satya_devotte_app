@@ -63,15 +63,15 @@ Step into a more organized, deeply connected spiritual routine. Download the Sat
             const SizedBox(height: 16),
 
             // Short Description
-            Text(
-              'Short Description',
-              style: AppTypography.lora(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: DonationUi.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
+            // Text(
+            //   'Short Description',
+            //   style: AppTypography.lora(
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.w600,
+            //     color: DonationUi.textPrimary,
+            //   ),
+            // ),
+            // const SizedBox(height: 8),
             Text(
               'Streamline your daily prayers, track moon phases, and get Puja Kits delivered.',
               style: AppTypography.inter(
@@ -83,15 +83,15 @@ Step into a more organized, deeply connected spiritual routine. Download the Sat
             const SizedBox(height: 24),
 
             // Long Description
-            Text(
-              'Long Description',
-              style: AppTypography.lora(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: DonationUi.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
+            // Text(
+            //   'Long Description',
+            //   style: AppTypography.lora(
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.w600,
+            //     color: DonationUi.textPrimary,
+            //   ),
+            // ),
+            // const SizedBox(height: 8),
             Text(
               'Experience Spiritual Alignment Every Day with the Sathya Application.',
               style: AppTypography.inter(
