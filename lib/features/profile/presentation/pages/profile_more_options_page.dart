@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
@@ -44,16 +45,12 @@ class ProfileMoreOptionsPage extends StatelessWidget {
                     final ok = await auth.deleteAccount(comment: comment);
                     if (ok) {
                       Get.offAllNamed(AppRoutes.login);
-                      Get.snackbar(
-                        'Account Deleted',
+                      ToastUtil.showSuccess(
                         'Your account has been deleted successfully.',
-                        snackPosition: SnackPosition.BOTTOM,
                       );
                     } else {
-                      Get.snackbar(
-                        'Error',
+                      ToastUtil.showError(
                         auth.lastAuthError ?? 'Failed to delete account.',
-                        snackPosition: SnackPosition.BOTTOM,
                       );
                     }
                   },

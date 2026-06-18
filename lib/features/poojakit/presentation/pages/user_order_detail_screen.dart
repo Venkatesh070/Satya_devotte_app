@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
@@ -438,11 +439,7 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
   Future<void> _submit() async {
     final reason = _reasonCtrl.text.trim();
     if (reason.isEmpty) {
-      Get.snackbar(
-        'Reason required',
-        'Please enter a reason for cancellation.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Please enter a reason for cancellation.');
       return;
     }
 

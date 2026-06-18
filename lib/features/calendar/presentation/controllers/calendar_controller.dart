@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/core/services/calendar_sync_service.dart';
@@ -238,11 +239,7 @@ class CalendarController extends GetxController {
   Future<void> toggleReminder(dynamic event) async {
     final fields = _fieldsFor(event);
     if (fields == null) {
-      Get.snackbar(
-        'Reminder unavailable',
-        'This event does not have a valid date.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('This event does not have a valid date.');
       return;
     }
 
@@ -255,10 +252,8 @@ class CalendarController extends GetxController {
       remindedEventIds.remove(id);
       remindedEventIds.refresh();
       await _notificationService.unsubscribeFromEventNotification(id);
-      Get.snackbar(
-        'Reminder removed',
+      ToastUtil.showInfo(
         'You will no longer receive notifications for ${fields.title}',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } else {
       remindedEventIds.add(id);
@@ -274,11 +269,7 @@ class CalendarController extends GetxController {
         debugPrint('CalendarController: Failed to subscribe: $e');
         remindedEventIds.remove(id);
         remindedEventIds.refresh();
-        Get.snackbar(
-          'Error',
-          'Failed to set reminder. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtil.showError('Failed to set reminder. Please try again.');
       }
     }
     await _saveReminders();
@@ -287,11 +278,7 @@ class CalendarController extends GetxController {
   Future<void> addToDeviceCalendar(dynamic event) async {
     final fields = _fieldsFor(event);
     if (fields == null) {
-      Get.snackbar(
-        'Unable to add',
-        'This event does not have a valid date.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('This event does not have a valid date.');
       return;
     }
 
@@ -299,11 +286,7 @@ class CalendarController extends GetxController {
       addedToCalendarIds.remove(fields.id);
       addedToCalendarIds.refresh();
       await _saveCalendarStatus();
-      Get.snackbar(
-        'Calendar',
-        'Removed from your saved calendar list',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Removed from your saved calendar list');
       return;
     }
 
@@ -324,25 +307,15 @@ class CalendarController extends GetxController {
         addedToCalendarIds.add(fields.id);
         addedToCalendarIds.refresh();
         await _saveCalendarStatus();
-        Get.snackbar(
-          'Calendar',
-          'Confirm save in your calendar app',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtil.showInfo('Confirm save in your calendar app');
       } else {
-        Get.snackbar(
-          'Calendar',
+        ToastUtil.showError(
           'Could not open your calendar app. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {
       debugPrint('CalendarController: addToDeviceCalendar failed: $e');
-      Get.snackbar(
-        'Calendar',
-        'Could not add this event. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showError('Could not add this event. Please try again.');
     }
   }
 

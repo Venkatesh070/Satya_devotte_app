@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
@@ -104,11 +105,7 @@ class CartScreen extends StatelessWidget {
       return;
     }
 
-    Get.snackbar(
-      'Error',
-      checkoutCtrl.lastError ?? 'Failed to initiate order',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    ToastUtil.showError(checkoutCtrl.lastError ?? 'Failed to initiate order');
   }
 }
 

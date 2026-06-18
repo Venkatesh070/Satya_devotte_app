@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
@@ -18,10 +19,8 @@ Future<void> openSunMoonSignCalculator() async {
   final uri = Uri.parse(kSunMoonSignCalculatorUrl);
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched) {
-    Get.snackbar(
-      'Could not open link',
+    ToastUtil.showInfo(
       'Please try again or open the calculator in your browser.',
-      snackPosition: SnackPosition.TOP,
     );
   }
 }
@@ -39,11 +38,7 @@ class SunMoonSignCalculatorLink extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(
-              Icons.open_in_new,
-              size: 14,
-              color: AppColors.gradientStart,
-            ),
+            Icon(Icons.open_in_new, size: 14, color: AppColors.gradientStart),
             const SizedBox(width: 6),
             Expanded(
               child: Text(

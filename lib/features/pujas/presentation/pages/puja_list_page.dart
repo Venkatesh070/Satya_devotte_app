@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -225,22 +226,11 @@ class _RitualListPageState extends State<RitualListPage> {
                     : null) ??
                 e.message ??
                 'Could not update favourites.';
-      Get.snackbar(
-        'Favourites',
-        msg,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(milliseconds: 2200),
-      );
+      ToastUtil.showInfo(msg);
       rethrow;
     } catch (e) {
       if (!mounted) return;
-      Get.snackbar(
-        'Favourites',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      );
+      ToastUtil.showInfo(e.toString());
       rethrow;
     }
 
@@ -263,13 +253,10 @@ class _RitualListPageState extends State<RitualListPage> {
     await _persistFavoritesPrefs();
 
     if (!mounted) return;
-    Get.snackbar(
+    ToastUtil.showSuccess(
       wasFavorite ? 'Removed from favourites' : 'Added to favourites',
-      item.name,
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      duration: const Duration(milliseconds: 1200),
     );
+    ToastUtil.showInfo(item.name);
   }
 
   void _openFavorites() {

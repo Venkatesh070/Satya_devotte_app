@@ -3,6 +3,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 
@@ -78,7 +79,7 @@ class UserOrdersController extends GetxController {
       await fetchOrders();
       return true;
     } catch (e) {
-      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+      ToastUtil.showError(e.toString());
       return false;
     } finally {
       _isMutating.value = false;
@@ -100,7 +101,7 @@ class UserOrdersController extends GetxController {
       await fetchOrders();
       return true;
     } catch (e) {
-      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+      ToastUtil.showError(e.toString());
       return false;
     } finally {
       _isMutating.value = false;
@@ -122,7 +123,7 @@ class UserOrdersController extends GetxController {
       await fetchOrders();
       return true;
     } catch (e) {
-      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+      ToastUtil.showError(e.toString());
       return false;
     } finally {
       _isMutating.value = false;

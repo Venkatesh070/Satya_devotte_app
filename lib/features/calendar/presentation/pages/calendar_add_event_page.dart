@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
@@ -72,7 +73,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
     );
     if (!mounted) return;
     Get.back();
-    Get.snackbar('Event added', name, snackPosition: SnackPosition.BOTTOM);
+    ToastUtil.showSuccess('$name added');
   }
 
   @override

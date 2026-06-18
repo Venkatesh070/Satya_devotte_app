@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/services/auth_service.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 
 class ForgotPasswordController extends GetxController {
   ForgotPasswordController(this._authService);
@@ -38,21 +39,13 @@ class ForgotPasswordController extends GetxController {
     try {
       await _authService.sendPasswordResetEmail(emailController.text);
       isSuccess.value = true;
-      Get.snackbar(
-        'Success',
-        'Password reset email sent successfully',
-        snackPosition: SnackPosition.TOP,
-      );
+      ToastUtil.showSuccess('Password reset email sent successfully');
       _startCooldown();
     } on FirebaseAuthException catch (e) {
       final message = _mapFirebaseError(e);
-      Get.snackbar('Error', message, snackPosition: SnackPosition.TOP);
+      ToastUtil.showError(message);
     } catch (_) {
-      Get.snackbar(
-        'Error',
-        'Failed to send reset link. Please try again.',
-        snackPosition: SnackPosition.TOP,
-      );
+      ToastUtil.showError('Failed to send reset link. Please try again.');
     } finally {
       isLoading.value = false;
     }

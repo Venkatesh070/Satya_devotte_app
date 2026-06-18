@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
@@ -55,27 +56,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
   ProfileController get _profileController => Get.find<ProfileController>();
   MediaUploadService get _mediaService => Get.find<MediaUploadService>();
 
-  @override
-  void initState() {
-    super.initState();
+  void _refreshFromController() {
     final user = _profileController.resolvedUser;
-    _fullNameController = TextEditingController(
-      text: user?['fullName'] ?? user?['name'] ?? '',
-    );
-    _phoneController = TextEditingController(text: user?['phone'] ?? '');
-    _birthPlaceController = TextEditingController(
-      text: user?['placeOfBirth'] ?? '',
-    );
-    _selectedGender = (user?['gender']?.toString().toUpperCase() ?? 'MALE');
-    if (_selectedGender != 'MALE' &&
-        _selectedGender != 'FEMALE' &&
-        _selectedGender != 'OTHER') {
+    if (user == null) return;
+
+    // Update text controllers
+    _fullNameController.text = user['fullName'] ?? user['name'] ?? '';
+    _phoneController.text = user['phone'] ?? '';
+    _birthPlaceController.text = user['placeOfBirth'] ?? '';
+
+    // Update gender
+    final gender = (user['gender']?.toString().toUpperCase() ?? 'MALE');
+    if (['MALE', 'FEMALE', 'OTHER'].contains(gender)) {
+      _selectedGender = gender;
+    } else {
       _selectedGender = 'MALE';
     }
 
-    if (user?['dateOfBirth'] != null) {
+    // Update date of birth
+    if (user['dateOfBirth'] != null) {
       try {
-        _dateOfBirth = DateTime.parse(user!['dateOfBirth'].toString());
+        _dateOfBirth = DateTime.parse(user['dateOfBirth'].toString());
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final dobDate = DateTime(
@@ -85,28 +86,89 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
         if (dobDate.isAfter(today)) {
           _dobError = 'Date of birth cannot be in the future';
+        } else {
+          _dobError = null;
         }
-      } catch (_) {}
+      } catch (_) {
+        _dateOfBirth = null;
+        _dobError = null;
+      }
+    } else {
+      _dateOfBirth = null;
+      _dobError = null;
     }
 
-    if (user?['timeOfBirth'] != null) {
+    // Update time of birth
+    if (user['timeOfBirth'] != null) {
       try {
-        final parts = user!['timeOfBirth'].toString().split(':');
+        final parts = user['timeOfBirth'].toString().split(':');
         if (parts.length == 2) {
           _timeOfBirth = TimeOfDay(
             hour: int.parse(parts[0]),
             minute: int.parse(parts[1]),
           );
+        } else {
+          _timeOfBirth = null;
         }
-      } catch (_) {}
+      } catch (_) {
+        _timeOfBirth = null;
+      }
+    } else {
+      _timeOfBirth = null;
     }
 
-    if (user?['sunSign'] != null && _zodiacSigns.contains(user!['sunSign'])) {
-      _sunSign = user['sunSign'];
+    // Update sun and moon signs (case-insensitive matching)
+    if (user['sunSign'] != null) {
+      final normalizedSunSign = user['sunSign'].toString().toLowerCase();
+      _sunSign = _zodiacSigns.firstWhere(
+        (sign) => sign.toLowerCase() == normalizedSunSign,
+        orElse: () => '',
+      );
+    } else {
+      _sunSign = null;
     }
-    if (user?['moonSign'] != null && _zodiacSigns.contains(user!['moonSign'])) {
-      _moonSign = user['moonSign'];
+
+    if (user['moonSign'] != null) {
+      final normalizedMoonSign = user['moonSign'].toString().toLowerCase();
+      _moonSign = _zodiacSigns.firstWhere(
+        (sign) => sign.toLowerCase() == normalizedMoonSign,
+        orElse: () => '',
+      );
+    } else {
+      _moonSign = null;
     }
+
+    // Call setState to ensure UI re-renders with updated values
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fullNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _birthPlaceController = TextEditingController();
+    _refreshFromController();
+    // Listen to profile controller changes using GetX's ever()
+    ever(_profileController.profile, (_) {
+      _refreshFromController();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh whenever the widget's dependencies change
+    _refreshFromController();
+  }
+
+  @override
+  void didUpdateWidget(covariant EditProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh when widget is updated
+    _refreshFromController();
   }
 
   @override
@@ -253,16 +315,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final success = await _profileController.deleteProfilePicture();
     if (success) {
-      Get.snackbar(
-        'Success',
-        'Profile picture deleted',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showSuccess('Profile picture deleted');
     } else {
-      Get.snackbar(
-        'Error',
+      ToastUtil.showError(
         _profileController.error ?? 'Failed to delete profile picture',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -278,8 +334,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'countryCode': '+91',
     };
 
-    if (_sunSign != null) payload['sunSign'] = _sunSign;
-    if (_moonSign != null) payload['moonSign'] = _moonSign;
+    if (_sunSign != null) payload['sunSign'] = _sunSign?.toLowerCase();
+    if (_moonSign != null) payload['moonSign'] = _moonSign?.toLowerCase();
 
     if (_dateOfBirth != null) {
       payload['dateOfBirth'] = DateFormat('yyyy-MM-dd').format(_dateOfBirth!);
@@ -300,16 +356,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final success = await _profileController.updateProfile(payload);
     if (success) {
       Get.back();
-      Get.snackbar(
-        'Success',
-        'Profile updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showSuccess('Profile updated successfully');
     } else {
-      Get.snackbar(
-        'Error',
+      ToastUtil.showError(
         _profileController.error ?? 'Failed to update profile',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }

@@ -17,6 +17,7 @@ import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_w
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
 /// Figma reference (saffron temple header, circular deity portrait,
@@ -153,21 +154,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               : null) ??
           e.message ??
           'Could not update favorites.';
-      Get.snackbar(
-        'Favorites',
-        msg,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      );
+      ToastUtil.showInfo(msg);
       return;
     } catch (e) {
       if (!mounted) return;
-      Get.snackbar(
-        'Favorites',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      );
+      ToastUtil.showInfo(e.toString());
       return;
     }
 

@@ -16,12 +16,13 @@ class ProfileController extends GetxController {
   final AuthSessionService _authSessionService;
 
   final _isLoading = false.obs;
-  final _profile = Rxn<Map<String, dynamic>>();
+  final profile = Rxn<Map<String, dynamic>>();
   final _error = RxnString();
   final _sessionUser = Rxn<Map<String, dynamic>>();
 
   bool get isLoading => _isLoading.value;
-  Map<String, dynamic>? get profile => _profile.value;
+  // Deprecated: use profile.value instead
+  Map<String, dynamic>? get profileValue => profile.value;
   String? get error => _error.value;
   Map<String, dynamic>? get sessionUser => _sessionUser.value;
 
@@ -73,7 +74,7 @@ class ProfileController extends GetxController {
 
   Map<String, dynamic>? get _mergedUserPayload {
     final session = _sessionUser.value;
-    final root = _profile.value;
+    final root = profile.value;
     Map<String, dynamic>? fromProfile;
     if (root != null) {
       final u = root['user'];
@@ -147,7 +148,7 @@ class ProfileController extends GetxController {
   /// Clears cached user after logout so UI (e.g. home greeting) resets.
   void clearCachedUser() {
     _sessionUser.value = null;
-    _profile.value = null;
+    profile.value = null;
     _error.value = null;
     update();
   }
@@ -159,7 +160,7 @@ class ProfileController extends GetxController {
     _error.value = null;
     try {
       final data = await _profileRepository.getProfile();
-      _profile.value = data;
+      profile.value = data;
     } catch (error) {
       if (error is DioException && error.response?.statusCode == 401) {
         _error.value = 'Session expired. Please login again.';

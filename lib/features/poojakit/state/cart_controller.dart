@@ -1,6 +1,7 @@
 // lib/features/poojakit/state/cart_controller.dart
 
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 
@@ -50,7 +51,7 @@ class CartController extends GetxController {
     try {
       _cart.value = await _repo.addToCart(productId, quantity);
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      ToastUtil.showError(e.toString());
     } finally {
       _busyProductIds.remove(productId);
     }
@@ -69,7 +70,7 @@ class CartController extends GetxController {
       _cart.value = await _repo.updateCartQuantity(productId, quantity);
     } catch (e) {
       _cart.value = previousCart;
-      Get.snackbar('Error', e.toString());
+      ToastUtil.showError(e.toString());
     } finally {
       _busyProductIds.remove(productId);
     }
@@ -84,7 +85,7 @@ class CartController extends GetxController {
       _cart.value = await _repo.removeFromCart(productId);
     } catch (e) {
       _cart.value = previousCart;
-      Get.snackbar('Error', e.toString());
+      ToastUtil.showError(e.toString());
     } finally {
       _busyProductIds.remove(productId);
     }
@@ -95,7 +96,7 @@ class CartController extends GetxController {
       await _repo.clearCart();
       _cart.value = const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      ToastUtil.showError(e.toString());
     }
   }
 

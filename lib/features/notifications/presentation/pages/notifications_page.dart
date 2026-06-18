@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 
 import 'package:satya_devotte_app/features/notifications/data/notifications_exception.dart';
@@ -59,11 +60,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await Get.toNamed(AppRoutes.userOrderDetail, arguments: order);
     } catch (_) {
       if (!mounted) return;
-      Get.snackbar(
-        'Notifications',
-        'Could not open order details.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Could not open order details.');
     }
   }
 
@@ -75,7 +72,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients || _loading || _loadingMore || !_hasMore) {
+    if (!_scrollController.hasClients ||
+        _loading ||
+        _loadingMore ||
+        !_hasMore) {
       return;
     }
     final max = _scrollController.position.maxScrollExtent;
@@ -124,14 +124,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
       });
     } on NotificationsException catch (e) {
       if (!mounted) return;
-      Get.snackbar('Notifications', e.message, snackPosition: SnackPosition.BOTTOM);
+      ToastUtil.showInfo(e.message);
     } catch (_) {
       if (!mounted) return;
-      Get.snackbar(
-        'Notifications',
-        'Failed to load more notifications.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Failed to load more notifications.');
     } finally {
       if (mounted) setState(() => _loadingMore = false);
     }
@@ -315,7 +311,10 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: 7),
                     Text(
                       time,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8B7E70)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8B7E70),
+                      ),
                     ),
                   ],
                 ),

@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/location_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
@@ -385,10 +386,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
 
   void _confirmMapLocation() {
     if (_pickedLocation == null) {
-      Get.snackbar(
-        'Select location',
+      ToastUtil.showInfo(
         'Search, use current location, or move the pin before continuing.',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
@@ -415,11 +414,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       return;
     }
 
-    Get.snackbar(
-      'Error',
-      _checkoutCtrl.lastError ?? 'Failed to initiate order',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    ToastUtil.showError(_checkoutCtrl.lastError ?? 'Failed to initiate order');
   }
 
   AddressModel? _buildAddress() {
@@ -428,10 +423,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         _houseCtrl.text.trim().isEmpty ||
         _streetCtrl.text.trim().isEmpty ||
         _provinceCtrl.text.trim().isEmpty) {
-      Get.snackbar(
-        'Address Required',
+      ToastUtil.showInfo(
         'Please fill receiver details, house, street, and province.',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return null;
     }
@@ -462,11 +455,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   void _showLocationError(Object e) {
-    Get.snackbar(
-      'Location Error',
-      e.toString().replaceFirst('Exception: ', ''),
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    ToastUtil.showError(e.toString().replaceFirst('Exception: ', ''));
   }
 
   @override

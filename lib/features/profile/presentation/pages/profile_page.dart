@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
@@ -178,17 +179,13 @@ class ProfilePage extends StatelessWidget {
                                   );
                                   if (ok) {
                                     Get.offAllNamed(AppRoutes.login);
-                                    Get.snackbar(
-                                      'Account Deleted',
+                                    ToastUtil.showSuccess(
                                       'Your account has been deleted successfully.',
-                                      snackPosition: SnackPosition.BOTTOM,
                                     );
                                   } else {
-                                    Get.snackbar(
-                                      'Error',
+                                    ToastUtil.showError(
                                       authController.lastAuthError ??
                                           'Failed to delete account.',
-                                      snackPosition: SnackPosition.BOTTOM,
                                     );
                                   }
                                 },
@@ -307,8 +304,8 @@ class _ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 64,
-      height: 64,
+      width: 84,
+      height: 84,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,

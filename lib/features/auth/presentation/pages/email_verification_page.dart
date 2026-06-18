@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
@@ -52,21 +53,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     try {
       await _firebaseService.sendEmailVerification();
       if (mounted) {
-        Get.snackbar(
-          'Email Sent!',
-          'Check your inbox for the verification link',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3),
-        );
+        ToastUtil.showSuccess('Check your inbox for the verification link');
       }
     } catch (e) {
       if (mounted) {
-        Get.snackbar(
-          'Error Sending Email',
-          _getUserFriendlyErrorMessage(e),
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 5),
-        );
+        ToastUtil.showError(_getUserFriendlyErrorMessage(e));
       }
     } finally {
       if (mounted) {
@@ -105,19 +96,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     try {
       await _firebaseService.sendEmailVerification();
       if (mounted) {
-        Get.snackbar(
-          'Email Sent!',
-          'Verification email has been resent!',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtil.showSuccess('Verification email has been resent!');
       }
     } catch (e) {
       if (mounted) {
-        Get.snackbar(
-          'Error Resending Email',
-          _getUserFriendlyErrorMessage(e),
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        ToastUtil.showError(_getUserFriendlyErrorMessage(e));
       }
     } finally {
       if (mounted) {

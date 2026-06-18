@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
@@ -341,11 +342,7 @@ class _EventDetailActions extends StatelessWidget {
                       final userEvent = event as UserCalendarEvent;
                       controller.removeUserEvent(userEvent.id);
                       Navigator.of(context).pop();
-                      Get.snackbar(
-                        'Event removed',
-                        userEvent.name,
-                        snackPosition: SnackPosition.BOTTOM,
-                      );
+                      ToastUtil.showInfo('${userEvent.name} removed');
                     }
                   });
                 },

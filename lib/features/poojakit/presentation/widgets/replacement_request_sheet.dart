@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
@@ -126,19 +127,11 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
   Future<void> _submit() async {
     final reason = _reasonCtrl.text.trim();
     if (reason.length < 10) {
-      Get.snackbar(
-        'Reason required',
-        'Please describe the issue (at least 10 characters).',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Please describe the issue (at least 10 characters).');
       return;
     }
     if (_images.isEmpty) {
-      Get.snackbar(
-        'Photos required',
-        'Please attach at least one photo of the damage.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      ToastUtil.showInfo('Please attach at least one photo of the damage.');
       return;
     }
 
@@ -155,12 +148,8 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
     if (ok) {
       Navigator.of(context).pop();
       widget.onSubmitted?.call();
-      Get.snackbar(
-        'Request submitted',
+      ToastUtil.showSuccess(
         'Your replacement request has been sent. We will review it shortly.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withValues(alpha: 0.85),
-        colorText: Colors.white,
       );
     }
   }
