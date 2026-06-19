@@ -743,41 +743,44 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 ),
               ),
             ],
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                Obx(() {
-                  final pending = _historyController.pendingPoojas.toList();
-                  final finished = _historyController.finishedPoojas.toList();
-                  return _CalendarTab(
-                    key: ValueKey('cal_${p.title}'),
+            body: Container(
+              color: Color(0xFFFAECD2),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  Obx(() {
+                    final pending = _historyController.pendingPoojas.toList();
+                    final finished = _historyController.finishedPoojas.toList();
+                    return _CalendarTab(
+                      key: ValueKey('cal_${p.title}'),
+                      pooja: p,
+                      poojas: _deityPoojas,
+                      festivalNames: _festivalNames,
+                      favoriteDeityIds: _favoriteDeityIds,
+                      onToggleFavoriteDeity: _toggleFavorite,
+                      statusForPooja: (pooja) =>
+                          _statusForPooja(pooja, pending, finished),
+                      onSelectPooja: (pooja) {
+                        setState(() {
+                          _pooja = _mergeDeityIntoPooja(pooja, _selectedDeity);
+                        });
+                      },
+                    );
+                  }),
+                  _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
+                  _RitualsTab(
+                    key: ValueKey('rit_${p.title}'),
                     pooja: p,
-                    poojas: _deityPoojas,
-                    festivalNames: _festivalNames,
-                    favoriteDeityIds: _favoriteDeityIds,
-                    onToggleFavoriteDeity: _toggleFavorite,
-                    statusForPooja: (pooja) =>
-                        _statusForPooja(pooja, pending, finished),
-                    onSelectPooja: (pooja) {
-                      setState(() {
-                        _pooja = _mergeDeityIntoPooja(pooja, _selectedDeity);
-                      });
-                    },
-                  );
-                }),
-                _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
-                _RitualsTab(
-                  key: ValueKey('rit_${p.title}'),
-                  pooja: p,
-                  rituals: _deityRituals,
-                ),
-                _StoriesTab(
-                  key: ValueKey(
-                    'story_${p.deityName}_${p.deityStories.length}',
+                    rituals: _deityRituals,
                   ),
-                  pooja: p,
-                ),
-              ],
+                  _StoriesTab(
+                    key: ValueKey(
+                      'story_${p.deityName}_${p.deityStories.length}',
+                    ),
+                    pooja: p,
+                  ),
+                ],
+              ),
             ),
           ),
           // Back button
@@ -908,7 +911,7 @@ class _HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(color: AppColors.appBgColor),
+      decoration: const BoxDecoration(color: Color(0XFFFFF4E0)),
       child: Column(
         children: [
           Stack(
