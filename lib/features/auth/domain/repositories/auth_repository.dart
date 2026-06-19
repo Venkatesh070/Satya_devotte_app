@@ -24,4 +24,7 @@ abstract class AuthRepository {
 
   /// Partially updates the authenticated user's profile details.
   Future<void> updateProfile(Map<String, dynamic> profileData);
+  
+  /// Deletes the authenticated user's profile picture.
+  Future<void> deleteProfilePicture();
 }

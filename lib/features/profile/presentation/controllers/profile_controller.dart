@@ -196,8 +196,7 @@ class ProfileController extends GetxController {
     _error.value = null;
     try {
       final authRepo = Get.find<AuthRepository>();
-      // Send null or empty for image to delete it
-      await authRepo.updateProfile({'image': null});
+      await authRepo.deleteProfilePicture();
       await loadProfile();
       return true;
     } catch (error) {

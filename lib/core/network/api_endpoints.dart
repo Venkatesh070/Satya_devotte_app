@@ -8,6 +8,7 @@ class ApiEndpoints {
   static const String authDeleteAccount = '/api/v1/auth/account';
   static const String authRefresh = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/profile';
+  static const String profileImage = '/api/v1/auth/profile/image';
 
   /// GET — list current user's favourite deities (full APPROVED deity docs).
   static const String favoriteDeities = '/api/v1/auth/favorite-deities';

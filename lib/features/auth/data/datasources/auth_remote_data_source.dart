@@ -98,6 +98,23 @@ class AuthRemoteDataSource {
     }
   }
 
+  /// Deletes the signed-in user's profile picture.
+  /// DELETE `/api/v1/auth/profile/image`.
+  Future<void> deleteProfilePicture() async {
+    final response = await _apiClient.dio.delete<dynamic>(
+      ApiEndpoints.profileImage,
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message:
+            'Profile picture delete API failed with status ${response.statusCode}.',
+      );
+    }
+  }
+
   /// Web admin sign-in. POSTs to `/auth/admin-login` with the Firebase ID token
   /// in the Authorization header. The backend verifies the token AND ensures
   /// the user has admin (or superadmin) privileges.
