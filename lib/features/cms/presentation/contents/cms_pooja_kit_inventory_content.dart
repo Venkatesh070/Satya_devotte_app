@@ -947,7 +947,7 @@ const _kInventoryTableColumns = <_InvColSpec>[
   _InvColSpec('Category', 132),
   _InvColSpec('Item size', 96),
   _InvColSpec('Price', 84),
-  _InvColSpec('Stock', 56, align: TextAlign.right),
+  _InvColSpec('SOH (Stock On Hand)', 120, align: TextAlign.center),
   _InvColSpec('Level', 112),
   _InvColSpec('Status', 108),
   _InvColSpec('', 40),
@@ -1115,10 +1115,10 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[5].width,
-      align: Alignment.centerRight,
+      align: Alignment.center,
       child: Text(
         '${item.stockQuantity}',
-        textAlign: TextAlign.right,
+        textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -1430,9 +1430,11 @@ class _InventoryTableHeader extends StatelessWidget {
             _InvCell(
               width: _kInventoryTableColumns[i].width,
               gapAfter: i < _kInventoryTableColumns.length - 1,
-              align: _kInventoryTableColumns[i].align == TextAlign.right
-                  ? Alignment.centerRight
-                  : Alignment.centerLeft,
+              align: switch (_kInventoryTableColumns[i].align) {
+                TextAlign.right => Alignment.centerRight,
+                TextAlign.center => Alignment.center,
+                _ => Alignment.centerLeft,
+              },
               child: Text(
                 _kInventoryTableColumns[i].label,
                 textAlign: _kInventoryTableColumns[i].align,

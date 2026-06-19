@@ -695,7 +695,7 @@ class _ProductTable extends StatelessWidget {
         children: [
           Expanded(flex: _flexName, child: _HCell('Product Name')),
           Expanded(flex: _flexCreated, child: _HCell('Created At')),
-          Expanded(flex: _flexQty, child: _HCell('Kits')),
+          Expanded(flex: _flexQty, child: _HCell('SOH (Stock On Hand)')),
           Expanded(flex: _flexPrice, child: _HCell('Price', alignRight: true)),
           Expanded(
             flex: _flexStatus,
