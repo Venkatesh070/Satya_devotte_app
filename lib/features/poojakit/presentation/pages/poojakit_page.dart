@@ -43,9 +43,9 @@ class PoojaKitPage extends GetView<PoojaKitController> {
             return _ShopScaffold(
               cartController: cartCtrl,
               onBack: onBack,
-              child: const _StateMessage(
-                icon: Icons.shopping_bag_outlined,
-                title: 'No products available',
+              child: Image.asset(
+                'assets/images/default_img.png',
+                fit: BoxFit.cover,
               ),
             );
           }
@@ -267,10 +267,10 @@ class _ProductListTile extends StatelessWidget {
                             child: SizedBox(
                               width: 18,
                               height: 18,
-                            child: ChakraLoadingIndicator(
-                              size: 18,
-                              color: AppColors.primary,
-                            ),
+                              child: ChakraLoadingIndicator(
+                                size: 18,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ),
@@ -406,7 +406,7 @@ class _ProductImageFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xFFFFF7E8),
-      child: const Icon(Icons.shopping_bag_outlined, color: Color(0x996B4A2B)),
+      child: Image.asset('assets/images/default_img.png', fit: BoxFit.cover),
     );
   }
 }
@@ -423,7 +423,12 @@ class _CartBadge extends StatelessWidget {
       children: [
         _CircleIconButton(
           icon: Icons.shopping_cart_outlined,
-          onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
+          onTap: () async {
+            await controller.fetchCart();
+            if (context.mounted) {
+              Get.toNamed(AppRoutes.poojaKitCart);
+            }
+          },
         ),
         Positioned(
           right: -1,

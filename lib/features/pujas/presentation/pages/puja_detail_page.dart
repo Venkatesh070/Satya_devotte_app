@@ -2941,10 +2941,9 @@ class _RitualCard extends StatelessWidget {
                 color: Color(0xFFFAECD2),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: const Icon(
-                Icons.local_fire_department_outlined,
-                size: 48,
-                color: Color(0xFFB07A3A),
+              child: Image.asset(
+                'assets/images/default_img.png',
+                fit: BoxFit.cover,
               ),
             ),
           Padding(

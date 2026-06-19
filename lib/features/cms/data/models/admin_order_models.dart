@@ -518,7 +518,8 @@ class AdminOrder {
       totalAmount: _toDouble(json['totalAmount'] ?? json['total']) ?? 0,
       subtotalAmount:
           _toDouble(json['subtotalAmount'] ?? json['subtotal']) ?? 0,
-      shippingAmount: _toDouble(
+      shippingAmount:
+          _toDouble(
             json['deliveryCharge'] ??
                 json['delivery_charge'] ??
                 json['shippingAmount'] ??

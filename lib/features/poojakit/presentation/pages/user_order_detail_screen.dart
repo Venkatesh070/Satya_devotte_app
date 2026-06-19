@@ -1,5 +1,7 @@
 // lib/features/poojakit/presentation/pages/user_order_detail_screen.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
@@ -868,9 +870,9 @@ class _ThumbFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
+    return ColoredBox(
       color: Color(0xFFFFF7E8),
-      child: Icon(Icons.shopping_bag_outlined, color: Color(0x996B4A2B)),
+      child: Image.asset('assets/images/default_img.png', fit: BoxFit.cover),
     );
   }
 }

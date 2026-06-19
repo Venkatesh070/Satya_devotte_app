@@ -13,8 +13,20 @@ import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final c = Get.find<CartController>();
+    c.fetchCart();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -331,19 +343,19 @@ class _ProductThumb extends StatelessWidget {
                     ),
                   ),
                 ),
-                errorWidget: (_, _, _) => const ColoredBox(
+                errorWidget: (_, _, _) => ColoredBox(
                   color: Color(0xFFFFF7E8),
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Color(0x996B4A2B),
+                  child: Image.asset(
+                    'assets/images/default_img.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
               )
-            : const ColoredBox(
+            : ColoredBox(
                 color: Color(0xFFFFF7E8),
-                child: Icon(
-                  Icons.shopping_bag_outlined,
-                  color: Color(0x996B4A2B),
+                child: Image.asset(
+                  'assets/images/default_img.png',
+                  fit: BoxFit.cover,
                 ),
               ),
       ),
@@ -567,11 +579,17 @@ class _BillSummarySection extends StatelessWidget {
   const _BillSummarySection({required this.cart});
   final CartModel cart;
 
+  static String _formatPrice(num value) {
+    if (value % 1 == 0) return value.toInt().toStringAsFixed(2);
+    return value.toStringAsFixed(2);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final subtotal = cart.totalAmount;
-    const delivery = 0;
-    final toPay = subtotal + delivery;
+    final subtotal = cart.subtotal ?? cart.totalAmount;
+    final delivery = cart.deliveryCharge ?? 0;
+    final toPay = cart.totalAmount;
+    debugPrint('Cart Model - subtotal: ${cart.subtotal}, deliveryCharge: ${cart.deliveryCharge}, totalAmount: ${cart.totalAmount}');
 
     Widget row(String left, String right, {bool bold = false}) {
       return Padding(
@@ -620,10 +638,10 @@ class _BillSummarySection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          row('Subtotal', '${cart.currency} $subtotal'),
-          row('Delivery charge', '${cart.currency} $delivery'),
+          row('Subtotal', '${cart.currency} ${_formatPrice(subtotal)}'),
+          row('Delivery charge', '${cart.currency} ${_formatPrice(delivery)}'),
           const Divider(height: 16, color: Color(0x1A6B4A2B)),
-          row('To pay', '${cart.currency} $toPay', bold: true),
+          row('To pay', '${cart.currency} ${_formatPrice(toPay)}', bold: true),
           Text(
             'Inclusive of all taxes and charges',
             style: AppTypography.inter(

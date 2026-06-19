@@ -110,7 +110,12 @@ class _CartBadge extends StatelessWidget {
       children: [
         _CircleIconButton(
           icon: Icons.shopping_cart_outlined,
-          onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
+          onTap: () async {
+            await controller.fetchCart();
+            if (context.mounted) {
+              Get.toNamed(AppRoutes.poojaKitCart);
+            }
+          },
         ),
         Positioned(
           right: -1,
@@ -229,7 +234,7 @@ class _ProductHeader extends StatelessWidget {
 
     return Column(
       children: [
-        _ProductHeroImage(imageUrl: product.imageUrl),
+        _ProductHeroImage(imageUrl: product.imageUrl, isPujakit: isPujakit),
         const SizedBox(height: 16),
         Text(
           product.title,
@@ -294,14 +299,15 @@ class _ProductHeader extends StatelessWidget {
 }
 
 class _ProductHeroImage extends StatelessWidget {
-  const _ProductHeroImage({required this.imageUrl});
+  const _ProductHeroImage({required this.imageUrl, required this.isPujakit});
   final String? imageUrl;
+  final bool isPujakit;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 147,
-      height: 111,
+      width: isPujakit ? 147 : double.infinity,
+      height: isPujakit ? 111 : 250,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -319,6 +325,8 @@ class _ProductHeroImage extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: imageUrl!,
                 fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
                 placeholder: (context, url) => const ColoredBox(
                   color: Color(0xFFFFF7E8),
                   child: Center(
@@ -332,19 +340,19 @@ class _ProductHeroImage extends StatelessWidget {
                     ),
                   ),
                 ),
-                errorWidget: (context, url, error) => const ColoredBox(
+                errorWidget: (context, url, error) => ColoredBox(
                   color: Color(0xFFFFF7E8),
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Color(0x996B4A2B),
+                  child: Image.asset(
+                    'assets/images/default_img.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
               )
-            : const ColoredBox(
+            : ColoredBox(
                 color: Color(0xFFFFF7E8),
-                child: Icon(
-                  Icons.shopping_bag_outlined,
-                  color: Color(0x996B4A2B),
+                child: Image.asset(
+                  'assets/images/default_img.png',
+                  fit: BoxFit.cover,
                 ),
               ),
       ),

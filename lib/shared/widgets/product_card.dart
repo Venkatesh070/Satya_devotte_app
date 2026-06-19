@@ -69,9 +69,9 @@ class ProductCard extends StatelessWidget {
                           )
                         : Container(
                             color: Colors.grey[200],
-                            child: const Icon(
-                              Icons.shopping_bag_outlined,
-                              color: Colors.grey,
+                            child: Image.asset(
+                              'assets/images/default_img.png',
+                              fit: BoxFit.cover,
                             ),
                           ),
                   ),

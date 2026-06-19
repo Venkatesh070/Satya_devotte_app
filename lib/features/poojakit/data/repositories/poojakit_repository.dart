@@ -278,13 +278,16 @@ class PoojaKitRepository {
     try {
       final res = await _apiClient.dio.get<dynamic>(ApiEndpoints.cart);
       final data = res.data;
+      debugPrint('Cart API Response: $data');
       if (data is! Map<String, dynamic>) {
         throw Exception('Unexpected response from server.');
       }
       final payload = data['data'];
+      debugPrint('Cart Payload: $payload');
       final cartData = payload is Map && payload['cart'] is Map
           ? payload['cart']
           : payload;
+      debugPrint('Cart Data to Parse: $cartData');
       return CartModel.fromJson(cartData as Map<String, dynamic>);
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not fetch cart.';
@@ -300,13 +303,16 @@ class PoojaKitRepository {
         data: {'productId': productId, 'quantity': quantity},
       );
       final data = res.data;
+      debugPrint('Add to Cart API Response: $data');
       if (data is! Map<String, dynamic>) {
         throw Exception('Unexpected response from server.');
       }
       final payload = data['data'];
+      debugPrint('Add to Cart Payload: $payload');
       final cartData = payload is Map && payload['cart'] is Map
           ? payload['cart']
           : payload;
+      debugPrint('Add to Cart Data to Parse: $cartData');
       return CartModel.fromJson(cartData as Map<String, dynamic>);
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not add to cart.';
@@ -322,13 +328,16 @@ class PoojaKitRepository {
         ApiEndpoints.cartRemoveItem(productId),
       );
       final data = res.data;
+      debugPrint('Remove from Cart API Response: $data');
       if (data is! Map<String, dynamic>) {
         throw Exception('Unexpected response from server.');
       }
       final payload = data['data'];
+      debugPrint('Remove from Cart Payload: $payload');
       final cartData = payload is Map && payload['cart'] is Map
           ? payload['cart']
           : payload;
+      debugPrint('Remove from Cart Data to Parse: $cartData');
       return CartModel.fromJson(cartData as Map<String, dynamic>);
     } on DioException catch (e) {
       // Fallback to POST remove if DELETE fails (some environments might only support POST)
@@ -359,13 +368,16 @@ class PoojaKitRepository {
         data: {'productId': productId, 'quantity': quantity},
       );
       final data = res.data;
+      debugPrint('Update Cart API Response: $data');
       if (data is! Map<String, dynamic>) {
         throw Exception('Unexpected response from server.');
       }
       final payload = data['data'];
+      debugPrint('Update Cart Payload: $payload');
       final cartData = payload is Map && payload['cart'] is Map
           ? payload['cart']
           : payload;
+      debugPrint('Update Cart Data to Parse: $cartData');
       return CartModel.fromJson(cartData as Map<String, dynamic>);
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not update cart.';

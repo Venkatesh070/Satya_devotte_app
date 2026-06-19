@@ -51,24 +51,32 @@ class CartModel {
     required this.items,
     required this.totalAmount,
     required this.currency,
+    this.subtotal,
+    this.deliveryCharge,
     this.serverItemCount,
   });
 
   final List<CartItemModel> items;
   final num totalAmount;
   final String currency;
+  final num? subtotal;
+  final num? deliveryCharge;
   final int? serverItemCount;
 
   CartModel copyWith({
     List<CartItemModel>? items,
     num? totalAmount,
     String? currency,
+    num? subtotal,
+    num? deliveryCharge,
     int? serverItemCount,
   }) {
     return CartModel(
       items: items ?? this.items,
       totalAmount: totalAmount ?? this.totalAmount,
       currency: currency ?? this.currency,
+      subtotal: subtotal ?? this.subtotal,
+      deliveryCharge: deliveryCharge ?? this.deliveryCharge,
       serverItemCount: serverItemCount,
     );
   }
@@ -81,6 +89,8 @@ class CartModel {
           .toList(),
       totalAmount: (json['totalAmount'] ?? 0) as num,
       currency: (json['currency'] ?? 'ZAR').toString(),
+      subtotal: (json['subtotal'] as num?) ?? (json['subtotalAmount'] as num?),
+      deliveryCharge: (json['deliveryCharge'] as num?) ?? (json['shippingAmount'] as num?),
       serverItemCount: json['itemCount'] as int?,
     );
   }
