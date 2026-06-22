@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "1053803605697-p6jt0oqp0h43m1r6pdlq68pkki8uq71q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "c8c5eda4f79a7920103c7b4d5e4b04d52064f93c"
+          }
+        },
+        {
           "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
           "client_type": 3
         }
