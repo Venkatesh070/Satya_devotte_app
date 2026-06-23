@@ -1034,6 +1034,127 @@ class _IngredientChecklistTileState extends State<_IngredientChecklistTile> {
   }
 }
 
+class _AutoScrollCarousel extends StatefulWidget {
+  const _AutoScrollCarousel({required this.imageUrls});
+  final List<String> imageUrls;
+
+  @override
+  State<_AutoScrollCarousel> createState() => _AutoScrollCarouselState();
+}
+
+class _AutoScrollCarouselState extends State<_AutoScrollCarousel> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    if (widget.imageUrls.length <= 1) return;
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return false;
+      _currentPage = (_currentPage + 1) % widget.imageUrls.length;
+      await _pageController.animateToPage(
+        _currentPage,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      return true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.imageUrls.isEmpty) return const SizedBox.shrink();
+    if (widget.imageUrls.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          _cleanUrl(widget.imageUrls.first),
+          width: double.infinity,
+          height: 180,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 180,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    _cleanUrl(widget.imageUrls[index]),
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              );
+            },
+          ),
+          Positioned(
+            bottom: 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(widget.imageUrls.length, (index) {
+                return Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _currentPage == index
+                        ? const LinearGradient(
+                            colors: [Color(0xFFFFBF00), Color(0xFFFF6200)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: _currentPage != index
+                        ? Colors.white.withOpacity(0.4)
+                        : null,
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _cleanUrl(String url) {
+    return url.replaceAll('`', '').trim();
+  }
+}
+
 class _PujaStepScreen extends StatelessWidget {
   const _PujaStepScreen({
     required this.step,
@@ -1269,24 +1390,7 @@ class _PujaStepScreen extends StatelessWidget {
             if (step.imageUrls.isNotEmpty) ...[
               _WizardFadeSlideIn(
                 delay: const Duration(milliseconds: 140),
-                child: SizedBox(
-                  height: 180,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: step.imageUrls.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) => ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        step.imageUrls[index],
-                        width: 240,
-                        height: 180,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
-                  ),
-                ),
+                child: _AutoScrollCarousel(imageUrls: step.imageUrls),
               ),
               const SizedBox(height: 16),
             ],
