@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sathya - Payment Processing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #FFF8E8 0%, #FFF0D4 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 48px 32px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(74, 44, 0, 0.1);
+            border: 1px solid #E8D5B7;
+        }
+        .logo-img {
+            height: 50px;
+            width: auto;
+            margin-bottom: 32px;
+        }
+        .spinner {
+            border: 4px solid #FFF0D4;
+            border-top: 4px solid #C85A00;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h1 {
+            color: #4A2C00;
+            font-size: 24px;
+            margin-bottom: 16px;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+        }
+        p {
+            color: #5C3A00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="../images/logoWhite.png" alt="Sathya Logo" class="logo-img">
+        <div class="spinner"></div>
+        <h1>Processing Payment</h1>
+        <p>Please wait while we verify your transaction...</p>
+    </div>
+</body>
+</html>
