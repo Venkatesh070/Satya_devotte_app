@@ -1387,7 +1387,7 @@ class _DateCell extends StatelessWidget {
   }
 }
 
-/// Paystack / payment reference — fully visible with copy action.
+/// Payment reference — fully visible with copy action.
 class _ReferenceCell extends StatelessWidget {
   const _ReferenceCell({
     required this.reference,
@@ -1473,7 +1473,7 @@ class _WideTable extends StatelessWidget {
     3: FlexColumnWidth(1.4), // Status
     4: FlexColumnWidth(2.0), // Date (two lines)
     5: FlexColumnWidth(2.2), // Note
-    6: FlexColumnWidth(2.4), // Reference (Paystack ref)
+    6: FlexColumnWidth(2.4), // Reference (payment ref)
   };
 
   static const _headerStyle = TextStyle(

@@ -26,8 +26,8 @@ class AdminNotificationDetailSheet extends StatelessWidget {
       if (item.contributionNumber != null)
         'Contribution #': item.contributionNumber!,
       if (item.requestNumber != null) 'Request #': item.requestNumber!,
-      if (item.paystackReference != null)
-        'Paystack ref': item.paystackReference!,
+      if (item.paymentReference != null)
+        'Payment ref': item.paymentReference!,
     };
 
     return Padding(

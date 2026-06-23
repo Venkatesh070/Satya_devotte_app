@@ -7,7 +7,7 @@
 //              detail view with summary / line items / shipping / tracking
 //              / invoice / fulfilment, plus contextual admin actions:
 //              Mark Processing, Add Tracking, Dispatch, Mark Delivered,
-//              Cancel order, and Verify (Paystack) by reference.
+//              Cancel order, and Verify (PayFast) by reference.
 //
 // Mirrors the section structure described in
 // `Flutter-cms-refund&orders&payments.plan` §4.
@@ -1168,9 +1168,9 @@ class _SummaryCard extends StatelessWidget {
         const SizedBox(height: 12),
         _MetaPair(
           label: 'Reference',
-          value: order.paystackReference.isEmpty
+          value: order.paymentReference.isEmpty
               ? '—'
-              : order.paystackReference,
+              : order.paymentReference,
         ),
         const SizedBox(height: 12),
         _MetaPair(
@@ -1701,14 +1701,14 @@ class _ActionBar extends StatelessWidget {
             ),
           );
         }
-        if (order.paystackReference.isNotEmpty) {
+        if (order.paymentReference.isNotEmpty) {
           children.add(
             _OutlinedAction(
               label: 'Verify payment',
               icon: Icons.refresh_rounded,
               color: CmsColors.orangeDark,
               onTap:
-                  busy ? null : () => controller.verifyPayment(order.paystackReference),
+                  busy ? null : () => controller.verifyPayment(order.paymentReference),
             ),
           );
         }
@@ -2016,7 +2016,7 @@ Future<void> _showInitiateRefundDialog(
             children: [
               const Text(
                 'Available after the order is marked Delivered. Initiates a refund '
-                'on this order. Process the actual payout in Paystack when required.',
+                'on this order. Process the actual payout in PayFast when required.',
                 style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
               ),
               const SizedBox(height: 10),

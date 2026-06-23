@@ -32,7 +32,7 @@ class DonationsRepository {
     }
   }
 
-  // ── Initiate Paystack payment for a single donation ─────────
+  // ── Initiate PayFast payment for a single donation ─────────
   Future<DonationInitData> initiateDonation({
     String? donationId,
     required num amount,
@@ -72,7 +72,7 @@ class DonationsRepository {
     }
   }
 
-  // ── Verify a Paystack reference (idempotent) ────────────────
+  // ── Verify a payment reference (idempotent) ────────────────
   Future<VerifyResult> verifyPayment(String reference) async {
     if (reference.trim().isEmpty) {
       throw const DonationException('Missing payment reference.');

@@ -15,7 +15,12 @@ class FirebaseService {
                     defaultValue: AppEnv.googleWebClientId,
                   ),
                 )
-              : GoogleSignIn());
+              : GoogleSignIn(
+                  serverClientId: const String.fromEnvironment(
+                    'GOOGLE_WEB_CLIENT_ID',
+                    defaultValue: AppEnv.androidGoogleServerClientId,
+                  ),
+                ));
 
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;

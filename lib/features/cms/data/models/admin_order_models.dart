@@ -400,7 +400,7 @@ class AdminOrder {
     required this.orderStatus,
     required this.paymentStatus,
     required this.paymentMethod,
-    required this.paystackReference,
+    required this.paymentReference,
     required this.currency,
     required this.totalAmount,
     required this.subtotalAmount,
@@ -425,7 +425,7 @@ class AdminOrder {
   final OrderStatus orderStatus;
   final PaymentStatus paymentStatus;
   final String paymentMethod;
-  final String paystackReference;
+  final String paymentReference;
   final String currency;
   final double totalAmount;
   final double subtotalAmount;
@@ -446,7 +446,7 @@ class AdminOrder {
 
   bool get hasTracking => tracking?.hasTrackingNumber == true;
 
-  /// Paystack reported a successful charge; fulfilment actions apply.
+  /// PayFast reported a successful charge; fulfilment actions apply.
   bool get isPaymentPaid => paymentStatus == PaymentStatus.paid;
 
   /// Admin may start a refund request only after fulfilment is **Delivered**.
@@ -505,9 +505,10 @@ class AdminOrder {
       orderStatus: OrderStatusX.parseFromOrderJson(json),
       paymentStatus: PaymentStatusX.parse(json['paymentStatus']),
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
-      paystackReference:
-          (json['paystackReference'] ??
-                  json['paymentReference'] ??
+      paymentReference:
+          (json['paymentReference'] ??
+                  json['payfastReference'] ??
+                  json['paystackReference'] ??
                   json['reference'] ??
                   '')
               .toString(),
@@ -552,7 +553,7 @@ class AdminOrder {
     );
   }
 
-  /// Some endpoints (e.g. Paystack verify) return an order without a populated
+  /// Some endpoints (e.g. PayFast verify) return an order without a populated
   /// `user` map. When merging into a list row that already had customer data,
   /// copy [fallback]'s customer fields so the UI does not blank out.
   AdminOrder withCustomerFallback(AdminOrder fallback) {
@@ -569,7 +570,7 @@ class AdminOrder {
       orderStatus: orderStatus,
       paymentStatus: paymentStatus,
       paymentMethod: paymentMethod,
-      paystackReference: paystackReference,
+      paymentReference: paymentReference,
       currency: currency,
       totalAmount: totalAmount,
       subtotalAmount: subtotalAmount,

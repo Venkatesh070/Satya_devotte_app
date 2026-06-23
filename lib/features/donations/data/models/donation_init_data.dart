@@ -1,7 +1,9 @@
+import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
+
 // Response payload of POST /api/v1/donations/:id/donate.
 //
-// The backend may return either `authorization_url` (Paystack-native) or
-// the camelCase `authorizationUrl` — `fromJson` accepts both.
+// The backend returns a redirect URL for PayFast hosted checkout — field names
+// may be `authorizationUrl`, `paymentUrl`, or snake_case variants.
 class DonationInitData {
   const DonationInitData({
     required this.reference,
@@ -41,9 +43,7 @@ class DonationInitData {
 
     return DonationInitData(
       reference: _str(root['reference']),
-      authorizationUrl: _str(
-        root['authorizationUrl'] ?? root['authorization_url'],
-      ),
+      authorizationUrl: PaymentGatewayUrls.authorizationUrlFromMap(root),
       amount: (root['amount'] is num)
           ? root['amount'] as num
           : num.tryParse(_str(root['amount'])) ?? 0,

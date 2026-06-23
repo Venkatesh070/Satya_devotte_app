@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -125,16 +126,8 @@ class _ProductPaymentWebViewScreenState
     });
   }
 
-  bool _isTerminalUrl(String url) {
-    if (url.isEmpty) return false;
-    final u = url.toLowerCase();
-    return u.contains('/standard/close') ||
-        u.contains('/standard/success') ||
-        u.contains('reference=') ||
-        u.contains('trxref=') ||
-        u.contains('payment/return') ||
-        u.contains('order/return');
-  }
+  bool _isTerminalUrl(String url) =>
+      PaymentGatewayUrls.isTerminalCallbackUrl(url);
 
   Future<void> _onTerminalUrl(String url) async {
     if (_completed) return;

@@ -337,8 +337,11 @@ class AdminOrdersRemoteDataSource {
       copyIfMissing('paymentStatus', json['paymentStatus']);
       copyIfMissing('paymentMethod', json['paymentMethod']);
       copyIfMissing(
-        'paystackReference',
-        json['paystackReference'] ?? json['reference'],
+        'paymentReference',
+        json['paymentReference'] ??
+            json['payfastReference'] ??
+            json['paystackReference'] ??
+            json['reference'],
       );
       copyIfMissing('totalAmount', json['totalAmount'] ?? json['amount']);
       copyIfMissing('currency', json['currency']);

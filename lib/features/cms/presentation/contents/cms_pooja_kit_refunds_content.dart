@@ -1049,8 +1049,8 @@ class _ApproveHelpText extends StatelessWidget {
         'Cancels the order and restocks inventory. Not allowed if the order '
             'has already shipped.',
       OrderRequestType.refund =>
-        'Marks the order as REFUNDED in Satya. v1 does NOT call Paystack — '
-            'process the actual refund in the Paystack dashboard.',
+        'Marks the order as REFUNDED in Satya. v1 does NOT call PayFast — '
+            'process the actual refund in the PayFast dashboard.',
       OrderRequestType.replacement =>
         'Creates a new paid replacement order linked to this request. '
             'Returns an error if stock is insufficient.',

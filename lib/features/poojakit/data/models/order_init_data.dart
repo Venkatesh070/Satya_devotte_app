@@ -1,5 +1,7 @@
 // lib/features/poojakit/data/models/order_init_data.dart
 
+import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
+
 class OrderInitData {
   const OrderInitData({
     required this.reference,
@@ -28,9 +30,7 @@ class OrderInitData {
 
     return OrderInitData(
       reference: _str(root['reference']),
-      authorizationUrl: _str(
-        root['authorizationUrl'] ?? root['authorization_url'],
-      ),
+      authorizationUrl: PaymentGatewayUrls.authorizationUrlFromMap(root),
       amount: (root['amount'] is num)
           ? root['amount'] as num
           : num.tryParse(_str(root['amount'])) ?? 0,

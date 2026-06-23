@@ -16,10 +16,10 @@ class PoojaKitRepository {
   PoojaKitRepository(this._apiClient);
   final ApiClient _apiClient;
 
-  /// Initiate a Paystack payment for a product order.
+  /// Initiate a PayFast payment for a product order.
   /// This is now a 2-step process as per the API:
   /// 1. Create order
-  /// 2. Initialize Paystack payment
+  /// 2. Initialize PayFast payment
   Future<OrderInitData> initiateOrder({
     required String productId,
     required int quantity,
@@ -33,7 +33,7 @@ class PoojaKitRepository {
           {'productId': productId, 'quantity': quantity},
         ],
         'shippingAddress': shippingAddress.toJson(),
-        'paymentMethod': 'PAYSTACK',
+        'paymentMethod': 'PAYFAST',
         if (notes != null) 'notes': notes,
       };
 
@@ -89,7 +89,7 @@ class PoojaKitRepository {
     }
   }
 
-  /// Verify a Paystack reference for an order.
+  /// Verify a PayFast reference for an order.
   Future<VerifyResult> verifyOrderPayment(
     String orderId,
     String reference,
@@ -406,7 +406,7 @@ class PoojaKitRepository {
         'items':
             [], // Backend knows it's from cart if items is empty or omitted
         'shippingAddress': shippingAddress.toJson(),
-        'paymentMethod': 'PAYSTACK',
+        'paymentMethod': 'PAYFAST',
         if (notes != null) 'notes': notes,
       };
 

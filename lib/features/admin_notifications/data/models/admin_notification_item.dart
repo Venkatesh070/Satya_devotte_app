@@ -23,7 +23,10 @@ class AdminNotificationItem {
   String? get contributionNumber => _dataString('contributionNumber');
   String? get requestId => _dataString('requestId');
   String? get requestNumber => _dataString('requestNumber');
-  String? get paystackReference => _dataString('paystackReference');
+  String? get paymentReference =>
+      _dataString('paymentReference') ??
+      _dataString('payfastReference') ??
+      _dataString('paystackReference');
 
   String? _dataString(String key) {
     final v = data?[key];

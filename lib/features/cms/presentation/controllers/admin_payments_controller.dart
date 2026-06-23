@@ -1,5 +1,5 @@
 // Payments inbox controller — `GET /payments/all` with optional
-// `paymentStatus` filter, `search` (order number or Paystack reference),
+// `paymentStatus` filter, `search` (order number or payment reference),
 // plus "Verify now" via `GET /payments/verify/:reference`.
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
@@ -107,13 +107,13 @@ class AdminPaymentsController extends GetxController {
     }
   }
 
-  /// Admin-triggered Paystack verify. Updates the row in-place.
+  /// Admin-triggered PayFast verify. Updates the row in-place.
   Future<void> verifyByReference(AdminOrder order) async {
-    final ref = order.paystackReference;
+    final ref = order.paymentReference;
     if (ref.trim().isEmpty) {
       showCmsSnackbar(
         title: 'No reference',
-        message: 'This order has no Paystack reference yet.',
+        message: 'This order has no payment reference yet.',
         isError: true,
       );
       return;
@@ -142,7 +142,7 @@ class AdminPaymentsController extends GetxController {
       }
       showCmsSnackbar(
         title: 'Verified',
-        message: 'Latest payment status pulled from Paystack.',
+        message: 'Latest payment status pulled from PayFast.',
         isError: false,
       );
     } on DioException catch (e) {

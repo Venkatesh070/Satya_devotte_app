@@ -31,6 +31,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -161,21 +162,8 @@ class _DonationPaystackWebViewScreenState
   }
 
   // ── Shared: detect terminal URL ─────────────────────────────
-  bool _isTerminalUrl(String url) {
-    if (url.isEmpty) return false;
-    final u = url.toLowerCase();
-    // Paystack's hosted-checkout terminal pages.
-    if (u.contains('/standard/close')) return true;
-    if (u.contains('/standard/success')) return true;
-    // Our backend / Paystack callback redirects almost always carry the
-    // payment reference back on the URL, so this is the surest match.
-    if (u.contains('reference=')) return true;
-    if (u.contains('trxref=')) return true;
-    // Generic callback hints.
-    if (u.contains('payment/return')) return true;
-    if (u.contains('donation/return')) return true;
-    return false;
-  }
+  bool _isTerminalUrl(String url) =>
+      PaymentGatewayUrls.isTerminalCallbackUrl(url);
 
   Future<void> _onTerminalUrl(String url) async {
     if (_completed) return;
@@ -386,7 +374,7 @@ class _WebFallback extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Flutter web cannot embed Paystack inline. The payment page '
+              'Flutter web cannot embed PayFast inline. The payment page '
               'opened in a new tab — finish there and we will detect it '
               'automatically when you come back.',
               textAlign: TextAlign.center,

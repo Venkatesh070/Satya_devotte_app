@@ -7,34 +7,42 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1053803605697:android:d5a06b41628f6c282a6e40",
+        "mobilesdk_app_id": "1:1053803605697:android:9e53b9236398a6472a6e40",
         "android_client_info": {
-          "package_name": "com.satya_devotte_app"
+          "package_name": "com.developer.sathya"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1053803605697-9heqrgj4kqgk98cqgl9ag1hiop16ck3u.apps.googleusercontent.com",
+          "client_id": "1053803605697-0egmismnl4bjgk8h605q30p428fsnoff.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.satya_devotte_app",
+            "package_name": "com.developer.sathya",
+            "certificate_hash": "adfc0f2cadfd129085ffdd75b1e2febc2cf06190"
+          }
+        },
+        {
+          "client_id": "1053803605697-1j6dmcmtvj5ckgr7cbkfp758i809s37m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.developer.sathya",
             "certificate_hash": "4d447abb21398544357beaae50def9455dc779d4"
           }
         },
         {
-          "client_id": "1053803605697-gprltm02l8a8elktar2af8el9kqqoojc.apps.googleusercontent.com",
+          "client_id": "1053803605697-gq5i6qtp245ncjlk9gtsoh7b8s5uh670.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.satya_devotte_app",
-            "certificate_hash": "0ebb22dd03384a58897eb61eb86d3ea8d7b5c34e"
+            "package_name": "com.developer.sathya",
+            "certificate_hash": "c8c5eda4f79a7920103c7b4d5e4b04d52064f93c"
           }
         },
         {
-          "client_id": "1053803605697-p6jt0oqp0h43m1r6pdlq68pkki8uq71q.apps.googleusercontent.com",
+          "client_id": "1053803605697-qbt3a8c39tsuo6rhtft5jrlgns8gbj8f.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.satya_devotte_app",
-            "certificate_hash": "c8c5eda4f79a7920103c7b4d5e4b04d52064f93c"
+            "package_name": "com.developer.sathya",
+            "certificate_hash": "0ebb22dd03384a58897eb61eb86d3ea8d7b5c34e"
           }
         },
         {

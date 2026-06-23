@@ -49,7 +49,7 @@ class DonationContribution {
   final String donationId;
   final String donationTitle;
   final String? reference;
-  /// Gateway / processor transaction id (e.g. Paystack transaction id).
+  /// Gateway / processor transaction id (e.g. PayFast payment id).
   final String? transactionId;
   final DateTime? createdAt;
   final String? note;
@@ -92,7 +92,10 @@ class DonationContribution {
           json['donationId']),
       donationTitle: _str(donationMap['title'] ?? donationMap['name']),
       reference: _nullableStr(
-        json['reference'] ?? json['paystackReference'],
+        json['reference'] ??
+            json['paymentReference'] ??
+            json['payfastReference'] ??
+            json['paystackReference'],
       ),
       transactionId: _nullableStr(json['transactionId']),
       createdAt: () {
@@ -143,7 +146,7 @@ class DonationContribution {
     return '$d • $t';
   }
 
-  /// Shown under amount on history (Paystack ref / contribution #).
+  /// Shown under amount on history (payment ref / contribution #).
   String get displayTransactionLine {
     final tid = (transactionId ?? '').trim();
     if (tid.isNotEmpty) return tid;

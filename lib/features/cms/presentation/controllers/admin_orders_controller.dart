@@ -300,13 +300,13 @@ class AdminOrdersController extends GetxController {
       _ok(
         'Refund initiated',
         'Refund has been initiated on this order. Complete the payout in the '
-        'Paystack dashboard if required.',
+        'PayFast dashboard if required.',
       );
       return true;
     });
   }
 
-  /// Idempotent admin verify by Paystack reference.
+  /// Idempotent admin verify by payment reference.
   Future<bool> verifyPayment(String reference) async {
     if (reference.trim().isEmpty) return false;
     return _mutate(() async {
@@ -320,7 +320,7 @@ class AdminOrdersController extends GetxController {
       } else {
         await fetchDetail();
       }
-      _ok('Payment verified', 'Latest payment status pulled from Paystack.');
+      _ok('Payment verified', 'Latest payment status pulled from PayFast.');
       return true;
     });
   }

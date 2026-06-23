@@ -5,7 +5,7 @@
 //     REFUNDED.
 //   • Each row exposes a "Verify now" action that calls
 //     `GET /payments/verify/:reference` and refreshes the row in-place.
-//   • Search by order number or Paystack reference (server-side `search`).
+//   • Search by order number or payment reference (server-side `search`).
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -82,8 +82,8 @@ class CmsPoojaKitPaymentsContent extends StatelessWidget {
         CmsPoojaKitSectionHeader(
           title: 'Payments',
           subtitle:
-              'Inspect Paystack transactions tied to Puja Kit orders. Use '
-              '“Verify now” to pull the latest status straight from Paystack.',
+              'Inspect PayFast transactions tied to Puja Kit orders. Use '
+              '“Verify now” to pull the latest status straight from PayFast.',
         ),
         const Divider(height: 1, color: CmsColors.border),
         _FiltersBar(controller: c),
@@ -348,7 +348,7 @@ class _Body extends StatelessWidget {
           title: 'No Payments Yet',
           subtitle:
               'Once a devotee completes a payment for a Puja Kit order, it '
-              'will appear here with its Paystack reference and status.',
+              'will appear here with its payment reference and status.',
         );
       }
       final wide = MediaQuery.of(context).size.width >= 1000;
@@ -395,7 +395,7 @@ class _PaymentsTable extends StatelessWidget {
                   SizedBox(width: 200, child: _Hdr(label: 'Customer')),
                   SizedBox(width: 110, child: _Hdr(label: 'Total')),
                   SizedBox(width: 92, child: _Hdr(label: 'Status')),
-                  Expanded(child: _Hdr(label: 'Paystack reference')),
+                  Expanded(child: _Hdr(label: 'Payment reference')),
                   SizedBox(width: 152, child: _Hdr(label: 'Date')),
                   SizedBox(width: 130, child: _Hdr(label: '')),
                 ],
@@ -516,7 +516,7 @@ class _PaymentRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(top: 2),
               child: SelectableText(
-                order.paystackReference.isEmpty ? '—' : order.paystackReference,
+                order.paymentReference.isEmpty ? '—' : order.paymentReference,
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
@@ -600,7 +600,7 @@ class _PaymentsCards extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               SelectableText(
-                'Ref: ${o.paystackReference.isEmpty ? '—' : o.paystackReference}',
+                'Ref: ${o.paymentReference.isEmpty ? '—' : o.paymentReference}',
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
@@ -646,7 +646,7 @@ class _VerifyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final busy = controller.isVerifying(order.id);
-      final hasRef = order.paystackReference.trim().isNotEmpty;
+      final hasRef = order.paymentReference.trim().isNotEmpty;
       return _cmsClickableOptional(
         onTap: (busy || !hasRef)
             ? null

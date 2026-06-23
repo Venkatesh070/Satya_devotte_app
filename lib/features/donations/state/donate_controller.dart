@@ -1,4 +1,4 @@
-// Orchestrates the per-donation Paystack flow:
+// Orchestrates the per-donation PayFast flow:
 //   • initiate → cache `DonationInitData`
 //   • verify   → cache `VerifyResult`, with exponential-backoff retries
 //                on transient transport errors (backend is idempotent).

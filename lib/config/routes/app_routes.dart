@@ -20,7 +20,7 @@ class AppRoutes {
   /// Single donation details. Pass `DonationModel` via `arguments`.
   static const String userDonationDetails = '/donations/details';
 
-  /// Post-Paystack confirming screen. Pass `DonationInitData`.
+  /// Post-PayFast confirming screen. Pass `DonationInitData`.
   static const String userDonationConfirming = '/donations/confirming';
 
   /// Terminal screens. Pass `VerifyResult` (success) or
@@ -41,7 +41,7 @@ class AppRoutes {
   /// Cart screen for pooja kit.
   static const String poojaKitCart = '/pooja-kit/cart';
 
-  /// WebView for Paystack payment. Pass `OrderInitData`.
+  /// WebView for PayFast payment. Pass `OrderInitData`.
   static const String poojaKitPayment = '/pooja-kit/payment';
 
   /// Success screen after order placement.

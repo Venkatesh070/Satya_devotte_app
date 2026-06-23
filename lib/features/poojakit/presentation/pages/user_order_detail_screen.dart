@@ -288,9 +288,9 @@ class _TransactionCard extends StatelessWidget {
           _RowLine(label: 'Transaction Date', value: order.formattedDate),
           _RowLine(
             label: 'Transaction ID',
-            value: order.paystackReference.isEmpty
+            value: order.paymentReference.isEmpty
                 ? order.orderNumber
-                : order.paystackReference,
+                : order.paymentReference,
           ),
           _RowLine(
             label: 'Order Status',

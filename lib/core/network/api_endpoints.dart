@@ -122,13 +122,13 @@ class ApiEndpoints {
   /// POST — place an order (from explicit items or cart).
   /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
 
-  /// POST — initialize a Paystack transaction for a specific order.
+  /// POST — initialize a PayFast transaction for a specific order.
   static String initializeOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/initialize';
+      '/api/v1/orders/$id/payments/payfast/initialize';
 
-  /// POST — manually verify a Paystack transaction for an order.
+  /// POST — manually verify a PayFast transaction for an order.
   static String verifyOrderPayment(String id) =>
-      '/api/v1/orders/$id/payments/paystack/verify';
+      '/api/v1/orders/$id/payments/payfast/verify';
 
   /// GET — paginated history of the signed-in user's orders.
   static const String myOrders = '/api/v1/orders/my';
@@ -159,7 +159,7 @@ class ApiEndpoints {
   static String orderStatus(String id) => '/api/v1/orders/$id/status';
 
   /// PATCH — payment fields. Body: `{ paymentStatus?, paymentMethod? }`.
-  /// Use sparingly — Paystack verify normally sets PAID.
+  /// Use sparingly — PayFast verify normally sets PAID.
   static String orderPayment(String id) => '/api/v1/orders/$id/payment';
 
   /// PATCH — set tracking only.
@@ -216,7 +216,7 @@ class ApiEndpoints {
   /// POST — place an order (from explicit items or cart).
   /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
   static const String createOrder = '/api/v1/orders';
-  /// POST — initialize a Paystack transaction for a specific order.
+  /// POST — initialize a PayFast transaction for a specific order.
   // ── Cart (authenticated) ───────────────────────────────────
   /// GET — get the current user's cart.
   static const String cart = '/api/v1/cart';
@@ -266,18 +266,18 @@ class ApiEndpoints {
   /// GET — list approved + visible donations for users.
   static const String donations = '/api/v1/donations';
 
-  /// POST — initiate a Paystack payment for the given donation.
+  /// POST — initiate a PayFast payment for the given donation.
   /// Body: `{ amount, currency?, note?, callbackUrl? }`.
   static String donate(String id) => '/api/v1/donations/$id/donate';
 
-  /// POST — initiate a general Paystack donation.
+  /// POST — initiate a general PayFast donation.
   /// Body: `{ amount, currency, note?, callbackUrl? }`.
   static const String generalDonate = '/api/v1/donations/donate';
 
   /// GET — list all payments. Query: `page`, `limit`, `search` (order # or reference).
   // static const String allPayments = '/api/v1/payments/all';
 
-  /// GET — idempotent verification by Paystack reference.
+  /// GET — idempotent verification by payment reference.
   static String verifyPayment(String reference) =>
       '/api/v1/payments/verify/$reference';
 

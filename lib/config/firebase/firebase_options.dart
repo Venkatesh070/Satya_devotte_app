@@ -22,7 +22,7 @@ class DefaultFirebaseOptions {
     projectId: 'satya-devotte-app',
     storageBucket: 'satya-devotte-app.firebasestorage.app',
     messagingSenderId: '1053803605697',
-    appId: '1:1053803605697:android:d5a06b41628f6c282a6e40',
+    appId: '1:1053803605697:android:9e53b9236398a6472a6e40',
   );
 
   static const FirebaseOptions testIos = FirebaseOptions(
@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
     projectId: 'sathyatest-4b2b1',
     storageBucket: 'sathyatest-4b2b1.firebasestorage.app',
     messagingSenderId: '460042314237',
-    appId: '1:460042314237:android:2dfce106f585b513847994',
+    appId: '1:460042314237:android:5523275a078e9136847994',
   );
 
   static const FirebaseOptions prodAndroid = FirebaseOptions(
@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
     projectId: 'sathyatest-4b2b1',
     storageBucket: 'sathyatest-4b2b1.firebasestorage.app',
     messagingSenderId: '460042314237',
-    appId: '1:460042314237:android:2dfce106f585b513847994',
+    appId: '1:460042314237:android:5523275a078e9136847994',
   );
 
   static const FirebaseOptions prodIos = FirebaseOptions(
