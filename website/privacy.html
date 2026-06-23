@@ -1,121 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sathya - Privacy Policy</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #FFF8E8;
-            color: #4A2C00;
-            line-height: 1.6;
-        }
-        a {
-            text-decoration: none;
-            color: inherit;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-        /* Header */
-        header {
-            background: #FFF8E8;
-            border-bottom: 1px solid #E8D5B7;
-        }
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .logo-img {
-            height: 50px;
-            width: auto;
-        }
-        .back-btn {
-            background: #C85A00;
-            color: white;
-            padding: 10px 24px;
-            border-radius: 30px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        /* Content */
-        .content {
-            background: white;
-            margin: 40px 0;
-            padding: 48px;
-            border-radius: 20px;
-            border: 1px solid #E8D5B7;
-        }
-        h1 {
-            font-size: 36px;
-            font-weight: bold;
-            font-family: Georgia, 'Times New Roman', Times, serif;
-            margin-bottom: 32px;
-            color: #4A2C00;
-        }
-        h2 {
-            font-size: 24px;
-            font-weight: bold;
-            font-family: Georgia, 'Times New Roman', Times, serif;
-            margin: 32px 0 16px;
-            color: #4A2C00;
-        }
-        p, li {
-            color: #5C3A00;
-            font-size: 18px;
-            margin-bottom: 16px;
-        }
-        ul {
-            padding-left: 24px;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: #fff8e8;
+        color: #4a2c00;
+        line-height: 1.6;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      /* Header */
+      header {
+        background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+      }
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .logo-img {
+        height: 50px;
+        width: auto;
+      }
+      nav {
+        display: flex;
+        gap: 32px;
+        align-items: center;
+      }
+      .nav-link {
+        font-weight: 500;
+        transition: opacity 0.3s;
+        color: white;
+        font-size: 14px;
+      }
+      .nav-link:hover {
+        opacity: 0.8;
+      }
+      .store-btn {
+        display: inline-block;
+        transition: transform 0.3s ease;
+      }
+      .store-btn:hover {
+        transform: scale(1.05);
+      }
+      .store-btn img {
+        height: 40px;
+        width: auto;
+      }
+      /* Content */
+      .content {
+        background: white;
+        margin: 40px 0;
+        padding: 48px;
+        border-radius: 20px;
+        border: 1px solid #e8d5b7;
+      }
+      h1 {
+        font-size: 36px;
+        font-weight: bold;
+        font-family: Georgia, "Times New Roman", Times, serif;
+        margin-bottom: 32px;
+        color: #4a2c00;
+      }
+      h2 {
+        font-size: 24px;
+        font-weight: bold;
+        font-family: Georgia, "Times New Roman", Times, serif;
+        margin: 32px 0 16px;
+        color: #4a2c00;
+      }
+      p,
+      li {
+        color: #5c3a00;
+        font-size: 18px;
+        margin-bottom: 16px;
+      }
+      ul {
+        padding-left: 24px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <header>
-        <div class="header-content container">
-            <a href="index.html">
-                <img src="images/logoWhite.png" alt="Sathya Logo" class="logo-img">
-            </a>
-            <a href="index.html" class="back-btn">← Back to Home</a>
+      <div class="header-content container">
+        <a href="index.html">
+          <img src="images/logoWhite.png" alt="Sathya Logo" class="logo-img" />
+        </a>
+        <nav>
+          <a href="index.html#features" class="nav-link">Core Features</a>
+          <a href="index.html#catalogue" class="nav-link">Pooja store links</a>
+          <a href="index.html#about" class="nav-link"
+            >Ready to Deepen Your Practice?</a
+          >
+        </nav>
+        <div style="display: flex; gap: 12px; align-items: center">
+          <a href="#" class="store-btn">
+            <img src="./images/apple.png" alt="Download on the App Store" />
+          </a>
+          <a href="#" class="store-btn">
+            <img src="./images/play_store.png" alt="Get it on Google Play" />
+          </a>
         </div>
+      </div>
     </header>
 
     <div class="container">
-        <div class="content">
-            <h1>Privacy Policy</h1>
-            <p>At Sathya, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your personal information when you use our application and services.</p>
-            
-            <h2>Information We Collect</h2>
-            <ul>
-                <li>Personal identification information (name, email, phone number)</li>
-                <li>Usage data and analytics</li>
-                <li>Device information</li>
-            </ul>
-            
-            <h2>How We Use Your Information</h2>
-            <ul>
-                <li>To provide and improve our services</li>
-                <li>To communicate with you</li>
-                <li>To personalize your experience</li>
-            </ul>
-            
-            <h2>Contact Us</h2>
-            <p>If you have any questions about this Privacy Policy, please contact us at privacy@sathya.app.</p>
-        </div>
+      <div class="content">
+        <h1>Privacy Policy</h1>
+        <p>
+          At Sathya, we take your privacy seriously. This Privacy Policy
+          explains how we collect, use, and protect your personal information
+          when you use our application and services.
+        </p>
+
+        <h2>Information We Collect</h2>
+        <ul>
+          <li>
+            Personal identification information (name, email, phone number)
+          </li>
+          <li>Usage data and analytics</li>
+          <li>Device information</li>
+        </ul>
+
+        <h2>How We Use Your Information</h2>
+        <ul>
+          <li>To provide and improve our services</li>
+          <li>To communicate with you</li>
+          <li>To personalize your experience</li>
+        </ul>
+
+        <h2>Contact Us</h2>
+        <p>
+          If you have any questions about this Privacy Policy, please contact us
+          at privacy@sathya.app.
+        </p>
+      </div>
     </div>
-</body>
+  </body>
 </html>
