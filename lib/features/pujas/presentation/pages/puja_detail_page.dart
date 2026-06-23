@@ -583,7 +583,13 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       List<Map<String, dynamic>>? rituals,
     }) {
       _pooja = _mergeDeityIntoPooja(_pooja!, deity);
-      if (rituals != null) _deityRituals = rituals;
+      if (rituals != null) {
+        // Filter rituals to only those belonging to this deity
+        final filteredRituals = rituals
+            .where((r) => _poojaBelongsToDeity(r, id, deity))
+            .toList(growable: false);
+        _deityRituals = filteredRituals;
+      }
     }
 
     // Offline: use cached deity/rituals only.
@@ -591,13 +597,21 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       final cachedDeity = offlineService.getCachedData(deityCacheKey);
       if (cachedDeity is! Map || !mounted) return;
 
+      // Cast cachedDeity to Map<String, dynamic>
+      final deityMap = Map<String, dynamic>.from(cachedDeity);
+
       final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
       setState(() {
-        applyDeity(Map<String, dynamic>.from(cachedDeity));
+        applyDeity(deityMap);
         if (cachedRituals is List) {
-          _deityRituals = cachedRituals
+          final ritualsList = cachedRituals
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
+          // Filter cached rituals as well
+          final filteredRituals = ritualsList
+              .where((r) => _poojaBelongsToDeity(r, id, deityMap))
+              .toList(growable: false);
+          _deityRituals = filteredRituals;
         }
       });
       return;
@@ -632,13 +646,21 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       final cachedDeity = offlineService.getCachedData(deityCacheKey);
       if (cachedDeity is! Map || !mounted) return;
 
+      // Cast cachedDeity to Map<String, dynamic>
+      final deityMap = Map<String, dynamic>.from(cachedDeity);
+
       final cachedRituals = offlineService.getCachedData(ritualsCacheKey);
       setState(() {
-        applyDeity(Map<String, dynamic>.from(cachedDeity));
+        applyDeity(deityMap);
         if (cachedRituals is List) {
-          _deityRituals = cachedRituals
+          final ritualsList = cachedRituals
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
+          // Filter cached rituals as well
+          final filteredRituals = ritualsList
+              .where((r) => _poojaBelongsToDeity(r, id, deityMap))
+              .toList(growable: false);
+          _deityRituals = filteredRituals;
         }
       });
     }

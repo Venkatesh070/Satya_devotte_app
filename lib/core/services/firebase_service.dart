@@ -189,6 +189,7 @@ class FirebaseService {
   Future<void> createUserWithEmailAndPassword({
     required String email,
     required String password,
+    bool autoSendVerificationEmail = false,
   }) async {
     print("FirebaseService.createUserWithEmailAndPassword: Starting for email: ${email.trim()}");
     try {
@@ -198,12 +199,10 @@ class FirebaseService {
       );
       print("FirebaseService.createUserWithEmailAndPassword: User created! UID: ${userCredential.user?.uid}");
 
-      if (userCredential.user != null) {
+      if (autoSendVerificationEmail && userCredential.user != null) {
         print("FirebaseService.createUserWithEmailAndPassword: Sending verification email...");
         await userCredential.user!.sendEmailVerification();
         print("FirebaseService.createUserWithEmailAndPassword: Verification email sent successfully!");
-      } else {
-        print("FirebaseService.createUserWithEmailAndPassword: User is null, can't send verification email!");
       }
     } catch (e) {
       print("FirebaseService.createUserWithEmailAndPassword: ERROR: $e");

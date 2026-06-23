@@ -20,8 +20,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   final FirebaseService _firebaseService = Get.find<FirebaseService>();
   final AuthController _authController = Get.find<AuthController>();
   Timer? _timer;
+  Timer? _resendCooldownTimer;
   bool _isResending = false;
   bool _isSendingFirstEmail = false;
+  bool _canResend = true;
+  int _resendCooldownSeconds = 0;
 
   @override
   void initState() {
@@ -69,6 +72,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _resendCooldownTimer?.cancel();
     super.dispose();
   }
 
@@ -82,6 +86,22 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     });
   }
 
+  void _startResendCooldown() {
+    _resendCooldownSeconds = 60; // 1 minute cooldown
+    _canResend = false;
+    setState(() {});
+
+    _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCooldownSeconds > 0) {
+        setState(() => _resendCooldownSeconds--);
+      } else {
+        _resendCooldownTimer?.cancel();
+        _canResend = true;
+        setState(() {});
+      }
+    });
+  }
+
   Future<void> _checkEmailVerifiedAndProceed() async {
     if (_firebaseService.isEmailVerified) {
       if (mounted) {
@@ -91,10 +111,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   }
 
   Future<void> _resendVerificationEmail() async {
-    if (_isResending) return;
+    if (_isResending || !_canResend) return;
     setState(() => _isResending = true);
     try {
       await _firebaseService.sendEmailVerification();
+      _startResendCooldown();
       if (mounted) {
         ToastUtil.showSuccess('Verification email has been resent!');
       }
@@ -155,9 +176,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               CustomButton(
                 label: _isSendingFirstEmail
                     ? 'Sending Verification Email...'
+                    : !_canResend
+                    ? 'Resend in $_resendCooldownSeconds s'
                     : 'Resend Verification Email',
                 isLoading: _isResending || _isSendingFirstEmail,
-                enabled: !_isResending && !_isSendingFirstEmail,
+                enabled: !_isResending && !_isSendingFirstEmail && _canResend,
                 gradientColors: const [
                   AppColors.gradientStart,
                   AppColors.gradientEnd,

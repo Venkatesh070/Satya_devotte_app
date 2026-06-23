@@ -614,6 +614,16 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
+    // Sort by date, with earliest upcoming dates first
+    result.sort((a, b) {
+      final dateA = _parseHomeItemDate(a);
+      final dateB = _parseHomeItemDate(b);
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB);
+    });
+    
     return result;
   }
 

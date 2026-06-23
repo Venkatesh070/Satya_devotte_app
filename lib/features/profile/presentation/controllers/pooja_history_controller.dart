@@ -44,13 +44,17 @@ class PoojaHistoryController extends GetxController {
         final Set<String> pendingPoojaIds = {};
         debugPrint('PoojaHistoryController.fetchHistory(): pending = $pending');
         if (pending is List) {
-          pendingPoojas.assignAll(pending);
-          for (final session in pending) {
+          final sortedPending = List<dynamic>.from(pending)
+            ..sort((a, b) => _comparePoojaDates(a, b));
+          pendingPoojas.assignAll(sortedPending);
+          for (final session in sortedPending) {
             if (session is Map) {
               final p = session['pooja'];
               if (p is Map) {
                 final id = (p['_id'] ?? p['id'] ?? '').toString();
-                debugPrint('PoojaHistoryController.fetchHistory(): pending pooja id = $id');
+                debugPrint(
+                  'PoojaHistoryController.fetchHistory(): pending pooja id = $id',
+                );
                 if (id.isNotEmpty) pendingPoojaIds.add(id);
               }
             }
@@ -60,7 +64,9 @@ class PoojaHistoryController extends GetxController {
         }
 
         final finished = payload['finished'];
-        debugPrint('PoojaHistoryController.fetchHistory(): finished = $finished');
+        debugPrint(
+          'PoojaHistoryController.fetchHistory(): finished = $finished',
+        );
         if (finished is List) {
           final Map<String, dynamic> uniqueFinished = {};
           for (final session in finished) {
@@ -68,14 +74,20 @@ class PoojaHistoryController extends GetxController {
             final pooja = session['pooja'];
             if (pooja is! Map) continue;
             final id = (pooja['_id'] ?? pooja['id'] ?? '').toString();
-            debugPrint('PoojaHistoryController.fetchHistory(): finished pooja id = $id');
+            debugPrint(
+              'PoojaHistoryController.fetchHistory(): finished pooja id = $id',
+            );
             if (id.isEmpty || pendingPoojaIds.contains(id)) continue;
             if (!uniqueFinished.containsKey(id)) {
               uniqueFinished[id] = session;
             }
           }
-          debugPrint('PoojaHistoryController.fetchHistory(): unique finished count = ${uniqueFinished.length}');
-          finishedPoojas.assignAll(uniqueFinished.values.toList());
+          debugPrint(
+            'PoojaHistoryController.fetchHistory(): unique finished count = ${uniqueFinished.length}',
+          );
+          final sortedFinished = List<dynamic>.from(uniqueFinished.values)
+            ..sort((a, b) => _comparePoojaDates(a, b));
+          finishedPoojas.assignAll(sortedFinished);
         } else {
           finishedPoojas.clear();
         }
@@ -86,6 +98,41 @@ class PoojaHistoryController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  int _comparePoojaDates(dynamic a, dynamic b) {
+    try {
+      final aDate = _extractPoojaDate(a);
+      final bDate = _extractPoojaDate(b);
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1; // Put null dates at the end
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate); // Most recent first
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  DateTime? _extractPoojaDate(dynamic session) {
+    if (session is! Map) return null;
+    // Try common date fields in order of priority
+    final dateFields = [
+      'poojaDate',
+      'scheduledDate',
+      'date',
+      'scheduledAt',
+      'finishedAt',
+      'createdAt',
+    ];
+    for (final field in dateFields) {
+      final raw = session[field] ?? session['pooja']?[field];
+      if (raw != null) {
+        try {
+          return DateTime.parse(raw.toString());
+        } catch (_) {}
+      }
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>?> startPooja(String poojaId) async {
