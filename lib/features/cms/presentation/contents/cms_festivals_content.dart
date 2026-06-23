@@ -1506,7 +1506,7 @@ class _PoojaPickerField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Associated Rituals / Pujas (optional)',
+          'Associated Pujas (optional)',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
@@ -919,6 +921,8 @@ class _PoojaFormState extends State<_PoojaForm> {
   final _stepTitleCtrl = TextEditingController();
   final _stepDescCtrl = TextEditingController();
   final _itemCtrl = TextEditingController();
+  final List<String> _stepImageUrls = [];
+  final List<PickedFile> _stepPickedImages = [];
 
   late String _difficulty;
   late String _category;
@@ -940,6 +944,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   late List<Map<String, String>> _actionsMeaningEntries;
   late List<Map<String, String>> _otherSymbolismEntries;
   bool _showStepEditor = false;
+  int? _editingStepIndex;
   bool _showOfferingsEditor = false;
   bool _showActionsEditor = false;
   bool _showOtherSymbolismEditor = false;
@@ -1017,7 +1022,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (p?.date != null) {
       _selectedDate = _parseDate(p!.date!);
     }
-    _stepEntries = (p?.steps ?? <String>[]).map(_decodeStoredStep).toList();
+    _stepEntries = List<_StepDraft>.from(
+      (p?.steps ?? <String>[]).map(_decodeStoredStep),
+    );
     _items = List.from(p?.requiredItems ?? []);
     _purposeBenefits = List.from(p?.purposeBenefits ?? const []);
     _deitySummaryBlessings = List.from(p?.deitySummaryBlessings ?? const []);
@@ -1095,39 +1102,125 @@ class _PoojaFormState extends State<_PoojaForm> {
       .toList();
 
   _StepDraft _decodeStoredStep(String raw) {
-    final parts = raw.split('||');
-    if (parts.length < 2) {
-      return _StepDraft(title: raw.trim(), description: '');
-    }
+    final decoded = PoojaStepCodec.decode(raw);
     return _StepDraft(
-      title: parts.first.trim(),
-      description: parts.sublist(1).join('||').trim(),
+      title: decoded.title.isEmpty ? 'Untitled Step' : decoded.title,
+      description: decoded.description,
+      imageUrls: decoded.imageUrls,
     );
   }
 
   String _encodeStoredStep(_StepDraft step) {
-    final title = step.title.trim();
-    final description = step.description.trim();
-    if (description.isEmpty) return title;
-    return '$title||$description';
+    return PoojaStepCodec.encode(
+      title: step.title,
+      description: step.description,
+      imageUrls: step.imageUrls,
+    );
+  }
+
+  List<List<PickedFile>> _stepPickedImagesByStep() => _stepEntries
+      .map((step) => List<PickedFile>.from(step.pickedImages))
+      .toList();
+
+  Future<void> _pickStepImages() async {
+    final files = await Get.find<MediaUploadService>().pickImages();
+    if (files.isEmpty) return;
+    setState(() => _stepPickedImages.addAll(files));
+  }
+
+  void _removeStepPickedImage(int index) {
+    setState(() => _stepPickedImages.removeAt(index));
+  }
+
+  void _removeStepImageUrl(int index) {
+    setState(() => _stepImageUrls.removeAt(index));
+  }
+
+  void _clearStepEditorFields() {
+    _stepTitleCtrl.clear();
+    _stepDescCtrl.clear();
+    _stepImageUrls.clear();
+    _stepPickedImages.clear();
+    _editingStepIndex = null;
+  }
+
+  void _toggleStepEditor() {
+    setState(() {
+      if (_showStepEditor) {
+        _clearStepEditorFields();
+        _showStepEditor = false;
+      } else {
+        _clearStepEditorFields();
+        _showStepEditor = true;
+      }
+    });
+  }
+
+  void _startEditStep(int index) {
+    final step = _stepEntries[index];
+    setState(() {
+      _editingStepIndex = index;
+      _showStepEditor = true;
+      _stepTitleCtrl.text = step.title;
+      _stepDescCtrl.text = step.description;
+      _stepImageUrls
+        ..clear()
+        ..addAll(step.imageUrls);
+      _stepPickedImages
+        ..clear()
+        ..addAll(step.pickedImages);
+    });
+  }
+
+  void _cancelStepEdit() {
+    setState(() {
+      _clearStepEditorFields();
+      _showStepEditor = false;
+    });
+  }
+
+  void _removeStep(int index) {
+    setState(() {
+      if (_editingStepIndex == index) {
+        _clearStepEditorFields();
+        _showStepEditor = false;
+      } else if (_editingStepIndex != null && index < _editingStepIndex!) {
+        _editingStepIndex = _editingStepIndex! - 1;
+      }
+      final next = List<_StepDraft>.from(_stepEntries);
+      next.removeAt(index);
+      _stepEntries = next;
+    });
   }
 
   List<String> _serializedSteps() =>
       _stepEntries.map(_encodeStoredStep).where((e) => e.isNotEmpty).toList();
 
-  void _addStepEntry() {
+  void _saveStepEntry() {
     final title = _stepTitleCtrl.text.trim();
     final description = _stepDescCtrl.text.trim();
-    if (title.isEmpty && description.isEmpty) return;
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _stepImageUrls.isEmpty &&
+        _stepPickedImages.isEmpty) {
+      return;
+    }
+    final editingIndex = _editingStepIndex;
+    final draft = _StepDraft(
+      title: title.isEmpty ? 'Untitled Step' : title,
+      description: description,
+      imageUrls: List<String>.from(_stepImageUrls),
+      pickedImages: List<PickedFile>.from(_stepPickedImages),
+    );
     setState(() {
-      _stepEntries.add(
-        _StepDraft(
-          title: title.isEmpty ? 'Untitled Step' : title,
-          description: description,
-        ),
-      );
-      _stepTitleCtrl.clear();
-      _stepDescCtrl.clear();
+      if (editingIndex != null) {
+        final next = List<_StepDraft>.from(_stepEntries);
+        next[editingIndex] = draft;
+        _stepEntries = next;
+      } else {
+        _stepEntries = [..._stepEntries, draft];
+      }
+      _clearStepEditorFields();
       _showStepEditor = false;
     });
   }
@@ -1203,40 +1296,40 @@ class _PoojaFormState extends State<_PoojaForm> {
       'Fruits, milk, and water',
     ];
     _prepItemsCtrl.text = _items.join('\n');
-    _stepEntries = const [
-      _StepDraft(
+    _stepEntries = [
+      const _StepDraft(
         title: 'Setup',
         description: 'Arrange offerings, tray, diya, and bell.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Invocation',
         description: 'Light incense and chant opening prayers.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Offerings',
         description: 'Offer flowers with mantra repetition.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Sacred actions',
         description: 'Perform aarti and clockwise circling of flame.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Chanting and prayer',
         description: 'Continue mantra and devotional focus.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Personal prayer',
         description: 'Pray sincerely for blessings.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Atmosphere enhancement',
         description: 'Bhajans and peaceful ambience.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Closure',
         description: 'Bow in gratitude and surrender.',
       ),
-      _StepDraft(
+      const _StepDraft(
         title: 'Prasad distribution',
         description: 'Share blessed offerings.',
       ),
@@ -1374,6 +1467,7 @@ class _PoojaFormState extends State<_PoojaForm> {
       ok = await widget.controller.updatePooja(
         widget.pooja!.id,
         pickedImage: _pickedImage,
+        stepImagesByStep: _stepPickedImagesByStep(),
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
           deity: _selectedDeityId ?? '',
@@ -1412,6 +1506,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     } else {
       ok = await widget.controller.createPooja(
         pickedImage: _pickedImage,
+        stepImagesByStep: _stepPickedImagesByStep(),
         title: _titleCtrl.text.trim(),
         deity: _selectedDeityId ?? '',
         category: _category,
@@ -2129,10 +2224,10 @@ class _PoojaFormState extends State<_PoojaForm> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Add step',
-                  style: TextStyle(
+                  _editingStepIndex != null ? 'Edit step' : 'Add step',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: CmsColors.textSecond,
@@ -2140,7 +2235,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                 ),
               ),
               _cmsClickable(
-                onTap: () => setState(() => _showStepEditor = !_showStepEditor),
+                onTap: _toggleStepEditor,
                 child: Container(
                   width: 34,
                   height: 34,
@@ -2172,15 +2267,45 @@ class _PoojaFormState extends State<_PoojaForm> {
               maxLines: 3,
             ),
             const SizedBox(height: 10),
+            _StepMultiImagePicker(
+              imageUrls: _stepImageUrls,
+              pickedImages: _stepPickedImages,
+              onPick: _pickStepImages,
+              onRemoveUrl: _removeStepImageUrl,
+              onRemovePicked: _removeStepPickedImage,
+            ),
+            const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: _addStepEntry,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Step'),
-                style: OutlinedButton.styleFrom().copyWith(
-                  mouseCursor: _cmsButtonClickCursor,
-                ),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  if (_editingStepIndex != null)
+                    TextButton(
+                      onPressed: _cancelStepEdit,
+                      style: TextButton.styleFrom().copyWith(
+                        mouseCursor: _cmsButtonClickCursor,
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: _saveStepEntry,
+                    icon: Icon(
+                      _editingStepIndex != null
+                          ? Icons.save_outlined
+                          : Icons.add,
+                      size: 16,
+                    ),
+                    label: Text(
+                      _editingStepIndex != null ? 'Update Step' : 'Add Step',
+                    ),
+                    style: OutlinedButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2192,7 +2317,11 @@ class _PoojaFormState extends State<_PoojaForm> {
                 text: e.value.description.trim().isEmpty
                     ? e.value.title
                     : '${e.value.title}\n${e.value.description}',
-                onRemove: () => setState(() => _stepEntries.removeAt(e.key)),
+                imageUrls: e.value.imageUrls,
+                pickedImages: e.value.pickedImages,
+                isEditing: _editingStepIndex == e.key,
+                onEdit: () => _startEditStep(e.key),
+                onRemove: () => _removeStep(e.key),
               ),
             ),
           ] else
@@ -2627,9 +2756,16 @@ class _PoojaFormState extends State<_PoojaForm> {
 // SMALL HELPER WIDGETS
 // ════════════════════════════════════════════════════════════════
 class _StepDraft {
-  const _StepDraft({required this.title, required this.description});
+  const _StepDraft({
+    required this.title,
+    required this.description,
+    this.imageUrls = const [],
+    this.pickedImages = const [],
+  });
   final String title;
   final String description;
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
 }
 
 class _KeyValueEditor extends StatelessWidget {
@@ -2884,15 +3020,191 @@ class _LineChip extends StatelessWidget {
   );
 }
 
+class _StepMultiImagePicker extends StatelessWidget {
+  const _StepMultiImagePicker({
+    required this.imageUrls,
+    required this.pickedImages,
+    required this.onPick,
+    required this.onRemoveUrl,
+    required this.onRemovePicked,
+  });
+
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
+  final Future<void> Function() onPick;
+  final ValueChanged<int> onRemoveUrl;
+  final ValueChanged<int> onRemovePicked;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImages = imageUrls.isNotEmpty || pickedImages.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Step Images',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: onPick,
+          icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+          label: const Text('Upload Images'),
+          style: OutlinedButton.styleFrom().copyWith(
+            mouseCursor: _cmsButtonClickCursor,
+          ),
+        ),
+        if (hasImages) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var i = 0; i < imageUrls.length; i++)
+                _StepImageThumb(
+                  child: Image.network(
+                    imageUrls[i],
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _brokenThumb(),
+                  ),
+                  onRemove: () => onRemoveUrl(i),
+                ),
+              for (var i = 0; i < pickedImages.length; i++)
+                _StepImageThumb(
+                  child: Image.memory(
+                    Uint8List.fromList(pickedImages[i].bytes),
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                  ),
+                  onRemove: () => onRemovePicked(i),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _brokenThumb() {
+    return Container(
+      width: 88,
+      height: 88,
+      color: CmsColors.bg,
+      alignment: Alignment.center,
+      child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+    );
+  }
+}
+
+class _StepImageThumb extends StatelessWidget {
+  const _StepImageThumb({required this.child, required this.onRemove});
+
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(borderRadius: BorderRadius.circular(8), child: child),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: _cmsClickable(
+            onTap: onRemove,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Colors.black87,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 12, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StepRow extends StatelessWidget {
   const _StepRow({
     required this.index,
     required this.text,
     required this.onRemove,
+    this.onEdit,
+    this.imageUrls = const [],
+    this.pickedImages = const [],
+    this.isEditing = false,
   });
   final int index;
   final String text;
   final VoidCallback onRemove;
+  final VoidCallback? onEdit;
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
+  final bool isEditing;
+
+  Widget _imageStrip() {
+    if (imageUrls.isEmpty && pickedImages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 108,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final url in imageUrls)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  url,
+                  width: 108,
+                  height: 108,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 108,
+                    height: 108,
+                    color: CmsColors.bg,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          for (final file in pickedImages)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  Uint8List.fromList(file.bytes),
+                  width: 108,
+                  height: 108,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2901,12 +3213,23 @@ class _StepRow extends StatelessWidget {
     final description = parts.length > 1
         ? parts.sublist(1).join('\n').trim()
         : '';
+    final hasImages = imageUrls.isNotEmpty || pickedImages.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isEditing ? CmsColors.orange.withValues(alpha: 0.06) : null,
+          borderRadius: BorderRadius.circular(10),
+          border: isEditing
+              ? Border.all(color: CmsColors.orange.withValues(alpha: 0.35))
+              : null,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(isEditing ? 10 : 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Container(
             width: 22,
             height: 22,
@@ -2928,34 +3251,56 @@ class _StepRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: CmsColors.textPrimary,
-                ),
-                children: [
-                  TextSpan(
-                    text: title,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
+                      fontSize: 13,
+                      height: 1.4,
+                      color: CmsColors.textPrimary,
                     ),
+                    children: [
+                      TextSpan(
+                        text: title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (description.isNotEmpty) ...[
+                        const TextSpan(text: '\n'),
+                        TextSpan(text: description),
+                      ],
+                    ],
                   ),
-                  if (description.isNotEmpty) ...[
-                    const TextSpan(text: '\n'),
-                    TextSpan(text: description),
-                  ],
+                ),
+                if (hasImages) ...[
+                  const SizedBox(height: 10),
+                  _imageStrip(),
                 ],
-              ),
+              ],
             ),
           ),
+          if (onEdit != null) ...[
+            _cmsClickable(
+              onTap: onEdit!,
+              child: Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: isEditing ? CmsColors.orange : Colors.grey,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           _cmsClickable(
             onTap: onRemove,
             child: const Icon(Icons.close, size: 16, color: Colors.grey),
           ),
         ],
+          ),
+        ),
       ),
     );
   }

@@ -153,6 +153,7 @@ class PoojaController extends GetxController {
     String? videoUrl,
     String? date,
     String status = 'Pending',
+    List<List<PickedFile>> stepImagesByStep = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -200,6 +201,7 @@ class PoojaController extends GetxController {
         image: pickedImage,
         audio: pickedAudio,
         video: pickedVideo,
+        stepImagesByStep: stepImagesByStep,
       );
       // Insert into current list only if it belongs here.
       // For 'All': include everything except Rejected.
@@ -230,6 +232,7 @@ class PoojaController extends GetxController {
     PickedFile? pickedImage,
     PickedFile? pickedAudio,
     PickedFile? pickedVideo,
+    List<List<PickedFile>> stepImagesByStep = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -240,6 +243,7 @@ class PoojaController extends GetxController {
         image: pickedImage,
         audio: pickedAudio,
         video: pickedVideo,
+        stepImagesByStep: stepImagesByStep,
       );
       final index = _poojas.indexWhere((p) => p.id == id);
       if (index != -1) {

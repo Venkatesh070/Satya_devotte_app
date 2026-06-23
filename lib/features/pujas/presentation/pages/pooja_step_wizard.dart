@@ -1266,6 +1266,30 @@ class _PujaStepScreen extends StatelessWidget {
               child: _WizardGradientTitle(text: step.title, fontSize: 24),
             ),
             const SizedBox(height: 20),
+            if (step.imageUrls.isNotEmpty) ...[
+              _WizardFadeSlideIn(
+                delay: const Duration(milliseconds: 140),
+                child: SizedBox(
+                  height: 180,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: step.imageUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) => ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        step.imageUrls[index],
+                        width: 240,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Expanded(
               child: SingleChildScrollView(
                 child: Column(

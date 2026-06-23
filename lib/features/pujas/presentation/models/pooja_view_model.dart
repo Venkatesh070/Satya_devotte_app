@@ -175,6 +175,22 @@ class PoojaView {
             : int.tryParse(m['stepNumber']?.toString() ?? '') ?? 0,
         title: (m['title'] ?? '').toString(),
         description: (m['description'] ?? '').toString(),
+        imageUrls: () {
+          final urls = <String>[];
+          final rawUrls = m['images'] ?? m['imageUrls'];
+          if (rawUrls is List) {
+            urls.addAll(
+              rawUrls
+                  .map((e) => _cleanUrl(e.toString()))
+                  .where((url) => url.isNotEmpty),
+            );
+          }
+          final single = _cleanUrl((m['imageUrl'] ?? '').toString());
+          if (single.isNotEmpty && !urls.contains(single)) {
+            urls.add(single);
+          }
+          return urls;
+        }(),
         subSteps: (m['subSteps'] is List)
             ? (m['subSteps'] as List).map((e) => e.toString()).toList()
             : const [],
@@ -243,11 +259,13 @@ class StepView {
     required this.title,
     required this.description,
     required this.subSteps,
+    this.imageUrls = const [],
   });
   final int number;
   final String title;
   final String description;
   final List<String> subSteps;
+  final List<String> imageUrls;
 }
 
 class MeaningItem {

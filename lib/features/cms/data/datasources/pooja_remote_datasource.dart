@@ -98,8 +98,11 @@ class PoojaRemoteDataSource {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByStep = const [],
   }) async {
-    final hasMedia = image != null || audio != null || video != null;
+    final hasStepImages = stepImagesByStep.any((files) => files.isNotEmpty);
+    final hasMedia =
+        image != null || audio != null || video != null || hasStepImages;
     final payload = Map<String, dynamic>.from(pooja.toJson());
     if (hasMedia) {
       _stripMediaSlotsReplacedByFiles(
@@ -122,42 +125,19 @@ class PoojaRemoteDataSource {
       );
     }
 
-    final formMap = _toMultipartFields(payload);
-    if (image != null) {
-      formMap['image'] = MultipartFile.fromBytes(
-        image.bytes,
-        filename: image.filename,
-        contentType: MediaType.parse(image.mimeType),
-      );
-    }
-    if (audio != null) {
-      formMap['audio'] = MultipartFile.fromBytes(
-        audio.bytes,
-        filename: audio.filename,
-        contentType: MediaType.parse(audio.mimeType),
-      );
-    }
-    if (video != null) {
-      formMap['video'] = MultipartFile.fromBytes(
-        video.bytes,
-        filename: video.filename,
-        contentType: MediaType.parse(video.mimeType),
-      );
-    }
+    final formData = _buildFormData(
+      _toMultipartFields(payload),
+      image: image,
+      audio: audio,
+      video: video,
+      stepImagesByStep: stepImagesByStep,
+    );
     if (kDebugMode) {
-      final printable = <String, dynamic>{};
-      formMap.forEach((key, value) {
-        if (value is MultipartFile) {
-          printable[key] = 'MultipartFile(filename: ${value.filename})';
-        } else {
-          printable[key] = value;
-        }
-      });
-      debugPrint('[create-pooja] Multipart payload: ${jsonEncode(printable)}');
+      debugPrint('[create-pooja] Multipart payload: ${_describeFormData(formData)}');
     }
     final response = await _apiClient.dio.post(
       ApiEndpoints.createPooja,
-      data: FormData.fromMap(formMap),
+      data: formData,
     );
     return PoojaModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
@@ -171,8 +151,11 @@ class PoojaRemoteDataSource {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByStep = const [],
   }) async {
-    final hasMedia = image != null || audio != null || video != null;
+    final hasStepImages = stepImagesByStep.any((files) => files.isNotEmpty);
+    final hasMedia =
+        image != null || audio != null || video != null || hasStepImages;
     if (!hasMedia) {
       final payload = Map<String, dynamic>.from(pooja.toJson());
       _applyExplicitMediaClearsForPatch(payload, pooja);
@@ -192,32 +175,17 @@ class PoojaRemoteDataSource {
       audio: audio,
       video: video,
     );
-    final formMap = _toMultipartFields(payload);
-    if (image != null) {
-      formMap['image'] = MultipartFile.fromBytes(
-        image.bytes,
-        filename: image.filename,
-        contentType: MediaType.parse(image.mimeType),
-      );
-    }
-    if (audio != null) {
-      formMap['audio'] = MultipartFile.fromBytes(
-        audio.bytes,
-        filename: audio.filename,
-        contentType: MediaType.parse(audio.mimeType),
-      );
-    }
-    if (video != null) {
-      formMap['video'] = MultipartFile.fromBytes(
-        video.bytes,
-        filename: video.filename,
-        contentType: MediaType.parse(video.mimeType),
-      );
-    }
+    final formData = _buildFormData(
+      _toMultipartFields(payload),
+      image: image,
+      audio: audio,
+      video: video,
+      stepImagesByStep: stepImagesByStep,
+    );
     try {
       final response = await _apiClient.dio.patch(
         ApiEndpoints.updatePooja(id),
-        data: FormData.fromMap(formMap),
+        data: formData,
       );
       return PoojaModel.fromJson(
         _extractSingle(response.data as Map<String, dynamic>),
@@ -226,7 +194,7 @@ class PoojaRemoteDataSource {
       debugPrint('DioException in updatePooja:');
       debugPrint('Status: ${e.response?.statusCode}');
       debugPrint('Data: ${e.response?.data}');
-      debugPrint('Fields sent: ${formMap.keys}');
+      debugPrint('Fields sent: ${_describeFormData(formData)}');
       rethrow;
     }
   }
@@ -357,5 +325,77 @@ class PoojaRemoteDataSource {
     };
     payload['media'] = fresh;
     return fresh;
+  }
+
+  FormData _buildFormData(
+    Map<String, dynamic> formMap, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+    List<List<PickedFile>> stepImagesByStep = const [],
+  }) {
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
+      );
+    }
+
+    final stepImageMeta = <Map<String, int>>[];
+    final stepImageFiles = <MultipartFile>[];
+    for (var stepIdx = 0; stepIdx < stepImagesByStep.length; stepIdx++) {
+      for (final file in stepImagesByStep[stepIdx]) {
+        stepImageMeta.add({'stepNumber': stepIdx + 1});
+        stepImageFiles.add(
+          MultipartFile.fromBytes(
+            file.bytes,
+            filename: file.filename,
+            contentType: MediaType.parse(file.mimeType),
+          ),
+        );
+      }
+    }
+    if (stepImageMeta.isNotEmpty) {
+      formMap['stepImageMeta'] = jsonEncode(stepImageMeta);
+    }
+
+    final formData = FormData.fromMap(formMap);
+    for (final file in stepImageFiles) {
+      formData.files.add(MapEntry('stepImage', file));
+    }
+    return formData;
+  }
+
+  String _describeFormData(FormData formData) {
+    final printable = <String, dynamic>{};
+    for (final field in formData.fields) {
+      printable[field.key] = field.value;
+    }
+    final stepImageCount = formData.files
+        .where((entry) => entry.key == 'stepImage')
+        .length;
+    if (stepImageCount > 0) {
+      printable['stepImage'] = 'MultipartFile x$stepImageCount';
+    }
+    for (final file in formData.files) {
+      if (file.key == 'stepImage') continue;
+      printable[file.key] = 'MultipartFile(filename: ${file.value.filename})';
+    }
+    return jsonEncode(printable);
   }
 }

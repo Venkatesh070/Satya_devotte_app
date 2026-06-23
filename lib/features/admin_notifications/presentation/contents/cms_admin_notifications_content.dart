@@ -119,7 +119,7 @@ class _CmsAdminNotificationsContentState
         children: [
           const Expanded(
             child: Text(
-              'Activity',
+              'Activity Alerts',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,

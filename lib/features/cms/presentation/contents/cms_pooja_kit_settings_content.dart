@@ -132,7 +132,7 @@ class _CmsPoojaKitSettingsContentState extends State<CmsPoojaKitSettingsContent>
                 title: 'Delivery fee / charges',
                 children: [
                   const Text(
-                    'Set the flat delivery charge applied to Pooja Kit orders. '
+                    'Set the flat delivery charge applied to product orders. '
                     'Currency is fixed to ZAR.',
                     style: TextStyle(
                       fontSize: 12,

@@ -44,22 +44,47 @@ class AdminRemoteDataSource {
     return body;
   }
 
-  // ── GET /superadmin/admins — all admin users (super admin) ───
-  Future<List<AdminModel>> getAdminUsers() async {
+  // ── GET /superadmin/admins — paginated admin users (super admin) ───
+  Future<({List<AdminModel> items, int page, int limit, int total, int totalPages})>
+  getAdminUsersPage({
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
+    final q = search?.trim();
+    if (q != null && q.isNotEmpty) {
+      query['search'] = q;
+    }
+
     try {
       final res = await _apiClient.dio.get<Map<String, dynamic>>(
         ApiEndpoints.superadminAdmins,
+        queryParameters: query,
       );
       final body = res.data;
       if (body == null) {
-        throw Exception('Empty response from server.');
+        return (
+          items: const <AdminModel>[],
+          page: page,
+          limit: limit,
+          total: 0,
+          totalPages: 1,
+        );
       }
       if (body['success'] == false) {
         throw Exception(
           body['message']?.toString() ?? 'Could not load admins.',
         );
       }
-      return _parseAdminList(_list(body));
+      return _parsePaginatedAdmins(
+        body,
+        page: page,
+        limit: limit,
+      );
     } on DioException catch (e) {
       final raw = e.response?.data;
       if (raw is Map && raw['message'] != null) {
@@ -67,6 +92,58 @@ class AdminRemoteDataSource {
       }
       rethrow;
     }
+  }
+
+  // ── GET /superadmin/admins — all admin users (legacy helper) ───
+  Future<List<AdminModel>> getAdminUsers() async {
+    final result = await getAdminUsersPage(page: 1, limit: 100);
+    return result.items;
+  }
+
+  ({List<AdminModel> items, int page, int limit, int total, int totalPages})
+  _parsePaginatedAdmins(
+    Map<String, dynamic> body, {
+    required int page,
+    required int limit,
+  }) {
+    final items = _parseAdminList(_list(body));
+
+    final data = body['data'];
+    final dataMap = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final pagination = dataMap['pagination'];
+    final paginationMap = pagination is Map<String, dynamic>
+        ? pagination
+        : const <String, dynamic>{};
+
+    final resolvedPage = _asInt(
+      paginationMap['page'] ?? dataMap['page'] ?? body['page'],
+      page,
+    );
+    final resolvedLimit = _asInt(
+      paginationMap['limit'] ?? dataMap['limit'] ?? body['limit'],
+      limit,
+    );
+    final resolvedTotal = _asInt(
+      paginationMap['total'] ?? dataMap['total'] ?? body['total'],
+      items.length,
+    );
+    final fallbackPages = resolvedLimit <= 0
+        ? 1
+        : ((resolvedTotal + resolvedLimit - 1) ~/ resolvedLimit).clamp(1, 999999);
+    final resolvedTotalPages = _asInt(
+      paginationMap['totalPages'] ?? dataMap['totalPages'] ?? body['totalPages'],
+      fallbackPages,
+    );
+
+    return (
+      items: items,
+      page: resolvedPage,
+      limit: resolvedLimit,
+      total: resolvedTotal,
+      totalPages: resolvedTotalPages < 1 ? 1 : resolvedTotalPages,
+    );
   }
 
   List<AdminModel> _parseAdminList(List<dynamic> raw) {

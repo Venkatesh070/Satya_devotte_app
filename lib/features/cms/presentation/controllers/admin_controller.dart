@@ -16,6 +16,11 @@ class AdminController extends GetxController {
   final _isLoadingRegularUsers = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
+  final _adminsPage = 1.obs;
+  final _adminsPageSize = 20.obs;
+  final _adminsTotal = 0.obs;
+  final _adminsTotalPages = 1.obs;
+  final _adminsSearch = ''.obs;
   final _regularUsersPage = 1.obs;
   final _regularUsersPageSize = 10.obs;
   final _regularUsersTotal = 0.obs;
@@ -32,6 +37,11 @@ class AdminController extends GetxController {
   bool get isLoading => _isLoadingAdmins.value || _isLoadingRegularUsers.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
+  int get adminsPage => _adminsPage.value;
+  int get adminsPageSize => _adminsPageSize.value;
+  int get adminsTotal => _adminsTotal.value;
+  int get adminsTotalPages => _adminsTotalPages.value;
+  String get adminsSearch => _adminsSearch.value;
   int get regularUsersPage => _regularUsersPage.value;
   int get regularUsersPageSize => _regularUsersPageSize.value;
   int get regularUsersTotal => _regularUsersTotal.value;
@@ -64,23 +74,56 @@ class AdminController extends GetxController {
     await Future.wait([loadAdmins(), loadRegularUsers()]);
   }
 
-  Future<void> loadAdmins({bool showLoadingIndicator = true}) async {
+  Future<void> loadAdmins({
+    bool showLoadingIndicator = true,
+    int? page,
+    int? limit,
+    String? search,
+  }) async {
     final hadData = _admins.isNotEmpty;
     if (showLoadingIndicator && !hadData) {
       _isLoadingAdmins.value = true;
     }
     _error.value = null;
+    final targetPage = page ?? _adminsPage.value;
+    final targetLimit = limit ?? _adminsPageSize.value;
+    final targetSearch = search ?? _adminsSearch.value;
     try {
-      final result = await _dataSource.getAdminUsers();
-      _admins.assignAll(
-        result.where((a) => a.role.toLowerCase() != 'superadmin'),
+      final result = await _dataSource.getAdminUsersPage(
+        page: targetPage,
+        limit: targetLimit,
+        search: targetSearch.trim().isEmpty ? null : targetSearch.trim(),
       );
+      _admins.assignAll(
+        result.items.where((a) => a.role.toLowerCase() != 'superadmin'),
+      );
+      _adminsPage.value = result.page;
+      _adminsPageSize.value = result.limit;
+      _adminsTotal.value = result.total;
+      _adminsTotalPages.value = result.totalPages;
+      _adminsSearch.value = targetSearch;
     } catch (e) {
       _error.value = _parseError(e);
       print('loadAdmins error: $e');
     } finally {
       _isLoadingAdmins.value = false;
     }
+  }
+
+  void setAdminsSearch(String value) {
+    if (_adminsSearch.value == value) return;
+    loadAdmins(page: 1, search: value);
+  }
+
+  Future<void> setAdminsPage(int page) async {
+    final target = page.clamp(1, _adminsTotalPages.value);
+    if (target == _adminsPage.value) return;
+    await loadAdmins(page: target);
+  }
+
+  Future<void> setAdminsPageSize(int size) async {
+    if (size <= 0 || size == _adminsPageSize.value) return;
+    await loadAdmins(page: 1, limit: size);
   }
 
   Future<void> loadRegularUsers({int? page, int? limit}) async {

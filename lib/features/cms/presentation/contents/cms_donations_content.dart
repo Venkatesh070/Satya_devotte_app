@@ -1,5 +1,6 @@
 // lib/features/cms/presentation/contents/cms_donations_content.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
@@ -1386,6 +1387,79 @@ class _DateCell extends StatelessWidget {
   }
 }
 
+/// Paystack / payment reference — fully visible with copy action.
+class _ReferenceCell extends StatelessWidget {
+  const _ReferenceCell({
+    required this.reference,
+    this.dense = false,
+  });
+
+  final String? reference;
+  final bool dense;
+
+  Future<void> _copy(BuildContext context) async {
+    final text = reference?.trim() ?? '';
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    showCmsSnackbar(
+      title: 'Copied',
+      message: 'Reference ID copied to clipboard',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = reference?.trim() ?? '';
+    if (text.isEmpty) {
+      return Text(
+        '—',
+        style: TextStyle(
+          fontSize: dense ? 12 : 12.5,
+          color: CmsColors.textSecond,
+        ),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: SelectableText(
+            text,
+            style: TextStyle(
+              fontSize: dense ? 12 : 12,
+              fontFamily: 'monospace',
+              color: CmsColors.textSecond,
+              height: 1.35,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        _cmsClickable(
+          onTap: () => _copy(context),
+          child: Tooltip(
+            message: 'Copy reference ID',
+            child: Container(
+              padding: EdgeInsets.all(dense ? 5 : 6),
+              decoration: BoxDecoration(
+                color: CmsColors.bg,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: CmsColors.border),
+              ),
+              child: Icon(
+                Icons.copy_outlined,
+                size: dense ? 14 : 15,
+                color: CmsColors.textSecond,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── Wide layout: flex Table that always fits the parent width ──
 class _WideTable extends StatelessWidget {
   const _WideTable({required this.items});
@@ -1399,7 +1473,7 @@ class _WideTable extends StatelessWidget {
     3: FlexColumnWidth(1.4), // Status
     4: FlexColumnWidth(2.0), // Date (two lines)
     5: FlexColumnWidth(2.2), // Note
-    6: FlexColumnWidth(2.0), // Reference (Paystack ref)
+    6: FlexColumnWidth(2.4), // Reference (Paystack ref)
   };
 
   static const _headerStyle = TextStyle(
@@ -1483,16 +1557,7 @@ class _WideTable extends StatelessWidget {
                           : CmsColors.textPrimary,
                     ),
                   )),
-                  _pad(Text(
-                    c.reference ?? '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      color: CmsColors.textSecond,
-                    ),
-                  )),
+                  _pad(_ReferenceCell(reference: c.reference)),
                 ],
               ),
           ],
@@ -1609,10 +1674,27 @@ class _ContributionCard extends StatelessWidget {
                 : c.note!.trim(),
           ),
           const SizedBox(height: 4),
-          _MetaRow(
-            label: 'Reference',
-            value: c.reference ?? '—',
-            mono: true,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(
+                width: 96,
+                child: Text(
+                  'Reference',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: CmsColors.textSecond,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _ReferenceCell(
+                  reference: c.reference,
+                  dense: true,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1624,11 +1706,9 @@ class _MetaRow extends StatelessWidget {
   const _MetaRow({
     required this.label,
     required this.value,
-    this.mono = false,
   });
   final String label;
   final String value;
-  final bool mono;
 
   @override
   Widget build(BuildContext context) {
@@ -1651,10 +1731,9 @@ class _MetaRow extends StatelessWidget {
             value.isEmpty ? '—' : value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: CmsColors.textPrimary,
-              fontFamily: mono ? 'monospace' : null,
             ),
           ),
         ),

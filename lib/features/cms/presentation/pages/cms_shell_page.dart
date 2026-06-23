@@ -1205,7 +1205,7 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
     index: _NavIds.notifications,
   ),
   const _NavEntry(
-    label: 'Activity',
+    label: 'Activity Alerts',
     icon: Icons.notifications_active_outlined,
     activeIcon: Icons.notifications_active,
     index: _NavIds.activity,
@@ -1278,7 +1278,7 @@ String _pageTitle(int i) {
     case _NavIds.notifications:
       return 'Notifications';
     case _NavIds.activity:
-      return 'Activity';
+      return 'Activity Alerts';
     case _NavIds.users:
       return 'Users';
     // case _NavIds.analytics:

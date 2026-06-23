@@ -1,3 +1,77 @@
+import 'dart:convert';
+
+/// Encodes/decodes a pooja step stored in [PoojaModel.steps] as JSON, with
+/// legacy `title||description` fallback.
+class PoojaStepCodec {
+  const PoojaStepCodec._();
+
+  static String encode({
+    required String title,
+    required String description,
+    List<String> imageUrls = const [],
+  }) {
+    final map = <String, dynamic>{
+      'title': title,
+      'description': description,
+    };
+    final urls = imageUrls
+        .map((url) => url.trim())
+        .where((url) => url.isNotEmpty)
+        .toList();
+    if (urls.isNotEmpty) map['imageUrls'] = urls;
+    return jsonEncode(map);
+  }
+
+  static List<String> _urlsFromMap(Map<dynamic, dynamic> map) {
+    final raw = map['images'] ?? map['imageUrls'];
+    if (raw is List) {
+      return raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    final single = map['imageUrl']?.toString().trim();
+    if (single != null && single.isNotEmpty) return [single];
+    return const [];
+  }
+
+  static ({String title, String description, List<String> imageUrls}) decode(
+    String raw,
+  ) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return (title: '', description: '', imageUrls: const []);
+    }
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map) {
+        return (
+          title: decoded['title']?.toString().trim() ?? '',
+          description: decoded['description']?.toString().trim() ?? '',
+          imageUrls: _urlsFromMap(decoded),
+        );
+      }
+    } catch (_) {}
+    final parts = trimmed.split('||');
+    if (parts.length < 2) {
+      return (title: trimmed, description: '', imageUrls: const []);
+    }
+    return (
+      title: parts.first.trim(),
+      description: parts.sublist(1).join('||').trim(),
+      imageUrls: const [],
+    );
+  }
+
+  static String encodeFromMap(Map<dynamic, dynamic> map) {
+    return encode(
+      title: map['title']?.toString().trim() ?? '',
+      description: map['description']?.toString().trim() ?? '',
+      imageUrls: _urlsFromMap(map),
+    );
+  }
+}
+
 class PoojaModel {
   const PoojaModel({
     required this.id,
@@ -226,12 +300,9 @@ class PoojaModel {
         return rawSteps
             .map((e) {
               if (e is Map) {
-                final title = e['title']?.toString().trim() ?? '';
-                final description =
-                    e['description']?.toString().trim() ?? '';
-                if (title.isEmpty && description.isEmpty) return '';
-                if (description.isEmpty) return title;
-                return '$title||$description';
+                final encoded = PoojaStepCodec.encodeFromMap(e);
+                if (encoded == '{"title":"","description":""}') return '';
+                return encoded;
               }
               return e?.toString().trim() ?? '';
             })
@@ -323,16 +394,14 @@ class PoojaModel {
       'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
     },
     'steps': steps.asMap().entries.map((e) {
-      final raw = e.value.trim();
-      final parts = raw.split('||');
-      final title = parts.first.trim();
-      final description = parts.length > 1
-          ? parts.sublist(1).join('||').trim()
-          : title;
+      final step = PoojaStepCodec.decode(e.value);
+      final title = step.title.trim();
+      final description = step.description.trim();
       return {
         'stepNumber': e.key + 1,
-        'title': title,
-        'description': description,
+        'title': title.isEmpty ? 'Step ${e.key + 1}' : title,
+        'description': description.isEmpty ? title : description,
+        'images': step.imageUrls,
         'subSteps': <String>[],
       };
     }).toList(),
