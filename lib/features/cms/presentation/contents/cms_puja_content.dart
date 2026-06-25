@@ -410,8 +410,8 @@ class _PoojaList extends StatelessWidget {
                     ? 'No Pujas Yet'
                     : 'No ${controller.filter} Pujas',
                 subtitle: controller.filter == 'All'
-                    ? 'Add your first pooja to get started'
-                    : 'No poojas with this status',
+                    ? 'Add your first puja to get started'
+                    : 'No pujas with this status',
                 actionLabel: controller.filter == 'All' ? 'Add Puja' : null,
                 onAction: controller.filter == 'All' ? onAdd : null,
               );

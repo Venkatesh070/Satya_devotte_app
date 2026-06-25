@@ -12,7 +12,7 @@ class _FakeRitualRepository implements RitualRepository {
     return [
       const RitualEntity(
         id: '1',
-        title: 'Morning Pooja',
+        title: 'Morning Puja',
         description: 'Daily prayer ritual',
         steps: ['Light lamp', 'Offer flowers'],
         mediaUrl: '',
@@ -31,6 +31,6 @@ void main() {
     final useCase = GetRitualsUseCase(_FakeRitualRepository());
     final result = await useCase();
     expect(result, isNotEmpty);
-    expect(result.first.title, 'Morning Pooja');
+    expect(result.first.title, 'Morning Puja');
   });
 }

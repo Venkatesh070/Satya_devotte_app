@@ -173,6 +173,8 @@ class NotificationService with WidgetsBindingObserver {
           badge: false,
           sound: false,
         );
+        // FCM getToken() needs the APNs token first on iOS.
+        await _waitForApnsToken();
       }
 
       // 6. Observe app lifecycle so we drain pending notifications when
@@ -191,6 +193,10 @@ class NotificationService with WidgetsBindingObserver {
         final token = await _fcm.getToken();
         if (token != null && token.length >= 12) {
           debugPrint('[fcm] device token: ${token.substring(0, 12)}…');
+        } else if (notificationPlatformIsIOS || notificationPlatformIsMacOS) {
+          debugPrint(
+            '[fcm] device token not ready yet (APNs may still be registering)',
+          );
         }
       }
     } catch (e) {
@@ -368,6 +374,25 @@ class NotificationService with WidgetsBindingObserver {
   /// JSON-encode without surprises.
   Map<String, dynamic> _dataAsMap(Map<String, dynamic> data) {
     return data.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+  }
+
+  /// iOS/macOS: FCM cannot produce a device token until APNs registration
+  /// completes (often a few seconds after [requestPermission]).
+  Future<void> _waitForApnsToken() async {
+    if (!notificationPlatformIsIOS && !notificationPlatformIsMacOS) return;
+    for (var i = 0; i < 20; i++) {
+      final token = await _fcm.getAPNSToken();
+      if (token != null && token.isNotEmpty) {
+        if (kDebugMode) {
+          debugPrint('[fcm] APNs token ready (${token.substring(0, 10)}…)');
+        }
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    if (kDebugMode) {
+      debugPrint('[fcm] APNs token not available yet — push may register later');
+    }
   }
 
   // ════════════════════════════════════════════════════════════════

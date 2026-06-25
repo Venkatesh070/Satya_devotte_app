@@ -21,6 +21,8 @@ class RitualController extends GetxController {
   final _filter = 'All'.obs;
   final _search = ''.obs;
   final _deities = <Map<String, String>>[].obs;
+  final _isLoadingDeities = false.obs;
+  final _deitiesLoaded = false.obs;
 
   List<RitualModel> get rituals => _rituals;
   bool get isLoading => _isLoading.value;
@@ -29,6 +31,8 @@ class RitualController extends GetxController {
   String get filter => _filter.value;
   String get search => _search.value;
   List<Map<String, String>> get deities => _deities;
+  bool get isLoadingDeities => _isLoadingDeities.value;
+  bool get deitiesLoaded => _deitiesLoaded.value;
 
   void setSearch(String q) => _search.value = q.trim().toLowerCase();
 
@@ -92,10 +96,17 @@ class RitualController extends GetxController {
   }
 
   Future<void> loadDeities() async {
+    if (_isLoadingDeities.value) return;
+    _isLoadingDeities.value = true;
     try {
-      final result = await _poojaDataSource.getDeities();
+      final result = await _poojaDataSource.getDeities(status: 'APPROVED');
       _deities.assignAll(result);
-    } catch (_) {}
+    } catch (_) {
+      _deities.clear();
+    } finally {
+      _isLoadingDeities.value = false;
+      _deitiesLoaded.value = true;
+    }
   }
 
   Future<bool> createRitual({

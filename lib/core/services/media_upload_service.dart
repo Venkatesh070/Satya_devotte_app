@@ -4,7 +4,7 @@
 // The picked file bytes are sent directly in the create/update API calls.
 // e.g. POST /poojas/create-pooja (multipart) includes image/audio/video bytes.
 
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -62,11 +62,14 @@ class MediaUploadService extends GetxService {
   /// Capture image from camera
   Future<PickedFile?> captureImage() async {
     try {
-      // Request camera permission first
-      final status = await Permission.camera.request();
-      if (!status.isGranted) {
-        debugPrint('Camera permission not granted');
-        return null;
+      // On Android, request explicitly. On iOS, image_picker triggers the
+      // system prompt (permission_handler needs PERMISSION_CAMERA in Podfile).
+      if (!kIsWeb && Platform.isAndroid) {
+        final status = await Permission.camera.request();
+        if (!status.isGranted) {
+          debugPrint('Camera permission not granted');
+          return null;
+        }
       }
 
       final XFile? xFile = await _imagePicker.pickImage(

@@ -63,9 +63,15 @@ class PoojaRemoteDataSource {
     );
   }
 
-  // ── GET /deities — for Add Pooja dropdown ───────────────────
-  Future<List<Map<String, String>>> getDeities() async {
-    final response = await _apiClient.dio.get(ApiEndpoints.allDeities);
+  // ── GET /deities — for CMS dropdowns (optional status filter) ─
+  Future<List<Map<String, String>>> getDeities({String? status}) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.allDeities,
+      queryParameters: {
+        if (status != null && status.isNotEmpty) 'status': status,
+        'limit': 100,
+      },
+    );
     final raw = response.data;
     List<dynamic> list = const [];
     if (raw is Map<String, dynamic>) {
@@ -77,8 +83,15 @@ class PoojaRemoteDataSource {
       list = raw;
     }
 
+    final statusFilter = status?.trim().toUpperCase();
+
     return list
         .whereType<Map>()
+        .where((e) {
+          if (statusFilter == null || statusFilter.isEmpty) return true;
+          final itemStatus = (e['status'] ?? '').toString().toUpperCase();
+          return itemStatus == statusFilter;
+        })
         .map((e) {
           final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
           final name =

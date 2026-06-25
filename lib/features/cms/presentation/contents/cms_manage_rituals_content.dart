@@ -498,6 +498,7 @@ class _RitualFormState extends State<_RitualForm> {
         : _defaultSections();
     _imageUrl = r?.imageUrl;
     _titleCtrl.addListener(_syncSlugFromTitle);
+    Future.microtask(widget.controller.loadDeities);
   }
 
   @override
@@ -529,7 +530,11 @@ class _RitualFormState extends State<_RitualForm> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDeityId == null) {
-      Get.snackbar('Error', 'Please select a deity');
+      showCmsSnackbar(
+        title: 'Validation Error',
+        message: 'Please select a deity',
+        isError: true,
+      );
       return;
     }
     if (_days.isEmpty) {
@@ -928,20 +933,67 @@ class _RitualFormState extends State<_RitualForm> {
   Widget _buildDeityDropdown() {
     return Obx(() {
       final deities = widget.controller.deities;
-      if (deities.isEmpty) {
-        return const Padding(
-          padding: EdgeInsets.only(bottom: 4),
-          child: Text(
-            'Loading deities...',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-          ),
-        );
-      }
+      final isLoading = widget.controller.isLoadingDeities;
+      final loaded = widget.controller.deitiesLoaded;
+      final hasDeities = deities.isNotEmpty;
       final ids = deities.map((d) => d['id']!).toList();
       final value =
-          _selectedDeityId != null && ids.contains(_selectedDeityId)
+          hasDeities &&
+              _selectedDeityId != null &&
+              ids.contains(_selectedDeityId)
           ? _selectedDeityId
           : null;
+
+      final hintText = isLoading && !loaded
+          ? 'Loading deities...'
+          : 'Select deity';
+
+      final List<DropdownMenuItem<String>> items;
+      if (isLoading && !loaded) {
+        items = const [
+          DropdownMenuItem<String>(
+            enabled: false,
+            value: '__loading__',
+            child: Text(
+              'Loading deities...',
+              style: TextStyle(
+                fontSize: 13,
+                color: CmsThemeColors.inputHint,
+              ),
+            ),
+          ),
+        ];
+      } else if (hasDeities) {
+        items = deities
+            .map(
+              (d) => DropdownMenuItem(
+                value: d['id'],
+                child: Text(
+                  d['name'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: CmsThemeColors.inputText,
+                  ),
+                ),
+              ),
+            )
+            .toList();
+      } else {
+        items = const [
+          DropdownMenuItem<String>(
+            enabled: false,
+            value: '__no_deities__',
+            child: Text(
+              'No deities found',
+              style: TextStyle(
+                fontSize: 13,
+                color: CmsThemeColors.inputHint,
+              ),
+            ),
+          ),
+        ];
+      }
+
       return _RitualLabeled(
         label: 'Deity *',
         child: DropdownButtonFormField<String>(
@@ -957,21 +1009,20 @@ class _RitualFormState extends State<_RitualForm> {
             fontSize: 13,
             color: CmsThemeColors.inputText,
           ),
-          items: deities
-              .map(
-                (d) => DropdownMenuItem(
-                  value: d['id'],
-                  child: Text(
-                    d['name'] ?? '',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: CmsThemeColors.inputText,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (v) => setState(() => _selectedDeityId = v),
+          hint: Text(
+            hintText,
+            style: const TextStyle(
+              fontSize: 13,
+              color: CmsThemeColors.inputHint,
+            ),
+          ),
+          items: items,
+          onChanged: (v) {
+            if (v == null || v == '__no_deities__' || v == '__loading__') {
+              return;
+            }
+            setState(() => _selectedDeityId = v);
+          },
           decoration: InputDecoration(
             filled: true,
             fillColor: CmsColors.bg,
@@ -990,6 +1041,10 @@ class _RitualFormState extends State<_RitualForm> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: CmsColors.orange),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: CmsColors.border),
             ),
           ),
         ),

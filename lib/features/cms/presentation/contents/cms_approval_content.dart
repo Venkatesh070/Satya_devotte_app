@@ -294,9 +294,9 @@ class _PoojaList extends StatelessWidget {
       if (list.isEmpty) {
         return CmsEmptyState(
           icon: Icons.self_improvement_outlined,
-          title: filter == 'All' ? 'No Poojas' : 'No $filter Poojas',
+          title: filter == 'All' ? 'No Pujas' : 'No $filter Pujas',
           subtitle: filter == 'Pending'
-              ? 'All caught up! No poojas waiting.'
+              ? 'All caught up! No pujas waiting.'
               : 'Nothing here yet.',
         );
       }

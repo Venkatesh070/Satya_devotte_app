@@ -1558,8 +1558,8 @@ class _PoojaPickerField extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   selectedIds.isEmpty
-                      ? 'Select poojas for this festival...'
-                      : 'Add another pooja',
+                      ? 'Select pujas for this festival...'
+                      : 'Add another puja',
                   style: const TextStyle(
                     fontSize: 13,
                     color: CmsColors.textSecond,
@@ -1581,8 +1581,8 @@ class _PoojaPickerField extends StatelessWidget {
 
     if (poojas.isEmpty) {
       Get.snackbar(
-        'No Poojas',
-        'No more poojas to add',
+        'No Pujas',
+        'No more pujas to add',
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orange,
         colorText: Colors.white,
@@ -1611,7 +1611,7 @@ class _PoojaPickerField extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text(
-              'Select Pooja',
+              'Select Puja',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
