@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -16,6 +17,17 @@ import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+
+const _privacyPolicyUrl = 'https://sathya-app-privacy.netlify.app/';
+const _termsConditionsUrl = 'https://sathya-terms-and-conditions.netlify.app/';
+
+Future<void> _openUrl(String url) async {
+  final uri = Uri.parse(url);
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched) {
+    ToastUtil.showInfo('Could not open the link. Please try again.');
+  }
+}
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -141,6 +153,16 @@ class ProfilePage extends StatelessWidget {
                           // ),
                           const SizedBox(height: 22),
                           const ProfileSectionHeading('Settings'),
+                          ProfileLinkTile(
+                            icon: Icons.privacy_tip_outlined,
+                            label: 'Privacy Policy',
+                            onTap: () => _openUrl(_privacyPolicyUrl),
+                          ),
+                          ProfileLinkTile(
+                            icon: Icons.description_outlined,
+                            label: 'Terms & Conditions',
+                            onTap: () => _openUrl(_termsConditionsUrl),
+                          ),
                           ProfileLinkTile(
                             icon: Icons.info_outline,
                             label: 'About the app',

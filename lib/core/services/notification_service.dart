@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -17,12 +18,61 @@ import 'package:satya_devotte_app/core/services/notification_platform.dart';
 /// Top-level FCM background isolate handler.
 ///
 /// Must be a top-level function annotated with `@pragma('vm:entry-point')`
-/// so the engine can locate it when the app is fully terminated. Keep it
-/// minimal — the isolate has no Flutter UI and our app state is gone.
+/// so the engine can locate it when the app is fully terminated. Displays
+/// a local notification so data-only messages still surface to the user.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (kDebugMode) {
-    debugPrint('[fcm bg] id=${message.messageId} type=${message.data['type']}');
+  try {
+    if (kDebugMode) {
+      debugPrint('[fcm bg] id=${message.messageId} type=${message.data['type']}');
+    }
+
+    final data = message.data;
+    final displayTitle = data['title'] ?? message.notification?.title ?? 'Satya';
+    final displayBody = data['body'] ?? message.notification?.body ?? '';
+    if (displayBody.isEmpty && displayTitle.isEmpty) return;
+
+    final localNotifications = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    await localNotifications.initialize(initSettings);
+
+    final payload = jsonEncode(data.map((k, v) => MapEntry(k, v.toString())));
+
+    await localNotifications.show(
+      message.hashCode,
+      displayTitle,
+      displayBody,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          NotificationService.pushChannelId,
+          NotificationService.pushChannelName,
+          channelDescription: NotificationService.pushChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          styleInformation: BigTextStyleInformation(displayBody),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: payload,
+    );
+
+    if (kDebugMode) {
+      debugPrint('[fcm bg] notification shown: id=${message.messageId}');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('[fcm bg] error: $e');
+    }
   }
 }
 
@@ -201,13 +251,13 @@ class NotificationService {
     }
 
     final notification = message.notification;
-    if (notification == null) {
-      return;
-    }
+    final displayTitle = notification?.title ?? data['title'] ?? 'Satya';
+    final displayBody = notification?.body ?? data['body'] ?? '';
+    if (displayBody.isEmpty && displayTitle.isEmpty) return;
+
     if (kDebugMode) {
       debugPrint(
-        '[fcm fg] type=${message.data['type']} '
-        'title=${notification.title}',
+        '[fcm fg] type=${message.data['type']} title=$displayTitle',
       );
     }
     final payload = jsonEncode(_dataAsMap(message.data));
@@ -219,7 +269,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
-        styleInformation: BigTextStyleInformation(notification.body ?? ''),
+        styleInformation: BigTextStyleInformation(displayBody),
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -229,8 +279,8 @@ class NotificationService {
     );
     await _localNotifications.show(
       message.hashCode,
-      notification.title,
-      notification.body,
+      displayTitle,
+      displayBody,
       details,
       payload: payload,
     );

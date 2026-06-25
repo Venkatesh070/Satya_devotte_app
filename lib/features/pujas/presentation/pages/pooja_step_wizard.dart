@@ -268,12 +268,13 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     }
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     if (_sessionId != null) {
-      Get.find<PoojaHistoryController>().finishPoojaBySession(_sessionId!);
+      await Get.find<PoojaHistoryController>().finishPoojaBySession(_sessionId!);
     } else {
-      Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
+      await Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
     }
+    if (!mounted) return;
     Get.offAllNamed(AppRoutes.home);
   }
 

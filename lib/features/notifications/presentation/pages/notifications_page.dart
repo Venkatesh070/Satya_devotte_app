@@ -236,7 +236,13 @@ class _TopBar extends StatelessWidget {
           shadowColor: const Color(0x22000000),
           child: InkWell(
             customBorder: const CircleBorder(),
-            onTap: () => Get.back(),
+            onTap: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Get.offNamed(AppRoutes.home);
+              }
+            },
             child: const SizedBox(
               width: 40,
               height: 40,

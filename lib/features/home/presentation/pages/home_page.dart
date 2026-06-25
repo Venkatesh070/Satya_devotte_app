@@ -136,8 +136,12 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchAchievementsData({required bool recordStreak}) async {
     await Future.wait([
       recordStreak ? _recordUserStreak() : _fetchUserStreakStatus(),
-      _fetchPoojasCompleted(),
+      _poojaHistoryController.fetchHistory(),
     ]);
+    // fetchHistory updates finishedPoojas which triggers the ever() worker
+    // to call _fetchPoojasCompleted. Call it directly as a safety net in
+    // case ever() didn't fire (e.g. no change in the list).
+    _fetchPoojasCompleted();
   }
 
   /// `POST /user/streak` with device IANA timezone for daily streak tracking.
