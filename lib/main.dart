@@ -51,9 +51,12 @@ Future<void> main() async {
 
   runApp(SathyaApp());
 
-  // Handle cold-start taps AFTER `runApp` so GetX routing is ready to
-  // accept `Get.toNamed`. Fire-and-forget; failures are logged inside.
-  notifs.handleColdStart();
+  // Web uses login as initial route (no splash page), so handle cold-start
+  // taps here. Native platforms do this in SplashPage to avoid a navigation
+  // race with the splash->home redirect.
+  if (kIsWeb) {
+    notifs.handleColdStart();
+  }
 }
 
 /// Initializes Firebase from Dart using env-specific [DefaultFirebaseOptions].

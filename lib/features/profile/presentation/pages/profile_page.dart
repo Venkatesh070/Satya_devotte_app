@@ -131,7 +131,7 @@ class ProfilePage extends StatelessWidget {
                           const ProfileSectionHeading('Spiritual'),
                           ProfileLinkTile(
                             icon: Icons.volunteer_activism_outlined,
-                            label: 'Donations',
+                            label: 'Contributions',
                             onTap: () {
                               if (!Get.find<OfflineService>()
                                   .checkAndShowDialog()) {

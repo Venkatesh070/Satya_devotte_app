@@ -15,74 +15,58 @@ import 'package:satya_devotte_app/core/notifications/admin_notification_router.d
 import 'package:satya_devotte_app/core/notifications/push_router.dart';
 import 'package:satya_devotte_app/core/services/notification_platform.dart';
 
+/// Temp file shared between background handler and main isolate.
+/// `dart:io` works in any isolate — no platform channels needed.
+const String _pendingNotificationFile = 'satya_pending.json';
+const int _maxPendingNotifications = 50;
+
 /// Top-level FCM background isolate handler.
 ///
 /// Must be a top-level function annotated with `@pragma('vm:entry-point')`
-/// so the engine can locate it when the app is fully terminated. Displays
-/// a local notification so data-only messages still surface to the user.
+/// so the engine can locate it when the app is fully terminated. Persists
+/// notification data to a temp file so the main isolate can show it later
+/// (platform channels are unavailable when the app is fully killed).
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    if (kDebugMode) {
-      debugPrint('[fcm bg] id=${message.messageId} type=${message.data['type']}');
-    }
-
     final data = message.data;
     final displayTitle = data['title'] ?? message.notification?.title ?? 'Satya';
     final displayBody = data['body'] ?? message.notification?.body ?? '';
     if (displayBody.isEmpty && displayTitle.isEmpty) return;
 
-    final localNotifications = FlutterLocalNotificationsPlugin();
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-    await localNotifications.initialize(initSettings);
-
-    final payload = jsonEncode(data.map((k, v) => MapEntry(k, v.toString())));
-
-    await localNotifications.show(
-      message.hashCode,
-      displayTitle,
-      displayBody,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          NotificationService.pushChannelId,
-          NotificationService.pushChannelName,
-          channelDescription: NotificationService.pushChannelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          styleInformation: BigTextStyleInformation(displayBody),
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      payload: payload,
-    );
-
-    if (kDebugMode) {
-      debugPrint('[fcm bg] notification shown: id=${message.messageId}');
+    final file = File('${Directory.systemTemp.path}/$_pendingNotificationFile');
+    final pending = <Map<String, String>>[];
+    if (await file.exists()) {
+      try {
+        final content = await file.readAsString();
+        if (content.isNotEmpty) {
+          final List<dynamic> existing = jsonDecode(content);
+          for (final item in existing) {
+            if (item is Map) {
+              pending.add(item.map((k, v) => MapEntry(k.toString(), v.toString())));
+            }
+          }
+        }
+      } catch (_) {}
     }
+    if (pending.length >= _maxPendingNotifications) {
+      pending.removeAt(0);
+    }
+    pending.add(data.map((k, v) => MapEntry(k.toString(), v.toString())));
+    await file.writeAsString(jsonEncode(pending));
   } catch (e) {
-    if (kDebugMode) {
-      debugPrint('[fcm bg] error: $e');
-    }
+    print('[fcm bg] error: $e');
   }
 }
 
 /// All notification plumbing — local notifications, FCM foreground
 /// display, tap routing, and scheduled ritual reminders.
-class NotificationService {
+class NotificationService with WidgetsBindingObserver {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  bool _processingPending = false;
 
   // ── Channels ────────────────────────────────────────────────────
   /// MUST match the server payload:
@@ -191,7 +175,15 @@ class NotificationService {
         );
       }
 
-      // 6. FCM listeners — foreground display, background tap, cold-start.
+      // 6. Observe app lifecycle so we drain pending notifications when
+      // the user returns to the app (messages that arrived in background).
+      WidgetsBinding.instance.addObserver(this);
+
+      // 7. Drain any notifications the background handler persisted while
+      // the app was killed (platform channels unavailable in that isolate).
+      await processPendingNotifications();
+
+      // 7. FCM listeners — foreground display, background tap, cold-start.
       FirebaseMessaging.onMessage.listen(_onForegroundMessage);
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
@@ -224,15 +216,76 @@ class NotificationService {
   Future<void> handleColdStart() async {
     try {
       final initial = await _fcm.getInitialMessage();
-      if (initial == null) return;
-      if (kDebugMode) {
-        debugPrint(
-          '[fcm cold] id=${initial.messageId} type=${initial.data['type']}',
-        );
+      if (initial != null) {
+        if (kDebugMode) {
+          debugPrint(
+            '[fcm cold] id=${initial.messageId} type=${initial.data['type']}',
+          );
+        }
+        PushRouter.navigateFromData(_dataAsMap(initial.data));
       }
-      PushRouter.navigateFromData(_dataAsMap(initial.data));
+      // Also show any pending notifications saved by background handler.
+      await processPendingNotifications();
     } catch (e) {
       if (kDebugMode) debugPrint('[fcm cold] error: $e');
+    }
+  }
+
+  /// Reads and displays notifications saved by the background handler.
+  /// Called from [initialize] and [handleColdStart] — the main isolate
+  /// has working platform channels so [FlutterLocalNotificationsPlugin]
+  /// can show them.
+  Future<void> processPendingNotifications() async {
+    if (_processingPending) return;
+    _processingPending = true;
+    try {
+      final file = File('${Directory.systemTemp.path}/$_pendingNotificationFile');
+      if (!await file.exists()) return;
+      final content = await file.readAsString();
+      if (content.isEmpty) return;
+      await file.delete();
+
+      final List<dynamic> items = jsonDecode(content);
+      for (final item in items) {
+        if (item is! Map) continue;
+        final data = item.map((k, v) => MapEntry(k.toString(), v.toString()));
+        final title = data['title'] ?? 'Satya';
+        final body = data['body'] ?? '';
+        if (title == 'Satya' && body.isEmpty) continue;
+        await _localNotifications.show(
+          data.hashCode,
+          title,
+          body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              pushChannelId,
+              pushChannelName,
+              channelDescription: pushChannelDescription,
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+              styleInformation: BigTextStyleInformation(body),
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          payload: jsonEncode(data),
+        );
+      }
+    } catch (e) {
+      print('[notification] process pending error: $e');
+    } finally {
+      _processingPending = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      processPendingNotifications();
     }
   }
 
@@ -385,6 +438,10 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     try {
+      // Android 12+ blocks exact alarms unless the user grants
+      // SCHEDULE_EXACT_ALARM in system settings.  Use inexact so the
+      // notification still fires in all cases (may be delayed a few
+      // minutes during Doze).
       await _localNotifications.zonedSchedule(
         id,
         title,
@@ -405,7 +462,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );

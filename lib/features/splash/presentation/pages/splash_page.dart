@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/notifications/admin_notification_router.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
+import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -61,6 +64,21 @@ class _SplashPageState extends State<SplashPage>
       return;
     }
 
+    // Cold-start notification tap — replace splash with notifications
+    // instead of home, so the user lands on the notification screen.
+    final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMsg != null) {
+      if (kDebugMode) {
+        debugPrint('[splash cold] type=${initialMsg.data['type']}');
+      }
+      if (!AdminNotificationRouter.isOperationalType(
+          initialMsg.data['type']?.toString())) {
+        Get.offAllNamed(AppRoutes.notifications, arguments: initialMsg.data);
+      }
+      await Get.find<NotificationService>().processPendingNotifications();
+      return;
+    }
+
     auth.navigateAfterLogin();
   }
 
@@ -110,7 +128,10 @@ class _SplashPageState extends State<SplashPage>
                     child: Opacity(
                       opacity: 1,
                       child: ImageFiltered(
-                        imageFilter: ui.ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+                        imageFilter: ui.ImageFilter.blur(
+                          sigmaX: 64,
+                          sigmaY: 64,
+                        ),
                         child: SizedBox(
                           width: 294.69,
                           height: 294.69,
@@ -141,26 +162,34 @@ class _SplashPageState extends State<SplashPage>
                                 angle: -spin,
                                 child: Transform.scale(
                                   scale: 0.90,
-                                  child: Image.asset('assets/images/chakra2.png'),
+                                  child: Image.asset(
+                                    'assets/images/chakra2.png',
+                                  ),
                                 ),
                               ),
                               Transform.rotate(
                                 angle: spin,
                                 child: Transform.scale(
                                   scale: 0.80,
-                                  child: Image.asset('assets/images/chakra3.png'),
+                                  child: Image.asset(
+                                    'assets/images/chakra3.png',
+                                  ),
                                 ),
                               ),
                               Transform.rotate(
                                 angle: -spin,
                                 child: Transform.scale(
                                   scale: 0.53,
-                                  child: Image.asset('assets/images/chakra4.png'),
+                                  child: Image.asset(
+                                    'assets/images/chakra4.png',
+                                  ),
                                 ),
                               ),
                               Opacity(
                                 opacity: 0.8,
-                                child: Image.asset('assets/images/onBoardBgOverlay.png'),
+                                child: Image.asset(
+                                  'assets/images/onBoardBgOverlay.png',
+                                ),
                               ),
                             ],
                           );
@@ -199,7 +228,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Pooja is peace in action',
+                    'Puja is peace in action',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 14,

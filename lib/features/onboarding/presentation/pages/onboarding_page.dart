@@ -31,7 +31,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     (
       title: 'Guided Rituals',
       subtitle:
-          'Step-by-step instructions for every pooja,\nfrom preparation to completion',
+          'Step-by-step instructions for every puja,\nfrom preparation to completion',
     ),
     (
       title: 'Never Miss a Festival',
