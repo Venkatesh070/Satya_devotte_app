@@ -7,7 +7,6 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class PoojaKitPage extends GetView<PoojaKitController> {
   const PoojaKitPage({super.key, this.onBack});
@@ -70,10 +69,7 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 18),
                       child: Center(
-                        child: ChakraLoadingIndicator(
-                          size: 24,
-                          color: AppColors.primary,
-                        ),
+                        child: _GradientSpinner(size: 24),
                       ),
                     );
                   }
@@ -267,10 +263,7 @@ class _ProductListTile extends StatelessWidget {
                             child: SizedBox(
                               width: 18,
                               height: 18,
-                              child: ChakraLoadingIndicator(
-                                size: 18,
-                                color: AppColors.primary,
-                              ),
+                              child: _GradientSpinner(size: 18),
                             ),
                           ),
                         ),
@@ -457,6 +450,28 @@ class _CartBadge extends StatelessWidget {
           }),
         ),
       ],
+    );
+  }
+}
+
+class _GradientSpinner extends StatelessWidget {
+  const _GradientSpinner({this.size = 24});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+      ).createShader(bounds),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      ),
     );
   }
 }

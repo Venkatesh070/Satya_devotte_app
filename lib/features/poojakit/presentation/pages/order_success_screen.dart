@@ -28,7 +28,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
   @override
   void initState() {
     super.initState();
-    _result = Get.arguments as VerifyResult;
+    final arg = Get.arguments;
+    _result = arg is VerifyResult ? arg : VerifyResult.empty();
     _animation = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -46,12 +47,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
       curve: const Interval(.15, 1, curve: Curves.easeOut),
     );
 
-    Timer(const Duration(seconds: 3), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-      Get.offAllNamed(AppRoutes.home);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.toNamed(AppRoutes.userOrders);
-      });
+      await Get.offAllNamed(AppRoutes.home);
+      if (!mounted) return;
+      await Get.toNamed(AppRoutes.userOrders);
     });
   }
 
@@ -63,117 +64,124 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.appBgColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _animation,
-                builder: (context, _) => CustomPaint(
-                  painter: _SuccessBurstPainter(progress: _animation.value),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        Get.offAllNamed(AppRoutes.home);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.appBgColor,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, _) => CustomPaint(
+                    painter: _SuccessBurstPainter(progress: _animation.value),
+                  ),
                 ),
               ),
-            ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, _) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Opacity(
-                              opacity: 1 - _ringOpacity.value,
-                              child: Transform.scale(
-                                scale: 1 + (_animation.value * .9),
-                                child: Container(
-                                  width: 108,
-                                  height: 108,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF18A978,
-                                      ).withValues(alpha: .35),
-                                      width: 3,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Transform.scale(
-                              scale: _badgeScale.value,
-                              child: Container(
-                                width: 84,
-                                height: 84,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF18A978),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0x3318A978),
-                                      blurRadius: 24,
-                                      offset: Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _animation,
+                        builder: (context, _) {
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Opacity(
+                                opacity: 1 - _ringOpacity.value,
                                 child: Transform.scale(
-                                  scale: _checkScale.value,
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 48,
+                                  scale: 1 + (_animation.value * .9),
+                                  child: Container(
+                                    width: 108,
+                                    height: 108,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(
+                                          0xFF18A978,
+                                        ).withValues(alpha: .35),
+                                        width: 3,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 26),
-                    Text(
-                      'Order Placed Successfully',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF2B1A0C),
+                              Transform.scale(
+                                scale: _badgeScale.value,
+                                child: Container(
+                                  width: 84,
+                                  height: 84,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF18A978),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x3318A978),
+                                        blurRadius: 24,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Transform.scale(
+                                    scale: _checkScale.value,
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 48,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _result.reference.isEmpty
-                          ? 'Order ID : ${_result.status.name.toUpperCase()}'
-                          : 'Order ID : ${_result.reference}',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF6C5B46),
+                      const SizedBox(height: 26),
+                      Text(
+                        'Order Placed Successfully',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF2B1A0C),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 210),
-                    Text(
-                      'We will email you with all the updated and tracking of your order shortly.\nThank you for shopping with us',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.inter(
-                        fontSize: 9,
-                        height: 1.35,
-                        color: const Color(0xFF9A7C61),
+                      const SizedBox(height: 8),
+                      Text(
+                        _result.reference.isEmpty
+                            ? 'Order ID : ${_result.status.name.toUpperCase()}'
+                            : 'Order ID : ${_result.reference}',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF6C5B46),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 210),
+                      Text(
+                        'We will email you with all the updated and tracking of your order shortly.\nThank you for shopping with us',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.inter(
+                          fontSize: 9,
+                          height: 1.35,
+                          color: const Color(0xFF9A7C61),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

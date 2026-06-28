@@ -70,6 +70,10 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                 _OrderItemCard(order: _order),
                 const SizedBox(height: 16),
                 _DeliveryCard(order: _order),
+                if (_order.hasTracking) ...[
+                  const SizedBox(height: 12),
+                  _TrackingCard(order: _order),
+                ],
                 const SizedBox(height: 12),
                 _BillSummaryCard(order: _order),
                 const SizedBox(height: 12),
@@ -239,6 +243,48 @@ class _DeliveryCard extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrackingCard extends StatelessWidget {
+  const _TrackingCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final tracking = order.tracking!;
+    return _SummaryCard(
+      title: 'Tracking',
+      child: Column(
+        children: [
+          _RowLine(label: 'Courier', value: tracking.courier),
+          GestureDetector(
+            onTap: () => launchUrl(Uri.parse('tel:${tracking.trackingNumber}')),
+            child: _RowLine(
+              label: 'Tracking No.',
+              value: tracking.trackingNumber,
+              icon: Icons.phone,
+            ),
+          ),
+          if (tracking.trackingUrl.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: OutlinedButton.icon(
+                onPressed: () => launchUrl(Uri.parse(tracking.trackingUrl)),
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('Track Order'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFE95700),
+                  side: const BorderSide(color: Color(0xFFE95700)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

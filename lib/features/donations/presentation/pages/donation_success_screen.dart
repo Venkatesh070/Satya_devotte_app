@@ -51,13 +51,12 @@ class _DonationSuccessScreenState extends State<DonationSuccessScreen>
       curve: const Interval(.15, 1, curve: Curves.easeOut),
     );
 
-    // Auto-navigate after delay
-    Timer(const Duration(seconds: 4), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-      Get.offAllNamed(AppRoutes.home);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.toNamed(AppRoutes.userContributions);
-      });
+      await Get.offAllNamed(AppRoutes.home);
+      if (!mounted) return;
+      await Get.toNamed(AppRoutes.userContributions);
     });
   }
 
@@ -82,132 +81,141 @@ class _DonationSuccessScreenState extends State<DonationSuccessScreen>
     final number = _result.contribution?.contributionNumber ?? '';
     final date = _result.contribution?.formattedDate ?? '';
 
-    return Scaffold(
-      backgroundColor: DonationUi.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _animation,
-                builder: (context, _) => CustomPaint(
-                  painter: _SuccessBurstPainter(progress: _animation.value),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        Get.offAllNamed(AppRoutes.home);
+      },
+      child: Scaffold(
+        backgroundColor: DonationUi.background,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, _) => CustomPaint(
+                    painter: _SuccessBurstPainter(progress: _animation.value),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-                  Center(
-                    child: AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, _) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Opacity(
-                              opacity: 1 - _ringOpacity.value,
-                              child: Transform.scale(
-                                scale: 1 + (_animation.value * .9),
-                                child: Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: DonationUi.successGreen.withValues(
-                                        alpha: .35,
-                                      ),
-                                      width: 3,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Transform.scale(
-                              scale: _badgeScale.value,
-                              child: Container(
-                                width: 96,
-                                height: 96,
-                                decoration: const BoxDecoration(
-                                  color: DonationUi.successGreen,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0x331F8A4C),
-                                      blurRadius: 24,
-                                      offset: Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Spacer(),
+                    Center(
+                      child: AnimatedBuilder(
+                        animation: _animation,
+                        builder: (context, _) {
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Opacity(
+                                opacity: 1 - _ringOpacity.value,
                                 child: Transform.scale(
-                                  scale: _checkScale.value,
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 56,
+                                  scale: 1 + (_animation.value * .9),
+                                  child: Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: DonationUi.successGreen
+                                            .withValues(alpha: .35),
+                                        width: 3,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              Transform.scale(
+                                scale: _badgeScale.value,
+                                child: Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: const BoxDecoration(
+                                    color: DonationUi.successGreen,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x331F8A4C),
+                                        blurRadius: 24,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Transform.scale(
+                                    scale: _checkScale.value,
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 56,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Thank you for your donation!',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.lora(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: DonationUi.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: DonationUi.cardFill,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: DonationUi.cardBorder),
+                      ),
+                      child: Column(
+                        children: [
+                          _Row('Purpose', title),
+                          if (amountText != null) ...[
+                            const SizedBox(height: 12),
+                            _Row('Amount', amountText),
                           ],
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Thank you for your donation!',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.lora(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: DonationUi.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: DonationUi.cardFill,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: DonationUi.cardBorder),
-                    ),
-                    child: Column(
-                      children: [
-                        _Row('Purpose', title),
-                        if (amountText != null) ...[
-                          const SizedBox(height: 12),
-                          _Row('Amount', amountText),
+                          if (number.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _Row('Receipt', '#$number'),
+                          ],
+                          if (date.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _Row('Date', date),
+                          ],
                         ],
-                        if (number.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _Row('Receipt', '#$number'),
-                        ],
-                        if (date.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _Row('Date', date),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Redirecting to history...',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.inter(
-                      fontSize: 12,
-                      color: DonationUi.textMuted,
-                      fontStyle: FontStyle.italic,
+                    const Spacer(),
+                    Text(
+                      'Redirecting to history...',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        color: DonationUi.textMuted,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

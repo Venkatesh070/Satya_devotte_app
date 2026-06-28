@@ -2969,6 +2969,7 @@ class _RitualCard extends StatelessWidget {
               child: Image.asset(
                 'assets/images/default_img.png',
                 fit: BoxFit.cover,
+                height: 160,
               ),
             ),
           Padding(
