@@ -334,6 +334,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       child: _step == 0 && !widget.completeProfileOnly
                           ? Form(
                               key: _formStepOneKey,
+                              autovalidateMode: AutovalidateMode.onUnfocus,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -355,8 +356,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       if (value.isEmpty) {
                                         return 'Email is required';
                                       }
-                                      if (!value.contains('@')) {
-                                        return 'Invalid email';
+                                      final emailRegex = RegExp(
+                                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                      );
+                                      if (!emailRegex.hasMatch(value)) {
+                                        return 'Invalid email address';
                                       }
                                       return null;
                                     },
@@ -465,6 +469,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             )
                           : Form(
                               key: _formStepTwoKey,
+                              autovalidateMode: AutovalidateMode.onUnfocus,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -567,6 +572,14 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                     decoration: _inputDecoration(
                                       'Enter mobile number',
                                     ),
+                                    validator: (v) {
+                                      final value = v?.trim() ?? '';
+                                      if (value.isEmpty) return null;
+                                      if (value.length < 10) {
+                                        return 'Phone must be at least 10 digits';
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ],
                               ),

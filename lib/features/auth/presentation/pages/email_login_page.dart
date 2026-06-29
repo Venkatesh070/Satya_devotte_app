@@ -21,6 +21,7 @@ class EmailLoginPage extends StatefulWidget {
 class _EmailLoginPageState extends State<EmailLoginPage> {
   static const Color _fieldColor = Color(0xFFFFFBF3);
 
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -129,15 +130,24 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
               ],
 
               Expanded(
-                child: SingleChildScrollView(
-                  child: _showForgotPassword
-                      ? InlineForgotPasswordForm(
-                          onBack: _closeForgotPassword,
-                          showTopBackButton: false,
-                        )
-                      : Obx(() => _buildLoginFields(
-                            controller.isEmailSignInLoading,
-                          )),
+                child: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  child: SingleChildScrollView(
+                    child: _showForgotPassword
+                        ? InlineForgotPasswordForm(
+                            onBack: _closeForgotPassword,
+                            showTopBackButton: false,
+                          )
+                        : Form(
+                            key: _formKey,
+                            autovalidateMode: AutovalidateMode.onUnfocus,
+                            child: Obx(
+                              () => _buildLoginFields(
+                                controller.isEmailSignInLoading,
+                              ),
+                            ),
+                          ),
+                  ),
                 ),
               ),
 
@@ -165,14 +175,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           final email = _emailController.text.trim();
                           final password = _passwordController.text;
 
-                          if (email.isEmpty || password.isEmpty) {
-                            showAppSnackbar(
-                              title: 'Required',
-                              message: 'Please enter email and password.',
-                              isError: true,
-                            );
-                            return;
-                          }
+                          if (!_formKey.currentState!.validate()) return;
 
                           try {
                             await controller.signInWithEmailPassword(
@@ -208,12 +211,18 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
         TextFormField(
           controller: _emailController,
           enabled: !isLoading,
-          style: const TextStyle(
-            color: Color(0xFF1F1F1F),
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Color(0xFF1F1F1F), fontSize: 13),
           keyboardType: TextInputType.emailAddress,
           decoration: _inputDecoration('Enter your email'),
+          validator: (v) {
+            final value = v?.trim() ?? '';
+            if (value.isEmpty) return 'Email is required';
+            final emailRegex = RegExp(
+              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+            );
+            if (!emailRegex.hasMatch(value)) return 'Invalid email address';
+            return null;
+          },
         ),
         const SizedBox(height: 18),
         _buildLabel('Password'),
@@ -222,10 +231,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
           controller: _passwordController,
           obscureText: _obscurePassword,
           enabled: !isLoading,
-          style: const TextStyle(
-            color: Color(0xFF1F1F1F),
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Color(0xFF1F1F1F), fontSize: 13),
           decoration: _inputDecoration('Enter password').copyWith(
             suffixIcon: IconButton(
               icon: ShaderMask(
