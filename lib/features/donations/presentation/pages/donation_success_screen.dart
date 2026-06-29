@@ -6,11 +6,9 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
-import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 
 class DonationSuccessScreen extends StatefulWidget {
   const DonationSuccessScreen({super.key});
@@ -51,12 +49,19 @@ class _DonationSuccessScreenState extends State<DonationSuccessScreen>
       curve: const Interval(.15, 1, curve: Curves.easeOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 2));
+    _animation.addStatusListener(_onAnimationComplete);
+  }
+
+  void _onAnimationComplete(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _animation.removeStatusListener(_onAnimationComplete);
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      await Get.offAllNamed(AppRoutes.home);
-      if (!mounted) return;
-      await Get.toNamed(AppRoutes.userContributions);
+      Get.offAllNamed(AppRoutes.home);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Get.toNamed(AppRoutes.userContributions);
+      });
     });
   }
 

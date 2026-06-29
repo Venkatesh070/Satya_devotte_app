@@ -39,8 +39,6 @@ import 'package:satya_devotte_app/features/donations/data/models/donation_init_d
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
-
 class DonationPaystackWebViewScreen extends StatefulWidget {
   const DonationPaystackWebViewScreen({super.key});
 
@@ -55,16 +53,12 @@ class _DonationPaystackWebViewScreenState
   DonationInitData? _init;
 
   WebViewController? _webview;
-  bool _pageLoading = true;
   bool _completed = false;
-  bool _verifyOverlay = false;
 
   // Auto-verify polling on web (where we can't intercept the redirect
   // from a popup window). Mobile uses navigation interception instead.
   Timer? _pollTimer;
-  int _pollAttempts = 0;
-  static const _maxPollAttempts = 20;
-  static const _pollEvery = Duration(seconds: 3);
+  static const _pollEvery = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -81,10 +75,10 @@ class _DonationPaystackWebViewScreenState
     WidgetsBinding.instance.addObserver(this);
     if (kIsWeb) {
       _launchWebPopup();
-      _startWebPoll();
     } else {
       _setupWebView();
     }
+    _startWebPoll();
   }
 
   @override
@@ -110,11 +104,7 @@ class _DonationPaystackWebViewScreenState
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) setState(() => _pageLoading = true);
-          },
           onPageFinished: (url) {
-            if (mounted) setState(() => _pageLoading = false);
             if (_isTerminalUrl(url)) _onTerminalUrl(url);
           },
           onNavigationRequest: (req) {
@@ -124,9 +114,7 @@ class _DonationPaystackWebViewScreenState
             }
             return NavigationDecision.navigate;
           },
-          onWebResourceError: (_) {
-            if (mounted) setState(() => _pageLoading = false);
-          },
+          onWebResourceError: (_) {},
         ),
       )
       ..loadRequest(Uri.parse(_init!.authorizationUrl));
@@ -152,11 +140,6 @@ class _DonationPaystackWebViewScreenState
         _pollTimer?.cancel();
         return;
       }
-      _pollAttempts++;
-      if (_pollAttempts > _maxPollAttempts) {
-        _pollTimer?.cancel();
-        return;
-      }
       await _verifyAndRoute(silent: true);
     });
   }
@@ -169,7 +152,6 @@ class _DonationPaystackWebViewScreenState
     if (_completed) return;
     _completed = true;
     _pollTimer?.cancel();
-    if (mounted) setState(() => _verifyOverlay = true);
     await _verifyAndRoute();
   }
 
@@ -184,7 +166,6 @@ class _DonationPaystackWebViewScreenState
     if (silent && r == null) return;
     if (silent && r != null && !_isTerminalVerify(r)) return;
 
-    setState(() => _verifyOverlay = false);
     if (r == null) {
       _completed = true;
       Get.offNamed(
@@ -230,11 +211,9 @@ class _DonationPaystackWebViewScreenState
         return false;
       }
     }
-    // Best-effort verify before leaving — the user may have actually paid.
-    if (mounted) setState(() => _verifyOverlay = true);
+      // Best-effort verify before leaving — the user may have actually paid.
     await _verifyAndRoute(silent: true);
     if (_completed) return true;
-    if (mounted) setState(() => _verifyOverlay = false);
     return true;
   }
 
@@ -243,7 +222,7 @@ class _DonationPaystackWebViewScreenState
     if (_init == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFFAF1DD),
-        body: Center(child: ChakraLoadingIndicator(size: 32)),
+        body: SizedBox.shrink(),
       );
     }
     return PopScope(
@@ -268,55 +247,15 @@ class _DonationPaystackWebViewScreenState
             },
           ),
         ),
-        body: Stack(
-          children: [
-            if (kIsWeb)
-              _WebFallback(
-                init: _init!,
-                relaunch: _launchWebPopup,
-                verifyNow: () => _verifyAndRoute(),
-              )
-            else if (_webview != null)
-              WebViewWidget(controller: _webview!)
-            else
-              const Center(child: ChakraLoadingIndicator(size: 32)),
-            if (!kIsWeb && _pageLoading && !_verifyOverlay)
-              const _LoadingOverlay(label: 'Loading payment page…'),
-            if (_verifyOverlay)
-              const _LoadingOverlay(label: 'Confirming your donation…'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white.withValues(alpha: 0.92),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ChakraLoadingIndicator(
-            size: 56,
-            color: Color(0xFFB10F33),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            label,
-            style: AppTypography.lora(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textColor,
-            ),
-          ),
-        ],
+        body: kIsWeb
+          ? _WebFallback(
+              init: _init!,
+              relaunch: _launchWebPopup,
+              verifyNow: () => _verifyAndRoute(),
+            )
+          : (_webview != null
+              ? WebViewWidget(controller: _webview!)
+              : const SizedBox.shrink()),
       ),
     );
   }

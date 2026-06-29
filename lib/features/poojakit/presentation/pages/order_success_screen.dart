@@ -47,12 +47,19 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
       curve: const Interval(.15, 1, curve: Curves.easeOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 2));
+    _animation.addStatusListener(_onAnimationComplete);
+  }
+
+  void _onAnimationComplete(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _animation.removeStatusListener(_onAnimationComplete);
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      await Get.offAllNamed(AppRoutes.home);
-      if (!mounted) return;
-      await Get.toNamed(AppRoutes.userOrders);
+      Get.offAllNamed(AppRoutes.home);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Get.toNamed(AppRoutes.userOrders);
+      });
     });
   }
 

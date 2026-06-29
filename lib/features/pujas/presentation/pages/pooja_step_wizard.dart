@@ -270,7 +270,9 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
   Future<void> _finish() async {
     if (_sessionId != null) {
-      await Get.find<PoojaHistoryController>().finishPoojaBySession(_sessionId!);
+      await Get.find<PoojaHistoryController>().finishPoojaBySession(
+        _sessionId!,
+      );
     } else {
       await Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
     }
@@ -440,7 +442,7 @@ class _BaseWizardScreen extends StatelessWidget {
                                 debugPrint('Share button tapped');
                                 const shareText =
                                     'Check out this Puja/App on Sathya! \n\n'
-                                    'Download for Android: https://play.google.com/store/apps/details?id=com.sathyadevotee.app \n'
+                                    'Download for Android: https://play.google.com/store/apps/details?id=com.satya_devotte_app \n'
                                     'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
                                 Share.share(shareText).catchError((e) {
                                   debugPrint('Share error: $e');

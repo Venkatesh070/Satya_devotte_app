@@ -33,6 +33,7 @@ class PaymentGatewayUrls {
     if (u.contains('payment_status=')) return true;
     if (u.contains('m_payment_id=')) return true;
     if (u.contains('pf_payment_id=')) return true;
+    if (u.contains('process/return')) return true;
 
     // Legacy Paystack hosted checkout (keep for old in-flight sessions).
     if (u.contains('/standard/close')) return true;

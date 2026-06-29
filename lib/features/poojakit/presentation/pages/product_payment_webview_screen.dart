@@ -9,12 +9,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
-import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/order_init_data.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 
 class ProductPaymentWebViewScreen extends StatefulWidget {
@@ -33,14 +31,10 @@ class _ProductPaymentWebViewScreenState
   OrderInitData? _init;
 
   WebViewController? _webview;
-  bool _pageLoading = true;
   bool _completed = false;
-  bool _verifyOverlay = false;
 
   Timer? _pollTimer;
-  int _pollAttempts = 0;
-  static const _maxPollAttempts = 20;
-  static const _pollEvery = Duration(seconds: 3);
+  static const _pollEvery = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -58,10 +52,10 @@ class _ProductPaymentWebViewScreenState
     WidgetsBinding.instance.addObserver(this);
     if (kIsWeb) {
       _launchWebPopup();
-      _startWebPoll();
     } else {
       _setupWebView();
     }
+    _startWebPoll();
   }
 
   @override
@@ -84,11 +78,7 @@ class _ProductPaymentWebViewScreenState
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) setState(() => _pageLoading = true);
-          },
           onPageFinished: (url) {
-            if (mounted) setState(() => _pageLoading = false);
             if (_isTerminalUrl(url)) _onTerminalUrl(url);
           },
           onNavigationRequest: (req) {
@@ -117,11 +107,6 @@ class _ProductPaymentWebViewScreenState
         _pollTimer?.cancel();
         return;
       }
-      _pollAttempts++;
-      if (_pollAttempts > _maxPollAttempts) {
-        _pollTimer?.cancel();
-        return;
-      }
       await _verifyAndRoute(silent: true);
     });
   }
@@ -133,7 +118,6 @@ class _ProductPaymentWebViewScreenState
     if (_completed) return;
     _completed = true;
     _pollTimer?.cancel();
-    if (mounted) setState(() => _verifyOverlay = true);
     await _verifyAndRoute();
   }
 
@@ -147,7 +131,6 @@ class _ProductPaymentWebViewScreenState
     if (silent && r == null) return;
     if (silent && r != null && !_isTerminalVerify(r)) return;
 
-    setState(() => _verifyOverlay = false);
     if (r == null) {
       _completed = true;
       Get.offNamed(
@@ -191,13 +174,9 @@ class _ProductPaymentWebViewScreenState
         foregroundColor: AppColors.textColor,
         elevation: 0,
       ),
-      body: Stack(
-        children: [
-          if (_webview != null) WebViewWidget(controller: _webview!),
-          if (_pageLoading || _verifyOverlay)
-            const Center(child: ChakraLoadingIndicator(size: 32)),
-        ],
-      ),
+      body: _webview != null
+          ? WebViewWidget(controller: _webview!)
+          : const SizedBox.shrink(),
     );
   }
 }
