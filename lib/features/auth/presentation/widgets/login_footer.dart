@@ -18,7 +18,7 @@ class LoginFooter extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              'assets/images/redin_consulting.png',
+              'assets/images/redin_logo.png',
               width: 116,
               height: 32,
               fit: BoxFit.contain,

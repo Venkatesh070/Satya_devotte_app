@@ -646,11 +646,7 @@ class _Footer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Image.asset(
-            'assets/images/redin_consulting.png',
-            width: 116,
-            height: 32,
-          ),
+          Image.asset('assets/images/redin_logo.png', width: 116, height: 32),
         ],
       ),
     );
