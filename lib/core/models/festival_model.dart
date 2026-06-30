@@ -13,7 +13,7 @@ class FestivalModel {
     this.location = '',
     this.locationCity = '',
     this.locationState = '',
-    this.locationCountry = 'India',
+    this.locationCountry = '',
     this.notifyUsers = false,
     this.notificationDaysBefore = 0,
     this.rituals,
@@ -67,16 +67,16 @@ class FestivalModel {
 
   // API returns location as {city, state, country} object
   static Map<String, String> _parseLocation(dynamic raw) {
-    if (raw == null) return {'city': '', 'state': '', 'country': 'India'};
+    if (raw == null) return {'city': '', 'state': '', 'country': ''};
     if (raw is Map) {
       return {
         'city': raw['city']?.toString() ?? '',
         'state': raw['state']?.toString() ?? '',
-        'country': raw['country']?.toString() ?? 'India',
+        'country': raw['country']?.toString() ?? '',
       };
     }
     // plain string fallback
-    return {'city': raw.toString(), 'state': '', 'country': 'India'};
+    return {'city': raw.toString(), 'state': '', 'country': ''};
   }
 
   static String? _parseRituals(dynamic raw) {
@@ -196,6 +196,9 @@ class FestivalModel {
     category: category ?? this.category,
     isGlobal: isGlobal ?? this.isGlobal,
     location: this.location,
+    locationCity: locationCity ?? this.locationCity,
+    locationState: locationState ?? this.locationState,
+    locationCountry: locationCountry ?? this.locationCountry,
     notifyUsers: notifyUsers ?? this.notifyUsers,
     notificationDaysBefore:
         notificationDaysBefore ?? this.notificationDaysBefore,
