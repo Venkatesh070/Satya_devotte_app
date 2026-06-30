@@ -18,11 +18,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -795,16 +791,16 @@ class _FestivalCard extends StatelessWidget {
                     color: CmsColors.textPrimary,
                   ),
                 ),
-                if (festival.locationDisplay.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    festival.locationDisplay,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: CmsColors.textSecond,
-                    ),
-                  ),
-                ],
+                // if (festival.locationDisplay.isNotEmpty) ...[
+                //   const SizedBox(height: 3),
+                //   Text(
+                //     festival.locationDisplay,
+                //     style: const TextStyle(
+                //       fontSize: 12,
+                //       color: CmsColors.textSecond,
+                //     ),
+                //   ),
+                // ],
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
