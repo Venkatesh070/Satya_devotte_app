@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/sloka_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 Widget _cmsClickable({
@@ -641,37 +642,33 @@ class _SlokaForm extends StatefulWidget {
 }
 
 class _SlokaFormState extends State<_SlokaForm> {
-  late final TextEditingController _slokaCtrl;
-  late final TextEditingController _meaningCtrl;
-  late final TextEditingController _contemplationCtrl;
-  late final TextEditingController _prayerCtrl;
   late final TextEditingController _authorCtrl;
+  String? _slokaRich;
+  String? _meaningRich;
+  String? _contemplationRich;
+  String? _prayerRich;
 
   @override
   void initState() {
     super.initState();
     final existing = widget.ctrl.todaySloka;
-    _slokaCtrl = TextEditingController(text: existing?.sloka ?? '');
-    _meaningCtrl = TextEditingController(text: existing?.meaning ?? '');
-    _contemplationCtrl = TextEditingController(
-      text: existing?.contemplation ?? '',
-    );
-    _prayerCtrl = TextEditingController(text: existing?.prayer ?? '');
+    _slokaRich = existing?.sloka;
+    _meaningRich = existing?.meaning;
+    _contemplationRich = existing?.contemplation;
+    _prayerRich = existing?.prayer;
     _authorCtrl = TextEditingController(text: existing?.author ?? '');
   }
 
   @override
   void dispose() {
-    _slokaCtrl.dispose();
-    _meaningCtrl.dispose();
-    _contemplationCtrl.dispose();
-    _prayerCtrl.dispose();
     _authorCtrl.dispose();
     super.dispose();
   }
 
+  String _richVal(String? v) => v ?? '';
+
   Future<void> _submit() async {
-    if (_slokaCtrl.text.trim().isEmpty) {
+    if (_slokaRich == null || _slokaRich!.trim().isEmpty) {
       Get.snackbar(
         'Required',
         'Sloka text is required',
@@ -683,10 +680,10 @@ class _SlokaFormState extends State<_SlokaForm> {
       return;
     }
     final ok = await widget.ctrl.saveSloka(
-      sloka: _slokaCtrl.text.trim(),
-      meaning: _meaningCtrl.text.trim(),
-      contemplation: _contemplationCtrl.text.trim(),
-      prayer: _prayerCtrl.text.trim(),
+      sloka: _richVal(_slokaRich),
+      meaning: _richVal(_meaningRich),
+      contemplation: _richVal(_contemplationRich),
+      prayer: _richVal(_prayerRich),
       author: _authorCtrl.text.trim(),
     );
     if (ok) widget.onSaved();
@@ -773,32 +770,28 @@ class _SlokaFormState extends State<_SlokaForm> {
                 ),
                 const SizedBox(height: 14),
 
-                CmsFormField(
+                CmsRichTextField(
                   label: 'Sloka *',
-                  hint: 'e.g. कर्मण्येवाधिकारस्ते मा फलेषु कदाचन...',
-                  controller: _slokaCtrl,
-                  maxLines: 4,
+                  initialValue: _slokaRich,
+                  onChanged: (v) => _slokaRich = v,
                 ),
                 const SizedBox(height: 12),
-                CmsFormField(
+                CmsRichTextField(
                   label: 'Meaning',
-                  hint: 'Enter meaning / translation...',
-                  controller: _meaningCtrl,
-                  maxLines: 3,
+                  initialValue: _meaningRich,
+                  onChanged: (v) => _meaningRich = v,
                 ),
                 const SizedBox(height: 12),
-                CmsFormField(
+                CmsRichTextField(
                   label: 'Contemplation',
-                  hint: 'Enter contemplation...',
-                  controller: _contemplationCtrl,
-                  maxLines: 3,
+                  initialValue: _contemplationRich,
+                  onChanged: (v) => _contemplationRich = v,
                 ),
                 const SizedBox(height: 12),
-                CmsFormField(
+                CmsRichTextField(
                   label: 'Prayer',
-                  hint: 'Enter prayer...',
-                  controller: _prayerCtrl,
-                  maxLines: 3,
+                  initialValue: _prayerRich,
+                  onChanged: (v) => _prayerRich = v,
                 ),
                 const SizedBox(height: 12),
 

@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/features/cms/models/donation_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/donation_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
@@ -894,7 +895,7 @@ class _DonationForm extends StatefulWidget {
 
 class _DonationFormState extends State<_DonationForm> {
   late final TextEditingController _titleCtrl;
-  late final TextEditingController _descCtrl;
+  String? _descRich;
   PickedFile? _pickedImage; // newly picked file bytes
   bool get _isEdit => widget.donation != null;
 
@@ -902,14 +903,13 @@ class _DonationFormState extends State<_DonationForm> {
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.donation?.title ?? '');
-    _descCtrl = TextEditingController(text: widget.donation?.description ?? '');
+    _descRich = widget.donation?.description;
     // _pickedImage starts null; existing imageUrl shown via initialUrl
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _descCtrl.dispose();
     super.dispose();
   }
 
@@ -930,13 +930,13 @@ class _DonationFormState extends State<_DonationForm> {
       ok = await widget.ctrl.updateDonation(
         widget.donation!.id,
         _titleCtrl.text.trim(),
-        _descCtrl.text.trim(),
+        (_descRich ?? '').trim(),
         image: _pickedImage,
       );
     } else {
       ok = await widget.ctrl.createDonation(
         title: _titleCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
+        description: (_descRich ?? '').trim(),
         image: _pickedImage,
       );
     }
@@ -993,11 +993,10 @@ class _DonationFormState extends State<_DonationForm> {
                   controller: _titleCtrl,
                 ),
                 const SizedBox(height: 12),
-                CmsFormField(
+                CmsRichTextField(
                   label: 'Description',
-                  hint: 'Describe the donation campaign...',
-                  controller: _descCtrl,
-                  maxLines: 4,
+                  initialValue: _descRich,
+                  onChanged: (v) => _descRich = v,
                 ),
                 const SizedBox(height: 12),
                 CmsUploadBox(

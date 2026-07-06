@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class SectionCard extends StatelessWidget {
   const SectionCard({
@@ -111,7 +112,7 @@ class StoryCard extends StatelessWidget {
             // ),
             // const SizedBox(height: 16),
           ],
-          Text(
+          RichTextDisplay(
             description,
             style: AppTypography.inter(
               fontSize: 14,
@@ -154,7 +155,7 @@ class QuoteCard extends StatelessWidget {
             color: Color(0xFFB07A3A),
           ),
           const SizedBox(height: 8),
-          Text(
+          RichTextDisplay(
             text,
             style: AppTypography.inter(
               fontSize: 13.5,
@@ -314,10 +315,8 @@ class LabeledField extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
+          RichTextDisplay(
             value,
-            maxLines: multiline ? null : 2,
-            overflow: multiline ? TextOverflow.visible : TextOverflow.ellipsis,
             style: AppTypography.inter(
               fontSize: 13.5,
               height: 1.5,

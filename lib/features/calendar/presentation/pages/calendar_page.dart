@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key});
@@ -638,10 +639,8 @@ class _FestivalCard extends StatelessWidget {
                     ),
                     if (festival.description.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(
+                      RichTextDisplay(
                         festival.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.inter(
                           fontSize: 12,
                           height: 1.4,
@@ -938,10 +937,8 @@ class _CalendarEntryCard extends StatelessWidget {
                         ),
                       ),
                     if (subtitle.trim().isNotEmpty)
-                      Text(
+                      RichTextDisplay(
                         subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.inter(
                           fontSize: 12,
                           color: CalendarUi.subText,

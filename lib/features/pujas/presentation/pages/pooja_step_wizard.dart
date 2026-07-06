@@ -11,7 +11,7 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/make_don
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
-import 'package:get/get.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class PoojaStepWizard extends StatefulWidget {
   const PoojaStepWizard({
@@ -526,7 +526,7 @@ class _IntroScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 120),
-              child: Text(
+              child: RichTextDisplay(
                 pooja.description,
                 textAlign: TextAlign.start,
                 style: AppTypography.inter(
@@ -730,7 +730,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
           ),
           if (body != null && body!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
+            RichTextDisplay(
               body!,
               style: AppTypography.inter(
                 fontSize: 14,
@@ -757,7 +757,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Text(
+                      child: RichTextDisplay(
                         item,
                         style: AppTypography.inter(
                           fontSize: 14,
@@ -1307,7 +1307,7 @@ class _PujaStepScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
+              RichTextDisplay(
                 mantraText,
                 textAlign: TextAlign.center,
                 style: AppTypography.lora(
@@ -1331,7 +1331,7 @@ class _PujaStepScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFFF9D00).withOpacity(0.2)),
           ),
-          child: Text(
+          child: RichTextDisplay(
             text,
             style: AppTypography.inter(
               fontSize: 13,
@@ -1349,7 +1349,7 @@ class _PujaStepScreen extends StatelessWidget {
             color: Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
+          child: RichTextDisplay(
             text,
             style: AppTypography.inter(
               fontSize: 15,

@@ -18,6 +18,7 @@ import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deiti
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
 /// Figma reference (saffron temple header, circular deity portrait,
@@ -719,7 +720,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                       if (p.description.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
+                          child: RichTextDisplay(
                             p.description,
                             textAlign: TextAlign.justify,
                             style: AppTypography.inter(
@@ -1639,7 +1640,7 @@ class _LabeledTitleDescriptionList extends StatelessWidget {
               ),
             if (items[i].description.isNotEmpty) ...[
               if (items[i].title.isNotEmpty) const SizedBox(height: 4),
-              Text(
+              RichTextDisplay(
                 items[i].description,
                 style: AppTypography.inter(
                   fontSize: 13.5,
@@ -1860,7 +1861,7 @@ class _StoryCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          Text(
+          RichTextDisplay(
             description,
             style: AppTypography.inter(
               fontSize: 14,
@@ -2748,7 +2749,7 @@ class _StepTile extends StatelessWidget {
                 ),
                 if (step.description.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(
+                  RichTextDisplay(
                     step.description,
                     style: AppTypography.inter(
                       fontSize: 13,
@@ -2840,7 +2841,7 @@ class _MeaningGroup extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  RichTextDisplay(
                     m.description,
                     style: AppTypography.inter(
                       fontSize: 12.5,

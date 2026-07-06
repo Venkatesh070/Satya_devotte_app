@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
@@ -550,7 +551,7 @@ class _DeityForm extends StatefulWidget {
 class _DeityFormState extends State<_DeityForm> {
   bool _isSaving = false;
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _descCtrl;
+  String? _descRich;
   late final TextEditingController _alternateNamesCtrl;
   late final TextEditingController _rolesCtrl;
   late final TextEditingController _lineageParentsCtrl;
@@ -559,14 +560,14 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _lineageVehicleCtrl;
   late final TextEditingController _lineageAbodeCtrl;
   late final TextEditingController _appearanceTitleCtrl;
-  late final TextEditingController _appearanceDescCtrl;
+  String? _appearanceDescRich;
   late final TextEditingController _spiritualTitleCtrl;
-  late final TextEditingController _spiritualDescCtrl;
-  late final TextEditingController _connectingHowToPrayCtrl;
+  String? _spiritualDescRich;
+  String? _connectingHowToPrayRich;
   late final TextEditingController _connectingWhatPleasesCtrl;
   late final TextEditingController _connectingDispleasesCtrl;
   late final TextEditingController _connectingIdealTimeCtrl;
-  late final TextEditingController _chantingMantraCtrl;
+  String? _chantingMantraRich;
   late final TextEditingController _chantingRepetitionsCtrl;
   late final TextEditingController _chantingBenefitsCtrl;
   late final TextEditingController _chantingAssociatedColorsCtrl;
@@ -574,10 +575,10 @@ class _DeityFormState extends State<_DeityForm> {
   late final TextEditingController _homeOfferingsCtrl;
   late final TextEditingController _homeDoCtrl;
   late final TextEditingController _homeDontCtrl;
-  late final TextEditingController _devotionalSignCtrl;
-  late final TextEditingController _devotionalNotesCtrl;
+  String? _devotionalSignRich;
+  String? _devotionalNotesRich;
   late final TextEditingController _storiesTitleCtrl;
-  late final TextEditingController _storiesDescCtrl;
+  String? _storiesDescRich;
   String _status = 'PENDING';
   late final TextEditingController _imageUrlsCtrl;
   final List<Map<String, String>> _lineageFormsEntries =
@@ -612,7 +613,7 @@ class _DeityFormState extends State<_DeityForm> {
   bool _showSpiritualEditor = false;
   bool _showStoriesEditor = false;
   late final TextEditingController _lineageFormsTitleCtrl;
-  late final TextEditingController _lineageFormsDescCtrl;
+  String? _lineageFormsDescRich;
   PickedFile? _pickedImage;
   String? _deityColor;
 
@@ -625,7 +626,7 @@ class _DeityFormState extends State<_DeityForm> {
         ? null
         : initial?.deityColor;
     _nameCtrl = TextEditingController(text: initial?.name ?? '');
-    _descCtrl = TextEditingController(text: initial?.description ?? '');
+    _descRich = initial?.description;
     _alternateNamesCtrl = TextEditingController();
     _rolesCtrl = TextEditingController();
     _lineageParentsCtrl = TextEditingController(
@@ -644,20 +645,16 @@ class _DeityFormState extends State<_DeityForm> {
       text: initial?.lineageAbode ?? '',
     );
     _appearanceTitleCtrl = TextEditingController();
-    _appearanceDescCtrl = TextEditingController();
+    _appearanceDescRich = null;
     _spiritualTitleCtrl = TextEditingController();
-    _spiritualDescCtrl = TextEditingController();
-    _connectingHowToPrayCtrl = TextEditingController(
-      text: initial?.connectingHowToPray ?? '',
-    );
+    _spiritualDescRich = null;
+    _connectingHowToPrayRich = initial?.connectingHowToPray;
     _connectingWhatPleasesCtrl = TextEditingController();
     _connectingDispleasesCtrl = TextEditingController();
     _connectingIdealTimeCtrl = TextEditingController(
       text: initial?.connectingIdealTime ?? '',
     );
-    _chantingMantraCtrl = TextEditingController(
-      text: initial?.chantingMantra ?? '',
-    );
+    _chantingMantraRich = initial?.chantingMantra;
     _chantingRepetitionsCtrl = TextEditingController(
       text: initial?.chantingRepetitions ?? '',
     );
@@ -669,17 +666,13 @@ class _DeityFormState extends State<_DeityForm> {
     _homeOfferingsCtrl = TextEditingController();
     _homeDoCtrl = TextEditingController();
     _homeDontCtrl = TextEditingController();
-    _devotionalSignCtrl = TextEditingController(
-      text: initial?.devotionalSignOfConnection ?? '',
-    );
-    _devotionalNotesCtrl = TextEditingController(
-      text: initial?.devotionalNotes ?? '',
-    );
+    _devotionalSignRich = initial?.devotionalSignOfConnection;
+    _devotionalNotesRich = initial?.devotionalNotes;
     _storiesTitleCtrl = TextEditingController();
-    _storiesDescCtrl = TextEditingController();
+    _storiesDescRich = null;
     _imageUrlsCtrl = TextEditingController(text: initial?.imageUrl ?? '');
     _lineageFormsTitleCtrl = TextEditingController();
-    _lineageFormsDescCtrl = TextEditingController();
+    _lineageFormsDescRich = null;
     if (initial != null) {
       _alternateNames.addAll(initial.alternateNames);
       _roles.addAll(initial.roles);
@@ -711,7 +704,6 @@ class _DeityFormState extends State<_DeityForm> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _descCtrl.dispose();
     _alternateNamesCtrl.dispose();
     _rolesCtrl.dispose();
     _lineageParentsCtrl.dispose();
@@ -720,14 +712,10 @@ class _DeityFormState extends State<_DeityForm> {
     _lineageVehicleCtrl.dispose();
     _lineageAbodeCtrl.dispose();
     _appearanceTitleCtrl.dispose();
-    _appearanceDescCtrl.dispose();
     _spiritualTitleCtrl.dispose();
-    _spiritualDescCtrl.dispose();
-    _connectingHowToPrayCtrl.dispose();
     _connectingWhatPleasesCtrl.dispose();
     _connectingDispleasesCtrl.dispose();
     _connectingIdealTimeCtrl.dispose();
-    _chantingMantraCtrl.dispose();
     _chantingRepetitionsCtrl.dispose();
     _chantingBenefitsCtrl.dispose();
     _chantingAssociatedColorsCtrl.dispose();
@@ -735,13 +723,9 @@ class _DeityFormState extends State<_DeityForm> {
     _homeOfferingsCtrl.dispose();
     _homeDoCtrl.dispose();
     _homeDontCtrl.dispose();
-    _devotionalSignCtrl.dispose();
-    _devotionalNotesCtrl.dispose();
     _storiesTitleCtrl.dispose();
-    _storiesDescCtrl.dispose();
     _imageUrlsCtrl.dispose();
     _lineageFormsTitleCtrl.dispose();
-    _lineageFormsDescCtrl.dispose();
     super.dispose();
   }
 
@@ -805,11 +789,11 @@ class _DeityFormState extends State<_DeityForm> {
 
   void _addKeyValueEntry({
     required TextEditingController titleCtrl,
-    required TextEditingController descCtrl,
     required List<Map<String, String>> target,
+    String? richDesc,
   }) {
     final title = titleCtrl.text.trim();
-    final description = descCtrl.text.trim();
+    final description = richDesc ?? '';
     if (title.isEmpty && description.isEmpty) return;
     if (title.isEmpty) {
       showCmsSnackbar(
@@ -822,7 +806,6 @@ class _DeityFormState extends State<_DeityForm> {
     setState(() {
       target.add({'title': title, 'description': description});
       titleCtrl.clear();
-      descCtrl.clear();
     });
   }
 
@@ -838,11 +821,10 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _nameCtrl,
         ),
         const SizedBox(height: 12),
-        CmsFormField(
+        CmsRichTextField(
           label: 'Description',
-          hint: 'e.g. Remover of obstacles',
-          controller: _descCtrl,
-          maxLines: 3,
+          initialValue: _descRich,
+          onChanged: (v) => _descRich = v,
         ),
         const SizedBox(height: 12),
         _DeityColorField(
@@ -918,11 +900,12 @@ class _DeityFormState extends State<_DeityForm> {
             () => _showLineageFormsEditor = !_showLineageFormsEditor,
           ),
           titleCtrl: _lineageFormsTitleCtrl,
-          descCtrl: _lineageFormsDescCtrl,
+          richDescValue: _lineageFormsDescRich,
+          onRichDescChanged: (v) => _lineageFormsDescRich = v,
           onAdd: () => _addKeyValueEntry(
             titleCtrl: _lineageFormsTitleCtrl,
-            descCtrl: _lineageFormsDescCtrl,
             target: _lineageFormsEntries,
+            richDesc: _lineageFormsDescRich,
           ),
           entries: _lineageFormsEntries,
           onRemove: (index) =>
@@ -939,11 +922,12 @@ class _DeityFormState extends State<_DeityForm> {
           onToggle: () =>
               setState(() => _showAppearanceEditor = !_showAppearanceEditor),
           titleCtrl: _appearanceTitleCtrl,
-          descCtrl: _appearanceDescCtrl,
+          richDescValue: _appearanceDescRich,
+          onRichDescChanged: (v) => _appearanceDescRich = v,
           onAdd: () => _addKeyValueEntry(
             titleCtrl: _appearanceTitleCtrl,
-            descCtrl: _appearanceDescCtrl,
             target: _appearanceEntries,
+            richDesc: _appearanceDescRich,
           ),
           entries: _appearanceEntries,
           onRemove: (index) =>
@@ -960,11 +944,12 @@ class _DeityFormState extends State<_DeityForm> {
           onToggle: () =>
               setState(() => _showSpiritualEditor = !_showSpiritualEditor),
           titleCtrl: _spiritualTitleCtrl,
-          descCtrl: _spiritualDescCtrl,
+          richDescValue: _spiritualDescRich,
+          onRichDescChanged: (v) => _spiritualDescRich = v,
           onAdd: () => _addKeyValueEntry(
             titleCtrl: _spiritualTitleCtrl,
-            descCtrl: _spiritualDescCtrl,
             target: _spiritualEntries,
+            richDesc: _spiritualDescRich,
           ),
           entries: _spiritualEntries,
           onRemove: (index) =>
@@ -975,11 +960,10 @@ class _DeityFormState extends State<_DeityForm> {
     final connectingCard = CmsFormCard(
       title: 'Connecting with Deity',
       children: [
-        CmsFormField(
+        CmsRichTextField(
           label: 'How to Invoke / Call Upon This Deity',
-          hint: 'Enter prayer guidance',
-          controller: _connectingHowToPrayCtrl,
-          maxLines: 3,
+          initialValue: _connectingHowToPrayRich,
+          onChanged: (v) => _connectingHowToPrayRich = v,
         ),
         const SizedBox(height: 12),
         _ChipListEditor(
@@ -1010,11 +994,10 @@ class _DeityFormState extends State<_DeityForm> {
     final chantingCard = CmsFormCard(
       title: 'Prayer & Chanting',
       children: [
-        CmsFormField(
-          label: 'Recommended Mantra / Chant ',
-          hint: 'Enter mantra',
-          controller: _chantingMantraCtrl,
-          maxLines: 2,
+        CmsRichTextField(
+          label: 'Recommended Mantra / Chant',
+          initialValue: _chantingMantraRich,
+          onChanged: (v) => _chantingMantraRich = v,
         ),
         const SizedBox(height: 12),
         CmsFormField(
@@ -1123,18 +1106,16 @@ class _DeityFormState extends State<_DeityForm> {
     final devotionalCard = CmsFormCard(
       title: 'Devotional Experience',
       children: [
-        CmsFormField(
+        CmsRichTextField(
           label: 'Sign of Connection',
-          hint: 'Describe signs of connection',
-          controller: _devotionalSignCtrl,
-          maxLines: 2,
+          initialValue: _devotionalSignRich,
+          onChanged: (v) => _devotionalSignRich = v,
         ),
         const SizedBox(height: 12),
-        CmsFormField(
+        CmsRichTextField(
           label: 'Notes',
-          hint: 'Personal reflection notes',
-          controller: _devotionalNotesCtrl,
-          maxLines: 3,
+          initialValue: _devotionalNotesRich,
+          onChanged: (v) => _devotionalNotesRich = v,
         ),
       ],
     );
@@ -1147,11 +1128,12 @@ class _DeityFormState extends State<_DeityForm> {
           onToggle: () =>
               setState(() => _showStoriesEditor = !_showStoriesEditor),
           titleCtrl: _storiesTitleCtrl,
-          descCtrl: _storiesDescCtrl,
+          richDescValue: _storiesDescRich,
+          onRichDescChanged: (v) => _storiesDescRich = v,
           onAdd: () => _addKeyValueEntry(
             titleCtrl: _storiesTitleCtrl,
-            descCtrl: _storiesDescCtrl,
             target: _storiesEntries,
+            richDesc: _storiesDescRich,
           ),
           entries: _storiesEntries,
           onRemove: (index) => setState(() => _storiesEntries.removeAt(index)),
@@ -1339,7 +1321,7 @@ class _DeityFormState extends State<_DeityForm> {
                         _alternateNamesCtrl,
                         _alternateNames,
                       ),
-                      'description': _descCtrl.text.trim(),
+                      'description': _descRich ?? '',
                       'roles': _valuesWithPending(_rolesCtrl, _roles),
                       'lineage': {
                         'parents': _csv(_lineageParentsCtrl.text),
@@ -1352,7 +1334,7 @@ class _DeityFormState extends State<_DeityForm> {
                       'appearance': _appearanceEntries,
                       'spiritual_significance': _spiritualEntries,
                       'connecting': {
-                        'how_to_pray': _connectingHowToPrayCtrl.text.trim(),
+                        'how_to_pray': _connectingHowToPrayRich ?? '',
                         'what_pleases': _valuesWithPending(
                           _connectingWhatPleasesCtrl,
                           _whatPleases,
@@ -1364,7 +1346,7 @@ class _DeityFormState extends State<_DeityForm> {
                         'ideal_time': _csv(_connectingIdealTimeCtrl.text),
                       },
                       'chanting': {
-                        'mantra': _chantingMantraCtrl.text.trim(),
+                        'mantra': _chantingMantraRich ?? '',
                         'repetitions': _chantingRepetitionsCtrl.text.trim(),
                         'benefits': _valuesWithPending(
                           _chantingBenefitsCtrl,
@@ -1388,9 +1370,8 @@ class _DeityFormState extends State<_DeityForm> {
                         },
                       },
                       'devotional_experience': {
-                        'sign_of_connection':
-                            _devotionalSignCtrl.text.trim(),
-                        'notes': _devotionalNotesCtrl.text.trim(),
+                        'sign_of_connection': _devotionalSignRich ?? '',
+                        'notes': _devotionalNotesRich ?? '',
                       },
                       'stories': _storiesEntries,
                       'pujas': List<String>.from(_ritualIds),
@@ -1413,7 +1394,9 @@ class _KeyValueEditor extends StatelessWidget {
     required this.showEditor,
     required this.onToggle,
     required this.titleCtrl,
-    required this.descCtrl,
+    this.descCtrl,
+    this.richDescValue,
+    this.onRichDescChanged,
     required this.onAdd,
     required this.entries,
     required this.onRemove,
@@ -1423,7 +1406,9 @@ class _KeyValueEditor extends StatelessWidget {
   final bool showEditor;
   final VoidCallback onToggle;
   final TextEditingController titleCtrl;
-  final TextEditingController descCtrl;
+  final TextEditingController? descCtrl;
+  final String? richDescValue;
+  final ValueChanged<String>? onRichDescChanged;
   final VoidCallback onAdd;
   final List<Map<String, String>> entries;
   final ValueChanged<int> onRemove;
@@ -1477,12 +1462,18 @@ class _KeyValueEditor extends StatelessWidget {
             controller: titleCtrl,
           ),
           const SizedBox(height: 10),
-          CmsFormField(
-            label: '$heading Description',
-            hint: 'Enter description',
-            controller: descCtrl,
-            maxLines: 3,
-          ),
+          onRichDescChanged != null
+              ? CmsRichTextField(
+                  label: '$heading Description',
+                  initialValue: richDescValue,
+                  onChanged: onRichDescChanged!,
+                )
+              : CmsFormField(
+                  label: '$heading Description',
+                  hint: 'Enter description',
+                  controller: descCtrl!,
+                  maxLines: 3,
+                ),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,

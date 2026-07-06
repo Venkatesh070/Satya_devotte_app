@@ -5,7 +5,7 @@ class AppEnv {
   /// Keep [config/app_env.default] in sync for native-only builds without dart-defines.
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'prod',
+    defaultValue: 'test',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -16,7 +16,6 @@ class AppEnv {
       'BAQl5XzrLFPnWDA9nuf2a2KG6IM2wYaEcQrqMpj4CiELt_RtaHXyKj1KKy-08CzZymNY-fCaEIIHfF05cPx3Pis';
   static const String _prodFirebaseVapidKey =
       'BJL_cbHU5oarw58Cl5wsUFtWD_38YRJmoF2CxSRFNxx36ntfXPbD3GHCHqe_lBWp48Nr95-DKquJPUkkhDNYotI';
-      
 
   /// Web Push VAPID **public** key (Firebase Console → Cloud Messaging →
   /// Web configuration → Key pair). Usually ~88 chars, often starts with `B`.

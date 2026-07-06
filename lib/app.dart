@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_pages.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
@@ -68,6 +70,16 @@ class SathyaApp extends StatelessWidget {
       initialRoute: kIsWeb ? AppRoutes.login : AppRoutes.splash,
       getPages: AppPages.pages,
       navigatorObservers: [_dialogObserver],
+      localizationsDelegates: const [
+        FlutterQuillLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('en'),
+      ],
       routingCallback: (routing) {
         if (kIsWeb) {
           final current = routing?.current?.trim();

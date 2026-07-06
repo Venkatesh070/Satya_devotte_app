@@ -36,6 +36,7 @@ import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -1931,10 +1932,8 @@ class _GlobalSearchResultTile extends StatelessWidget {
                     ),
                     if (result.description.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      RichTextDisplay(
                         result.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.inter(
                           fontSize: 11,
                           height: 1.25,

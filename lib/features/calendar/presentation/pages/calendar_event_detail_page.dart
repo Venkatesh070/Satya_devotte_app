@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dar
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 /// Figma calendar event detail — bottom sheet with "Add to Google Calendar".
 class CalendarEventDetailPage extends StatelessWidget {
@@ -111,10 +112,8 @@ class CalendarEventDetailPage extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 14),
-                  Text(
-                    description.isNotEmpty
-                        ? description
-                        : 'No additional details available.',
+                  RichTextDisplay(
+                    description.isNotEmpty ? description : null,
                     style: AppTypography.inter(
                       fontSize: 14,
                       height: 1.55,

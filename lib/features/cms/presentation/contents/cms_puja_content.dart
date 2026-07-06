@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/festival
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 Widget _cmsClickable({
@@ -20,11 +21,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -903,6 +900,12 @@ class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _prepItemsCtrl;
   late final TextEditingController _mantraPrimaryCtrl;
   late final TextEditingController _mantraRepetitionsCtrl;
+  String? _descRich;
+  String? _purposeWhyRich;
+  String? _deitySummaryAboutRich;
+  String? _mantraPrimaryRich;
+  String? _mantraMeaningRich;
+  String? _blessingsRich;
   late final TextEditingController _mantraAdditionalCtrl;
   late final TextEditingController _mantraMeaningCtrl;
   late final TextEditingController _guidanceMindsetCtrl;
@@ -988,11 +991,14 @@ class _PoojaFormState extends State<_PoojaForm> {
     _selectedDeityId = p?.deity;
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
+    _descRich = p?.description;
     _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
+    _purposeWhyRich = p?.purposeWhy;
     _purposeBenefitsCtrl = TextEditingController();
     _deitySummaryAboutCtrl = TextEditingController(
       text: p?.deitySummaryAbout ?? '',
     );
+    _deitySummaryAboutRich = p?.deitySummaryAbout;
     _deitySummaryBlessingsCtrl = TextEditingController();
     _prepPersonalCtrl = TextEditingController();
     _prepSpaceCtrl = TextEditingController();
@@ -1000,11 +1006,13 @@ class _PoojaFormState extends State<_PoojaForm> {
       text: p?.preparationItems.join('\n') ?? p?.requiredItems.join('\n') ?? '',
     );
     _mantraPrimaryCtrl = TextEditingController(text: p?.mantraPrimary ?? '');
+    _mantraPrimaryRich = p?.mantraPrimary;
     _mantraRepetitionsCtrl = TextEditingController(
       text: p?.mantraRepetitions ?? '',
     );
     _mantraAdditionalCtrl = TextEditingController();
     _mantraMeaningCtrl = TextEditingController(text: p?.mantraMeaning ?? '');
+    _mantraMeaningRich = p?.mantraMeaning;
     _guidanceMindsetCtrl = TextEditingController();
     _guidanceAvoidCtrl = TextEditingController();
     _completionClosureCtrl = TextEditingController();
@@ -1037,6 +1045,9 @@ class _PoojaFormState extends State<_PoojaForm> {
     _completionIntegration = List.from(p?.completionIntegration ?? const []);
     _completionBenefits = List.from(p?.completionBenefits ?? const []);
     _completionBlessings = List.from(p?.blessings ?? const []);
+    _blessingsRich = p?.blessings.isNotEmpty == true
+        ? p!.blessings.first
+        : null;
     _selectedFestivalIds = List.from(p?.festivalIds ?? const []);
     _offeringsMeaningEntries = List.from(
       p?.spiritualOfferingsMeaning ?? const [],
@@ -1089,7 +1100,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (_selectedDeityId == null || _selectedDeityId!.isEmpty) {
       return 'Deity is required';
     }
-    if (_descCtrl.text.trim().isEmpty) return 'Description is required';
+    if ((_descRich ?? '').isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     if (_selectedDate == null) return 'Schedule Date is required';
     return null;
@@ -1404,9 +1415,8 @@ class _PoojaFormState extends State<_PoojaForm> {
       'Inner peace',
       'Spiritual upliftment',
     ];
-    _completionBlessings = [
-      'May you be blessed with good health, growing wealth, and a prosperous family life.',
-    ];
+    _blessingsRich =
+        'May you be blessed with good health, growing wealth, and a prosperous family life.';
     final approved = _approvedFestivals;
     if (approved.isNotEmpty) {
       _selectedFestivalIds = [approved.first.id];
@@ -1438,12 +1448,9 @@ class _PoojaFormState extends State<_PoojaForm> {
   }
 
   Future<void> _submit({required bool isDraft}) async {
-    // Build blessings payload directly from both chips + current input text.
-    // This avoids losing values when user doesn't tap "+" before submit.
-    final blessingsPayload = <String>{
-      ..._completionBlessings.map((e) => e.trim()).where((e) => e.isNotEmpty),
-      ..._toList(_completionBlessingsCtrl.text),
-    }.toList();
+    final blessingsPayload = <String>[
+      if ((_blessingsRich ?? '').isNotEmpty) _blessingsRich!,
+    ];
 
     final err = _validate();
     if (err != null) {
@@ -1474,22 +1481,22 @@ class _PoojaFormState extends State<_PoojaForm> {
           category: _category,
           difficulty: _difficulty,
           duration: _durationCtrl.text.trim(),
-          description: _descCtrl.text.trim(),
+          description: _descRich ?? '',
           status: status,
           imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
           steps: _serializedSteps(),
           requiredItems: _items,
-          purposeWhy: _purposeWhyCtrl.text.trim(),
+          purposeWhy: _purposeWhyRich ?? '',
           purposeBenefits: _purposeBenefits,
-          deitySummaryAbout: _deitySummaryAboutCtrl.text.trim(),
+          deitySummaryAbout: _deitySummaryAboutRich ?? '',
           deitySummaryBlessings: _deitySummaryBlessings,
           preparationPersonal: _preparationPersonal,
           preparationSpace: _preparationSpace,
           preparationItems: _toList(_prepItemsCtrl.text),
-          mantraPrimary: _mantraPrimaryCtrl.text.trim(),
+          mantraPrimary: _mantraPrimaryRich ?? '',
           mantraRepetitions: _mantraRepetitionsCtrl.text.trim(),
           mantraAdditional: _mantraAdditional,
-          mantraMeaning: _mantraMeaningCtrl.text.trim(),
+          mantraMeaning: _mantraMeaningRich ?? '',
           spiritualOfferingsMeaning: _offeringsMeaningEntries,
           spiritualActionsMeaning: _actionsMeaningEntries,
           spiritualOtherSymbolism: _otherSymbolismEntries,
@@ -1512,22 +1519,22 @@ class _PoojaFormState extends State<_PoojaForm> {
         category: _category,
         difficulty: _difficulty,
         duration: _durationCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
+        description: _descRich ?? '',
         status: status,
         imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
         steps: _serializedSteps(),
         requiredItems: _items,
-        purposeWhy: _purposeWhyCtrl.text.trim(),
+        purposeWhy: _purposeWhyRich ?? '',
         purposeBenefits: _purposeBenefits,
-        deitySummaryAbout: _deitySummaryAboutCtrl.text.trim(),
+        deitySummaryAbout: _deitySummaryAboutRich ?? '',
         deitySummaryBlessings: _deitySummaryBlessings,
         preparationPersonal: _preparationPersonal,
         preparationSpace: _preparationSpace,
         preparationItems: _toList(_prepItemsCtrl.text),
-        mantraPrimary: _mantraPrimaryCtrl.text.trim(),
+        mantraPrimary: _mantraPrimaryRich ?? '',
         mantraRepetitions: _mantraRepetitionsCtrl.text.trim(),
         mantraAdditional: _mantraAdditional,
-        mantraMeaning: _mantraMeaningCtrl.text.trim(),
+        mantraMeaning: _mantraMeaningRich ?? '',
         spiritualOfferingsMeaning: _offeringsMeaningEntries,
         spiritualActionsMeaning: _actionsMeaningEntries,
         spiritualOtherSymbolism: _otherSymbolismEntries,
@@ -1776,11 +1783,10 @@ class _PoojaFormState extends State<_PoojaForm> {
             onChanged: (v) => setState(() => _category = v ?? _cats.first),
           ),
           const SizedBox(height: 12),
-          CmsFormField(
+          CmsRichTextField(
             label: 'Description *',
-            hint: 'Enter a brief description...',
-            controller: _descCtrl,
-            maxLines: 3,
+            initialValue: _descRich,
+            onChanged: (v) => _descRich = v,
           ),
           const SizedBox(height: 12),
           Column(
@@ -1992,11 +1998,10 @@ class _PoojaFormState extends State<_PoojaForm> {
       CmsFormCard(
         title: 'Purpose of the Ritual',
         children: [
-          CmsFormField(
+          CmsRichTextField(
             label: 'Purpose: Why',
-            hint: 'Why this puja is performed',
-            controller: _purposeWhyCtrl,
-            maxLines: 2,
+            initialValue: _purposeWhyRich,
+            onChanged: (v) => _purposeWhyRich = v,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2032,11 +2037,10 @@ class _PoojaFormState extends State<_PoojaForm> {
             ),
           ],
           const SizedBox(height: 12),
-          CmsFormField(
+          CmsRichTextField(
             label: 'Deity Summary: About',
-            hint: 'Short description of deity',
-            controller: _deitySummaryAboutCtrl,
-            maxLines: 2,
+            initialValue: _deitySummaryAboutRich,
+            onChanged: (v) => _deitySummaryAboutRich = v,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2338,11 +2342,10 @@ class _PoojaFormState extends State<_PoojaForm> {
       CmsFormCard(
         title: 'Mantras & Chanting',
         children: [
-          CmsFormField(
+          CmsRichTextField(
             label: 'Mantra: Primary',
-            hint: 'Primary mantra text',
-            controller: _mantraPrimaryCtrl,
-            maxLines: 2,
+            initialValue: _mantraPrimaryRich,
+            onChanged: (v) => _mantraPrimaryRich = v,
           ),
           const SizedBox(height: 12),
           CmsFormField(
@@ -2384,11 +2387,10 @@ class _PoojaFormState extends State<_PoojaForm> {
             ),
           ],
           const SizedBox(height: 12),
-          CmsFormField(
+          CmsRichTextField(
             label: 'Mantra: Meaning',
-            hint: 'Meaning or significance',
-            controller: _mantraMeaningCtrl,
-            maxLines: 2,
+            initialValue: _mantraMeaningRich,
+            onChanged: (v) => _mantraMeaningRich = v,
           ),
         ],
       ),
@@ -2646,34 +2648,13 @@ class _PoojaFormState extends State<_PoojaForm> {
       ),
       const SizedBox(height: 16),
       CmsFormCard(
-        title: 'Blessings from Satya',
+        title: 'Blessings from Sathya',
         children: [
-          _InputRow(
-            ctrl: _completionBlessingsCtrl,
-            hint: 'Add blessing',
-            onAdd: () => setState(
-              () =>
-                  _addChipValue(_completionBlessingsCtrl, _completionBlessings),
-            ),
+          CmsRichTextField(
+            label: 'Blessings',
+            initialValue: _blessingsRich,
+            onChanged: (v) => _blessingsRich = v,
           ),
-          if (_completionBlessings.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _completionBlessings
-                  .map(
-                    (i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: _LineChip(
-                        label: i,
-                        onRemove: () =>
-                            setState(() => _completionBlessings.remove(i)),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
         ],
       ),
       const SizedBox(height: 24),
@@ -3230,75 +3211,75 @@ class _StepRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          Container(
-            width: 22,
-            height: 22,
-            margin: const EdgeInsets.only(top: 1),
-            decoration: const BoxDecoration(
-              color: CmsColors.orange,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$index',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+              Container(
+                width: 22,
+                height: 22,
+                margin: const EdgeInsets.only(top: 1),
+                decoration: const BoxDecoration(
+                  color: CmsColors.orange,
+                  shape: BoxShape.circle,
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
+                child: Center(
+                  child: Text(
+                    '$index',
                     style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: CmsColors.textPrimary,
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
                     ),
-                    children: [
-                      TextSpan(
-                        text: title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          height: 1.35,
-                        ),
-                      ),
-                      if (description.isNotEmpty) ...[
-                        const TextSpan(text: '\n'),
-                        TextSpan(text: description),
-                      ],
-                    ],
                   ),
                 ),
-                if (hasImages) ...[
-                  const SizedBox(height: 10),
-                  _imageStrip(),
-                ],
-              ],
-            ),
-          ),
-          if (onEdit != null) ...[
-            _cmsClickable(
-              onTap: onEdit!,
-              child: Icon(
-                Icons.edit_outlined,
-                size: 16,
-                color: isEditing ? CmsColors.orange : Colors.grey,
               ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          _cmsClickable(
-            onTap: onRemove,
-            child: const Icon(Icons.close, size: 16, color: Colors.grey),
-          ),
-        ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: CmsColors.textPrimary,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                            ),
+                          ),
+                          if (description.isNotEmpty) ...[
+                            const TextSpan(text: '\n'),
+                            TextSpan(text: description),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (hasImages) ...[
+                      const SizedBox(height: 10),
+                      _imageStrip(),
+                    ],
+                  ],
+                ),
+              ),
+              if (onEdit != null) ...[
+                _cmsClickable(
+                  onTap: onEdit!,
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: isEditing ? CmsColors.orange : Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              _cmsClickable(
+                onTap: onRemove,
+                child: const Icon(Icons.close, size: 16, color: Colors.grey),
+              ),
+            ],
           ),
         ),
       ),

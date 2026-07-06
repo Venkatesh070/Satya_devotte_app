@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/features/donations/presentation/pages/make_don
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class DonationDetailsScreen extends StatelessWidget {
   const DonationDetailsScreen({super.key});
@@ -41,10 +42,10 @@ class DonationDetailsScreen extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Text(
+                    child: RichTextDisplay(
                       donation.description.isNotEmpty
                           ? donation.description
-                          : 'Support this cause and earn blessings.',
+                          : null,
                       style: AppTypography.inter(
                         fontSize: 14,
                         height: 1.5,

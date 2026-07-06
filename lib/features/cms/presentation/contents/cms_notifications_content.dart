@@ -18,6 +18,8 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/notifications/data/models/app_notification.dart';
 import 'package:satya_devotte_app/features/notifications/data/models/send_notification_request.dart';
 
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
+
 Widget _cmsClickable({
   required VoidCallback onTap,
   required Widget child,
@@ -68,7 +70,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
   // Form
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _bodyCtrl = TextEditingController();
+  String? _bodyRich;
   String _audience = 'ALL';
   DateTime? _scheduledAt;
 
@@ -81,7 +83,6 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _bodyCtrl.dispose();
     super.dispose();
   }
 
@@ -125,7 +126,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
 
     final req = SendNotificationRequest(
       title: _titleCtrl.text.trim(),
-      body: _bodyCtrl.text.trim(),
+      body: (_bodyRich ?? '').trim(),
       audience: _audience,
       scheduledAt: _scheduledAt,
     );
@@ -143,7 +144,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
           : 'Notification queued for delivery.',
     );
     _titleCtrl.clear();
-    _bodyCtrl.clear();
+    _bodyRich = null;
     setState(() {
       _audience = 'ALL';
       _scheduledAt = null;
@@ -178,7 +179,8 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
         _SendNotificationCard(
           formKey: _formKey,
           titleCtrl: _titleCtrl,
-          bodyCtrl: _bodyCtrl,
+          bodyRich: _bodyRich,
+          onBodyChanged: (v) => setState(() => _bodyRich = v),
           audience: _audience,
           onAudienceChanged: (v) {
             if (v == null) return;
@@ -278,7 +280,8 @@ class _SendNotificationCard extends StatelessWidget {
   const _SendNotificationCard({
     required this.formKey,
     required this.titleCtrl,
-    required this.bodyCtrl,
+    required this.bodyRich,
+    required this.onBodyChanged,
     required this.audience,
     required this.onAudienceChanged,
     required this.scheduledAt,
@@ -290,7 +293,8 @@ class _SendNotificationCard extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final TextEditingController titleCtrl;
-  final TextEditingController bodyCtrl;
+  final String? bodyRich;
+  final ValueChanged<String> onBodyChanged;
   final String audience;
   final ValueChanged<String?> onAudienceChanged;
   final DateTime? scheduledAt;
@@ -359,23 +363,10 @@ class _SendNotificationCard extends StatelessWidget {
             const SizedBox(height: 12),
             _LabeledField(
               label: 'Message',
-              child: TextFormField(
-                controller: bodyCtrl,
-                maxLines: 4,
-                minLines: 3,
-                maxLength: 1000,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter notification message...',
-                ),
-                inputFormatters: [LengthLimitingTextInputFormatter(1000)],
-                validator: (v) {
-                  final s = (v ?? '').trim();
-                  if (s.isEmpty) return 'Message is required.';
-                  if (s.length > 1000) return 'Max 1000 characters.';
-                  return null;
-                },
+              child: CmsRichTextField(
+                label: 'Message',
+                initialValue: bodyRich,
+                onChanged: onBodyChanged,
               ),
             ),
             const SizedBox(height: 12),

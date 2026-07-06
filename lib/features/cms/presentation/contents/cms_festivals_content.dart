@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_co
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 Widget _cmsClickable({
@@ -967,7 +968,7 @@ class _FestivalForm extends StatefulWidget {
 class _FestivalFormState extends State<_FestivalForm> {
   // ── Text controllers ──────────────────────────────────────────
   late final TextEditingController _titleCtrl;
-  late final TextEditingController _descCtrl;
+  String? _descRich;
   late final TextEditingController _notifyDaysCtrl;
 
   // ── FIX: properly declared state fields ───────────────────────
@@ -995,7 +996,7 @@ class _FestivalFormState extends State<_FestivalForm> {
     final f = widget.festival;
 
     _titleCtrl = TextEditingController(text: f?.title ?? '');
-    _descCtrl = TextEditingController(text: f?.description ?? '');
+    _descRich = f?.description;
     _notifyDaysCtrl = TextEditingController(
       text: (f?.notificationDaysBefore ?? 0).toString(),
     );
@@ -1068,7 +1069,7 @@ class _FestivalFormState extends State<_FestivalForm> {
   Map<String, dynamic> _buildBody() {
     final body = <String, dynamic>{
       'title': _titleCtrl.text.trim(),
-      'description': _descCtrl.text.trim(),
+      'description': (_descRich ?? '').trim(),
       'date': _formatDate(_date!),
       'category': _category,
       'isGlobal': _isGlobal,
@@ -1115,7 +1116,7 @@ class _FestivalFormState extends State<_FestivalForm> {
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _descCtrl.dispose();
+
     _notifyDaysCtrl.dispose();
     super.dispose();
   }
@@ -1218,11 +1219,10 @@ class _FestivalFormState extends State<_FestivalForm> {
         onChanged: (v) => setState(() => _category = v ?? 'MAJOR'),
       ),
       const SizedBox(height: 12),
-      CmsFormField(
+      CmsRichTextField(
         label: 'Description',
-        hint: 'Brief description of the festival...',
-        controller: _descCtrl,
-        maxLines: 3,
+        initialValue: _descRich,
+        onChanged: (v) => _descRich = v,
       ),
       const SizedBox(height: 12),
       _PoojaPickerField(

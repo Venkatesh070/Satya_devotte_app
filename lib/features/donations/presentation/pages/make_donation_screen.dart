@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 /// Figma "Make a Donation" bottom sheet.
 class MakeDonationScreen extends StatefulWidget {
@@ -424,10 +425,8 @@ class _SelectedCauseCard extends StatelessWidget {
                     color: DonationUi.text,
                   ),
                 ),
-                Text(
+                RichTextDisplay(
                   donation.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
