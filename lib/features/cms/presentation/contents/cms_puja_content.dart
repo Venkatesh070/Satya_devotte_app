@@ -1786,7 +1786,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Description *',
             initialValue: _descRich,
-            onChanged: (v) => _descRich = v,
+            onChanged: (v) => setState(() => _descRich = v),
           ),
           const SizedBox(height: 12),
           Column(
@@ -2001,7 +2001,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Purpose: Why',
             initialValue: _purposeWhyRich,
-            onChanged: (v) => _purposeWhyRich = v,
+            onChanged: (v) => setState(() => _purposeWhyRich = v),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2040,7 +2040,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Deity Summary: About',
             initialValue: _deitySummaryAboutRich,
-            onChanged: (v) => _deitySummaryAboutRich = v,
+            onChanged: (v) => setState(() => _deitySummaryAboutRich = v),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2345,7 +2345,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Mantra: Primary',
             initialValue: _mantraPrimaryRich,
-            onChanged: (v) => _mantraPrimaryRich = v,
+            onChanged: (v) => setState(() => _mantraPrimaryRich = v),
           ),
           const SizedBox(height: 12),
           CmsFormField(
@@ -2390,7 +2390,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Mantra: Meaning',
             initialValue: _mantraMeaningRich,
-            onChanged: (v) => _mantraMeaningRich = v,
+            onChanged: (v) => setState(() => _mantraMeaningRich = v),
           ),
         ],
       ),
@@ -2653,7 +2653,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Blessings',
             initialValue: _blessingsRich,
-            onChanged: (v) => _blessingsRich = v,
+            onChanged: (v) => setState(() => _blessingsRich = v),
           ),
         ],
       ),

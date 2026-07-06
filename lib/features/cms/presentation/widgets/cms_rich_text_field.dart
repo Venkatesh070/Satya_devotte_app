@@ -25,6 +25,7 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   late final FocusNode _focusNode;
   bool _focused = false;
   String? _externalInitialValue;
+  String? _lastSentValue;
 
   @override
   void initState() {
@@ -41,6 +42,9 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   @override
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // If widget.initialValue is the last value we sent, skip (prevents loop)
+    if (widget.initialValue == _lastSentValue) return;
+
     // Only update the document if the parent is passing a new initialValue that's not what we already have
     if (widget.initialValue != _externalInitialValue) {
       _externalInitialValue = widget.initialValue;
@@ -61,7 +65,9 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   }
 
   void _onControllerChange() {
-    widget.onChanged?.call(serializeDocument(_controller.document));
+    final value = serializeDocument(_controller.document);
+    _lastSentValue = value;
+    widget.onChanged?.call(value);
   }
 
   @override

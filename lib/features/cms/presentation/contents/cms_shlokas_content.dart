@@ -16,11 +16,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -320,7 +316,9 @@ class _SlokaCard extends StatelessWidget {
         ctrl.selectedDate.day == now.day &&
         ctrl.selectedDate.month == now.month &&
         ctrl.selectedDate.year == now.year;
-    final title = isToday ? "Today's Shloka" : 'Shloka — ${ctrl.selectedDateStr}';
+    final title = isToday
+        ? "Today's Shloka"
+        : 'Shloka — ${ctrl.selectedDateStr}';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -773,25 +771,25 @@ class _SlokaFormState extends State<_SlokaForm> {
                 CmsRichTextField(
                   label: 'Sloka *',
                   initialValue: _slokaRich,
-                  onChanged: (v) => _slokaRich = v,
+                  onChanged: (v) => setState(() => _slokaRich = v),
                 ),
                 const SizedBox(height: 12),
                 CmsRichTextField(
                   label: 'Meaning',
                   initialValue: _meaningRich,
-                  onChanged: (v) => _meaningRich = v,
+                  onChanged: (v) => setState(() => _meaningRich = v),
                 ),
                 const SizedBox(height: 12),
                 CmsRichTextField(
                   label: 'Contemplation',
                   initialValue: _contemplationRich,
-                  onChanged: (v) => _contemplationRich = v,
+                  onChanged: (v) => setState(() => _contemplationRich = v),
                 ),
                 const SizedBox(height: 12),
                 CmsRichTextField(
                   label: 'Prayer',
                   initialValue: _prayerRich,
-                  onChanged: (v) => _prayerRich = v,
+                  onChanged: (v) => setState(() => _prayerRich = v),
                 ),
                 const SizedBox(height: 12),
 

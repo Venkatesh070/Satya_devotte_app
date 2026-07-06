@@ -18,11 +18,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -33,11 +29,7 @@ Widget _cmsClickableInk({
 }) {
   return MouseRegion(
     cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: borderRadius,
-      child: child,
-    ),
+    child: InkWell(onTap: onTap, borderRadius: borderRadius, child: child),
   );
 }
 
@@ -104,20 +96,10 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
     }).toList();
   }
 
-  Future<void> _save(
-    Map<String, dynamic> payload, {
-    PickedFile? image,
-  }) async {
+  Future<void> _save(Map<String, dynamic> payload, {PickedFile? image}) async {
     final ok = _editing != null
-        ? await _controller.updateDeity(
-            _editing!.id,
-            payload,
-            image: image,
-          )
-        : await _controller.createDeity(
-            payload,
-            image: image,
-          );
+        ? await _controller.updateDeity(_editing!.id, payload, image: image)
+        : await _controller.createDeity(payload, image: image);
 
     if (!ok) return;
 
@@ -249,14 +231,10 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: sel
-                            ? CmsColors.orange
-                            : CmsColors.bg,
+                        color: sel ? CmsColors.orange : CmsColors.bg,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: sel
-                              ? CmsColors.orange
-                              : CmsColors.border,
+                          color: sel ? CmsColors.orange : CmsColors.border,
                         ),
                       ),
                       child: Text(
@@ -264,9 +242,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: sel
-                              ? Colors.white
-                              : CmsColors.textSecond,
+                          color: sel ? Colors.white : CmsColors.textSecond,
                         ),
                       ),
                     ),
@@ -287,9 +263,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                       children: [
                         Text(
                           _error!,
-                          style: TextStyle(
-                            color: CmsColors.textSecond,
-                          ),
+                          style: TextStyle(color: CmsColors.textSecond),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -306,9 +280,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 ? Center(
                     child: Text(
                       'No deities found.',
-                      style: TextStyle(
-                        color: CmsColors.textSecond,
-                      ),
+                      style: TextStyle(color: CmsColors.textSecond),
                     ),
                   )
                 : ListView.builder(
@@ -322,9 +294,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         decoration: BoxDecoration(
                           color: CmsColors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: CmsColors.border,
-                          ),
+                          border: Border.all(color: CmsColors.border),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,7 +794,7 @@ class _DeityFormState extends State<_DeityForm> {
         CmsRichTextField(
           label: 'Description',
           initialValue: _descRich,
-          onChanged: (v) => _descRich = v,
+          onChanged: (v) => setState(() => _descRich = v),
         ),
         const SizedBox(height: 12),
         _DeityColorField(
@@ -867,10 +837,7 @@ class _DeityFormState extends State<_DeityForm> {
         if (_ritualIds.isEmpty)
           Text(
             'No entries added yet',
-            style: TextStyle(
-              fontSize: 12,
-              color: CmsColors.textSecond,
-            ),
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
           )
         else
           Wrap(
@@ -963,7 +930,7 @@ class _DeityFormState extends State<_DeityForm> {
         CmsRichTextField(
           label: 'How to Invoke / Call Upon This Deity',
           initialValue: _connectingHowToPrayRich,
-          onChanged: (v) => _connectingHowToPrayRich = v,
+          onChanged: (v) => setState(() => _connectingHowToPrayRich = v),
         ),
         const SizedBox(height: 12),
         _ChipListEditor(
@@ -997,7 +964,7 @@ class _DeityFormState extends State<_DeityForm> {
         CmsRichTextField(
           label: 'Recommended Mantra / Chant',
           initialValue: _chantingMantraRich,
-          onChanged: (v) => _chantingMantraRich = v,
+          onChanged: (v) => setState(() => _chantingMantraRich = v),
         ),
         const SizedBox(height: 12),
         CmsFormField(
@@ -1032,10 +999,7 @@ class _DeityFormState extends State<_DeityForm> {
         if (_preferredDays.isEmpty)
           Text(
             'No entries added yet',
-            style: TextStyle(
-              fontSize: 12,
-              color: CmsColors.textSecond,
-            ),
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
           )
         else
           Wrap(
@@ -1109,13 +1073,13 @@ class _DeityFormState extends State<_DeityForm> {
         CmsRichTextField(
           label: 'Sign of Connection',
           initialValue: _devotionalSignRich,
-          onChanged: (v) => _devotionalSignRich = v,
+          onChanged: (v) => setState(() => _devotionalSignRich = v),
         ),
         const SizedBox(height: 12),
         CmsRichTextField(
           label: 'Notes',
           initialValue: _devotionalNotesRich,
-          onChanged: (v) => _devotionalNotesRich = v,
+          onChanged: (v) => setState(() => _devotionalNotesRich = v),
         ),
       ],
     );
@@ -1313,75 +1277,64 @@ class _DeityFormState extends State<_DeityForm> {
     }
     setState(() => _isSaving = true);
     try {
-      await widget.onSave(
-        {
-                      'name': _nameCtrl.text.trim(),
-                      'deity_color': _deityColor?.trim() ?? '',
-                      'alternate_names': _valuesWithPending(
-                        _alternateNamesCtrl,
-                        _alternateNames,
-                      ),
-                      'description': _descRich ?? '',
-                      'roles': _valuesWithPending(_rolesCtrl, _roles),
-                      'lineage': {
-                        'parents': _csv(_lineageParentsCtrl.text),
-                        'consort': _lineageConsortCtrl.text.trim(),
-                        'children': _csv(_lineageChildrenCtrl.text),
-                        'vehicle': _lineageVehicleCtrl.text.trim(),
-                        'abode': _lineageAbodeCtrl.text.trim(),
-                      },
-                      'structure': _lineageFormsEntries,
-                      'appearance': _appearanceEntries,
-                      'spiritual_significance': _spiritualEntries,
-                      'connecting': {
-                        'how_to_pray': _connectingHowToPrayRich ?? '',
-                        'what_pleases': _valuesWithPending(
-                          _connectingWhatPleasesCtrl,
-                          _whatPleases,
-                        ),
-                        'displeases': _valuesWithPending(
-                          _connectingDispleasesCtrl,
-                          _displeases,
-                        ),
-                        'ideal_time': _csv(_connectingIdealTimeCtrl.text),
-                      },
-                      'chanting': {
-                        'mantra': _chantingMantraRich ?? '',
-                        'repetitions': _chantingRepetitionsCtrl.text.trim(),
-                        'benefits': _valuesWithPending(
-                          _chantingBenefitsCtrl,
-                          _chantBenefits,
-                        ),
-                        'preferred_days': List<String>.from(_preferredDays),
-                        'associated_colors': _valuesWithPending(
-                          _chantingAssociatedColorsCtrl,
-                          _associatedColors,
-                        ),
-                      },
-                      'home_practice': {
-                        'placement': _homePlacementCtrl.text.trim(),
-                        'offerings': _valuesWithPending(
-                          _homeOfferingsCtrl,
-                          _homeOfferings,
-                        ),
-                        'do_and_dont': {
-                          'do': _valuesWithPending(_homeDoCtrl, _homeDos),
-                          'dont': _valuesWithPending(_homeDontCtrl, _homeDonts),
-                        },
-                      },
-                      'devotional_experience': {
-                        'sign_of_connection': _devotionalSignRich ?? '',
-                        'notes': _devotionalNotesRich ?? '',
-                      },
-                      'stories': _storiesEntries,
-                      'pujas': List<String>.from(_ritualIds),
-                      'media': {
-                        'images': _csv(_imageUrlsCtrl.text),
-                      },
-                      'status': _status,
-                    },
-        image: _pickedImage,
-      );
+      await widget.onSave({
+        'name': _nameCtrl.text.trim(),
+        'deity_color': _deityColor?.trim() ?? '',
+        'alternate_names': _valuesWithPending(
+          _alternateNamesCtrl,
+          _alternateNames,
+        ),
+        'description': _descRich ?? '',
+        'roles': _valuesWithPending(_rolesCtrl, _roles),
+        'lineage': {
+          'parents': _csv(_lineageParentsCtrl.text),
+          'consort': _lineageConsortCtrl.text.trim(),
+          'children': _csv(_lineageChildrenCtrl.text),
+          'vehicle': _lineageVehicleCtrl.text.trim(),
+          'abode': _lineageAbodeCtrl.text.trim(),
+        },
+        'structure': _lineageFormsEntries,
+        'appearance': _appearanceEntries,
+        'spiritual_significance': _spiritualEntries,
+        'connecting': {
+          'how_to_pray': _connectingHowToPrayRich ?? '',
+          'what_pleases': _valuesWithPending(
+            _connectingWhatPleasesCtrl,
+            _whatPleases,
+          ),
+          'displeases': _valuesWithPending(
+            _connectingDispleasesCtrl,
+            _displeases,
+          ),
+          'ideal_time': _csv(_connectingIdealTimeCtrl.text),
+        },
+        'chanting': {
+          'mantra': _chantingMantraRich ?? '',
+          'repetitions': _chantingRepetitionsCtrl.text.trim(),
+          'benefits': _valuesWithPending(_chantingBenefitsCtrl, _chantBenefits),
+          'preferred_days': List<String>.from(_preferredDays),
+          'associated_colors': _valuesWithPending(
+            _chantingAssociatedColorsCtrl,
+            _associatedColors,
+          ),
+        },
+        'home_practice': {
+          'placement': _homePlacementCtrl.text.trim(),
+          'offerings': _valuesWithPending(_homeOfferingsCtrl, _homeOfferings),
+          'do_and_dont': {
+            'do': _valuesWithPending(_homeDoCtrl, _homeDos),
+            'dont': _valuesWithPending(_homeDontCtrl, _homeDonts),
+          },
+        },
+        'devotional_experience': {
+          'sign_of_connection': _devotionalSignRich ?? '',
+          'notes': _devotionalNotesRich ?? '',
+        },
+        'stories': _storiesEntries,
+        'pujas': List<String>.from(_ritualIds),
+        'media': {'images': _csv(_imageUrlsCtrl.text)},
+        'status': _status,
+      }, image: _pickedImage);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -1483,7 +1436,10 @@ class _KeyValueEditor extends StatelessWidget {
                 backgroundColor: CmsColors.orange,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1497,10 +1453,7 @@ class _KeyValueEditor extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               'No entries added yet',
-              style: TextStyle(
-                fontSize: 12,
-                color: CmsColors.textSecond,
-              ),
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
             ),
           )
         else ...[
@@ -1586,10 +1539,7 @@ class _ChipListEditor extends StatelessWidget {
             padding: const EdgeInsets.only(top: 10),
             child: Text(
               'No entries added yet',
-              style: TextStyle(
-                fontSize: 12,
-                color: CmsColors.textSecond,
-              ),
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
             ),
           )
         else ...[
@@ -1704,11 +1654,7 @@ class _LineChip extends StatelessWidget {
           const SizedBox(width: 8),
           _cmsClickable(
             onTap: onRemove,
-            child: Icon(
-              Icons.close,
-              size: 16,
-              color: CmsColors.textSecond,
-            ),
+            child: Icon(Icons.close, size: 16, color: CmsColors.textSecond),
           ),
         ],
       ),
@@ -1896,11 +1842,7 @@ class _CompactChip extends StatelessWidget {
           const SizedBox(width: 6),
           _cmsClickable(
             onTap: onRemove,
-            child: Icon(
-              Icons.close,
-              size: 14,
-              color: CmsColors.textSecond,
-            ),
+            child: Icon(Icons.close, size: 14, color: CmsColors.textSecond),
           ),
         ],
       ),
@@ -1960,16 +1902,13 @@ String _colorToHex(Color color) {
   final g = (color.g * 255).round();
   final b = (color.b * 255).round();
   return '#${r.toRadixString(16).padLeft(2, '0')}'
-      '${g.toRadixString(16).padLeft(2, '0')}'
-      '${b.toRadixString(16).padLeft(2, '0')}'
+          '${g.toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}'
       .toUpperCase();
 }
 
 class _DeityColorField extends StatelessWidget {
-  const _DeityColorField({
-    required this.value,
-    required this.onChanged,
-  });
+  const _DeityColorField({required this.value, required this.onChanged});
 
   final String? value;
   final ValueChanged<String?> onChanged;
