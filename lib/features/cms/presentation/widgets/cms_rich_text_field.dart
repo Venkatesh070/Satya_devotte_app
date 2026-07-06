@@ -22,7 +22,6 @@ class CmsRichTextField extends StatefulWidget {
 
 class _CmsRichTextFieldState extends State<CmsRichTextField> {
   late final QuillController _controller;
-  late final FocusNode _focusNode;
   bool _focused = false;
   String? _externalInitialValue;
   String? _lastSentValue;
@@ -31,12 +30,6 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void initState() {
     super.initState();
     _externalInitialValue = widget.initialValue;
-    _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      if (mounted) {
-        setState(() => _focused = _focusNode.hasFocus);
-      }
-    });
     _controller = QuillController(
       document: documentFromValue(widget.initialValue),
       selection: const TextSelection.collapsed(offset: 0),
@@ -65,7 +58,6 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void dispose() {
     _controller.removeListener(_onControllerChange);
     _controller.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
 
@@ -144,12 +136,14 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
                 config: toolbarConfig,
               ),
               const Divider(height: 1, color: CmsColors.border),
-              DefaultTextStyle.merge(
-                style: TextStyle(color: CmsColors.textPrimary),
-                child: QuillEditor.basic(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  config: editorConfig,
+              Focus(
+                onFocusChange: (v) => setState(() => _focused = v),
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(color: CmsColors.textPrimary),
+                  child: QuillEditor.basic(
+                    controller: _controller,
+                    config: editorConfig,
+                  ),
                 ),
               ),
             ],
