@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 Widget _cmsClickable({
   required VoidCallback onTap,
@@ -761,6 +762,7 @@ class _DeityFormState extends State<_DeityForm> {
     required TextEditingController titleCtrl,
     required List<Map<String, String>> target,
     String? richDesc,
+    ValueSetter<String?>? clearRichDesc,
   }) {
     final title = titleCtrl.text.trim();
     final description = richDesc ?? '';
@@ -776,6 +778,9 @@ class _DeityFormState extends State<_DeityForm> {
     setState(() {
       target.add({'title': title, 'description': description});
       titleCtrl.clear();
+      if (clearRichDesc != null) {
+        clearRichDesc(null);
+      }
     });
   }
 
@@ -873,6 +878,7 @@ class _DeityFormState extends State<_DeityForm> {
             titleCtrl: _lineageFormsTitleCtrl,
             target: _lineageFormsEntries,
             richDesc: _lineageFormsDescRich,
+            clearRichDesc: (v) => _lineageFormsDescRich = v,
           ),
           entries: _lineageFormsEntries,
           onRemove: (index) =>
@@ -895,6 +901,7 @@ class _DeityFormState extends State<_DeityForm> {
             titleCtrl: _appearanceTitleCtrl,
             target: _appearanceEntries,
             richDesc: _appearanceDescRich,
+            clearRichDesc: (v) => _appearanceDescRich = v,
           ),
           entries: _appearanceEntries,
           onRemove: (index) =>
@@ -917,6 +924,7 @@ class _DeityFormState extends State<_DeityForm> {
             titleCtrl: _spiritualTitleCtrl,
             target: _spiritualEntries,
             richDesc: _spiritualDescRich,
+            clearRichDesc: (v) => _spiritualDescRich = v,
           ),
           entries: _spiritualEntries,
           onRemove: (index) =>
@@ -1098,6 +1106,7 @@ class _DeityFormState extends State<_DeityForm> {
             titleCtrl: _storiesTitleCtrl,
             target: _storiesEntries,
             richDesc: _storiesDescRich,
+            clearRichDesc: (v) => _storiesDescRich = v,
           ),
           entries: _storiesEntries,
           onRemove: (index) => setState(() => _storiesEntries.removeAt(index)),
@@ -1417,6 +1426,7 @@ class _KeyValueEditor extends StatelessWidget {
           const SizedBox(height: 10),
           onRichDescChanged != null
               ? CmsRichTextField(
+                  key: ValueKey(richDescValue),
                   label: '$heading Description',
                   initialValue: richDescValue,
                   onChanged: onRichDescChanged!,
@@ -1474,13 +1484,29 @@ class _KeyValueEditor extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      description.isEmpty ? title : '$title\n$description',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: CmsThemeColors.inputText,
-                        height: 1.4,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (title.isNotEmpty)
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: CmsThemeColors.inputText,
+                              fontWeight: FontWeight.bold,
+                              height: 1.4,
+                            ),
+                          ),
+                        if (description.isNotEmpty)
+                          RichTextDisplay(
+                            description,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: CmsThemeColors.inputText,
+                              height: 1.4,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),

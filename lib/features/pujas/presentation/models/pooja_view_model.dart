@@ -8,6 +8,23 @@ class PoojaView {
   PoojaView(this._raw);
   final Map<String, dynamic> _raw;
 
+  String _extractString(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v.trim();
+    if (v is List) {
+      return v
+          .map((e) => _extractString(e))
+          .where((s) => s.isNotEmpty)
+          .join(', ');
+    }
+    if (v is Map) {
+      // Try to get name or title from map
+      final name = v['name'] ?? v['title'] ?? '';
+      return _extractString(name);
+    }
+    return v.toString().trim();
+  }
+
   Map<String, dynamic> get raw => _raw;
 
   String get id => (_raw['_id'] ?? _raw['id'] ?? '').toString();
@@ -16,7 +33,11 @@ class PoojaView {
   String get category => (_raw['category'] ?? '').toString();
   String get difficulty => (_raw['difficulty'] ?? '').toString();
   String get duration => (_raw['duration'] ?? '').toString();
-  String get description => (_raw['description'] ?? '').toString();
+  String get description {
+    final v = _raw['description'];
+    return _extractString(v);
+  }
+
   String get status => (_raw['status'] ?? '').toString();
   String get date => (_raw['date'] ?? '').toString();
 
@@ -156,12 +177,13 @@ class PoojaView {
 
   MantraView get mantraView {
     final m = mantra;
+
     return MantraView(
-      primary: (m['primary'] ?? '').toString(),
-      repetitions: (m['repetitions'] ?? '').toString(),
-      meaning: (m['meaning'] ?? '').toString(),
+      primary: _extractString(m['primary']),
+      repetitions: _extractString(m['repetitions']),
+      meaning: _extractString(m['meaning']),
       additional: (m['additional'] is List)
-          ? (m['additional'] as List).map((e) => e.toString()).toList()
+          ? (m['additional'] as List).map((e) => _extractString(e)).toList()
           : const [],
     );
   }
@@ -173,8 +195,8 @@ class PoojaView {
         number: (m['stepNumber'] is num)
             ? (m['stepNumber'] as num).toInt()
             : int.tryParse(m['stepNumber']?.toString() ?? '') ?? 0,
-        title: (m['title'] ?? '').toString(),
-        description: (m['description'] ?? '').toString(),
+        title: _extractString(m['title']),
+        description: _extractString(m['description']),
         imageUrls: () {
           final urls = <String>[];
           final rawUrls = m['images'] ?? m['imageUrls'];
@@ -192,7 +214,7 @@ class PoojaView {
           return urls;
         }(),
         subSteps: (m['subSteps'] is List)
-            ? (m['subSteps'] as List).map((e) => e.toString()).toList()
+            ? (m['subSteps'] as List).map((e) => _extractString(e)).toList()
             : const [],
       );
     }).toList();
@@ -200,13 +222,13 @@ class PoojaView {
 
   List<String> get blessings {
     final raw = _raw['blessings'];
-    if (raw is List) return raw.map((e) => e.toString()).toList();
+    if (raw is List) return raw.map((e) => _extractString(e)).toList();
     return const [];
   }
 
   List<String> get festivalIds {
     final raw = _raw['festivalIds'];
-    if (raw is List) return raw.map((e) => e.toString()).toList();
+    if (raw is List) return raw.map((e) => _extractString(e)).toList();
     return const [];
   }
 

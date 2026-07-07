@@ -13,7 +13,6 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
-
 Widget _cmsClickable({
   required VoidCallback onTap,
   required Widget child,
@@ -21,11 +20,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -36,11 +31,7 @@ Widget _cmsClickableInk({
 }) {
   return MouseRegion(
     cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: borderRadius,
-      child: child,
-    ),
+    child: InkWell(onTap: onTap, borderRadius: borderRadius, child: child),
   );
 }
 
@@ -50,10 +41,7 @@ Widget _cmsClickableOptional({
 }) {
   return MouseRegion(
     cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-    child: GestureDetector(
-      onTap: onTap,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, child: child),
   );
 }
 
@@ -69,7 +57,8 @@ class CmsPoojaKitInventoryContent extends StatefulWidget {
       _CmsPoojaKitInventoryContentState();
 }
 
-class _CmsPoojaKitInventoryContentState extends State<CmsPoojaKitInventoryContent> {
+class _CmsPoojaKitInventoryContentState
+    extends State<CmsPoojaKitInventoryContent> {
   late final InventoryController _ctrl;
   InventoryItem? _editing;
   bool _showForm = false;
@@ -86,9 +75,9 @@ class _CmsPoojaKitInventoryContentState extends State<CmsPoojaKitInventoryConten
   }
 
   void _openCreate() => setState(() {
-        _editing = null;
-        _showForm = true;
-      });
+    _editing = null;
+    _showForm = true;
+  });
 
   Future<void> _openEdit(InventoryItem item) async {
     setState(() => _loadingDetail = true);
@@ -102,9 +91,9 @@ class _CmsPoojaKitInventoryContentState extends State<CmsPoojaKitInventoryConten
   }
 
   void _closeForm() => setState(() {
-        _showForm = false;
-        _editing = null;
-      });
+    _showForm = false;
+    _editing = null;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -213,26 +202,27 @@ class _InventoryListView extends StatelessWidget {
             ],
           ),
         ),
-        Obx(
-          () {
-            // Subscribe to all filter/category observables used in this strip.
-            final _ = ctrl.categories.length;
-            ctrl.categoryFilters.length;
-            final categoryFiltersSnapshot =
-                List<String>.from(ctrl.categoryFilters);
-            return _FilterStrip(
-              ctrl: ctrl,
-              categoryFilters: categoryFiltersSnapshot,
-              statusFilter: ctrl.statusFilter,
-              stockFilter: ctrl.stockFilter,
-              onCategory: ctrl.setCategoryFilters,
-              onStatus: ctrl.setStatusFilter,
-              onStock: ctrl.setStockFilter,
-            );
-          },
-        ),
+        Obx(() {
+          // Subscribe to all filter/category observables used in this strip.
+          final _ = ctrl.categories.length;
+          ctrl.categoryFilters.length;
+          final categoryFiltersSnapshot = List<String>.from(
+            ctrl.categoryFilters,
+          );
+          return _FilterStrip(
+            ctrl: ctrl,
+            categoryFilters: categoryFiltersSnapshot,
+            statusFilter: ctrl.statusFilter,
+            stockFilter: ctrl.stockFilter,
+            onCategory: ctrl.setCategoryFilters,
+            onStatus: ctrl.setStatusFilter,
+            onStock: ctrl.setStockFilter,
+          );
+        }),
         const Divider(height: 1, color: CmsColors.border),
-        Expanded(child: _InventoryBody(ctrl: ctrl, onEdit: onEdit)),
+        Expanded(
+          child: _InventoryBody(ctrl: ctrl, onEdit: onEdit),
+        ),
         Obx(() {
           if (ctrl.total == 0 && ctrl.items.isEmpty) {
             return const SizedBox.shrink();
@@ -286,11 +276,7 @@ class _FilterStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 768;
     return Padding(
-      padding: EdgeInsets.only(
-        top: 12,
-        bottom: 12,
-        left: isTablet ? 24 : 16,
-      ),
+      padding: EdgeInsets.only(top: 12, bottom: 12, left: isTablet ? 24 : 16),
       child: Align(
         alignment: Alignment.centerLeft,
         child: SingleChildScrollView(
@@ -438,8 +424,8 @@ class _CategoryFilterButton extends StatelessWidget {
     final label = !isActive
         ? 'Category'
         : selected.length == 1
-            ? _labelFor(selected.first)
-            : '${selected.length} categories selected';
+        ? _labelFor(selected.first)
+        : '${selected.length} categories selected';
 
     return Material(
       color: Colors.transparent,
@@ -471,7 +457,9 @@ class _CategoryFilterButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? CmsColors.orangeDark : CmsColors.textPrimary,
+                  color: isActive
+                      ? CmsColors.orangeDark
+                      : CmsColors.textPrimary,
                 ),
               ),
               const SizedBox(width: 2),
@@ -826,7 +814,7 @@ class _InventoryBody extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'After: ${item.stockQuantity + delta} in stock '
-                      '(${item.itemSizeLabel} each)\n',
+                  '(${item.itemSizeLabel} each)\n',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -885,7 +873,9 @@ class _InventoryBody extends StatelessWidget {
             ),
             FilledButton(
               onPressed: delta == 0 ? null : () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: CmsColors.orange).copyWith(mouseCursor: _cmsButtonClickCursor),
+              style: FilledButton.styleFrom(
+                backgroundColor: CmsColors.orange,
+              ).copyWith(mouseCursor: _cmsButtonClickCursor),
               child: const Text('Apply'),
             ),
           ],
@@ -918,9 +908,7 @@ class _InventoryBody extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete inventory item?'),
-        content: Text(
-          '“${item.name}” will be soft-deleted (marked inactive).',
-        ),
+        content: Text('“${item.name}” will be soft-deleted (marked inactive).'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -928,7 +916,9 @@ class _InventoryBody extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: CmsColors.red).copyWith(mouseCursor: _cmsButtonClickCursor),
+            style: FilledButton.styleFrom(
+              backgroundColor: CmsColors.red,
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
             child: const Text('Delete'),
           ),
         ],
@@ -971,7 +961,7 @@ class _InventoryTable extends StatelessWidget {
   static double get _minTableWidth {
     final cols = _kInventoryTableColumns.fold(0.0, (w, c) => w + c.width);
     final gaps = _kColGap * (_kInventoryTableColumns.length - 1);
-    return cols + gaps + 32;
+    return cols + gaps + 34; // 32 padding + 2 for outer container border
   }
 
   @override
@@ -1344,8 +1334,7 @@ class _InventoryStatusSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final color = isActive ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1364,7 +1353,9 @@ class _InventoryStatusSwitch extends StatelessWidget {
               activeThumbColor: Colors.white,
               activeTrackColor: const Color(0xFF2E7D32),
               inactiveThumbColor: Colors.white,
-              inactiveTrackColor: const Color(0xFFC62828).withValues(alpha: 0.45),
+              inactiveTrackColor: const Color(
+                0xFFC62828,
+              ).withValues(alpha: 0.45),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
@@ -1485,11 +1476,7 @@ class _InvCell extends StatelessWidget {
 }
 
 class _InvColSpec {
-  const _InvColSpec(
-    this.label,
-    this.width, {
-    this.align = TextAlign.left,
-  });
+  const _InvColSpec(this.label, this.width, {this.align = TextAlign.left});
   final String label;
   final double width;
   final TextAlign align;
@@ -1542,8 +1529,9 @@ class _InventoryFormState extends State<_InventoryForm> {
       text: p == null ? '' : p.itemQuantity.toString(),
     );
     _stockCtrl = TextEditingController(text: '${p?.stockQuantity ?? 0}');
-    _thresholdCtrl =
-        TextEditingController(text: '${p?.lowStockThreshold ?? 10}');
+    _thresholdCtrl = TextEditingController(
+      text: '${p?.lowStockThreshold ?? 10}',
+    );
     _priceCtrl = TextEditingController(
       text: p == null ? '' : p.price.toString(),
     );
@@ -1654,8 +1642,9 @@ class _InventoryFormState extends State<_InventoryForm> {
       return;
     }
     final salePriceText = _salePriceCtrl.text.trim();
-    final salePrice =
-        salePriceText.isEmpty ? null : num.tryParse(salePriceText);
+    final salePrice = salePriceText.isEmpty
+        ? null
+        : num.tryParse(salePriceText);
     if (salePriceText.isNotEmpty && salePrice == null) {
       showCmsSnackbar(
         title: 'Invalid sale price',
@@ -1910,8 +1899,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                       title: 'Product image',
                       children: [
                         CmsUploadBox(
-                          label:
-                              _isEdit ? 'Product Image' : 'Product Image *',
+                          label: _isEdit ? 'Product Image' : 'Product Image *',
                           icon: Icons.image_outlined,
                           accept: 'JPG, PNG up to 5MB',
                           mediaType: PickMediaType.image,
@@ -2164,8 +2152,9 @@ class _CategoryPickerField extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight:
-                            display != null ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: display != null
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                         color: display != null
                             ? CmsColors.textPrimary
                             : CmsColors.textSecond,
@@ -2188,10 +2177,7 @@ class _CategoryPickerField extends StatelessWidget {
 }
 
 class _CategoryPickerDialog extends StatefulWidget {
-  const _CategoryPickerDialog({
-    required this.categories,
-    this.selectedCode,
-  });
+  const _CategoryPickerDialog({required this.categories, this.selectedCode});
 
   final List<InventoryCategory> categories;
   final String? selectedCode;
@@ -2407,9 +2393,7 @@ class _DropdownField extends StatelessWidget {
             ),
           ),
           items: items
-              .map(
-                (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-              )
+              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
               .toList(),
           onChanged: onChanged,
         ),
@@ -2468,8 +2452,10 @@ class _InventoryPaginationBar extends StatelessWidget {
               onPressed: page > 1 ? controller.prevPage : null,
               icon: const Icon(Icons.chevron_left),
             ),
-            Text('Page $page of $tp',
-                style: const TextStyle(fontSize: 12, color: CmsColors.textSecond)),
+            Text(
+              'Page $page of $tp',
+              style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
             IconButton(
               style: IconButton.styleFrom().copyWith(
                 mouseCursor: _cmsButtonClickCursor,

@@ -22,6 +22,7 @@ class CmsRichTextField extends StatefulWidget {
 
 class _CmsRichTextFieldState extends State<CmsRichTextField> {
   late final QuillController _controller;
+  late final FocusNode _focusNode;
   bool _focused = false;
   String? _externalInitialValue;
   String? _lastSentValue;
@@ -30,6 +31,12 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void initState() {
     super.initState();
     _externalInitialValue = widget.initialValue;
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (mounted) {
+        setState(() => _focused = _focusNode.hasFocus);
+      }
+    });
     _controller = QuillController(
       document: documentFromValue(widget.initialValue),
       selection: const TextSelection.collapsed(offset: 0),
@@ -40,6 +47,16 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   @override
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // If initialValue is null, always reset to empty
+    if (widget.initialValue == null) {
+      _externalInitialValue = null;
+      _lastSentValue = null;
+      final newDoc = documentFromValue(null);
+      _controller.document = newDoc;
+      return;
+    }
+
     // If widget.initialValue is the last value we sent, skip (prevents loop)
     if (widget.initialValue == _lastSentValue) return;
 
@@ -58,6 +75,7 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void dispose() {
     _controller.removeListener(_onControllerChange);
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -99,6 +117,20 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
       showDividers: false,
     );
 
+    // Get default styles and customize placeholder font size
+    final defaultStyles = DefaultStyles.getInstance(context);
+    final customStyles = defaultStyles.merge(
+      DefaultStyles(
+        placeHolder: DefaultTextBlockStyle(
+          defaultStyles.placeHolder!.style.copyWith(fontSize: 14),
+          defaultStyles.placeHolder!.horizontalSpacing,
+          defaultStyles.placeHolder!.verticalSpacing,
+          defaultStyles.placeHolder!.lineSpacing,
+          defaultStyles.placeHolder!.decoration,
+        ),
+      ),
+    );
+
     final editorConfig = QuillEditorConfig(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       minHeight: 100,
@@ -106,6 +138,7 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
       scrollable: true,
       expands: false,
       placeholder: 'Enter ${widget.label}...',
+      customStyles: customStyles,
     );
 
     return Column(
@@ -115,7 +148,7 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
           widget.label,
           style: const TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w200,
             color: CmsColors.textPrimary,
           ),
         ),
@@ -136,14 +169,12 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
                 config: toolbarConfig,
               ),
               const Divider(height: 1, color: CmsColors.border),
-              Focus(
-                onFocusChange: (v) => setState(() => _focused = v),
-                child: DefaultTextStyle.merge(
-                  style: TextStyle(color: CmsColors.textPrimary),
-                  child: QuillEditor.basic(
-                    controller: _controller,
-                    config: editorConfig,
-                  ),
+              DefaultTextStyle.merge(
+                style: TextStyle(color: CmsColors.textPrimary),
+                child: QuillEditor.basic(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  config: editorConfig,
                 ),
               ),
             ],

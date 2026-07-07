@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 /// Encodes/decodes a pooja step stored in [PoojaModel.steps] as JSON, with
 /// legacy `title||description` fallback.
@@ -10,10 +11,7 @@ class PoojaStepCodec {
     required String description,
     List<String> imageUrls = const [],
   }) {
-    final map = <String, dynamic>{
-      'title': title,
-      'description': description,
-    };
+    final map = <String, dynamic>{'title': title, 'description': description};
     final urls = imageUrls
         .map((url) => url.trim())
         .where((url) => url.isNotEmpty)
@@ -166,8 +164,15 @@ class PoojaModel {
   ]) {
     for (final k in keys) {
       final v = json[k];
-      if (v != null && v.toString().trim().isNotEmpty)
-        return v.toString().trim();
+      if (v != null) {
+        String str;
+        if (v is List || v is Map) {
+          str = jsonEncode(v);
+        } else {
+          str = v.toString().trim();
+        }
+        if (str.isNotEmpty) return str;
+      }
     }
     return fallback;
   }
@@ -193,7 +198,13 @@ class PoojaModel {
         .whereType<Map>()
         .map((e) {
           final title = e['title']?.toString().trim() ?? '';
-          final description = e['description']?.toString().trim() ?? '';
+          final descRaw = e['description'];
+          String description;
+          if (descRaw is List || descRaw is Map) {
+            description = jsonEncode(descRaw);
+          } else {
+            description = descRaw?.toString().trim() ?? '';
+          }
           if (title.isEmpty && description.isEmpty) return <String, String>{};
           return {'title': title, 'description': description};
         })
@@ -205,7 +216,9 @@ class PoojaModel {
     if (raw == null || raw.trim().isEmpty) return null;
     final input = raw.trim();
     try {
-      final ddMmYyyy = RegExp(r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$');
+      final ddMmYyyy = RegExp(
+        r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$',
+      );
       if (ddMmYyyy.hasMatch(input)) return input;
 
       if (RegExp(r'^\d{8}$').hasMatch(input)) {
@@ -256,10 +269,41 @@ class PoojaModel {
   }
 
   factory PoojaModel.fromJson(Map<String, dynamic> json) {
+    // Special handling for deity field to avoid jsonEncode-ing whole deity object
+    String getDeityValue(dynamic raw) {
+      if (raw == null) return '';
+      if (raw is String) return raw.trim();
+      if (raw is List) {
+        // If it's a list of deities, take the first one and get its id/name
+        if (raw.isEmpty) return '';
+        return getDeityValue(raw.first);
+      }
+      if (raw is Map) {
+        // Try to get id first, then name/title if not found
+        final id = raw['_id']?.toString().trim() ?? 
+                   raw['id']?.toString().trim() ?? 
+                   raw['name']?.toString().trim() ?? 
+                   raw['title']?.toString().trim();
+        return id ?? '';
+      }
+      return raw.toString().trim();
+    }
+
+    // Now get deity value from possible keys
+    String deity = '';
+    for (final k in ['deity', 'deityName', 'deity_name']) {
+      final v = json[k];
+      final d = getDeityValue(v);
+      if (d.isNotEmpty) {
+        deity = d;
+        break;
+      }
+    }
+
     return PoojaModel(
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'pooja_name', 'poojaName', 'name']),
-      deity: _str(json, ['deity', 'deityName', 'deity_name']),
+      deity: deity,
       category: _str(json, ['category']),
       difficulty: _str(json, [
         'difficulty',
@@ -372,71 +416,73 @@ class PoojaModel {
   Map<String, dynamic> toJson() {
     final apiDate = _toApiDate(date) ?? _toApiDate(poojaDate);
     return {
-    'title': title,
-    'deity': deity,
-    'category': category,
-    'difficulty': difficulty,
-    'duration': duration,
-    'description': description,
-    'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
-    if (apiDate != null) 'date': apiDate,
-    if (imageUrl != null) 'imageUrl': imageUrl,
-    if (audioUrl != null) 'audioUrl': audioUrl,
-    if (videoUrl != null) 'videoUrl': videoUrl,
-    'purpose': {'why': purposeWhy ?? '', 'benefits': purposeBenefits},
-    'deitySummary': {
-      'about': deitySummaryAbout ?? '',
-      'blessings': deitySummaryBlessings,
-    },
-    'preparation': {
-      'personal': preparationPersonal,
-      'space': preparationSpace,
-      'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
-    },
-    'steps': steps.asMap().entries.map((e) {
-      final step = PoojaStepCodec.decode(e.value);
-      final title = step.title.trim();
-      final description = step.description.trim();
-      return {
-        'stepNumber': e.key + 1,
-        'title': title.isEmpty ? 'Step ${e.key + 1}' : title,
-        'description': description.isEmpty ? title : description,
-        'images': step.imageUrls,
-        'subSteps': <String>[],
-      };
-    }).toList(),
-    'mantra': {
-      'primary': mantraPrimary ?? '',
-      'repetitions': mantraRepetitions ?? '',
-      'additional': mantraAdditional,
-      'meaning': mantraMeaning ?? '',
-    },
-    'spiritualMeaning': {
-      'offeringsMeaning': spiritualOfferingsMeaning,
-      'actionsMeaning': spiritualActionsMeaning,
-      'otherSymbolism': spiritualOtherSymbolism,
-    },
-    'guidance': {'mindset': guidanceMindset, 'avoid': guidanceAvoid},
-    'completion': {
-      'closure': completionClosure,
-      'integration': completionIntegration,
-      'benefits': completionBenefits,
+      'title': title,
+      'deity': deity,
+      'category': category,
+      'difficulty': difficulty,
+      'duration': duration,
+      'description': description,
+      'status': _toApiStatus(
+        status,
+      ), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
+      if (apiDate != null) 'date': apiDate,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (audioUrl != null) 'audioUrl': audioUrl,
+      if (videoUrl != null) 'videoUrl': videoUrl,
+      'purpose': {'why': purposeWhy ?? '', 'benefits': purposeBenefits},
+      'deitySummary': {
+        'about': deitySummaryAbout ?? '',
+        'blessings': deitySummaryBlessings,
+      },
+      'preparation': {
+        'personal': preparationPersonal,
+        'space': preparationSpace,
+        'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
+      },
+      'steps': steps.asMap().entries.map((e) {
+        final step = PoojaStepCodec.decode(e.value);
+        final title = step.title.trim();
+        final description = step.description.trim();
+        return {
+          'stepNumber': e.key + 1,
+          'title': title.isEmpty ? 'Step ${e.key + 1}' : title,
+          'description': description.isEmpty ? title : description,
+          'images': step.imageUrls,
+          'subSteps': <String>[],
+        };
+      }).toList(),
+      'mantra': {
+        'primary': mantraPrimary ?? '',
+        'repetitions': mantraRepetitions ?? '',
+        'additional': mantraAdditional,
+        'meaning': mantraMeaning ?? '',
+      },
+      'spiritualMeaning': {
+        'offeringsMeaning': spiritualOfferingsMeaning,
+        'actionsMeaning': spiritualActionsMeaning,
+        'otherSymbolism': spiritualOtherSymbolism,
+      },
+      'guidance': {'mindset': guidanceMindset, 'avoid': guidanceAvoid},
+      'completion': {
+        'closure': completionClosure,
+        'integration': completionIntegration,
+        'benefits': completionBenefits,
+        'blessings': blessings,
+      },
       'blessings': blessings,
-    },
-    'blessings': blessings,
-    'media': {
-      'images': imageUrl != null && imageUrl!.trim().isNotEmpty
-          ? [imageUrl]
-          : [],
-      'audio': audioUrl != null && audioUrl!.trim().isNotEmpty
-          ? [audioUrl]
-          : [],
-      'videos': videoUrl != null && videoUrl!.trim().isNotEmpty
-          ? [videoUrl]
-          : [],
-    },
-    'festivalIds': festivalIds,
-  };
+      'media': {
+        'images': imageUrl != null && imageUrl!.trim().isNotEmpty
+            ? [imageUrl]
+            : [],
+        'audio': audioUrl != null && audioUrl!.trim().isNotEmpty
+            ? [audioUrl]
+            : [],
+        'videos': videoUrl != null && videoUrl!.trim().isNotEmpty
+            ? [videoUrl]
+            : [],
+      },
+      'festivalIds': festivalIds,
+    };
   }
 
   /// Sentinel: omit `imageUrl` / `audioUrl` / `videoUrl` in [copyWith] to keep previous values.

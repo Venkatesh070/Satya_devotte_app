@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class DeityModel {
   const DeityModel({
     required this.id,
@@ -75,6 +77,7 @@ class DeityModel {
   final String devotionalNotes;
   final List<Map<String, String>> stories;
   final List<String> rituals;
+
   /// Optional `id -> display title` map captured when the API returns
   /// populated ritual objects (e.g. `{_id, title, name}`). Used by the CMS
   /// edit form to render names instead of raw IDs while the pooja list loads.
@@ -122,8 +125,8 @@ class DeityModel {
         (json['connecting'] as Map?)?['ideal_time'],
       ),
       chantingMantra: ((json['chanting'] as Map?)?['mantra'] ?? '').toString(),
-      chantingRepetitions:
-          ((json['chanting'] as Map?)?['repetitions'] ?? '').toString(),
+      chantingRepetitions: ((json['chanting'] as Map?)?['repetitions'] ?? '')
+          .toString(),
       chantingBenefits: _listOfStrings((json['chanting'] as Map?)?['benefits']),
       chantingPreferredDays: _listOfStrings(
         (json['chanting'] as Map?)?['preferred_days'],
@@ -133,7 +136,9 @@ class DeityModel {
       ),
       homePlacement: ((json['home_practice'] as Map?)?['placement'] ?? '')
           .toString(),
-      homeOfferings: _listOfStrings((json['home_practice'] as Map?)?['offerings']),
+      homeOfferings: _listOfStrings(
+        (json['home_practice'] as Map?)?['offerings'],
+      ),
       homeDo: _listOfStrings(
         ((json['home_practice'] as Map?)?['do_and_dont'] as Map?)?['do'],
       ),
@@ -148,7 +153,7 @@ class DeityModel {
       stories: _listOfKeyValue(json['stories']),
       // Backend key was renamed `rituals` → `pujas`; accept both so older
       // payloads still parse during the transition.
-      rituals: _listOfIds(json['pujas'] ),
+      rituals: _listOfIds(json['pujas']),
       ritualTitles: _idToTitleMap(json['pujas']),
       lineageForms: _listOfKeyValue(
         (json['lineage'] as Map?)?['forms'] ?? json['lineage_forms'],
@@ -165,11 +170,9 @@ class DeityModel {
   static String _stringFromAny(dynamic raw) {
     if (raw == null) return '';
     if (raw is String) return raw.trim();
-    if (raw is List) {
-      return raw
-          .map((e) => e?.toString().trim() ?? '')
-          .where((e) => e.isNotEmpty)
-          .join(', ');
+    if (raw is List || raw is Map) {
+      // If it's a List or Map (rich text delta), encode to JSON string
+      return jsonEncode(raw);
     }
     return raw.toString();
   }
@@ -211,8 +214,9 @@ class DeityModel {
       if (e is! Map) continue;
       final id = (e['_id'] ?? e['id'])?.toString().trim() ?? '';
       if (id.isEmpty) continue;
-      final title =
-          (e['title'] ?? e['name'] ?? e['poojaName'] ?? '').toString().trim();
+      final title = (e['title'] ?? e['name'] ?? e['poojaName'] ?? '')
+          .toString()
+          .trim();
       if (title.isEmpty) continue;
       out[id] = title;
     }
@@ -225,7 +229,13 @@ class DeityModel {
         .whereType<Map>()
         .map((e) {
           final title = e['title']?.toString().trim() ?? '';
-          final description = e['description']?.toString().trim() ?? '';
+          final descRaw = e['description'];
+          String description;
+          if (descRaw is List || descRaw is Map) {
+            description = jsonEncode(descRaw);
+          } else {
+            description = descRaw?.toString().trim() ?? '';
+          }
           if (title.isEmpty && description.isEmpty) return <String, String>{};
           return {'title': title, 'description': description};
         })

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -12,6 +14,7 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/pooj
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class RitualListPage extends StatefulWidget {
   const RitualListPage({super.key});
@@ -657,11 +660,33 @@ class DeityListItem {
       return direct.isNotEmpty ? direct : null;
     }
 
+    String _extractString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v.trim();
+      if (v is List) {
+        return v
+            .map((e) => _extractString(e))
+            .where((s) => s.isNotEmpty)
+            .join(', ');
+      }
+      if (v is Map) {
+        // Try to get name or title from map
+        final name = v['name'] ?? v['title'] ?? '';
+        return _extractString(name);
+      }
+      return v.toString().trim();
+    }
+
+    String getDescription() {
+      final raw = e['description'] ?? e['about'];
+      return _extractString(raw);
+    }
+
     return DeityListItem(
       id: (e['_id'] ?? e['id'] ?? '').toString(),
       name: (e['name'] ?? e['title'] ?? 'Untitled Deity').toString(),
       title: (e['title'] ?? e['subtitle'] ?? '').toString(),
-      description: (e['description'] ?? e['about'] ?? '').toString(),
+      description: getDescription(),
       imageUrl: resolveImageUrl(),
     );
   }
@@ -793,10 +818,10 @@ class _DeityCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 5),
                   if (item.description.isNotEmpty)
-                    Text(
+                    RichTextDisplay(
                       item.description,
-                      // maxLines: 2,
-                      // overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
                         fontSize: 11,
                         color: const Color(0xFF78716C),

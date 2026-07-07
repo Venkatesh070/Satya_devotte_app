@@ -9,11 +9,15 @@ class RichTextDisplay extends StatelessWidget {
     super.key,
     this.style,
     this.textAlign,
+    this.maxLines,
+    this.overflow,
   });
 
   final String? value;
   final TextStyle? style;
   final TextAlign? textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   @override
   Widget build(BuildContext context) {
@@ -24,12 +28,16 @@ class RichTextDisplay extends StatelessWidget {
         value: v,
         style: style,
         textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: overflow,
       );
     }
     return Text(
       v,
       style: style,
       textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }
@@ -39,11 +47,15 @@ class _RichQuillDisplay extends StatefulWidget {
     required this.value,
     this.style,
     this.textAlign,
+    this.maxLines,
+    this.overflow,
   });
 
   final String value;
   final TextStyle? style;
   final TextAlign? textAlign;
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   @override
   State<_RichQuillDisplay> createState() => _RichQuillDisplayState();
@@ -78,10 +90,26 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       enableInteractiveSelection: false,
       showCursor: false,
     );
-    return QuillEditor.basic(
+    Widget child = QuillEditor.basic(
       controller: _controller,
       config: config,
       scrollController: ScrollController(),
     );
+
+    // If maxLines is provided, constrain the height
+    if (widget.maxLines != null) {
+      // Approximate max height based on line height
+      final lineHeight = widget.style?.height ?? 1.2;
+      final fontSize = widget.style?.fontSize ?? 14.0;
+      final maxHeight = fontSize * lineHeight * widget.maxLines!;
+      child = ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: widget.overflow == TextOverflow.ellipsis
+            ? ClipRect(child: child)
+            : child,
+      );
+    }
+
+    return child;
   }
 }

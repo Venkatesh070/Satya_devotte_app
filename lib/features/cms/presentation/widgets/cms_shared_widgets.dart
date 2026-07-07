@@ -105,10 +105,7 @@ class _CmsFormFieldState extends State<CmsFormField> {
       scrollController: _scrollController,
       onChanged: widget.onChanged,
       inputFormatters: widget.inputFormatters,
-      style: const TextStyle(
-        fontSize: 13,
-        color: CmsThemeColors.inputText,
-      ),
+      style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
       decoration: InputDecoration(
         hintText: widget.hint,
         hintStyle: const TextStyle(
@@ -234,10 +231,7 @@ class _CmsDropdownFieldState extends State<CmsDropdownField> {
             size: 20,
           ),
           dropdownColor: CmsColors.bg,
-          style: const TextStyle(
-            fontSize: 13,
-            color: CmsThemeColors.inputText,
-          ),
+          style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
           items: widget.items
               .map(
                 (e) => DropdownMenuItem(
@@ -517,10 +511,7 @@ class CmsSearchBar extends StatelessWidget {
       ),
       child: TextField(
         onChanged: onChanged,
-        style: const TextStyle(
-          fontSize: 13,
-          color: CmsThemeColors.inputText,
-        ),
+        style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(
@@ -697,19 +688,13 @@ class CmsPoojaKitSectionHeader extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            color: CmsColors.textSecond,
-          ),
+          style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
         ),
       ],
     );
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isWeb ? 24 : 16,
-        vertical: 14,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: 14),
       color: CmsColors.white,
       child: trailing == null
           ? headerCol

@@ -709,29 +709,36 @@ class _PoojaCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Text(
-                      pooja.deity,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: CmsColors.textSecond,
-                      ),
-                    ),
-                    if (pooja.duration.isNotEmpty) ...[
-                      const Text(
-                        ' • ',
-                        style: TextStyle(color: CmsColors.textSecond),
-                      ),
-                      Text(
-                        pooja.duration,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: CmsColors.textSecond,
+                ClipRect(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          pooja.deity,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: CmsColors.textSecond,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
+                      if (pooja.duration.isNotEmpty) ...[
+                        const Text(
+                          ' • ',
+                          style: TextStyle(color: CmsColors.textSecond),
+                        ),
+                        Text(
+                          pooja.duration,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 if (pooja.date != null && pooja.date!.isNotEmpty) ...[
                   const SizedBox(height: 3),

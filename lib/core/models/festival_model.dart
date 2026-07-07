@@ -1,4 +1,5 @@
 // lib/features/cms/models/festival_model.dart
+import 'dart:convert';
 
 class FestivalModel {
   const FestivalModel({
@@ -96,11 +97,15 @@ class FestivalModel {
   ]) {
     for (final k in keys) {
       final v = json[k];
-      if (v != null &&
-          v is! List &&
-          v is! Map &&
-          v.toString().trim().isNotEmpty)
-        return v.toString().trim();
+      if (v != null) {
+        String str;
+        if (v is List || v is Map) {
+          str = jsonEncode(v);
+        } else {
+          str = v.toString().trim();
+        }
+        if (str.isNotEmpty) return str;
+      }
     }
     return fb;
   }

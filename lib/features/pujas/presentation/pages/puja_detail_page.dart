@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1190,8 +1192,40 @@ class _AboutDeityTab extends StatelessWidget {
   const _AboutDeityTab({super.key, required this.pooja});
   final PoojaView pooja;
 
-  String _str(dynamic v) => (v ?? '').toString().trim();
-  List<String> _list(dynamic v) => _RitualsTab._stringList(v);
+  String _extractString(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v.trim();
+    if (v is List) {
+      return v
+          .map((e) => _extractString(e))
+          .where((s) => s.isNotEmpty)
+          .join(', ');
+    }
+    if (v is Map) {
+      // Try to get name or title from map
+      final name = v['name'] ?? v['title'] ?? '';
+      return _extractString(name);
+    }
+    return v.toString().trim();
+  }
+
+  List<String> _list(dynamic v) {
+    if (v == null) return const [];
+    if (v is List) {
+      return v
+          .map((e) => _extractString(e))
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    if (v is String && v.trim().isNotEmpty) {
+      return v
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1209,26 +1243,26 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['derivation'],
     );
     final divineRole =
-        _str(
+        _extractString(
           deityDoc?['divine_role'] ??
               deityDoc?['divineRole'] ??
               deityDoc?['description'] ??
               summary['about'],
         ).isEmpty
         ? _list(deityDoc?['roles']).join(', ')
-        : _str(
+        : _extractString(
             deityDoc?['divine_role'] ??
                 deityDoc?['divineRole'] ??
                 deityDoc?['description'] ??
                 summary['about'],
           );
 
-    final family = _str(
+    final family = _extractString(
       deityDoc?['family'] ??
           deityDoc?['family_associations'] ??
           deityDoc?['lineage'],
     );
-    final posture = _str(
+    final posture = _extractString(
       deityDoc?['posture'] ?? deityDoc?['seating'] ?? deityDoc?['iconography'],
     );
     final physicalItems = _meaningList(
@@ -1237,18 +1271,18 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['appearance'],
     );
     final physical =
-        _str(
+        _extractString(
           deityDoc?['physical_description'] ??
               deityDoc?['physicalDescription'] ??
               deityDoc?['appearance'],
         ).isEmpty
         ? _list(deityDoc?['appearance']).join(', ')
-        : _str(
+        : _extractString(
             deityDoc?['physical_description'] ??
                 deityDoc?['physicalDescription'] ??
                 deityDoc?['appearance'],
           );
-    final whyPray = _str(
+    final whyPray = _extractString(
       deityDoc?['why_pray'] ?? deityDoc?['whyPray'] ?? purpose['why'],
     );
     final keyQualities = _list(
@@ -1260,8 +1294,8 @@ class _AboutDeityTab extends StatelessWidget {
     final weapons = _meaningList(
       deityDoc?['weapons'] ?? deityDoc?['adornments'] ?? deityDoc?['symbols'],
     );
-    final chakra = _str(deityDoc?['chakra'] ?? deityDoc?['chakras']);
-    final astrology = _str(
+    final chakra = _extractString(deityDoc?['chakra'] ?? deityDoc?['chakras']);
+    final astrology = _extractString(
       deityDoc?['vedic_astrology'] ??
           deityDoc?['astrology'] ??
           deityDoc?['numerology'],
@@ -1283,15 +1317,15 @@ class _AboutDeityTab extends StatelessWidget {
     // Check if sections have content
     final bool hasConnectingContent =
         connecting != null &&
-        (_str(connecting['how_to_pray']).isNotEmpty ||
+        (_extractString(connecting['how_to_pray']).isNotEmpty ||
             _list(connecting['what_pleases']).isNotEmpty ||
             _list(connecting['displeases']).isNotEmpty ||
             _list(connecting['ideal_time']).isNotEmpty);
 
     final bool hasChantingContent =
         chanting != null &&
-        (_str(chanting['mantra']).isNotEmpty ||
-            _str(chanting['repetitions']).isNotEmpty ||
+        (_extractString(chanting['mantra']).isNotEmpty ||
+            _extractString(chanting['repetitions']).isNotEmpty ||
             _list(chanting['benefits']).isNotEmpty ||
             _list(chanting['preferred_days']).isNotEmpty ||
             _list(chanting['associated_colors']).isNotEmpty);
@@ -1303,13 +1337,13 @@ class _AboutDeityTab extends StatelessWidget {
                     _list(
                       (homePractice['do_and_dont'] as Map)['dont'],
                     ).isNotEmpty)) ||
-            _str(homePractice['placement']).isNotEmpty ||
+            _extractString(homePractice['placement']).isNotEmpty ||
             _list(homePractice['offerings']).isNotEmpty);
 
     final bool hasDevotionalExpContent =
         devotionalExp != null &&
-        (_str(devotionalExp['sign_of_connection']).isNotEmpty ||
-            _str(devotionalExp['notes']).isNotEmpty);
+        (_extractString(devotionalExp['sign_of_connection']).isNotEmpty ||
+            _extractString(devotionalExp['notes']).isNotEmpty);
 
     // Debug prints
     debugPrint('AboutDeityTab: deityDoc keys: ${deityDoc?.keys.toList()}');
@@ -1413,10 +1447,10 @@ class _AboutDeityTab extends StatelessWidget {
           const SizedBox(height: 14),
           const SectionHeader(title: 'Connecting with the Divine'),
           const SizedBox(height: 10),
-          if (_str(connecting!['how_to_pray']).isNotEmpty)
+          if (_extractString(connecting!['how_to_pray']).isNotEmpty)
             LabeledField(
               label: 'How to Pray / Connect',
-              value: _str(connecting['how_to_pray']),
+              value: _extractString(connecting['how_to_pray']),
               multiline: true,
             ),
           if (_list(connecting['what_pleases']).isNotEmpty)
@@ -1443,16 +1477,16 @@ class _AboutDeityTab extends StatelessWidget {
           const SizedBox(height: 14),
           const SectionHeader(title: 'Mantras & Chanting'),
           const SizedBox(height: 10),
-          if (_str(chanting!['mantra']).isNotEmpty)
+          if (_extractString(chanting!['mantra']).isNotEmpty)
             LabeledField(
               label: 'Main Mantra',
-              value: _str(chanting['mantra']),
+              value: _extractString(chanting['mantra']),
               multiline: true,
             ),
-          if (_str(chanting['repetitions']).isNotEmpty)
+          if (_extractString(chanting['repetitions']).isNotEmpty)
             LabeledField(
               label: 'Repetitions',
-              value: _str(chanting['repetitions']),
+              value: _extractString(chanting['repetitions']),
             ),
           if (_list(chanting['benefits']).isNotEmpty)
             LabeledChipsField(
@@ -1491,10 +1525,10 @@ class _AboutDeityTab extends StatelessWidget {
                 positive: false,
               ),
           ],
-          if (_str(homePractice['placement']).isNotEmpty)
+          if (_extractString(homePractice['placement']).isNotEmpty)
             LabeledField(
               label: 'Placement / Altar Setup',
-              value: _str(homePractice['placement']),
+              value: _extractString(homePractice['placement']),
               multiline: true,
             ),
           if (_list(homePractice['offerings']).isNotEmpty)
@@ -1510,16 +1544,16 @@ class _AboutDeityTab extends StatelessWidget {
           const SizedBox(height: 14),
           const SectionHeader(title: 'Devotional Experience'),
           const SizedBox(height: 10),
-          if (_str(devotionalExp!['sign_of_connection']).isNotEmpty)
+          if (_extractString(devotionalExp!['sign_of_connection']).isNotEmpty)
             LabeledField(
               label: 'Signs of Connection',
-              value: _str(devotionalExp['sign_of_connection']),
+              value: _extractString(devotionalExp['sign_of_connection']),
               multiline: true,
             ),
-          if (_str(devotionalExp['notes']).isNotEmpty)
+          if (_extractString(devotionalExp['notes']).isNotEmpty)
             LabeledField(
               label: 'Special Notes',
-              value: _str(devotionalExp['notes']),
+              value: _extractString(devotionalExp['notes']),
               multiline: true,
             ),
         ],
@@ -1578,13 +1612,14 @@ class _AboutDeityTab extends StatelessWidget {
     );
   }
 
-  static List<MeaningItem> _meaningList(dynamic raw) {
+  List<MeaningItem> _meaningList(dynamic raw) {
     if (raw is! List) return const [];
     return raw.whereType<Map>().map((m) {
       return MeaningItem(
-        title: (m['title'] ?? m['name'] ?? '').toString(),
-        description: (m['description'] ?? m['meaning'] ?? m['symbolism'] ?? '')
-            .toString(),
+        title: _extractString(m['title'] ?? m['name'] ?? ''),
+        description: _extractString(
+          m['description'] ?? m['meaning'] ?? m['symbolism'] ?? '',
+        ),
       );
     }).toList();
   }
@@ -2865,23 +2900,25 @@ class _EmptyView extends StatelessWidget {
   final String message;
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 42, color: const Color(0xFF8A6B4A)),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.inter(
-                fontSize: 13.5,
-                color: const Color(0xFF7A5A3D),
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 42, color: const Color(0xFF8A6B4A)),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.inter(
+                  fontSize: 13.5,
+                  color: const Color(0xFF7A5A3D),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
