@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  View-model normalising the API payload.
@@ -51,8 +52,23 @@ class PoojaView {
 
   Map<String, dynamic>? get deityDoc {
     final d = _raw['deity'];
+    debugPrint('[PoojaView] deityDoc: _raw["deity"] type=${d.runtimeType} value=${d.toString().length > 200 ? "${d.toString().substring(0, 200)}..." : d}');
     if (d is Map<String, dynamic>) return d;
     if (d is Map) return d.map((k, v) => MapEntry(k.toString(), v));
+    if (d is String && d.trim().isNotEmpty) {
+      final decoded = _decodeMap(d);
+      debugPrint('[PoojaView] deityDoc: decoded from JSON string -> $decoded');
+      if (decoded.isNotEmpty) return decoded;
+    }
+    // deity field might be an empty list from some API responses
+    if (d is List && d.isNotEmpty) {
+      final first = d.first;
+      if (first is Map) return Map<String, dynamic>.from(first);
+      if (first is String && first.trim().isNotEmpty) {
+        final decoded = _decodeMap(first);
+        if (decoded.isNotEmpty) return decoded;
+      }
+    }
     return null;
   }
 
@@ -73,9 +89,12 @@ class PoojaView {
   String get deityName {
     final d = deityDoc;
     if (d != null) {
-      return (d['name'] ?? d['title'] ?? '').toString();
+      final name = (d['name'] ?? d['title'] ?? '').toString();
+      debugPrint('[PoojaView] deityName: from deityDoc -> "$name"');
+      return name;
     }
     final raw = (_raw['deity'] ?? '').toString();
+    debugPrint('[PoojaView] deityName: deityDoc null, raw deity field -> "$raw"');
     if (raw.length == 24 && RegExp(r'^[0-9a-fA-F]+$').hasMatch(raw)) {
       return '';
     }

@@ -907,7 +907,6 @@ class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _prepItemsCtrl;
   late final TextEditingController _mantraPrimaryCtrl;
   late final TextEditingController _mantraRepetitionsCtrl;
-  String? _descRich;
   String? _purposeWhyRich;
   String? _deitySummaryAboutRich;
   String? _mantraPrimaryRich;
@@ -998,7 +997,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     _selectedDeityId = p?.deity;
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
-    _descRich = p?.description;
     _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
     _purposeWhyRich = p?.purposeWhy;
     _purposeBenefitsCtrl = TextEditingController();
@@ -1107,7 +1105,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (_selectedDeityId == null || _selectedDeityId!.isEmpty) {
       return 'Deity is required';
     }
-    if ((_descRich ?? '').isEmpty) return 'Description is required';
+    if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     if (_selectedDate == null) return 'Schedule Date is required';
     return null;
@@ -1488,7 +1486,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           category: _category,
           difficulty: _difficulty,
           duration: _durationCtrl.text.trim(),
-          description: _descRich ?? '',
+          description: _descCtrl.text.trim(),
           status: status,
           imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
           steps: _serializedSteps(),
@@ -1526,7 +1524,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         category: _category,
         difficulty: _difficulty,
         duration: _durationCtrl.text.trim(),
-        description: _descRich ?? '',
+        description: _descCtrl.text.trim(),
         status: status,
         imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
         steps: _serializedSteps(),
@@ -1790,10 +1788,11 @@ class _PoojaFormState extends State<_PoojaForm> {
             onChanged: (v) => setState(() => _category = v ?? _cats.first),
           ),
           const SizedBox(height: 12),
-          CmsRichTextField(
+          CmsFormField(
             label: 'Description *',
-            initialValue: _descRich,
-            onChanged: (v) => setState(() => _descRich = v),
+            hint: 'Enter description...',
+            controller: _descCtrl,
+            maxLines: 4,
           ),
           const SizedBox(height: 12),
           Column(

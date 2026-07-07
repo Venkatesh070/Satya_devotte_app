@@ -554,6 +554,23 @@ class _HomePageState extends State<HomePage> {
 
     if (list.isEmpty) return const [];
 
+    String _extractString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v.trim();
+      if (v is List) {
+        return v
+            .map((e) => _extractString(e))
+            .where((s) => s.isNotEmpty)
+            .join(', ');
+      }
+      if (v is Map) {
+        // Try to get name or title from map
+        final name = v['name'] ?? v['title'] ?? '';
+        return _extractString(name);
+      }
+      return v.toString().trim();
+    }
+
     final Set<String> seenIds = {};
     final List<HomeCircleItem> result = [];
 
@@ -561,7 +578,7 @@ class _HomePageState extends State<HomePage> {
       if (raw is! Map) continue;
       final item = raw.map((k, v) => MapEntry(k.toString(), v));
 
-      final title = (item['title'] ?? item['name'])?.toString().trim();
+      final title = _extractString(item['title'] ?? item['name']);
 
       // Clean URL: remove spaces and backticks
       String? clean(dynamic v) {
@@ -581,24 +598,26 @@ class _HomePageState extends State<HomePage> {
       final image =
           clean(item['imageUrl']) ?? clean(item['image']) ?? clean(mediaImage);
 
-      final id = (item['_id'] ?? item['id'])?.toString().trim();
-      final description = (item['description'] ?? item['purpose'])
-          ?.toString()
-          .trim();
-      final date = (item['date'] ?? item['startDate'] ?? item['festivalDate'])
-          ?.toString()
-          .trim();
+      final id = _extractString(item['_id'] ?? item['id']);
+      final description = _extractString(
+        item['description'] ?? item['purpose'] ?? item['about'],
+      );
+      final date = _extractString(
+        item['date'] ?? item['startDate'] ?? item['festivalDate'],
+      );
       final resolvedImagePath = (image != null && image.isNotEmpty)
           ? image
           : fallbackImage;
 
       final placeholderText =
-          useDatePlaceholderWhenImageMissing && resolvedImagePath.isEmpty
+          useDatePlaceholderWhenImageMissing &&
+              resolvedImagePath.isEmpty &&
+              date.isNotEmpty
           ? DateFormatters.formatFestivalDate(date)
           : null;
 
       // Skip if we already added an item with this id
-      if (id != null && id.isNotEmpty) {
+      if (id.isNotEmpty) {
         if (seenIds.contains(id)) {
           continue;
         }
@@ -607,14 +626,12 @@ class _HomePageState extends State<HomePage> {
 
       result.add(
         HomeCircleItem(
-          title: (title == null || title.isEmpty) ? 'Untitled' : title,
+          title: title.isEmpty ? 'Untitled' : title,
           imagePath: resolvedImagePath,
           placeholderText: placeholderText,
-          id: id == null || id.isEmpty ? null : id,
-          description: description == null || description.isEmpty
-              ? null
-              : description,
-          date: date == null || date.isEmpty ? null : date,
+          id: id.isEmpty ? null : id,
+          description: description.isEmpty ? null : description,
+          date: date.isEmpty ? null : date,
           raw: Map<String, dynamic>.from(item),
         ),
       );
@@ -2023,11 +2040,28 @@ class _GlobalSearchResult {
     final normalized = json.map(
       (key, value) => MapEntry(key.toString(), value),
     );
+
+    String _extractString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v.trim();
+      if (v is List) {
+        return v
+            .map((e) => _extractString(e))
+            .where((s) => s.isNotEmpty)
+            .join(', ');
+      }
+      if (v is Map) {
+        // Try to get name or title from map
+        final name = v['name'] ?? v['title'] ?? '';
+        return _extractString(name);
+      }
+      return v.toString().trim();
+    }
+
     String valueOf(List<String> keys) {
       for (final key in keys) {
         final value = normalized[key];
-        if (value == null || value is Map || value is List) continue;
-        final text = value.toString().trim();
+        final text = _extractString(value);
         if (text.isNotEmpty) return text;
       }
       return '';
@@ -2037,7 +2071,7 @@ class _GlobalSearchResult {
       id: valueOf(['id', '_id']),
       type: valueOf(['type']).toLowerCase(),
       title: valueOf(['title', 'name']),
-      description: valueOf(['description']),
+      description: valueOf(['description', 'about']),
       imageUrl: valueOf(['imageUrl', 'image']).isEmpty
           ? null
           : valueOf(['imageUrl', 'image']),

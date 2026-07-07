@@ -522,7 +522,7 @@ class _DeityForm extends StatefulWidget {
 class _DeityFormState extends State<_DeityForm> {
   bool _isSaving = false;
   late final TextEditingController _nameCtrl;
-  String? _descRich;
+  late final TextEditingController _descCtrl;
   late final TextEditingController _alternateNamesCtrl;
   late final TextEditingController _rolesCtrl;
   late final TextEditingController _lineageParentsCtrl;
@@ -597,7 +597,7 @@ class _DeityFormState extends State<_DeityForm> {
         ? null
         : initial?.deityColor;
     _nameCtrl = TextEditingController(text: initial?.name ?? '');
-    _descRich = initial?.description;
+    _descCtrl = TextEditingController(text: initial?.description ?? '');
     _alternateNamesCtrl = TextEditingController();
     _rolesCtrl = TextEditingController();
     _lineageParentsCtrl = TextEditingController(
@@ -675,6 +675,7 @@ class _DeityFormState extends State<_DeityForm> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _descCtrl.dispose();
     _alternateNamesCtrl.dispose();
     _rolesCtrl.dispose();
     _lineageParentsCtrl.dispose();
@@ -796,10 +797,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _nameCtrl,
         ),
         const SizedBox(height: 12),
-        CmsRichTextField(
+        CmsFormField(
           label: 'Description',
-          initialValue: _descRich,
-          onChanged: (v) => setState(() => _descRich = v),
+          hint: 'Enter description...',
+          controller: _descCtrl,
+          maxLines: 4,
         ),
         const SizedBox(height: 12),
         _DeityColorField(
@@ -1293,7 +1295,7 @@ class _DeityFormState extends State<_DeityForm> {
           _alternateNamesCtrl,
           _alternateNames,
         ),
-        'description': _descRich ?? '',
+        'description': _descCtrl.text.trim(),
         'roles': _valuesWithPending(_rolesCtrl, _roles),
         'lineage': {
           'parents': _csv(_lineageParentsCtrl.text),

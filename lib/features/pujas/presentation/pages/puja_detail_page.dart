@@ -82,6 +82,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     _historyController.fetchHistory();
 
     final args = Get.arguments;
+    debugPrint('[Detail] initState args type=${args.runtimeType}');
+    if (args is Map) {
+      debugPrint('[Detail] initState args keys=${args.keys} type=${args['type']}');
+      if (args.containsKey('deity')) debugPrint('[Detail] args["deity"] type=${args['deity'].runtimeType} value=${args['deity'].toString().length > 100 ? "${args['deity'].toString().substring(0, 100)}..." : args['deity']}');
+    }
     if (args is Map && args['type'] == 'deity') {
       _selectedDeity = Map<String, dynamic>.from(args);
       _isLoading = true;
@@ -95,8 +100,10 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     } else if (args is Map) {
       _pooja = Map<String, dynamic>.from(args);
       final id = args['_id']?.toString() ?? args['id']?.toString();
+      debugPrint('[Detail] initState path=home/search pooja id=$id');
       if (id != null && id.isNotEmpty) _loadDetail(id);
     } else if (args is String && args.isNotEmpty) {
+      debugPrint('[Detail] initState path=string id=$args');
       _loadDetail(args);
     } else {
       _error = 'No pooja selected.';
@@ -276,6 +283,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       _pooja = _deityPoojas.isNotEmpty
           ? _deityPoojas.first
           : _deityShellPooja(deity ?? <String, dynamic>{'_id': deityId});
+      debugPrint('[Detail] _loadDeityDetailAndPoojas done: _pooja["deity"] type=${_pooja?['deity'].runtimeType} value=${(_pooja?['deity']?.toString() ?? '').length > 100 ? "${_pooja?['deity'].toString().substring(0, 100)}..." : _pooja?['deity']}');
       _isLoading = false;
     });
   }
@@ -384,11 +392,14 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
       if (!mounted) return;
 
+      debugPrint('[Detail] _loadDetail: raw API pooja["deity"] type=${pooja?['deity'].runtimeType} value=${(pooja?['deity']?.toString() ?? '').length > 100 ? "${pooja?['deity'].toString().substring(0, 100)}..." : pooja?['deity']}');
+
       // Update state with the loaded pooja!
       setState(() => _pooja = pooja ?? _pooja);
 
       // CRITICAL: Always call _hydrateDeityIfNeeded after loading pooja, even from cache!
       await _hydrateDeityIfNeeded();
+      debugPrint('[Detail] _loadDetail: after hydration _pooja["deity"] type=${_pooja?['deity'].runtimeType}');
     } on DioException catch (e) {
       // On network error, try to load from cache!
       final cached = offlineService.getCachedData(cacheKey);
@@ -489,9 +500,26 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   }
 
   static Map<String, dynamic> _deityShellPooja(Map<String, dynamic> deity) {
-    final name = (deity['name'] ?? deity['title'] ?? '').toString();
-    final description = (deity['description'] ?? deity['about'] ?? '')
-        .toString();
+    String _extractString(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v.trim();
+      if (v is List) {
+        return v
+            .map((e) => _extractString(e))
+            .where((s) => s.isNotEmpty)
+            .join(', ');
+      }
+      if (v is Map) {
+        final name = v['name'] ?? v['title'] ?? '';
+        return _extractString(name);
+      }
+      return v.toString().trim();
+    }
+
+    final name = _extractString(deity['name'] ?? deity['title'] ?? '');
+    final description = _extractString(
+      deity['description'] ?? deity['about'] ?? '',
+    );
     return {
       'title': name,
       'description': description,
@@ -562,14 +590,24 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final p = _pooja;
     if (p == null) return;
     final d = p['deity'];
+    debugPrint('[Detail] _hydrateDeityIfNeeded: p["deity"] type=${d.runtimeType} value=${d.toString().length > 100 ? "${d.toString().substring(0, 100)}..." : d}');
 
     // Get deity ID from populated field or pooja reference.
+    // Also try from a list (some API endpoints return deity as [])
+    dynamic deityIdFromList;
+    if (d is List && d.isNotEmpty) {
+      final first = d.first;
+      if (first is Map) deityIdFromList = first['_id'] ?? first['id'];
+      if (first is String) deityIdFromList = first;
+    }
     final rawId = d is String
         ? d
         : (d is Map ? (d['_id'] ?? d['id']) : null) ??
+              deityIdFromList ??
               p['deityId'] ??
               p['deity_id'];
     final id = rawId?.toString().trim() ?? '';
+    debugPrint('[Detail] _hydrateDeityIfNeeded: extracted rawId=$rawId id="$id" p.deityId=${p['deityId']} p.deity_id=${p['deity_id']} p.keys=${p.keys.take(10).toList()}');
     if (id.isEmpty) return;
 
     // Verify it's a valid ObjectID!
@@ -697,6 +735,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
     final activePooja = _pooja!;
     final p = PoojaView(activePooja);
+    debugPrint('[Detail] build: p.deityDoc=${p.deityDoc} p.deityName="${p.deityName}"');
     final hasCalendarPujas = _calendarPoojasFor(p).isNotEmpty;
     final showGetStartedButton =
         _tabController.index == 0 &&

@@ -7,7 +7,6 @@ import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
-import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 
 Widget _cmsClickable({
@@ -428,9 +427,9 @@ class _RitualFormState extends State<_RitualForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
-  String? _descRich;
+  late final TextEditingController _descCtrl;
   late final TextEditingController _categoryCtrl;
-  String? _purposeRich;
+  late final TextEditingController _purposeCtrl;
   late final TextEditingController _startingDayCtrl;
   late final TextEditingController _ritualDaysCtrl;
   late final TextEditingController _bestTimeCtrl;
@@ -480,9 +479,9 @@ class _RitualFormState extends State<_RitualForm> {
     final r = widget.ritual;
     _titleCtrl = TextEditingController(text: r?.title ?? '');
     _slugCtrl = TextEditingController(text: r?.slug ?? '');
-    _descRich = r?.description;
+    _descCtrl = TextEditingController(text: r?.description ?? '');
     _categoryCtrl = TextEditingController(text: r?.category ?? '');
-    _purposeRich = r?.purpose;
+    _purposeCtrl = TextEditingController(text: r?.purpose ?? '');
     _startingDayCtrl = TextEditingController(text: r?.startingDay ?? '');
     final dayCount = r?.ritualDays ?? r?.days.length ?? 0;
     _ritualDaysCtrl = TextEditingController(
@@ -508,6 +507,8 @@ class _RitualFormState extends State<_RitualForm> {
     _titleCtrl.dispose();
     _slugCtrl.dispose();
     _categoryCtrl.dispose();
+    _descCtrl.dispose();
+    _purposeCtrl.dispose();
     _startingDayCtrl.dispose();
     _ritualDaysCtrl.dispose();
     _bestTimeCtrl.dispose();
@@ -575,11 +576,11 @@ class _RitualFormState extends State<_RitualForm> {
       title: _titleCtrl.text.trim(),
       slug: _slugCtrl.text.trim().isEmpty ? null : _slugCtrl.text.trim(),
       deity: _selectedDeityId!,
-      description: (_descRich ?? '').trim(),
+      description: _descCtrl.text.trim(),
       category: _categoryCtrl.text.trim(),
       days: cleanDays,
       sections: cleanSections,
-      purpose: (_purposeRich ?? '').trim(),
+      purpose: _purposeCtrl.text.trim(),
       startingDay: _startingDayCtrl.text.trim(),
       ritualDays: ritualDays ?? cleanDays.length,
       bestDayTime: _bestTimeCtrl.text.trim(),
@@ -766,10 +767,11 @@ class _RitualFormState extends State<_RitualForm> {
         //   controller: _slugCtrl,
         // ),
         const SizedBox(height: 12),
-        CmsRichTextField(
+        CmsFormField(
           label: 'Description',
-          initialValue: _descRich,
-          onChanged: (v) => _descRich = v,
+          hint: 'Enter description...',
+          controller: _descCtrl,
+          maxLines: 4,
         ),
         const SizedBox(height: 12),
         _buildDeityDropdown(),
@@ -780,10 +782,11 @@ class _RitualFormState extends State<_RitualForm> {
           controller: _categoryCtrl,
         ),
         const SizedBox(height: 12),
-        CmsRichTextField(
+        CmsFormField(
           label: 'Purpose',
-          initialValue: _purposeRich,
-          onChanged: (v) => _purposeRich = v,
+          hint: 'Enter purpose...',
+          controller: _purposeCtrl,
+          maxLines: 3,
         ),
       ],
     );
