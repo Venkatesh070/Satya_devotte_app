@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 // lib/features/cms/data/datasources/festival_remote_datasource.dart
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/features/cms/data/models/cms_paged_result.dart';
 
 class FestivalRemoteDataSource {
   FestivalRemoteDataSource(this._apiClient);
@@ -42,9 +43,47 @@ class FestivalRemoteDataSource {
     return body;
   }
 
+  // ── GET /festivals/all or /festivals/my — paginated CMS list ──
+  Future<CmsPagedResult<FestivalModel>> getFestivalsPage({
+    required bool superAdmin,
+    int page = 1,
+    int limit = 10,
+    String? status,
+    String? search,
+  }) async {
+    final endpoint = superAdmin ? '/api/v1/festivals/all' : '/api/v1/festivals/my';
+    final res = await _apiClient.dio.get(
+      endpoint,
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    final body = res.data;
+    final list = _list(body is Map<String, dynamic> ? body : const {});
+    final items = list
+        .map((e) => FestivalModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final pagination = CmsPaginationParser.fromBody(
+      body,
+      requestedPage: page,
+      requestedLimit: limit,
+      itemCount: items.length,
+    );
+    return CmsPagedResult<FestivalModel>(
+      items: items,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
+  }
+
   // ── GET /festivals/my — admin's own ──────────────────────────
   Future<List<FestivalModel>> getMyFestivals() async {
-    final res = await _apiClient.dio.get('/api/v1/festivals/all');
+    final res = await _apiClient.dio.get('/api/v1/festivals/my');
     return _list(
       res.data as Map<String, dynamic>,
     ).map((e) => FestivalModel.fromJson(e as Map<String, dynamic>)).toList();

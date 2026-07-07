@@ -8,6 +8,7 @@ class DonationInitData {
   const DonationInitData({
     required this.reference,
     required this.authorizationUrl,
+    required this.checkout,
     required this.amount,
     required this.currency,
     required this.donationId,
@@ -20,6 +21,7 @@ class DonationInitData {
 
   final String reference;
   final String authorizationUrl;
+  final PaymentCheckoutPayload checkout;
   final num amount;
   final String currency;
   final String donationId;
@@ -41,9 +43,12 @@ class DonationInitData {
     final donation = root['donation'];
     final donationMap = donation is Map<String, dynamic> ? donation : const {};
 
+    final checkout = PaymentGatewayUrls.parseCheckout(raw);
+
     return DonationInitData(
       reference: _str(root['reference']),
-      authorizationUrl: PaymentGatewayUrls.authorizationUrlFromMap(root),
+      authorizationUrl: checkout.redirectUrl,
+      checkout: checkout,
       amount: (root['amount'] is num)
           ? root['amount'] as num
           : num.tryParse(_str(root['amount'])) ?? 0,

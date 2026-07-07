@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
@@ -104,7 +105,7 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
 // ════════════════════════════════════════════════════════════════
 // FESTIVAL LIST
 // ════════════════════════════════════════════════════════════════
-class _FestivalList extends StatelessWidget {
+class _FestivalList extends StatefulWidget {
   const _FestivalList({
     required this.ctrl,
     required this.onAdd,
@@ -114,6 +115,29 @@ class _FestivalList extends StatelessWidget {
   final FestivalController ctrl;
   final VoidCallback onAdd;
   final ValueChanged<FestivalModel> onEdit;
+
+  @override
+  State<_FestivalList> createState() => _FestivalListState();
+}
+
+class _FestivalListState extends State<_FestivalList> {
+  late final CmsSearchScheduler _searchScheduler;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchScheduler = CmsSearchScheduler(onSearch: widget.ctrl.setSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    super.dispose();
+  }
+
+  FestivalController get ctrl => widget.ctrl;
+  VoidCallback get onAdd => widget.onAdd;
+  ValueChanged<FestivalModel> get onEdit => widget.onEdit;
 
   static const _months = [
     'Jan',
@@ -189,7 +213,7 @@ class _FestivalList extends StatelessWidget {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search festivals...',
-                  onChanged: (_) {},
+                  onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
               const SizedBox(width: 12),
@@ -399,7 +423,7 @@ class _FestivalList extends StatelessWidget {
         // ── Content ───────────────────────────────────────────────
         Expanded(
           child: Obx(() {
-            if (ctrl.isLoading) {
+            if (ctrl.isLoading && ctrl.festivals.isEmpty) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -458,12 +482,17 @@ class _FestivalList extends StatelessWidget {
             final list = ctrl.festivalsByMonth;
 
             if (list.isEmpty) {
+              final isSearch = ctrl.search.isNotEmpty;
               return CmsEmptyState(
                 icon: Icons.celebration_outlined,
-                title: 'No Festivals in ${_months[ctrl.selectedMonth - 1]}',
-                subtitle: 'Add a festival or select a different month',
-                actionLabel: 'Add Festival',
-                onAction: onAdd,
+                title: isSearch
+                    ? 'No matching festivals'
+                    : 'No Festivals in ${_months[ctrl.selectedMonth - 1]}',
+                subtitle: isSearch
+                    ? 'Try a different search term'
+                    : 'Add a festival or select a different month',
+                actionLabel: isSearch ? null : 'Add Festival',
+                onAction: isSearch ? null : onAdd,
               );
             }
 
@@ -494,6 +523,20 @@ class _FestivalList extends StatelessWidget {
               ),
             );
           }),
+        ),
+        Obx(
+          () => Padding(
+            padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 0, isWeb ? 24 : 16, 16),
+            child: CmsPaginationBar(
+              page: ctrl.page,
+              pageSize: ctrl.limit,
+              totalPages: ctrl.totalPages,
+              totalRows: ctrl.total,
+              isLoading: ctrl.isLoading,
+              onPageSelected: ctrl.goToPage,
+              onPageSizeChanged: ctrl.setPageSize,
+            ),
+          ),
         ),
       ],
     );
@@ -1322,7 +1365,7 @@ class _FestivalFormState extends State<_FestivalForm> {
           CmsUploadBox(
             label: 'Festival Image',
             icon: Icons.image_outlined,
-            accept: 'JPG, PNG up to 5MB',
+            accept: '1920 × 1080 px, JPG, PNG up to 5MB',
             mediaType: PickMediaType.image,
             initialUrl: _existingImageUrl,
             onPicked: (f) => setState(() => _pickedImage = f),

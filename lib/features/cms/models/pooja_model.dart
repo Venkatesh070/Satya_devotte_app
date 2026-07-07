@@ -74,13 +74,15 @@ class PoojaModel {
   const PoojaModel({
     required this.id,
     required this.title,
-    required this.deity,
+    required this.deities,
     required this.category,
     required this.difficulty,
     required this.duration,
     required this.description,
     required this.status,
     this.date,
+    this.schedules = const [],
+    this.daily = false,
     this.imageUrl,
     this.audioUrl,
     this.videoUrl,
@@ -116,7 +118,9 @@ class PoojaModel {
 
   final String id;
   final String title;
-  final String deity;
+  final List<String> deities;
+  /// First deity id, or comma-joined ids — for legacy display.
+  String get deity => deities.join(', ');
   final String category;
   final String difficulty;
   final String duration;
@@ -124,6 +128,8 @@ class PoojaModel {
   final String
   status; // Internal display value: 'Approved' | 'Queued' | 'Pending' | 'Draft' | 'Rejected'
   final String? date;
+  final List<Map<String, String>> schedules;
+  final bool daily;
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
@@ -157,6 +163,28 @@ class PoojaModel {
   final String? updatedAt;
 
   // ── Try multiple field names ──────────────────────────────────
+  static List<String> _extractDeityIds(Map<String, dynamic> json) {
+    final raw = json['deity'] ?? json['deities'];
+    if (raw is List) {
+      return raw
+          .map((e) {
+            if (e is Map) {
+              return (e['_id'] ?? e['id'] ?? '').toString().trim();
+            }
+            return e.toString().trim();
+          })
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    if (raw is Map) {
+      final id = _extractId(raw);
+      if (id != null && id.isNotEmpty) return [id];
+    }
+    final single = _str(json, ['deity', 'deityName', 'deity_name']);
+    if (single.isNotEmpty) return [single];
+    return const [];
+  }
+
   static String _str(
     Map<String, dynamic> json,
     List<String> keys, [
@@ -212,13 +240,82 @@ class PoojaModel {
         .toList();
   }
 
+  static String _normalizeApiTime(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '00:00';
+    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(trimmed);
+    if (match == null) return trimmed;
+    return '${match.group(1)!.padLeft(2, '0')}:${match.group(2)!}';
+  }
+
+  static List<Map<String, String>> _extractSchedules(Map<String, dynamic> json) {
+    final raw = json['schedules'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((entry) {
+            final date = _toApiDate(entry['date']?.toString()) ??
+                entry['date']?.toString().trim() ??
+                '';
+            final time = _normalizeApiTime(entry['time']?.toString() ?? '');
+            if (date.isEmpty) return <String, String>{};
+            return {'date': date, 'time': time};
+          })
+          .where((entry) => entry.isNotEmpty)
+          .toList();
+    }
+
+    final legacyDates = json['dates'] ?? json['scheduleDates'];
+    if (legacyDates is List) {
+      return legacyDates
+          .map((item) => _scheduleFromLegacyDateString(item.toString()))
+          .whereType<Map<String, String>>()
+          .toList();
+    }
+
+    final single = json['date'];
+    if (single is String && single.trim().isNotEmpty) {
+      if (single.contains(',')) {
+        return single
+            .split(',')
+            .map((item) => _scheduleFromLegacyDateString(item))
+            .whereType<Map<String, String>>()
+            .toList();
+      }
+      final schedule = _scheduleFromLegacyDateString(single);
+      if (schedule != null) return [schedule];
+    }
+    return const [];
+  }
+
+  static Map<String, String>? _scheduleFromLegacyDateString(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    final withTime = RegExp(
+      r'^(\d{1,2})-(\d{1,2})-(\d{4}) (\d{1,2}):(\d{2})$',
+    ).firstMatch(trimmed);
+    if (withTime != null) {
+      final date =
+          '${withTime.group(1)!.padLeft(2, '0')}-${withTime.group(2)!.padLeft(2, '0')}-${withTime.group(3)!}';
+      final time =
+          '${withTime.group(4)!.padLeft(2, '0')}:${withTime.group(5)!}';
+      return {'date': date, 'time': time};
+    }
+    final apiDate = _toApiDate(trimmed);
+    if (apiDate == null) return null;
+    return {'date': apiDate, 'time': '00:00'};
+  }
+
   static String? _toApiDate(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     final input = raw.trim();
     try {
-      final ddMmYyyy = RegExp(
-        r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$',
+      final ddMmYyyyHhMm = RegExp(
+        r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4} ([01][0-9]|2[0-3]):[0-5][0-9]$',
       );
+      if (ddMmYyyyHhMm.hasMatch(input)) return input;
+
+      final ddMmYyyy = RegExp(r'^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$');
       if (ddMmYyyy.hasMatch(input)) return input;
 
       if (RegExp(r'^\d{8}$').hasMatch(input)) {
@@ -232,6 +329,11 @@ class PoojaModel {
       final day = parsed.day.toString().padLeft(2, '0');
       final month = parsed.month.toString().padLeft(2, '0');
       final year = parsed.year.toString();
+      if (parsed.hour != 0 || parsed.minute != 0) {
+        final hour = parsed.hour.toString().padLeft(2, '0');
+        final minute = parsed.minute.toString().padLeft(2, '0');
+        return '$day-$month-$year $hour:$minute';
+      }
       return '$day-$month-$year';
     } catch (_) {
       return null;
@@ -303,7 +405,7 @@ class PoojaModel {
     return PoojaModel(
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'pooja_name', 'poojaName', 'name']),
-      deity: deity,
+      deities: _extractDeityIds(json),
       category: _str(json, ['category']),
       difficulty: _str(json, [
         'difficulty',
@@ -314,6 +416,8 @@ class PoojaModel {
       description: _str(json, ['description', 'about']),
       status: _fromApiStatus(_str(json, ['status', 'pooja_status'], 'Draft')),
       date: json['date'] as String?,
+      schedules: _extractSchedules(json),
+      daily: json['daily'] == true,
       imageUrl:
           json['imageUrl'] as String? ??
           json['image'] as String? ??
@@ -414,61 +518,66 @@ class PoojaModel {
 
   // ── toJson sends UPPERCASE status values the API accepts ─────
   Map<String, dynamic> toJson() {
-    final apiDate = _toApiDate(date) ?? _toApiDate(poojaDate);
+    final normalizedSchedules = schedules
+        .map((entry) {
+          final date = _toApiDate(entry['date']) ?? entry['date']?.trim() ?? '';
+          final time = _normalizeApiTime(entry['time'] ?? '');
+          if (date.isEmpty) return <String, String>{};
+          return {'date': date, 'time': time};
+        })
+        .where((entry) => entry.isNotEmpty)
+        .toList();
     return {
-      'title': title,
-      'deity': deity,
-      'category': category,
-      'difficulty': difficulty,
-      'duration': duration,
-      'description': description,
-      'status': _toApiStatus(
-        status,
-      ), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
-      if (apiDate != null) 'date': apiDate,
-      if (imageUrl != null) 'imageUrl': imageUrl,
-      if (audioUrl != null) 'audioUrl': audioUrl,
-      if (videoUrl != null) 'videoUrl': videoUrl,
-      'purpose': {'why': purposeWhy ?? '', 'benefits': purposeBenefits},
-      'deitySummary': {
-        'about': deitySummaryAbout ?? '',
-        'blessings': deitySummaryBlessings,
-      },
-      'preparation': {
-        'personal': preparationPersonal,
-        'space': preparationSpace,
-        'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
-      },
-      'steps': steps.asMap().entries.map((e) {
-        final step = PoojaStepCodec.decode(e.value);
-        final title = step.title.trim();
-        final description = step.description.trim();
-        return {
-          'stepNumber': e.key + 1,
-          'title': title.isEmpty ? 'Step ${e.key + 1}' : title,
-          'description': description.isEmpty ? title : description,
-          'images': step.imageUrls,
-          'subSteps': <String>[],
-        };
-      }).toList(),
-      'mantra': {
-        'primary': mantraPrimary ?? '',
-        'repetitions': mantraRepetitions ?? '',
-        'additional': mantraAdditional,
-        'meaning': mantraMeaning ?? '',
-      },
-      'spiritualMeaning': {
-        'offeringsMeaning': spiritualOfferingsMeaning,
-        'actionsMeaning': spiritualActionsMeaning,
-        'otherSymbolism': spiritualOtherSymbolism,
-      },
-      'guidance': {'mindset': guidanceMindset, 'avoid': guidanceAvoid},
-      'completion': {
-        'closure': completionClosure,
-        'integration': completionIntegration,
-        'benefits': completionBenefits,
-        'blessings': blessings,
-      },
+    'title': title,
+    'deity': deities,
+    'category': category,
+    'difficulty': difficulty,
+    'duration': duration,
+    'description': description,
+    'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
+    'daily': daily,
+    'schedules': normalizedSchedules,
+    if (imageUrl != null) 'imageUrl': imageUrl,
+    if (audioUrl != null) 'audioUrl': audioUrl,
+    if (videoUrl != null) 'videoUrl': videoUrl,
+    'purpose': {'why': purposeWhy ?? '', 'benefits': purposeBenefits},
+    'deitySummary': {
+      'about': deitySummaryAbout ?? '',
+      'blessings': deitySummaryBlessings,
+    },
+    'preparation': {
+      'personal': preparationPersonal,
+      'space': preparationSpace,
+      'items': preparationItems.isNotEmpty ? preparationItems : requiredItems,
+    },
+    'steps': steps.asMap().entries.map((e) {
+      final step = PoojaStepCodec.decode(e.value);
+      final title = step.title.trim();
+      final description = step.description.trim();
+      return {
+        'stepNumber': e.key + 1,
+        'title': title.isEmpty ? 'Step ${e.key + 1}' : title,
+        'description': description.isEmpty ? title : description,
+        'images': step.imageUrls,
+        'subSteps': <String>[],
+      };
+    }).toList(),
+    'mantra': {
+      'primary': mantraPrimary ?? '',
+      'repetitions': mantraRepetitions ?? '',
+      'additional': mantraAdditional,
+      'meaning': mantraMeaning ?? '',
+    },
+    'spiritualMeaning': {
+      'offeringsMeaning': spiritualOfferingsMeaning,
+      'actionsMeaning': spiritualActionsMeaning,
+      'otherSymbolism': spiritualOtherSymbolism,
+    },
+    'guidance': {'mindset': guidanceMindset, 'avoid': guidanceAvoid},
+    'completion': {
+      'closure': completionClosure,
+      'integration': completionIntegration,
+      'benefits': completionBenefits,
       'blessings': blessings,
       'media': {
         'images': imageUrl != null && imageUrl!.trim().isNotEmpty
@@ -482,7 +591,8 @@ class PoojaModel {
             : [],
       },
       'festivalIds': festivalIds,
-    };
+    },
+  };
   }
 
   /// Sentinel: omit `imageUrl` / `audioUrl` / `videoUrl` in [copyWith] to keep previous values.
@@ -491,13 +601,15 @@ class PoojaModel {
 
   PoojaModel copyWith({
     String? title,
-    String? deity,
+    List<String>? deities,
     String? category,
     String? difficulty,
     String? duration,
     String? description,
     String? status,
     String? date,
+    List<Map<String, String>>? schedules,
+    bool? daily,
     Object? imageUrl = _keepMediaUrl,
     Object? audioUrl = _keepMediaUrl,
     Object? videoUrl = _keepMediaUrl,
@@ -530,13 +642,15 @@ class PoojaModel {
     return PoojaModel(
       id: id,
       title: title ?? this.title,
-      deity: deity ?? this.deity,
+      deities: deities ?? this.deities,
       category: category ?? this.category,
       difficulty: difficulty ?? this.difficulty,
       duration: duration ?? this.duration,
       description: description ?? this.description,
       status: status ?? this.status,
       date: date ?? this.date,
+      schedules: schedules ?? this.schedules,
+      daily: daily ?? this.daily,
       imageUrl: identical(imageUrl, _keepMediaUrl)
           ? this.imageUrl
           : imageUrl as String?,

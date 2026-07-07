@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
@@ -51,51 +52,29 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   bool _showForm = false;
   _DeityItem? _editing;
   String _filter = 'All';
-  String _query = '';
-  bool _loading = false;
-  String? _error;
-
-  final List<_DeityItem> _all = <_DeityItem>[];
+  late final CmsSearchScheduler _searchScheduler;
 
   @override
   void initState() {
     super.initState();
+    _searchScheduler = CmsSearchScheduler(onSearch: _controller.setSearch);
     Future.microtask(_loadDeities);
   }
 
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadDeities({bool force = false}) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
     final status = _filter == 'All' ? null : _filter.toUpperCase();
     await _controller.loadDeities(
-      page: 1,
-      limit: 10,
       status: status,
       force: force,
     );
-    if (!mounted) return;
-    setState(() {
-      _all
-        ..clear()
-        ..addAll(_controller.deities);
-      _error = _controller.error;
-      _loading = false;
-    });
   }
 
-  List<_DeityItem> get _filtered {
-    final q = _query.trim().toLowerCase();
-    return _all.where((d) {
-      final byStatus = _filter == 'All' || d.status == _filter;
-      final byText =
-          q.isEmpty ||
-          d.name.toLowerCase().contains(q) ||
-          d.title.toLowerCase().contains(q);
-      return byStatus && byText;
-    }).toList();
-  }
 
   Future<void> _save(Map<String, dynamic> payload, {PickedFile? image}) async {
     final ok = _editing != null
@@ -113,14 +92,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   }
 
   Future<void> _openEdit(_DeityItem deity) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
     final full = await _controller.getDeityById(deity.id);
     if (!mounted) return;
     setState(() {
-      _loading = false;
       _editing = full ?? deity;
       _showForm = true;
     });
@@ -151,7 +125,6 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
       'Draft',
       'Rejected',
     ];
-    final list = _filtered;
 
     return Container(
       color: CmsColors.bg,
@@ -168,7 +141,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 Expanded(
                   child: CmsSearchBar(
                     hint: 'Search deities...',
-                    onChanged: (v) => setState(() => _query = v),
+                    onChanged: _searchScheduler.onQueryChanged,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -220,9 +193,11 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 children: filters.map((f) {
                   final sel = _filter == f;
                   return _cmsClickable(
-                    onTap: () {
+                    onTap: () async {
                       setState(() => _filter = f);
-                      _loadDeities(force: true);
+                      await _controller.setStatusFilter(
+                        f == 'All' ? null : f.toUpperCase(),
+                      );
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
@@ -253,43 +228,55 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: CmsColors.orange),
-                  )
-                : (_error != null)
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          style: TextStyle(color: CmsColors.textSecond),
+            child: Obx(() {
+              if (_controller.isLoading && _controller.deities.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: CmsColors.orange),
+                );
+              }
+              if (_controller.error != null && _controller.deities.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _controller.error!,
+                        style: const TextStyle(
+                          color: CmsColors.textSecond,
                         ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () => _loadDeities(force: true),
-                          style: TextButton.styleFrom().copyWith(
-                            mouseCursor: _cmsButtonClickCursor,
-                          ),
-                          child: const Text('Retry'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => _loadDeities(force: true),
+                        style: TextButton.styleFrom().copyWith(
+                          mouseCursor: _cmsButtonClickCursor,
                         ),
-                      ],
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final list = _controller.deities;
+              if (list.isEmpty) {
+                final isSearch = _controller.search.isNotEmpty;
+                return Center(
+                  child: Text(
+                    isSearch
+                        ? 'No deities match your search.'
+                        : 'No deities found.',
+                    style: const TextStyle(
+                      color: CmsColors.textSecond,
                     ),
-                  )
-                : list.isEmpty
-                ? Center(
-                    child: Text(
-                      'No deities found.',
-                      style: TextStyle(color: CmsColors.textSecond),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.all(isWeb ? 24 : 16),
-                    itemCount: list.length,
-                    itemBuilder: (_, i) {
-                      final d = list[i];
-                      return Container(
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: EdgeInsets.all(isWeb ? 24 : 16),
+                itemCount: list.length,
+                itemBuilder: (_, i) {
+                  final d = list[i];
+                  return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -462,7 +449,22 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         ),
                       );
                     },
-                  ),
+                  );
+            }),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 0, isWeb ? 24 : 16, 16),
+            child: Obx(
+              () => CmsPaginationBar(
+                page: _controller.page,
+                pageSize: _controller.limit,
+                totalPages: _controller.totalPages,
+                totalRows: _controller.total,
+                isLoading: _controller.isLoading,
+                onPageSelected: _controller.goToPage,
+                onPageSizeChanged: _controller.setPageSize,
+              ),
+            ),
           ),
         ],
       ),
@@ -583,6 +585,10 @@ class _DeityFormState extends State<_DeityForm> {
   bool _showAppearanceEditor = false;
   bool _showSpiritualEditor = false;
   bool _showStoriesEditor = false;
+  int? _editingLineageFormsIndex;
+  int? _editingAppearanceIndex;
+  int? _editingSpiritualIndex;
+  int? _editingStoriesIndex;
   late final TextEditingController _lineageFormsTitleCtrl;
   String? _lineageFormsDescRich;
   PickedFile? _pickedImage;
@@ -713,6 +719,18 @@ class _DeityFormState extends State<_DeityForm> {
     });
   }
 
+  void _startEditChipText(
+    TextEditingController ctrl,
+    List<String> target,
+    int index,
+  ) {
+    if (index < 0 || index >= target.length) return;
+    final value = target[index];
+    ctrl.text = value;
+    ctrl.selection = TextSelection.collapsed(offset: value.length);
+    setState(() => target.removeAt(index));
+  }
+
   List<String> _valuesWithPending(
     TextEditingController ctrl,
     List<String> values,
@@ -764,6 +782,8 @@ class _DeityFormState extends State<_DeityForm> {
     required List<Map<String, String>> target,
     String? richDesc,
     ValueSetter<String?>? clearRichDesc,
+    int? editingIndex,
+    VoidCallback? onAdded,
   }) {
     final title = titleCtrl.text.trim();
     final description = richDesc ?? '';
@@ -777,12 +797,40 @@ class _DeityFormState extends State<_DeityForm> {
       return;
     }
     setState(() {
-      target.add({'title': title, 'description': description});
-      titleCtrl.clear();
-      if (clearRichDesc != null) {
-        clearRichDesc(null);
+      final entry = {'title': title, 'description': description};
+      if (editingIndex != null) {
+        target[editingIndex] = entry;
+      } else {
+        target.add(entry);
       }
+      titleCtrl.clear();
+      clearRichDesc?.call(null);
+      onAdded?.call();
     });
+  }
+
+  void _startEditKeyValueEntry({
+    required int index,
+    required List<Map<String, String>> target,
+    required TextEditingController titleCtrl,
+    required ValueSetter<String?> setRichDesc,
+    required void Function() onStarted,
+  }) {
+    if (index < 0 || index >= target.length) return;
+    final entry = target[index];
+    titleCtrl.text = entry['title'] ?? '';
+    setRichDesc(entry['description'] ?? '');
+    onStarted();
+  }
+
+  void _clearKeyValueEditorFields({
+    required TextEditingController titleCtrl,
+    required ValueSetter<String?> clearRichDesc,
+    required void Function() onCleared,
+  }) {
+    titleCtrl.clear();
+    clearRichDesc(null);
+    onCleared();
   }
 
   @override
@@ -815,6 +863,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _alternateNamesCtrl,
           values: _alternateNames,
           onAdd: () => _addChipValue(_alternateNamesCtrl, _alternateNames),
+          onEdit: (index) => _startEditChipText(
+            _alternateNamesCtrl,
+            _alternateNames,
+            index,
+          ),
           onRemove: (index) => setState(() => _alternateNames.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -824,6 +877,7 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _rolesCtrl,
           values: _roles,
           onAdd: () => _addChipValue(_rolesCtrl, _roles),
+          onEdit: (index) => _startEditChipText(_rolesCtrl, _roles, index),
           onRemove: (index) => setState(() => _roles.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -870,9 +924,22 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Family / Divine Associations / Seating / Iconography',
           showEditor: _showLineageFormsEditor,
-          onToggle: () => setState(
-            () => _showLineageFormsEditor = !_showLineageFormsEditor,
-          ),
+          editingIndex: _editingLineageFormsIndex,
+          onToggle: () => setState(() {
+            if (_showLineageFormsEditor) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _lineageFormsTitleCtrl,
+                clearRichDesc: (v) => _lineageFormsDescRich = v,
+                onCleared: () {
+                  _editingLineageFormsIndex = null;
+                  _showLineageFormsEditor = false;
+                },
+              );
+            } else {
+              _editingLineageFormsIndex = null;
+              _showLineageFormsEditor = true;
+            }
+          }),
           titleCtrl: _lineageFormsTitleCtrl,
           richDescValue: _lineageFormsDescRich,
           onRichDescChanged: (v) => _lineageFormsDescRich = v,
@@ -881,10 +948,36 @@ class _DeityFormState extends State<_DeityForm> {
             target: _lineageFormsEntries,
             richDesc: _lineageFormsDescRich,
             clearRichDesc: (v) => _lineageFormsDescRich = v,
+            editingIndex: _editingLineageFormsIndex,
+            onAdded: () => _editingLineageFormsIndex = null,
           ),
           entries: _lineageFormsEntries,
-          onRemove: (index) =>
-              setState(() => _lineageFormsEntries.removeAt(index)),
+          onEdit: (index) => _startEditKeyValueEntry(
+            index: index,
+            target: _lineageFormsEntries,
+            titleCtrl: _lineageFormsTitleCtrl,
+            setRichDesc: (v) => _lineageFormsDescRich = v,
+            onStarted: () => setState(() {
+              _editingLineageFormsIndex = index;
+              _showLineageFormsEditor = true;
+            }),
+          ),
+          onRemove: (index) => setState(() {
+            if (_editingLineageFormsIndex == index) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _lineageFormsTitleCtrl,
+                clearRichDesc: (v) => _lineageFormsDescRich = v,
+                onCleared: () {
+                  _editingLineageFormsIndex = null;
+                  _showLineageFormsEditor = false;
+                },
+              );
+            } else if (_editingLineageFormsIndex != null &&
+                index < _editingLineageFormsIndex!) {
+              _editingLineageFormsIndex = _editingLineageFormsIndex! - 1;
+            }
+            _lineageFormsEntries.removeAt(index);
+          }),
         ),
       ],
     );
@@ -894,8 +987,22 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Appearance & Symbolism',
           showEditor: _showAppearanceEditor,
-          onToggle: () =>
-              setState(() => _showAppearanceEditor = !_showAppearanceEditor),
+          editingIndex: _editingAppearanceIndex,
+          onToggle: () => setState(() {
+            if (_showAppearanceEditor) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _appearanceTitleCtrl,
+                clearRichDesc: (v) => _appearanceDescRich = v,
+                onCleared: () {
+                  _editingAppearanceIndex = null;
+                  _showAppearanceEditor = false;
+                },
+              );
+            } else {
+              _editingAppearanceIndex = null;
+              _showAppearanceEditor = true;
+            }
+          }),
           titleCtrl: _appearanceTitleCtrl,
           richDescValue: _appearanceDescRich,
           onRichDescChanged: (v) => _appearanceDescRich = v,
@@ -904,10 +1011,36 @@ class _DeityFormState extends State<_DeityForm> {
             target: _appearanceEntries,
             richDesc: _appearanceDescRich,
             clearRichDesc: (v) => _appearanceDescRich = v,
+            editingIndex: _editingAppearanceIndex,
+            onAdded: () => _editingAppearanceIndex = null,
           ),
           entries: _appearanceEntries,
-          onRemove: (index) =>
-              setState(() => _appearanceEntries.removeAt(index)),
+          onEdit: (index) => _startEditKeyValueEntry(
+            index: index,
+            target: _appearanceEntries,
+            titleCtrl: _appearanceTitleCtrl,
+            setRichDesc: (v) => _appearanceDescRich = v,
+            onStarted: () => setState(() {
+              _editingAppearanceIndex = index;
+              _showAppearanceEditor = true;
+            }),
+          ),
+          onRemove: (index) => setState(() {
+            if (_editingAppearanceIndex == index) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _appearanceTitleCtrl,
+                clearRichDesc: (v) => _appearanceDescRich = v,
+                onCleared: () {
+                  _editingAppearanceIndex = null;
+                  _showAppearanceEditor = false;
+                },
+              );
+            } else if (_editingAppearanceIndex != null &&
+                index < _editingAppearanceIndex!) {
+              _editingAppearanceIndex = _editingAppearanceIndex! - 1;
+            }
+            _appearanceEntries.removeAt(index);
+          }),
         ),
       ],
     );
@@ -917,8 +1050,22 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Spiritual Significance',
           showEditor: _showSpiritualEditor,
-          onToggle: () =>
-              setState(() => _showSpiritualEditor = !_showSpiritualEditor),
+          editingIndex: _editingSpiritualIndex,
+          onToggle: () => setState(() {
+            if (_showSpiritualEditor) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _spiritualTitleCtrl,
+                clearRichDesc: (v) => _spiritualDescRich = v,
+                onCleared: () {
+                  _editingSpiritualIndex = null;
+                  _showSpiritualEditor = false;
+                },
+              );
+            } else {
+              _editingSpiritualIndex = null;
+              _showSpiritualEditor = true;
+            }
+          }),
           titleCtrl: _spiritualTitleCtrl,
           richDescValue: _spiritualDescRich,
           onRichDescChanged: (v) => _spiritualDescRich = v,
@@ -927,10 +1074,36 @@ class _DeityFormState extends State<_DeityForm> {
             target: _spiritualEntries,
             richDesc: _spiritualDescRich,
             clearRichDesc: (v) => _spiritualDescRich = v,
+            editingIndex: _editingSpiritualIndex,
+            onAdded: () => _editingSpiritualIndex = null,
           ),
           entries: _spiritualEntries,
-          onRemove: (index) =>
-              setState(() => _spiritualEntries.removeAt(index)),
+          onEdit: (index) => _startEditKeyValueEntry(
+            index: index,
+            target: _spiritualEntries,
+            titleCtrl: _spiritualTitleCtrl,
+            setRichDesc: (v) => _spiritualDescRich = v,
+            onStarted: () => setState(() {
+              _editingSpiritualIndex = index;
+              _showSpiritualEditor = true;
+            }),
+          ),
+          onRemove: (index) => setState(() {
+            if (_editingSpiritualIndex == index) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _spiritualTitleCtrl,
+                clearRichDesc: (v) => _spiritualDescRich = v,
+                onCleared: () {
+                  _editingSpiritualIndex = null;
+                  _showSpiritualEditor = false;
+                },
+              );
+            } else if (_editingSpiritualIndex != null &&
+                index < _editingSpiritualIndex!) {
+              _editingSpiritualIndex = _editingSpiritualIndex! - 1;
+            }
+            _spiritualEntries.removeAt(index);
+          }),
         ),
       ],
     );
@@ -949,6 +1122,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _connectingWhatPleasesCtrl,
           values: _whatPleases,
           onAdd: () => _addChipValue(_connectingWhatPleasesCtrl, _whatPleases),
+          onEdit: (index) => _startEditChipText(
+            _connectingWhatPleasesCtrl,
+            _whatPleases,
+            index,
+          ),
           onRemove: (index) => setState(() => _whatPleases.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -958,6 +1136,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _connectingDispleasesCtrl,
           values: _displeases,
           onAdd: () => _addChipValue(_connectingDispleasesCtrl, _displeases),
+          onEdit: (index) => _startEditChipText(
+            _connectingDispleasesCtrl,
+            _displeases,
+            index,
+          ),
           onRemove: (index) => setState(() => _displeases.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -989,6 +1172,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _chantingBenefitsCtrl,
           values: _chantBenefits,
           onAdd: () => _addChipValue(_chantingBenefitsCtrl, _chantBenefits),
+          onEdit: (index) => _startEditChipText(
+            _chantingBenefitsCtrl,
+            _chantBenefits,
+            index,
+          ),
           onRemove: (index) => setState(() => _chantBenefits.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -1035,6 +1223,11 @@ class _DeityFormState extends State<_DeityForm> {
           values: _associatedColors,
           onAdd: () =>
               _addChipValue(_chantingAssociatedColorsCtrl, _associatedColors),
+          onEdit: (index) => _startEditChipText(
+            _chantingAssociatedColorsCtrl,
+            _associatedColors,
+            index,
+          ),
           onRemove: (index) =>
               setState(() => _associatedColors.removeAt(index)),
         ),
@@ -1055,6 +1248,11 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _homeOfferingsCtrl,
           values: _homeOfferings,
           onAdd: () => _addChipValue(_homeOfferingsCtrl, _homeOfferings),
+          onEdit: (index) => _startEditChipText(
+            _homeOfferingsCtrl,
+            _homeOfferings,
+            index,
+          ),
           onRemove: (index) => setState(() => _homeOfferings.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -1064,6 +1262,7 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _homeDoCtrl,
           values: _homeDos,
           onAdd: () => _addChipValue(_homeDoCtrl, _homeDos),
+          onEdit: (index) => _startEditChipText(_homeDoCtrl, _homeDos, index),
           onRemove: (index) => setState(() => _homeDos.removeAt(index)),
         ),
         const SizedBox(height: 12),
@@ -1073,6 +1272,8 @@ class _DeityFormState extends State<_DeityForm> {
           controller: _homeDontCtrl,
           values: _homeDonts,
           onAdd: () => _addChipValue(_homeDontCtrl, _homeDonts),
+          onEdit: (index) =>
+              _startEditChipText(_homeDontCtrl, _homeDonts, index),
           onRemove: (index) => setState(() => _homeDonts.removeAt(index)),
         ),
       ],
@@ -1099,8 +1300,22 @@ class _DeityFormState extends State<_DeityForm> {
         _KeyValueEditor(
           heading: 'Stories',
           showEditor: _showStoriesEditor,
-          onToggle: () =>
-              setState(() => _showStoriesEditor = !_showStoriesEditor),
+          editingIndex: _editingStoriesIndex,
+          onToggle: () => setState(() {
+            if (_showStoriesEditor) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _storiesTitleCtrl,
+                clearRichDesc: (v) => _storiesDescRich = v,
+                onCleared: () {
+                  _editingStoriesIndex = null;
+                  _showStoriesEditor = false;
+                },
+              );
+            } else {
+              _editingStoriesIndex = null;
+              _showStoriesEditor = true;
+            }
+          }),
           titleCtrl: _storiesTitleCtrl,
           richDescValue: _storiesDescRich,
           onRichDescChanged: (v) => _storiesDescRich = v,
@@ -1109,9 +1324,36 @@ class _DeityFormState extends State<_DeityForm> {
             target: _storiesEntries,
             richDesc: _storiesDescRich,
             clearRichDesc: (v) => _storiesDescRich = v,
+            editingIndex: _editingStoriesIndex,
+            onAdded: () => _editingStoriesIndex = null,
           ),
           entries: _storiesEntries,
-          onRemove: (index) => setState(() => _storiesEntries.removeAt(index)),
+          onEdit: (index) => _startEditKeyValueEntry(
+            index: index,
+            target: _storiesEntries,
+            titleCtrl: _storiesTitleCtrl,
+            setRichDesc: (v) => _storiesDescRich = v,
+            onStarted: () => setState(() {
+              _editingStoriesIndex = index;
+              _showStoriesEditor = true;
+            }),
+          ),
+          onRemove: (index) => setState(() {
+            if (_editingStoriesIndex == index) {
+              _clearKeyValueEditorFields(
+                titleCtrl: _storiesTitleCtrl,
+                clearRichDesc: (v) => _storiesDescRich = v,
+                onCleared: () {
+                  _editingStoriesIndex = null;
+                  _showStoriesEditor = false;
+                },
+              );
+            } else if (_editingStoriesIndex != null &&
+                index < _editingStoriesIndex!) {
+              _editingStoriesIndex = _editingStoriesIndex! - 1;
+            }
+            _storiesEntries.removeAt(index);
+          }),
         ),
       ],
     );
@@ -1121,7 +1363,7 @@ class _DeityFormState extends State<_DeityForm> {
         CmsUploadBox(
           label: 'Thumbnail Image',
           icon: Icons.image_outlined,
-          accept: 'JPG, PNG up to 5MB',
+          accept: '1920 × 1080 px, JPG, PNG up to 5MB',
           mediaType: PickMediaType.image,
           initialUrl: widget.initial?.imageUrl,
           onPicked: (file) => setState(() => _pickedImage = file),
@@ -1352,7 +1594,7 @@ class _DeityFormState extends State<_DeityForm> {
   }
 }
 
-class _KeyValueEditor extends StatelessWidget {
+class _KeyValueEditor extends StatefulWidget {
   const _KeyValueEditor({
     required this.heading,
     required this.showEditor,
@@ -1363,7 +1605,9 @@ class _KeyValueEditor extends StatelessWidget {
     this.onRichDescChanged,
     required this.onAdd,
     required this.entries,
+    required this.onEdit,
     required this.onRemove,
+    this.editingIndex,
   });
 
   final String heading;
@@ -1375,7 +1619,51 @@ class _KeyValueEditor extends StatelessWidget {
   final ValueChanged<String>? onRichDescChanged;
   final VoidCallback onAdd;
   final List<Map<String, String>> entries;
+  final ValueChanged<int> onEdit;
   final ValueChanged<int> onRemove;
+  final int? editingIndex;
+
+  @override
+  State<_KeyValueEditor> createState() => _KeyValueEditorState();
+}
+
+class _KeyValueEditorState extends State<_KeyValueEditor> {
+  final FocusNode _titleFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _titleFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _KeyValueEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showEditor && !oldWidget.showEditor) {
+      _focusTitleField();
+    } else if (widget.showEditor &&
+        widget.editingIndex != null &&
+        widget.editingIndex != oldWidget.editingIndex) {
+      _focusTitleField();
+    }
+  }
+
+  void _focusTitleField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _titleFocus.requestFocus();
+        final text = widget.titleCtrl.text;
+        widget.titleCtrl.selection = TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
+  void _handleAdd() {
+    widget.onAdd();
+    _focusTitleField();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1386,8 +1674,8 @@ class _KeyValueEditor extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                heading,
-                style: TextStyle(
+                widget.heading,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: CmsColors.textSecond,
@@ -1395,9 +1683,9 @@ class _KeyValueEditor extends StatelessWidget {
               ),
             ),
             Tooltip(
-              message: showEditor ? 'Hide entry form' : 'Show entry form',
+              message: widget.showEditor ? 'Hide entry form' : 'Show entry form',
               child: _cmsClickable(
-                onTap: onToggle,
+                onTap: widget.onToggle,
                 child: Container(
                   width: 34,
                   height: 34,
@@ -1407,7 +1695,7 @@ class _KeyValueEditor extends StatelessWidget {
                     border: Border.all(color: CmsColors.border),
                   ),
                   child: Icon(
-                    showEditor
+                    widget.showEditor
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
                     color: CmsColors.textSecond,
@@ -1418,32 +1706,35 @@ class _KeyValueEditor extends StatelessWidget {
             ),
           ],
         ),
-        if (showEditor) ...[
+        if (widget.showEditor) ...[
           const SizedBox(height: 10),
           CmsFormField(
-            label: '$heading Title',
+            label: '${widget.heading} Title',
             hint: 'Enter title',
-            controller: titleCtrl,
+            controller: widget.titleCtrl,
+            focusNode: _titleFocus,
+            onFieldSubmitted: (_) => _handleAdd(),
+            textInputAction: TextInputAction.done,
           ),
           const SizedBox(height: 10),
-          onRichDescChanged != null
+          widget.onRichDescChanged != null
               ? CmsRichTextField(
-                  key: ValueKey(richDescValue),
-                  label: '$heading Description',
-                  initialValue: richDescValue,
-                  onChanged: onRichDescChanged!,
+                  key: ValueKey(widget.richDescValue),
+                  label: '${widget.heading} Description',
+                  initialValue: widget.richDescValue,
+                  onChanged: widget.onRichDescChanged!,
                 )
               : CmsFormField(
-                  label: '$heading Description',
+                  label: '${widget.heading} Description',
                   hint: 'Enter description',
-                  controller: descCtrl!,
+                  controller: widget.descCtrl!,
                   maxLines: 3,
                 ),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
-              onPressed: onAdd,
+              onPressed: _handleAdd,
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
                 foregroundColor: Colors.white,
@@ -1456,13 +1747,15 @@ class _KeyValueEditor extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ).copyWith(mouseCursor: _cmsButtonClickCursor),
-              child: const Text('Add entry'),
+              child: Text(
+                widget.editingIndex != null ? 'Update entry' : 'Add entry',
+              ),
             ),
           ),
         ],
-        if (entries.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
+        if (widget.entries.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
             child: Text(
               'No entries added yet',
               style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
@@ -1470,7 +1763,7 @@ class _KeyValueEditor extends StatelessWidget {
           )
         else ...[
           const SizedBox(height: 8),
-          ...entries.asMap().entries.map((entry) {
+          ...widget.entries.asMap().entries.map((entry) {
             final title = (entry.value['title'] ?? '').trim();
             final description = (entry.value['description'] ?? '').trim();
             return Container(
@@ -1478,9 +1771,15 @@ class _KeyValueEditor extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: CmsColors.bg,
+                color: widget.editingIndex == entry.key
+                    ? CmsColors.orange.withOpacity(0.08)
+                    : CmsColors.bg,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: CmsColors.border),
+                border: Border.all(
+                  color: widget.editingIndex == entry.key
+                      ? CmsColors.orange.withOpacity(0.35)
+                      : CmsColors.border,
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1513,8 +1812,19 @@ class _KeyValueEditor extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   _cmsClickable(
-                    onTap: () => onRemove(entry.key),
+                    onTap: () => widget.onEdit(entry.key),
                     child: Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: widget.editingIndex == entry.key
+                          ? CmsColors.orange
+                          : CmsColors.textSecond,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _cmsClickable(
+                    onTap: () => widget.onRemove(entry.key),
+                    child: const Icon(
                       Icons.close,
                       size: 16,
                       color: CmsColors.textSecond,
@@ -1537,6 +1847,7 @@ class _ChipListEditor extends StatelessWidget {
     required this.controller,
     required this.values,
     required this.onAdd,
+    required this.onEdit,
     required this.onRemove,
   });
 
@@ -1545,6 +1856,7 @@ class _ChipListEditor extends StatelessWidget {
   final TextEditingController controller;
   final List<String> values;
   final VoidCallback onAdd;
+  final ValueChanged<int> onEdit;
   final ValueChanged<int> onRemove;
 
   @override
@@ -1575,6 +1887,7 @@ class _ChipListEditor extends StatelessWidget {
           ...values.asMap().entries.map(
             (entry) => _LineChip(
               label: entry.value,
+              onEdit: () => onEdit(entry.key),
               onRemove: () => onRemove(entry.key),
             ),
           ),
@@ -1584,7 +1897,7 @@ class _ChipListEditor extends StatelessWidget {
   }
 }
 
-class _InputRow extends StatelessWidget {
+class _InputRow extends StatefulWidget {
   const _InputRow({
     required this.ctrl,
     required this.hint,
@@ -1594,6 +1907,51 @@ class _InputRow extends StatelessWidget {
   final TextEditingController ctrl;
   final String hint;
   final VoidCallback onAdd;
+
+  @override
+  State<_InputRow> createState() => _InputRowState();
+}
+
+class _InputRowState extends State<_InputRow> {
+  final FocusNode _focus = FocusNode();
+  String _previousText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _previousText = widget.ctrl.text;
+    widget.ctrl.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.ctrl.removeListener(_onControllerChanged);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    final text = widget.ctrl.text;
+    if (!_focus.hasFocus && text != _previousText && text.isNotEmpty) {
+      _requestFocus();
+    }
+    _previousText = text;
+  }
+
+  void _requestFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focus.requestFocus();
+      widget.ctrl.selection = TextSelection.collapsed(
+        offset: widget.ctrl.text.length,
+      );
+    });
+  }
+
+  void _handleAdd() {
+    widget.onAdd();
+    _requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1608,15 +1966,17 @@ class _InputRow extends StatelessWidget {
               border: Border.all(color: CmsColors.border),
             ),
             child: TextField(
-              controller: ctrl,
-              onSubmitted: (_) => onAdd(),
+              controller: widget.ctrl,
+              focusNode: _focus,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _handleAdd(),
               cursorColor: CmsColors.orange,
               style: const TextStyle(
                 fontSize: 13,
                 color: CmsThemeColors.inputText,
               ),
               decoration: InputDecoration(
-                hintText: hint,
+                hintText: widget.hint,
                 border: InputBorder.none,
                 hintStyle: const TextStyle(
                   color: CmsThemeColors.inputHint,
@@ -1632,7 +1992,7 @@ class _InputRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _cmsClickable(
-          onTap: onAdd,
+          onTap: _handleAdd,
           child: Container(
             width: 40,
             height: 40,
@@ -1649,10 +2009,15 @@ class _InputRow extends StatelessWidget {
 }
 
 class _LineChip extends StatelessWidget {
-  const _LineChip({required this.label, required this.onRemove});
+  const _LineChip({
+    required this.label,
+    required this.onRemove,
+    this.onEdit,
+  });
 
   final String label;
   final VoidCallback onRemove;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -1679,6 +2044,17 @@ class _LineChip extends StatelessWidget {
               ),
             ),
           ),
+          if (onEdit != null) ...[
+            const SizedBox(width: 8),
+            _cmsClickable(
+              onTap: onEdit!,
+              child: const Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: CmsColors.textSecond,
+              ),
+            ),
+          ],
           const SizedBox(width: 8),
           _cmsClickable(
             onTap: onRemove,

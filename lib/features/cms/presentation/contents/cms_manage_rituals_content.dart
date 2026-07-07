@@ -5,6 +5,7 @@ import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
@@ -83,7 +84,7 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
   }
 }
 
-class _RitualList extends StatelessWidget {
+class _RitualList extends StatefulWidget {
   const _RitualList({
     required this.controller,
     required this.onAdd,
@@ -92,6 +93,29 @@ class _RitualList extends StatelessWidget {
   final RitualController controller;
   final VoidCallback onAdd;
   final ValueChanged<RitualModel> onEdit;
+
+  @override
+  State<_RitualList> createState() => _RitualListState();
+}
+
+class _RitualListState extends State<_RitualList> {
+  late final CmsSearchScheduler _searchScheduler;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchScheduler = CmsSearchScheduler(onSearch: widget.controller.setSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    super.dispose();
+  }
+
+  RitualController get controller => widget.controller;
+  VoidCallback get onAdd => widget.onAdd;
+  ValueChanged<RitualModel> get onEdit => widget.onEdit;
 
   static const _filters = ['All', 'Approved', 'Pending', 'Draft', 'Rejected'];
 
@@ -123,7 +147,7 @@ class _RitualList extends StatelessWidget {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search rituals...',
-                  onChanged: controller.setSearch,
+                  onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
               const SizedBox(width: 12),
@@ -207,7 +231,7 @@ class _RitualList extends StatelessWidget {
         const Divider(height: 1, color: CmsColors.border),
         Expanded(
           child: Obx(() {
-            if (controller.isLoading) {
+            if (controller.isLoading && controller.rituals.isEmpty) {
               return const Center(
                 child: CircularProgressIndicator(color: CmsColors.orange),
               );
@@ -257,6 +281,25 @@ class _RitualList extends StatelessWidget {
               ),
             );
           }),
+        ),
+        Obx(
+          () => Padding(
+            padding: EdgeInsets.fromLTRB(
+              isTablet ? 24 : 16,
+              0,
+              isTablet ? 24 : 16,
+              16,
+            ),
+            child: CmsPaginationBar(
+              page: controller.page,
+              pageSize: controller.limit,
+              totalPages: controller.totalPages,
+              totalRows: controller.total,
+              isLoading: controller.isLoading,
+              onPageSelected: controller.goToPage,
+              onPageSizeChanged: controller.setPageSize,
+            ),
+          ),
         ),
       ],
     );
@@ -433,7 +476,7 @@ class _RitualFormState extends State<_RitualForm> {
   late final TextEditingController _startingDayCtrl;
   late final TextEditingController _ritualDaysCtrl;
   late final TextEditingController _bestTimeCtrl;
-  String? _selectedDeityId;
+  List<String> _selectedDeityIds = [];
   String _difficulty = 'BEGINNER';
   static const String _accessType = 'FREE';
   String _status = 'PENDING';
@@ -488,7 +531,7 @@ class _RitualFormState extends State<_RitualForm> {
       text: dayCount > 0 ? dayCount.toString() : '',
     );
     _bestTimeCtrl = TextEditingController(text: r?.bestDayTime ?? '');
-    _selectedDeityId = r?.deity;
+    _selectedDeityIds = List<String>.from(r?.deities ?? const []);
     _difficulty = r?.difficulty ?? 'BEGINNER';
     _status = r?.status ?? 'PENDING';
     _isFeatured = r?.isFeatured ?? false;
@@ -529,10 +572,10 @@ class _RitualFormState extends State<_RitualForm> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedDeityId == null) {
+    if (_selectedDeityIds.isEmpty) {
       showCmsSnackbar(
         title: 'Validation Error',
-        message: 'Please select a deity',
+        message: 'Please select at least one deity',
         isError: true,
       );
       return;
@@ -575,7 +618,7 @@ class _RitualFormState extends State<_RitualForm> {
       id: widget.ritual?.id ?? '',
       title: _titleCtrl.text.trim(),
       slug: _slugCtrl.text.trim().isEmpty ? null : _slugCtrl.text.trim(),
-      deity: _selectedDeityId!,
+      deities: _selectedDeityIds,
       description: _descCtrl.text.trim(),
       category: _categoryCtrl.text.trim(),
       days: cleanDays,
@@ -599,7 +642,7 @@ class _RitualFormState extends State<_RitualForm> {
         ? await widget.controller.createRitual(
             title: ritualData.title,
             slug: ritualData.slug,
-            deity: ritualData.deity,
+            deities: ritualData.deities,
             description: ritualData.description ?? '',
             days: ritualData.days,
             sections: ritualData.sections,
@@ -799,7 +842,7 @@ class _RitualFormState extends State<_RitualForm> {
         CmsUploadBox(
           label: _isEdit ? 'Ritual image' : 'Ritual image *',
           icon: Icons.image_outlined,
-          accept: 'JPG, PNG up to 5MB',
+          accept: '1920 × 1080 px, JPG, PNG up to 5MB',
           mediaType: PickMediaType.image,
           initialUrl: _imageUrl,
           onPicked: (f) => setState(() {
@@ -935,119 +978,23 @@ class _RitualFormState extends State<_RitualForm> {
       final deities = widget.controller.deities;
       final isLoading = widget.controller.isLoadingDeities;
       final loaded = widget.controller.deitiesLoaded;
-      final hasDeities = deities.isNotEmpty;
-      final ids = deities.map((d) => d['id']!).toList();
-      final value =
-          hasDeities &&
-              _selectedDeityId != null &&
-              ids.contains(_selectedDeityId)
-          ? _selectedDeityId
-          : null;
 
-      final hintText = isLoading && !loaded
-          ? 'Loading deities...'
-          : 'Select deity';
-
-      final List<DropdownMenuItem<String>> items;
-      if (isLoading && !loaded) {
-        items = const [
-          DropdownMenuItem<String>(
-            enabled: false,
-            value: '__loading__',
-            child: Text(
-              'Loading deities...',
-              style: TextStyle(
-                fontSize: 13,
-                color: CmsThemeColors.inputHint,
-              ),
-            ),
-          ),
-        ];
-      } else if (hasDeities) {
-        items = deities
+      return CmsMultiSelectField(
+        label: 'Deity *',
+        hintText: 'Select deities',
+        isLoading: isLoading && !loaded,
+        loadingText: 'Loading deities...',
+        emptyText: 'No deities found',
+        options: deities
             .map(
-              (d) => DropdownMenuItem(
-                value: d['id'],
-                child: Text(
-                  d['name'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: CmsThemeColors.inputText,
-                  ),
-                ),
+              (d) => CmsSelectOption(
+                value: d['id']!,
+                label: d['name']?.isNotEmpty == true ? d['name']! : d['id']!,
               ),
             )
-            .toList();
-      } else {
-        items = const [
-          DropdownMenuItem<String>(
-            enabled: false,
-            value: '__no_deities__',
-            child: Text(
-              'No deities found',
-              style: TextStyle(
-                fontSize: 13,
-                color: CmsThemeColors.inputHint,
-              ),
-            ),
-          ),
-        ];
-      }
-
-      return _RitualLabeled(
-        label: 'Deity *',
-        child: DropdownButtonFormField<String>(
-          value: value,
-          isExpanded: true,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: CmsColors.textSecond,
-            size: 20,
-          ),
-          dropdownColor: CmsColors.bg,
-          style: const TextStyle(
-            fontSize: 13,
-            color: CmsThemeColors.inputText,
-          ),
-          hint: Text(
-            hintText,
-            style: const TextStyle(
-              fontSize: 13,
-              color: CmsThemeColors.inputHint,
-            ),
-          ),
-          items: items,
-          onChanged: (v) {
-            if (v == null || v == '__no_deities__' || v == '__loading__') {
-              return;
-            }
-            setState(() => _selectedDeityId = v);
-          },
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: CmsColors.bg,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.orange),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CmsColors.border),
-            ),
-          ),
-        ),
+            .toList(),
+        selectedValues: _selectedDeityIds,
+        onChanged: (values) => setState(() => _selectedDeityIds = values),
       );
     });
   }

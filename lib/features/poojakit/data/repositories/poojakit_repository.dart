@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
@@ -98,6 +99,7 @@ class PoojaKitRepository {
       final res = await _apiClient.dio.post<dynamic>(
         ApiEndpoints.verifyOrderPayment(orderId),
         data: {'reference': reference},
+        options: Options(extra: {kSkipApiLoaderKey: true}),
       );
       final data = res.data;
       if (data is! Map<String, dynamic>) {

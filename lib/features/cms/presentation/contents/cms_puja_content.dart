@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
@@ -124,7 +125,7 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
 // ════════════════════════════════════════════════════════════════
 // POOJA LIST
 // ════════════════════════════════════════════════════════════════
-class _PoojaList extends StatelessWidget {
+class _PoojaList extends StatefulWidget {
   const _PoojaList({
     required this.controller,
     required this.onAdd,
@@ -133,6 +134,29 @@ class _PoojaList extends StatelessWidget {
   final PoojaController controller;
   final VoidCallback onAdd;
   final ValueChanged<PoojaModel> onEdit;
+
+  @override
+  State<_PoojaList> createState() => _PoojaListState();
+}
+
+class _PoojaListState extends State<_PoojaList> {
+  late final CmsSearchScheduler _searchScheduler;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchScheduler = CmsSearchScheduler(onSearch: widget.controller.setSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    super.dispose();
+  }
+
+  PoojaController get controller => widget.controller;
+  VoidCallback get onAdd => widget.onAdd;
+  ValueChanged<PoojaModel> get onEdit => widget.onEdit;
 
   static const _filters = [
     'All',
@@ -199,7 +223,10 @@ class _PoojaList extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: CmsSearchBar(hint: 'Search pujas...', onChanged: (_) {}),
+                child: CmsSearchBar(
+                  hint: 'Search pujas...',
+                  onChanged: _searchScheduler.onQueryChanged,
+                ),
               ),
               const SizedBox(width: 12),
               Obx(
@@ -342,7 +369,7 @@ class _PoojaList extends StatelessWidget {
         // ── Content ──────────────────────────────────────────
         Expanded(
           child: Obx(() {
-            if (controller.isLoading) {
+            if (controller.isLoading && controller.poojas.isEmpty) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -401,16 +428,23 @@ class _PoojaList extends StatelessWidget {
             final list = controller.filteredPoojas;
 
             if (list.isEmpty) {
+              final isSearch = controller.search.isNotEmpty;
               return CmsEmptyState(
                 icon: Icons.self_improvement,
-                title: controller.filter == 'All'
-                    ? 'No Pujas Yet'
-                    : 'No ${controller.filter} Pujas',
-                subtitle: controller.filter == 'All'
-                    ? 'Add your first puja to get started'
-                    : 'No pujas with this status',
-                actionLabel: controller.filter == 'All' ? 'Add Puja' : null,
-                onAction: controller.filter == 'All' ? onAdd : null,
+                title: isSearch
+                    ? 'No matching pujas'
+                    : controller.filter == 'All'
+                        ? 'No Pujas Yet'
+                        : 'No ${controller.filter} Pujas',
+                subtitle: isSearch
+                    ? 'Try a different search term'
+                    : controller.filter == 'All'
+                        ? 'Add your first puja to get started'
+                        : 'No pujas with this status',
+                actionLabel:
+                    !isSearch && controller.filter == 'All' ? 'Add Puja' : null,
+                onAction:
+                    !isSearch && controller.filter == 'All' ? onAdd : null,
               );
             }
 
@@ -441,6 +475,20 @@ class _PoojaList extends StatelessWidget {
               ),
             );
           }),
+        ),
+        Obx(
+          () => Padding(
+            padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 0, isWeb ? 24 : 16, 16),
+            child: CmsPaginationBar(
+              page: controller.page,
+              pageSize: controller.limit,
+              totalPages: controller.totalPages,
+              totalRows: controller.total,
+              isLoading: controller.isLoading,
+              onPageSelected: controller.goToPage,
+              onPageSizeChanged: controller.setPageSize,
+            ),
+          ),
         ),
       ],
     );
@@ -895,7 +943,7 @@ class _PoojaForm extends StatefulWidget {
 
 class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _titleCtrl;
-  String? _selectedDeityId;
+  List<String> _selectedDeityIds = [];
   late final TextEditingController _durationCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _purposeWhyCtrl;
@@ -927,8 +975,11 @@ class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _symbolismTitleCtrl;
   late final TextEditingController _symbolismDescCtrl;
   DateTime? _selectedDate;
+  final List<DateTime> _selectedScheduleDates = [];
+  bool _dailyRepeat = false;
   final _stepTitleCtrl = TextEditingController();
   final _stepDescCtrl = TextEditingController();
+  final _stepTitleFocus = FocusNode();
   final _itemCtrl = TextEditingController();
   final List<String> _stepImageUrls = [];
   final List<PickedFile> _stepPickedImages = [];
@@ -957,6 +1008,9 @@ class _PoojaFormState extends State<_PoojaForm> {
   bool _showOfferingsEditor = false;
   bool _showActionsEditor = false;
   bool _showOtherSymbolismEditor = false;
+  int? _editingOfferingsIndex;
+  int? _editingActionsIndex;
+  int? _editingOtherSymbolismIndex;
 
   FestivalController get _festivalCtrl => Get.find<FestivalController>();
 
@@ -973,7 +1027,7 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   static const _diffs = ['Beginner', 'Intermediate', 'Advanced'];
   static const _cats = [
-    'Daily Pooja',
+    'Daily Puja',
     'Festival',
     'Special Occasion',
     'Full Moon',
@@ -982,6 +1036,8 @@ class _PoojaFormState extends State<_PoojaForm> {
   ];
 
   bool get _isEdit => widget.pooja != null;
+
+  bool get _isDailyPuja => _category == 'Daily Puja';
 
   static String? _trimMediaUrl(String? url) {
     final t = url?.trim();
@@ -994,7 +1050,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     super.initState();
     final p = widget.pooja;
     _titleCtrl = TextEditingController(text: p?.title ?? '');
-    _selectedDeityId = p?.deity;
+    _selectedDeityIds = List<String>.from(p?.deities ?? const []);
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
     _descCtrl = TextEditingController(text: p?.description ?? '');
     _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
@@ -1032,9 +1088,8 @@ class _PoojaFormState extends State<_PoojaForm> {
     _symbolismDescCtrl = TextEditingController();
     _difficulty = _diffs.contains(p?.difficulty) ? p!.difficulty : _diffs.first;
     _category = _cats.contains(p?.category) ? p!.category : _cats.first;
-    if (p?.date != null) {
-      _selectedDate = _parseDate(p!.date!);
-    }
+    _dailyRepeat = p?.daily == true && _category == 'Daily Puja';
+    _initScheduleDatesFromPooja(p);
     _stepEntries = List<_StepDraft>.from(
       (p?.steps ?? <String>[]).map(_decodeStoredStep),
     );
@@ -1096,18 +1151,17 @@ class _PoojaFormState extends State<_PoojaForm> {
     _symbolismDescCtrl.dispose();
     _stepTitleCtrl.dispose();
     _stepDescCtrl.dispose();
+    _stepTitleFocus.dispose();
     _itemCtrl.dispose();
     super.dispose();
   }
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
-    if (_selectedDeityId == null || _selectedDeityId!.isEmpty) {
-      return 'Deity is required';
+    if (_selectedDeityIds.isEmpty) {
+      return 'At least one deity is required';
     }
-    if (_descCtrl.text.trim().isEmpty) return 'Description is required';
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
-    if (_selectedDate == null) return 'Schedule Date is required';
     return null;
   }
 
@@ -1160,7 +1214,20 @@ class _PoojaFormState extends State<_PoojaForm> {
     _editingStepIndex = null;
   }
 
+  void _focusStepTitleField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _stepTitleFocus.requestFocus();
+        final text = _stepTitleCtrl.text;
+        _stepTitleCtrl.selection = TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
   void _toggleStepEditor() {
+    final opening = !_showStepEditor;
     setState(() {
       if (_showStepEditor) {
         _clearStepEditorFields();
@@ -1170,6 +1237,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         _showStepEditor = true;
       }
     });
+    if (opening) _focusStepTitleField();
   }
 
   void _startEditStep(int index) {
@@ -1186,6 +1254,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         ..clear()
         ..addAll(step.pickedImages);
     });
+    _focusStepTitleField();
   }
 
   void _cancelStepEdit() {
@@ -1237,8 +1306,9 @@ class _PoojaFormState extends State<_PoojaForm> {
         _stepEntries = [..._stepEntries, draft];
       }
       _clearStepEditorFields();
-      _showStepEditor = false;
+      _showStepEditor = true;
     });
+    _focusStepTitleField();
   }
 
   void _addChipValue(TextEditingController ctrl, List<String> target) {
@@ -1250,22 +1320,64 @@ class _PoojaFormState extends State<_PoojaForm> {
     ctrl.clear();
   }
 
+  void _startEditChipText(
+    TextEditingController ctrl,
+    List<String> target,
+    int index,
+  ) {
+    if (index < 0 || index >= target.length) return;
+    final value = target[index];
+    ctrl.text = value;
+    ctrl.selection = TextSelection.collapsed(offset: value.length);
+    target.removeAt(index);
+  }
+
   void _addKeyValueEntry({
     required TextEditingController titleCtrl,
     required TextEditingController descCtrl,
     required List<Map<String, String>> target,
     required void Function() onAdded,
+    int? editingIndex,
   }) {
     final title = titleCtrl.text.trim();
     final description = descCtrl.text.trim();
     if (title.isEmpty && description.isEmpty) return;
-    target.add({
+    final entry = {
       'title': title.isEmpty ? 'Untitled' : title,
       'description': description,
-    });
+    };
+    if (editingIndex != null) {
+      target[editingIndex] = entry;
+    } else {
+      target.add(entry);
+    }
     titleCtrl.clear();
     descCtrl.clear();
     onAdded();
+  }
+
+  void _startEditKeyValueEntry({
+    required int index,
+    required List<Map<String, String>> target,
+    required TextEditingController titleCtrl,
+    required TextEditingController descCtrl,
+    required void Function() onStarted,
+  }) {
+    if (index < 0 || index >= target.length) return;
+    final entry = target[index];
+    titleCtrl.text = entry['title'] ?? '';
+    descCtrl.text = entry['description'] ?? '';
+    onStarted();
+  }
+
+  void _clearKeyValueEditor({
+    required TextEditingController titleCtrl,
+    required TextEditingController descCtrl,
+    required void Function() onCleared,
+  }) {
+    titleCtrl.clear();
+    descCtrl.clear();
+    onCleared();
   }
 
   void _applyGaneshaTemplate() {
@@ -1433,11 +1545,377 @@ class _PoojaFormState extends State<_PoojaForm> {
     return found?.title ?? id;
   }
 
-  DateTime? _parseDate(String s) {
+  void _initScheduleDatesFromPooja(PoojaModel? p) {
+    _selectedScheduleDates.clear();
+    _selectedDate = null;
+    if (p == null || _dailyRepeat) return;
+
+    final parsed = <DateTime>[];
+    if (p.schedules.isNotEmpty) {
+      for (final entry in p.schedules) {
+        final dateOnly = _parseDateOnly(entry['date'] ?? '');
+        if (dateOnly == null) continue;
+        final time = _parseTime(entry['time'] ?? '00:00');
+        parsed.add(
+          DateTime(
+            dateOnly.year,
+            dateOnly.month,
+            dateOnly.day,
+            time.hour,
+            time.minute,
+          ),
+        );
+      }
+    } else if (p.date != null && p.date!.trim().isNotEmpty) {
+      final legacy = _parseDate(p.date!);
+      if (legacy != null) parsed.add(legacy);
+    }
+    parsed.sort((a, b) => a.compareTo(b));
+
+    if (_cats.contains(p.category) && p.category == 'Daily Puja') {
+      _selectedScheduleDates.addAll(parsed);
+    } else if (parsed.isNotEmpty) {
+      _selectedDate = parsed.first;
+    }
+  }
+
+
+  bool _isSameDateTime(DateTime a, DateTime b) =>
+      a.year == b.year &&
+      a.month == b.month &&
+      a.day == b.day &&
+      a.hour == b.hour &&
+      a.minute == b.minute;
+
+  String _formatDisplayDateTime(DateTime d) {
+    final hour = d.hour;
+    final minute = d.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    return '${d.day}/${d.month}/${d.year}, $hour12:$minute $period';
+  }
+
+  String _formatApiDateOnly(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.year}';
+
+  String _formatApiTimeOnly(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:'
+      '${d.minute.toString().padLeft(2, '0')}';
+
+  List<Map<String, String>> _schedulesApi() {
+    if (_isDailyPuja && _dailyRepeat) return const [];
+    final source = _isDailyPuja
+        ? List<DateTime>.from(_selectedScheduleDates)
+        : (_selectedDate != null ? [_selectedDate!] : <DateTime>[]);
+    source.sort((a, b) => a.compareTo(b));
+    return source
+        .map(
+          (d) => {
+            'date': _formatApiDateOnly(d),
+            'time': _formatApiTimeOnly(d),
+          },
+        )
+        .toList();
+  }
+
+  void _onCategoryChanged(String? value) {
+    final next = value ?? _cats.first;
+    if (next == _category) return;
+    setState(() {
+      if (next == 'Daily Puja' && _category != 'Daily Puja') {
+        _selectedScheduleDates.clear();
+        if (_selectedDate != null) {
+          _selectedScheduleDates.add(_selectedDate!);
+          _selectedDate = null;
+        }
+      } else if (next != 'Daily Puja' && _category == 'Daily Puja') {
+        _selectedDate = _selectedScheduleDates.isNotEmpty
+            ? _selectedScheduleDates.first
+            : null;
+        _selectedScheduleDates.clear();
+        _dailyRepeat = false;
+      }
+      _category = next;
+    });
+  }
+
+  Future<TimeOfDay?> _pickScheduleTime({DateTime? initial}) {
+    return showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial ?? DateTime.now()),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: CmsColors.orange,
+              onPrimary: Colors.white,
+              onSurface: CmsColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+  }
+
+  Future<DateTime?> _pickScheduleDateTime({DateTime? initial}) async {
+    final base = initial ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: base,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: CmsColors.orange,
+              onPrimary: Colors.white,
+              onSurface: CmsColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null || !mounted) return null;
+    final time = await _pickScheduleTime(initial: base);
+    if (!mounted || time == null) return null;
+    return DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      time.hour,
+      time.minute,
+    );
+  }
+
+  Future<void> _pickScheduleDate() async {
+    final initial = _isDailyPuja
+        ? (_selectedScheduleDates.isNotEmpty
+            ? _selectedScheduleDates.last
+            : DateTime.now())
+        : (_selectedDate ?? DateTime.now());
+    final combined = await _pickScheduleDateTime(initial: initial);
+    if (combined == null) return;
+    setState(() {
+      if (_isDailyPuja) {
+        if (_selectedScheduleDates.any((d) => _isSameDateTime(d, combined))) {
+          return;
+        }
+        _selectedScheduleDates.add(combined);
+        _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+      } else {
+        _selectedDate = combined;
+      }
+    });
+  }
+
+  Future<void> _editScheduleAt(int index) async {
+    final current = _selectedScheduleDates[index];
+    final updated = await _pickScheduleDateTime(initial: current);
+    if (updated == null || !mounted) return;
+    setState(() {
+      final duplicate = _selectedScheduleDates
+          .asMap()
+          .entries
+          .any((e) => e.key != index && _isSameDateTime(e.value, updated));
+      if (duplicate) return;
+      _selectedScheduleDates[index] = updated;
+      _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+    });
+  }
+
+  Widget _buildDailyScheduleSection() {
+    if (!_isDailyPuja) {
+      return _buildScheduleDateField();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: CmsColors.bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Puja runs every day without fixed schedule dates',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _dailyRepeat,
+                activeThumbColor: Colors.white,
+                activeTrackColor: CmsColors.orange,
+                onChanged: (value) => setState(() {
+                  _dailyRepeat = value;
+                  if (value) _selectedScheduleDates.clear();
+                }),
+              ),
+            ],
+          ),
+        ),
+        if (!_dailyRepeat) ...[
+          const SizedBox(height: 12),
+          _buildScheduleDateField(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildScheduleDateField() {
+    if (_isDailyPuja) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Schedule Dates & Times',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _cmsClickable(
+            onTap: _pickScheduleDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: CmsColors.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: CmsColors.border),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    size: 16,
+                    color: CmsColors.orange,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Add date & time',
+                    style: TextStyle(fontSize: 13, color: CmsColors.textSecond),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_selectedScheduleDates.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _selectedScheduleDates.asMap().entries.map((e) {
+                final date = e.value;
+                return _Chip(
+                  label: _formatDisplayDateTime(date),
+                  onEdit: () => _editScheduleAt(e.key),
+                  onRemove: () =>
+                      setState(() => _selectedScheduleDates.removeAt(e.key)),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Schedule Date & Time',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _cmsClickable(
+          onTap: _pickScheduleDate,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: CmsColors.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.event_available_outlined,
+                  size: 16,
+                  color: _selectedDate != null
+                      ? CmsColors.orange
+                      : CmsColors.textSecond,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _selectedDate != null
+                        ? _formatDisplayDateTime(_selectedDate!)
+                        : 'Select date & time',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _selectedDate != null
+                          ? CmsColors.textPrimary
+                          : CmsColors.textSecond,
+                    ),
+                  ),
+                ),
+                if (_selectedDate != null)
+                  _cmsClickable(
+                    onTap: () => setState(() => _selectedDate = null),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  DateTime? _parseDateOnly(String s) {
     if (s.isEmpty) return null;
+    final trimmed = s.trim();
     try {
-      // Try DD-MM-YYYY
-      final parts = s.split('-');
+      final parts = trimmed.split('-');
       if (parts.length == 3 && parts[0].length <= 2) {
         return DateTime(
           int.parse(parts[2]),
@@ -1445,8 +1923,40 @@ class _PoojaFormState extends State<_PoojaForm> {
           int.parse(parts[0]),
         );
       }
-      // Fallback to ISO
-      return DateTime.parse(s);
+      final parsed = DateTime.parse(trimmed);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  TimeOfDay _parseTime(String s) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(s.trim());
+    if (match == null) return const TimeOfDay(hour: 0, minute: 0);
+    return TimeOfDay(
+      hour: int.parse(match.group(1)!),
+      minute: int.parse(match.group(2)!),
+    );
+  }
+
+  DateTime? _parseDate(String s) {
+    if (s.isEmpty) return null;
+    final trimmed = s.trim();
+    try {
+      final withTime = RegExp(
+        r'^(\d{1,2})-(\d{1,2})-(\d{4}) (\d{1,2}):(\d{2})$',
+      );
+      final match = withTime.firstMatch(trimmed);
+      if (match != null) {
+        return DateTime(
+          int.parse(match.group(3)!),
+          int.parse(match.group(2)!),
+          int.parse(match.group(1)!),
+          int.parse(match.group(4)!),
+          int.parse(match.group(5)!),
+        );
+      }
+      return _parseDateOnly(trimmed);
     } catch (_) {
       return null;
     }
@@ -1470,10 +1980,8 @@ class _PoojaFormState extends State<_PoojaForm> {
       return;
     }
     final status = isDraft ? 'Draft' : 'Pending';
-    final scheduleDateApi =
-        '${_selectedDate!.day.toString().padLeft(2, '0')}-'
-        '${_selectedDate!.month.toString().padLeft(2, '0')}-'
-        '${_selectedDate!.year}';
+    final schedulesApi = _schedulesApi();
+    final dailyApi = _isDailyPuja && _dailyRepeat;
     bool ok;
     if (_isEdit) {
       ok = await widget.controller.updatePooja(
@@ -1482,7 +1990,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         stepImagesByStep: _stepPickedImagesByStep(),
         widget.pooja!.copyWith(
           title: _titleCtrl.text.trim(),
-          deity: _selectedDeityId ?? '',
+          deities: _selectedDeityIds,
           category: _category,
           difficulty: _difficulty,
           duration: _durationCtrl.text.trim(),
@@ -1512,7 +2020,8 @@ class _PoojaFormState extends State<_PoojaForm> {
           completionBenefits: _completionBenefits,
           blessings: blessingsPayload,
           festivalIds: _selectedFestivalIds,
-          date: scheduleDateApi,
+          schedules: schedulesApi,
+          daily: dailyApi,
         ),
       );
     } else {
@@ -1520,7 +2029,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         pickedImage: _pickedImage,
         stepImagesByStep: _stepPickedImagesByStep(),
         title: _titleCtrl.text.trim(),
-        deity: _selectedDeityId ?? '',
+        deities: _selectedDeityIds,
         category: _category,
         difficulty: _difficulty,
         duration: _durationCtrl.text.trim(),
@@ -1550,7 +2059,8 @@ class _PoojaFormState extends State<_PoojaForm> {
         completionBenefits: _completionBenefits,
         blessings: blessingsPayload,
         festivalIds: _selectedFestivalIds,
-        date: scheduleDateApi,
+        schedules: schedulesApi,
+        daily: dailyApi,
       );
     }
     if (ok) widget.onSaved();
@@ -1654,117 +2164,28 @@ class _PoojaFormState extends State<_PoojaForm> {
               Expanded(
                 child: Obx(() {
                   final deities = widget.controller.deities;
-                  final value = deities.any((d) => d['id'] == _selectedDeityId)
-                      ? _selectedDeityId
-                      : null;
+                  final isLoading = widget.controller.isLoadingDeities;
+                  final loaded = widget.controller.deitiesLoaded;
 
-                  if (deities.isEmpty) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Deity *',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: CmsColors.textPrimary,
+                  return CmsMultiSelectField(
+                    label: 'Deity *',
+                    hintText: 'Select deities',
+                    isLoading: isLoading && !loaded,
+                    loadingText: 'Loading deities...',
+                    emptyText: 'No deities found',
+                    options: deities
+                        .map(
+                          (d) => CmsSelectOption(
+                            value: d['id']!,
+                            label: d['name']?.isNotEmpty == true
+                                ? d['name']!
+                                : d['id']!,
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Loading deities...',
-                            filled: true,
-                            fillColor: CmsColors.bg,
-                            enabled: false,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Deity *',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: CmsColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: value,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: CmsColors.textSecond,
-                          size: 20,
-                        ),
-                        dropdownColor: CmsColors.bg,
-                        hint: const Text(
-                          'Select deity',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: CmsThemeColors.inputHint,
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: CmsThemeColors.inputText,
-                        ),
-                        items: deities
-                            .map(
-                              (d) => DropdownMenuItem<String>(
-                                value: d['id'],
-                                child: Text(
-                                  (d['name']?.isNotEmpty ?? false)
-                                      ? d['name']!
-                                      : d['id']!,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: CmsThemeColors.inputText,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(() => _selectedDeityId = v),
-                        decoration: InputDecoration(
-                          hintText: 'Select deity',
-                          filled: true,
-                          fillColor: CmsColors.bg,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: CmsColors.border,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: CmsColors.border,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: CmsColors.orange,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                        )
+                        .toList(),
+                    selectedValues: _selectedDeityIds,
+                    onChanged: (values) =>
+                        setState(() => _selectedDeityIds = values),
                   );
                 }),
               ),
@@ -1785,99 +2206,17 @@ class _PoojaFormState extends State<_PoojaForm> {
             label: 'Category',
             items: _cats,
             initialValue: _category,
-            onChanged: (v) => setState(() => _category = v ?? _cats.first),
+            onChanged: _onCategoryChanged,
           ),
           const SizedBox(height: 12),
           CmsFormField(
-            label: 'Description *',
-            hint: 'Enter description...',
+            label: 'Description',
+            hint: 'Enter a brief description...',
             controller: _descCtrl,
             maxLines: 4,
           ),
           const SizedBox(height: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Schedule Date *',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              _cmsClickable(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate ?? DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                    builder: (context, child) {
-                      return Theme(
-                        data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(
-                            primary: CmsColors.orange,
-                            onPrimary: Colors.white,
-                            onSurface: CmsColors.textPrimary,
-                          ),
-                        ),
-                        child: child!,
-                      );
-                    },
-                  );
-                  if (picked != null) {
-                    setState(() => _selectedDate = picked);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: CmsColors.bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: CmsColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: _selectedDate != null
-                            ? CmsColors.orange
-                            : CmsColors.textSecond,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _selectedDate != null
-                            ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                            : 'Select a date',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _selectedDate != null
-                              ? CmsColors.textPrimary
-                              : CmsColors.textSecond,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (_selectedDate != null)
-                        _cmsClickable(
-                          onTap: () => setState(() => _selectedDate = null),
-                          child: const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: CmsColors.textSecond,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _buildDailyScheduleSection(),
           const SizedBox(height: 12),
           Obx(() {
             final festivals = _approvedFestivals;
@@ -2031,12 +2370,18 @@ class _PoojaFormState extends State<_PoojaForm> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _purposeBenefits
-                  .map(
-                    (i) => _Chip(
-                      label: i,
+              children: _purposeBenefits.asMap().entries.map(
+                    (e) => _Chip(
+                      label: e.value,
+                      onEdit: () => setState(
+                        () => _startEditChipText(
+                          _purposeBenefitsCtrl,
+                          _purposeBenefits,
+                          e.key,
+                        ),
+                      ),
                       onRemove: () =>
-                          setState(() => _purposeBenefits.remove(i)),
+                          setState(() => _purposeBenefits.removeAt(e.key)),
                     ),
                   )
                   .toList(),
@@ -2073,12 +2418,19 @@ class _PoojaFormState extends State<_PoojaForm> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _deitySummaryBlessings
-                  .map(
-                    (i) => _Chip(
-                      label: i,
-                      onRemove: () =>
-                          setState(() => _deitySummaryBlessings.remove(i)),
+              children: _deitySummaryBlessings.asMap().entries.map(
+                    (e) => _Chip(
+                      label: e.value,
+                      onEdit: () => setState(
+                        () => _startEditChipText(
+                          _deitySummaryBlessingsCtrl,
+                          _deitySummaryBlessings,
+                          e.key,
+                        ),
+                      ),
+                      onRemove: () => setState(
+                        () => _deitySummaryBlessings.removeAt(e.key),
+                      ),
                     ),
                   )
                   .toList(),
@@ -2093,7 +2445,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsUploadBox(
             label: 'Thumbnail Image',
             icon: Icons.image_outlined,
-            accept: 'JPG, PNG up to 5MB',
+            accept: '800 × 800 px, JPG, PNG up to 5MB',
             mediaType: PickMediaType.image,
             initialUrl: _imageUrl,
             onPicked: (f) => setState(() => _pickedImage = f),
@@ -2132,11 +2484,13 @@ class _PoojaFormState extends State<_PoojaForm> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _items
-                  .map(
-                    (i) => _Chip(
-                      label: i,
-                      onRemove: () => setState(() => _items.remove(i)),
+              children: _items.asMap().entries.map(
+                    (e) => _Chip(
+                      label: e.value,
+                      onEdit: () => setState(
+                        () => _startEditChipText(_itemCtrl, _items, e.key),
+                      ),
+                      onRemove: () => setState(() => _items.removeAt(e.key)),
                     ),
                   )
                   .toList(),
@@ -2175,14 +2529,21 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _preparationPersonal
-                  .map(
-                    (i) => Padding(
+              children: _preparationPersonal.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
-                        onRemove: () =>
-                            setState(() => _preparationPersonal.remove(i)),
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _prepPersonalCtrl,
+                            _preparationPersonal,
+                            e.key,
+                          ),
+                        ),
+                        onRemove: () => setState(
+                          () => _preparationPersonal.removeAt(e.key),
+                        ),
                       ),
                     ),
                   )
@@ -2210,14 +2571,21 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _preparationSpace
-                  .map(
-                    (i) => Padding(
+              children: _preparationSpace.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
-                        onRemove: () =>
-                            setState(() => _preparationSpace.remove(i)),
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _prepSpaceCtrl,
+                            _preparationSpace,
+                            e.key,
+                          ),
+                        ),
+                        onRemove: () => setState(
+                          () => _preparationSpace.removeAt(e.key),
+                        ),
                       ),
                     ),
                   )
@@ -2236,7 +2604,11 @@ class _PoojaFormState extends State<_PoojaForm> {
             children: [
               Expanded(
                 child: Text(
-                  _editingStepIndex != null ? 'Edit step' : 'Add step',
+                  _editingStepIndex != null
+                      ? 'Edit step'
+                      : _stepEntries.isNotEmpty
+                      ? 'Add another step'
+                      : 'Add step',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -2268,6 +2640,9 @@ class _PoojaFormState extends State<_PoojaForm> {
               label: 'Step Title',
               hint: 'e.g. Invocation',
               controller: _stepTitleCtrl,
+              focusNode: _stepTitleFocus,
+              onFieldSubmitted: (_) => _saveStepEntry(),
+              textInputAction: TextInputAction.done,
             ),
             const SizedBox(height: 10),
             CmsFormField(
@@ -2309,7 +2684,11 @@ class _PoojaFormState extends State<_PoojaForm> {
                       size: 16,
                     ),
                     label: Text(
-                      _editingStepIndex != null ? 'Update Step' : 'Add Step',
+                      _editingStepIndex != null
+                          ? 'Update Step'
+                          : _stepEntries.isNotEmpty
+                          ? 'Add another step'
+                          : 'Add Step',
                     ),
                     style: OutlinedButton.styleFrom().copyWith(
                       mouseCursor: _cmsButtonClickCursor,
@@ -2381,12 +2760,18 @@ class _PoojaFormState extends State<_PoojaForm> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _mantraAdditional
-                  .map(
-                    (i) => _Chip(
-                      label: i,
+              children: _mantraAdditional.asMap().entries.map(
+                    (e) => _Chip(
+                      label: e.value,
+                      onEdit: () => setState(
+                        () => _startEditChipText(
+                          _mantraAdditionalCtrl,
+                          _mantraAdditional,
+                          e.key,
+                        ),
+                      ),
                       onRemove: () =>
-                          setState(() => _mantraAdditional.remove(i)),
+                          setState(() => _mantraAdditional.removeAt(e.key)),
                     ),
                   )
                   .toList(),
@@ -2407,8 +2792,22 @@ class _PoojaFormState extends State<_PoojaForm> {
           _KeyValueEditor(
             heading: 'Offerings Meaning',
             showEditor: _showOfferingsEditor,
-            onToggle: () =>
-                setState(() => _showOfferingsEditor = !_showOfferingsEditor),
+            editingIndex: _editingOfferingsIndex,
+            onToggle: () => setState(() {
+              if (_showOfferingsEditor) {
+                _clearKeyValueEditor(
+                  titleCtrl: _offeringsTitleCtrl,
+                  descCtrl: _offeringsDescCtrl,
+                  onCleared: () {
+                    _editingOfferingsIndex = null;
+                    _showOfferingsEditor = false;
+                  },
+                );
+              } else {
+                _editingOfferingsIndex = null;
+                _showOfferingsEditor = true;
+              }
+            }),
             titleCtrl: _offeringsTitleCtrl,
             descCtrl: _offeringsDescCtrl,
             onAdd: () => setState(
@@ -2416,19 +2815,62 @@ class _PoojaFormState extends State<_PoojaForm> {
                 titleCtrl: _offeringsTitleCtrl,
                 descCtrl: _offeringsDescCtrl,
                 target: _offeringsMeaningEntries,
-                onAdded: () => _showOfferingsEditor = false,
+                editingIndex: _editingOfferingsIndex,
+                onAdded: () {
+                  _editingOfferingsIndex = null;
+                },
               ),
             ),
             entries: _offeringsMeaningEntries,
-            onRemove: (i) =>
-                setState(() => _offeringsMeaningEntries.removeAt(i)),
+            onEdit: (i) => setState(
+              () => _startEditKeyValueEntry(
+                index: i,
+                target: _offeringsMeaningEntries,
+                titleCtrl: _offeringsTitleCtrl,
+                descCtrl: _offeringsDescCtrl,
+                onStarted: () {
+                  _editingOfferingsIndex = i;
+                  _showOfferingsEditor = true;
+                },
+              ),
+            ),
+            onRemove: (i) => setState(() {
+              if (_editingOfferingsIndex == i) {
+                _clearKeyValueEditor(
+                  titleCtrl: _offeringsTitleCtrl,
+                  descCtrl: _offeringsDescCtrl,
+                  onCleared: () {
+                    _editingOfferingsIndex = null;
+                    _showOfferingsEditor = false;
+                  },
+                );
+              } else if (_editingOfferingsIndex != null &&
+                  i < _editingOfferingsIndex!) {
+                _editingOfferingsIndex = _editingOfferingsIndex! - 1;
+              }
+              _offeringsMeaningEntries.removeAt(i);
+            }),
           ),
           const SizedBox(height: 12),
           _KeyValueEditor(
             heading: 'Actions Meaning',
             showEditor: _showActionsEditor,
-            onToggle: () =>
-                setState(() => _showActionsEditor = !_showActionsEditor),
+            editingIndex: _editingActionsIndex,
+            onToggle: () => setState(() {
+              if (_showActionsEditor) {
+                _clearKeyValueEditor(
+                  titleCtrl: _actionsTitleCtrl,
+                  descCtrl: _actionsDescCtrl,
+                  onCleared: () {
+                    _editingActionsIndex = null;
+                    _showActionsEditor = false;
+                  },
+                );
+              } else {
+                _editingActionsIndex = null;
+                _showActionsEditor = true;
+              }
+            }),
             titleCtrl: _actionsTitleCtrl,
             descCtrl: _actionsDescCtrl,
             onAdd: () => setState(
@@ -2436,19 +2878,62 @@ class _PoojaFormState extends State<_PoojaForm> {
                 titleCtrl: _actionsTitleCtrl,
                 descCtrl: _actionsDescCtrl,
                 target: _actionsMeaningEntries,
-                onAdded: () => _showActionsEditor = false,
+                editingIndex: _editingActionsIndex,
+                onAdded: () {
+                  _editingActionsIndex = null;
+                },
               ),
             ),
             entries: _actionsMeaningEntries,
-            onRemove: (i) => setState(() => _actionsMeaningEntries.removeAt(i)),
+            onEdit: (i) => setState(
+              () => _startEditKeyValueEntry(
+                index: i,
+                target: _actionsMeaningEntries,
+                titleCtrl: _actionsTitleCtrl,
+                descCtrl: _actionsDescCtrl,
+                onStarted: () {
+                  _editingActionsIndex = i;
+                  _showActionsEditor = true;
+                },
+              ),
+            ),
+            onRemove: (i) => setState(() {
+              if (_editingActionsIndex == i) {
+                _clearKeyValueEditor(
+                  titleCtrl: _actionsTitleCtrl,
+                  descCtrl: _actionsDescCtrl,
+                  onCleared: () {
+                    _editingActionsIndex = null;
+                    _showActionsEditor = false;
+                  },
+                );
+              } else if (_editingActionsIndex != null &&
+                  i < _editingActionsIndex!) {
+                _editingActionsIndex = _editingActionsIndex! - 1;
+              }
+              _actionsMeaningEntries.removeAt(i);
+            }),
           ),
           const SizedBox(height: 12),
           _KeyValueEditor(
             heading: 'Other Symbolism',
             showEditor: _showOtherSymbolismEditor,
-            onToggle: () => setState(
-              () => _showOtherSymbolismEditor = !_showOtherSymbolismEditor,
-            ),
+            editingIndex: _editingOtherSymbolismIndex,
+            onToggle: () => setState(() {
+              if (_showOtherSymbolismEditor) {
+                _clearKeyValueEditor(
+                  titleCtrl: _symbolismTitleCtrl,
+                  descCtrl: _symbolismDescCtrl,
+                  onCleared: () {
+                    _editingOtherSymbolismIndex = null;
+                    _showOtherSymbolismEditor = false;
+                  },
+                );
+              } else {
+                _editingOtherSymbolismIndex = null;
+                _showOtherSymbolismEditor = true;
+              }
+            }),
             titleCtrl: _symbolismTitleCtrl,
             descCtrl: _symbolismDescCtrl,
             onAdd: () => setState(
@@ -2456,11 +2941,41 @@ class _PoojaFormState extends State<_PoojaForm> {
                 titleCtrl: _symbolismTitleCtrl,
                 descCtrl: _symbolismDescCtrl,
                 target: _otherSymbolismEntries,
-                onAdded: () => _showOtherSymbolismEditor = false,
+                editingIndex: _editingOtherSymbolismIndex,
+                onAdded: () {
+                  _editingOtherSymbolismIndex = null;
+                },
               ),
             ),
             entries: _otherSymbolismEntries,
-            onRemove: (i) => setState(() => _otherSymbolismEntries.removeAt(i)),
+            onEdit: (i) => setState(
+              () => _startEditKeyValueEntry(
+                index: i,
+                target: _otherSymbolismEntries,
+                titleCtrl: _symbolismTitleCtrl,
+                descCtrl: _symbolismDescCtrl,
+                onStarted: () {
+                  _editingOtherSymbolismIndex = i;
+                  _showOtherSymbolismEditor = true;
+                },
+              ),
+            ),
+            onRemove: (i) => setState(() {
+              if (_editingOtherSymbolismIndex == i) {
+                _clearKeyValueEditor(
+                  titleCtrl: _symbolismTitleCtrl,
+                  descCtrl: _symbolismDescCtrl,
+                  onCleared: () {
+                    _editingOtherSymbolismIndex = null;
+                    _showOtherSymbolismEditor = false;
+                  },
+                );
+              } else if (_editingOtherSymbolismIndex != null &&
+                  i < _editingOtherSymbolismIndex!) {
+                _editingOtherSymbolismIndex = _editingOtherSymbolismIndex! - 1;
+              }
+              _otherSymbolismEntries.removeAt(i);
+            }),
           ),
         ],
       ),
@@ -2488,14 +3003,20 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _guidanceMindset
-                  .map(
-                    (i) => Padding(
+              children: _guidanceMindset.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _guidanceMindsetCtrl,
+                            _guidanceMindset,
+                            e.key,
+                          ),
+                        ),
                         onRemove: () =>
-                            setState(() => _guidanceMindset.remove(i)),
+                            setState(() => _guidanceMindset.removeAt(e.key)),
                       ),
                     ),
                   )
@@ -2523,14 +3044,20 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _guidanceAvoid
-                  .map(
-                    (i) => Padding(
+              children: _guidanceAvoid.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _guidanceAvoidCtrl,
+                            _guidanceAvoid,
+                            e.key,
+                          ),
+                        ),
                         onRemove: () =>
-                            setState(() => _guidanceAvoid.remove(i)),
+                            setState(() => _guidanceAvoid.removeAt(e.key)),
                       ),
                     ),
                   )
@@ -2563,14 +3090,20 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _completionClosure
-                  .map(
-                    (i) => Padding(
+              children: _completionClosure.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _completionClosureCtrl,
+                            _completionClosure,
+                            e.key,
+                          ),
+                        ),
                         onRemove: () =>
-                            setState(() => _completionClosure.remove(i)),
+                            setState(() => _completionClosure.removeAt(e.key)),
                       ),
                     ),
                   )
@@ -2601,14 +3134,21 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _completionIntegration
-                  .map(
-                    (i) => Padding(
+              children: _completionIntegration.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
-                        onRemove: () =>
-                            setState(() => _completionIntegration.remove(i)),
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _completionIntegrationCtrl,
+                            _completionIntegration,
+                            e.key,
+                          ),
+                        ),
+                        onRemove: () => setState(
+                          () => _completionIntegration.removeAt(e.key),
+                        ),
                       ),
                     ),
                   )
@@ -2636,14 +3176,20 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _completionBenefits
-                  .map(
-                    (i) => Padding(
+              children: _completionBenefits.asMap().entries.map(
+                    (e) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _LineChip(
-                        label: i,
+                        label: e.value,
+                        onEdit: () => setState(
+                          () => _startEditChipText(
+                            _completionBenefitsCtrl,
+                            _completionBenefits,
+                            e.key,
+                          ),
+                        ),
                         onRemove: () =>
-                            setState(() => _completionBenefits.remove(i)),
+                            setState(() => _completionBenefits.removeAt(e.key)),
                       ),
                     ),
                   )
@@ -2755,7 +3301,7 @@ class _StepDraft {
   final List<PickedFile> pickedImages;
 }
 
-class _KeyValueEditor extends StatelessWidget {
+class _KeyValueEditor extends StatefulWidget {
   const _KeyValueEditor({
     required this.heading,
     required this.showEditor,
@@ -2765,6 +3311,8 @@ class _KeyValueEditor extends StatelessWidget {
     required this.onAdd,
     required this.entries,
     required this.onRemove,
+    this.onEdit,
+    this.editingIndex,
   });
 
   final String heading;
@@ -2775,6 +3323,50 @@ class _KeyValueEditor extends StatelessWidget {
   final VoidCallback onAdd;
   final List<Map<String, String>> entries;
   final ValueChanged<int> onRemove;
+  final ValueChanged<int>? onEdit;
+  final int? editingIndex;
+
+  @override
+  State<_KeyValueEditor> createState() => _KeyValueEditorState();
+}
+
+class _KeyValueEditorState extends State<_KeyValueEditor> {
+  final FocusNode _titleFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _titleFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _KeyValueEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showEditor && !oldWidget.showEditor) {
+      _focusTitleField();
+    } else if (widget.showEditor &&
+        widget.editingIndex != null &&
+        widget.editingIndex != oldWidget.editingIndex) {
+      _focusTitleField();
+    }
+  }
+
+  void _focusTitleField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _titleFocus.requestFocus();
+        final text = widget.titleCtrl.text;
+        widget.titleCtrl.selection = TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
+  void _handleAdd() {
+    widget.onAdd();
+    _focusTitleField();
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -2784,7 +3376,7 @@ class _KeyValueEditor extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              heading,
+              widget.heading,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -2793,7 +3385,7 @@ class _KeyValueEditor extends StatelessWidget {
             ),
           ),
           _cmsClickable(
-            onTap: onToggle,
+            onTap: widget.onToggle,
             child: Container(
               width: 34,
               height: 34,
@@ -2802,7 +3394,7 @@ class _KeyValueEditor extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                showEditor ? Icons.remove : Icons.add,
+                widget.showEditor ? Icons.remove : Icons.add,
                 color: Colors.white,
                 size: 18,
               ),
@@ -2810,42 +3402,50 @@ class _KeyValueEditor extends StatelessWidget {
           ),
         ],
       ),
-      if (showEditor) ...[
+      if (widget.showEditor) ...[
         const SizedBox(height: 10),
         CmsFormField(
-          label: '$heading Title',
+          label: '${widget.heading} Title',
           hint: 'Enter title',
-          controller: titleCtrl,
+          controller: widget.titleCtrl,
+          focusNode: _titleFocus,
+          onFieldSubmitted: (_) => _handleAdd(),
+          textInputAction: TextInputAction.done,
         ),
         const SizedBox(height: 10),
         CmsFormField(
-          label: '$heading Description',
+          label: '${widget.heading} Description',
           hint: 'Enter description',
-          controller: descCtrl,
+          controller: widget.descCtrl,
           maxLines: 3,
         ),
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,
           child: OutlinedButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text('Add'),
+            onPressed: _handleAdd,
+            icon: Icon(
+              widget.editingIndex != null ? Icons.save_outlined : Icons.add,
+              size: 16,
+            ),
+            label: Text(widget.editingIndex != null ? 'Update' : 'Add'),
             style: OutlinedButton.styleFrom().copyWith(
               mouseCursor: _cmsButtonClickCursor,
             ),
           ),
         ),
       ],
-      if (entries.isNotEmpty) ...[
+      if (widget.entries.isNotEmpty) ...[
         const SizedBox(height: 10),
-        ...entries.asMap().entries.map(
+        ...widget.entries.asMap().entries.map(
           (e) => _StepRow(
             index: e.key + 1,
             text: (e.value['description'] ?? '').trim().isEmpty
                 ? (e.value['title'] ?? '')
                 : '${e.value['title'] ?? ''}\n${e.value['description'] ?? ''}',
-            onRemove: () => onRemove(e.key),
+            isEditing: widget.editingIndex == e.key,
+            onEdit: widget.onEdit == null ? null : () => widget.onEdit!(e.key),
+            onRemove: () => widget.onRemove(e.key),
           ),
         ),
       ] else
@@ -2860,7 +3460,7 @@ class _KeyValueEditor extends StatelessWidget {
   );
 }
 
-class _InputRow extends StatelessWidget {
+class _InputRow extends StatefulWidget {
   const _InputRow({
     required this.ctrl,
     required this.hint,
@@ -2869,6 +3469,51 @@ class _InputRow extends StatelessWidget {
   final TextEditingController ctrl;
   final String hint;
   final VoidCallback onAdd;
+
+  @override
+  State<_InputRow> createState() => _InputRowState();
+}
+
+class _InputRowState extends State<_InputRow> {
+  final FocusNode _focus = FocusNode();
+  String _previousText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _previousText = widget.ctrl.text;
+    widget.ctrl.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.ctrl.removeListener(_onControllerChanged);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    final text = widget.ctrl.text;
+    if (!_focus.hasFocus && text != _previousText && text.isNotEmpty) {
+      _requestFocus();
+    }
+    _previousText = text;
+  }
+
+  void _requestFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focus.requestFocus();
+      widget.ctrl.selection = TextSelection.collapsed(
+        offset: widget.ctrl.text.length,
+      );
+    });
+  }
+
+  void _handleAdd() {
+    widget.onAdd();
+    _requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) => Row(
@@ -2882,11 +3527,13 @@ class _InputRow extends StatelessWidget {
             border: Border.all(color: CmsColors.border),
           ),
           child: TextField(
-            controller: ctrl,
-            onSubmitted: (_) => onAdd(),
+            controller: widget.ctrl,
+            focusNode: _focus,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _handleAdd(),
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: widget.hint,
               border: InputBorder.none,
               hintStyle: const TextStyle(
                 color: Color(0xFFAAAAAA),
@@ -2902,7 +3549,7 @@ class _InputRow extends StatelessWidget {
       ),
       const SizedBox(width: 8),
       _cmsClickable(
-        onTap: onAdd,
+        onTap: _handleAdd,
         child: Container(
           width: 40,
           height: 40,
@@ -2918,9 +3565,14 @@ class _InputRow extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.onRemove});
+  const _Chip({
+    required this.label,
+    required this.onRemove,
+    this.onEdit,
+  });
   final String label;
   final VoidCallback onRemove;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
@@ -2945,6 +3597,17 @@ class _Chip extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: CmsColors.orangeDark),
             ),
           ),
+          if (onEdit != null) ...[
+            const SizedBox(width: 5),
+            _cmsClickable(
+              onTap: onEdit!,
+              child: const Icon(
+                Icons.edit_outlined,
+                size: 12,
+                color: CmsColors.orangeDark,
+              ),
+            ),
+          ],
           const SizedBox(width: 5),
           _cmsClickable(
             onTap: onRemove,
@@ -2961,9 +3624,14 @@ class _Chip extends StatelessWidget {
 }
 
 class _LineChip extends StatelessWidget {
-  const _LineChip({required this.label, required this.onRemove});
+  const _LineChip({
+    required this.label,
+    required this.onRemove,
+    this.onEdit,
+  });
   final String label;
   final VoidCallback onRemove;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
@@ -2992,6 +3660,17 @@ class _LineChip extends StatelessWidget {
               ),
             ),
           ),
+          if (onEdit != null) ...[
+            const SizedBox(width: 6),
+            _cmsClickable(
+              onTap: onEdit!,
+              child: const Icon(
+                Icons.edit_outlined,
+                size: 13,
+                color: CmsColors.textSecond,
+              ),
+            ),
+          ],
           const SizedBox(width: 6),
           _cmsClickable(
             onTap: onRemove,
@@ -3036,6 +3715,11 @@ class _StepMultiImagePicker extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: CmsColors.textPrimary,
           ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '800 × 800 px recommended',
+          style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
