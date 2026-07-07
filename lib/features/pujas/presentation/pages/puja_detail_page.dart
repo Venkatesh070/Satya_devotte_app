@@ -904,10 +904,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                         },
                       );
                     } else {
-                      Get.toNamed(
-                        AppRoutes.poojaWizard,
-                        arguments: {'pooja': p},
-                      );
+                      _showPujaPreviewModal(context, p);
                     }
                   },
                   textColor: AppColors.white,
@@ -961,6 +958,146 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  void _showPujaPreviewModal(BuildContext context, PoojaView pooja) {
+    final steps = pooja.steps;
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).padding.bottom + 16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                pooja.title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F1F1F),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _previewChip(Icons.timer_outlined, pooja.duration.isNotEmpty ? pooja.duration : '—'),
+                  const SizedBox(width: 12),
+                  _previewChip(Icons.format_list_numbered, '${steps.length} Step${steps.length == 1 ? '' : 's'}'),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Steps',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F1F1F),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...steps.map((step) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${step.number}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        step.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: CustomButton(
+                  label: 'Begin Puja',
+                  borderRadius: 14,
+                  onTap: () {
+                    Get.back();
+                    Get.toNamed(
+                      AppRoutes.poojaWizard,
+                      arguments: {'pooja': pooja},
+                    );
+                  },
+                  textColor: AppColors.white,
+                  gradientColors: const [
+                    AppColors.gradientStart,
+                    AppColors.gradientEnd,
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _previewChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7E8),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFFE69138)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF5C3A1E),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
