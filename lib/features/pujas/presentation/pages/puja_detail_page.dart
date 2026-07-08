@@ -21,6 +21,9 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 
 /// Pooja / Ritual detail page – pixel-aligned to the Sathya Devotee
 /// Figma reference (saffron temple header, circular deity portrait,
@@ -84,8 +87,13 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final args = Get.arguments;
     debugPrint('[Detail] initState args type=${args.runtimeType}');
     if (args is Map) {
-      debugPrint('[Detail] initState args keys=${args.keys} type=${args['type']}');
-      if (args.containsKey('deity')) debugPrint('[Detail] args["deity"] type=${args['deity'].runtimeType} value=${args['deity'].toString().length > 100 ? "${args['deity'].toString().substring(0, 100)}..." : args['deity']}');
+      debugPrint(
+        '[Detail] initState args keys=${args.keys} type=${args['type']}',
+      );
+      if (args.containsKey('deity'))
+        debugPrint(
+          '[Detail] args["deity"] type=${args['deity'].runtimeType} value=${args['deity'].toString().length > 100 ? "${args['deity'].toString().substring(0, 100)}..." : args['deity']}',
+        );
     }
     if (args is Map && args['type'] == 'deity') {
       _selectedDeity = Map<String, dynamic>.from(args);
@@ -283,7 +291,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       _pooja = _deityPoojas.isNotEmpty
           ? _deityPoojas.first
           : _deityShellPooja(deity ?? <String, dynamic>{'_id': deityId});
-      debugPrint('[Detail] _loadDeityDetailAndPoojas done: _pooja["deity"] type=${_pooja?['deity'].runtimeType} value=${(_pooja?['deity']?.toString() ?? '').length > 100 ? "${_pooja?['deity'].toString().substring(0, 100)}..." : _pooja?['deity']}');
+      debugPrint(
+        '[Detail] _loadDeityDetailAndPoojas done: _pooja["deity"] type=${_pooja?['deity'].runtimeType} value=${(_pooja?['deity']?.toString() ?? '').length > 100 ? "${_pooja?['deity'].toString().substring(0, 100)}..." : _pooja?['deity']}',
+      );
       _isLoading = false;
     });
   }
@@ -392,14 +402,18 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
       if (!mounted) return;
 
-      debugPrint('[Detail] _loadDetail: raw API pooja["deity"] type=${pooja?['deity'].runtimeType} value=${(pooja?['deity']?.toString() ?? '').length > 100 ? "${pooja?['deity'].toString().substring(0, 100)}..." : pooja?['deity']}');
+      debugPrint(
+        '[Detail] _loadDetail: raw API pooja["deity"] type=${pooja?['deity'].runtimeType} value=${(pooja?['deity']?.toString() ?? '').length > 100 ? "${pooja?['deity'].toString().substring(0, 100)}..." : pooja?['deity']}',
+      );
 
       // Update state with the loaded pooja!
       setState(() => _pooja = pooja ?? _pooja);
 
       // CRITICAL: Always call _hydrateDeityIfNeeded after loading pooja, even from cache!
       await _hydrateDeityIfNeeded();
-      debugPrint('[Detail] _loadDetail: after hydration _pooja["deity"] type=${_pooja?['deity'].runtimeType}');
+      debugPrint(
+        '[Detail] _loadDetail: after hydration _pooja["deity"] type=${_pooja?['deity'].runtimeType}',
+      );
     } on DioException catch (e) {
       // On network error, try to load from cache!
       final cached = offlineService.getCachedData(cacheKey);
@@ -590,7 +604,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final p = _pooja;
     if (p == null) return;
     final d = p['deity'];
-    debugPrint('[Detail] _hydrateDeityIfNeeded: p["deity"] type=${d.runtimeType} value=${d.toString().length > 100 ? "${d.toString().substring(0, 100)}..." : d}');
+    debugPrint(
+      '[Detail] _hydrateDeityIfNeeded: p["deity"] type=${d.runtimeType} value=${d.toString().length > 100 ? "${d.toString().substring(0, 100)}..." : d}',
+    );
 
     // Get deity ID from populated field or pooja reference.
     // Also try from a list (some API endpoints return deity as [])
@@ -607,7 +623,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               p['deityId'] ??
               p['deity_id'];
     final id = rawId?.toString().trim() ?? '';
-    debugPrint('[Detail] _hydrateDeityIfNeeded: extracted rawId=$rawId id="$id" p.deityId=${p['deityId']} p.deity_id=${p['deity_id']} p.keys=${p.keys.take(10).toList()}');
+    debugPrint(
+      '[Detail] _hydrateDeityIfNeeded: extracted rawId=$rawId id="$id" p.deityId=${p['deityId']} p.deity_id=${p['deity_id']} p.keys=${p.keys.take(10).toList()}',
+    );
     if (id.isEmpty) return;
 
     // Verify it's a valid ObjectID!
@@ -735,7 +753,9 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 
     final activePooja = _pooja!;
     final p = PoojaView(activePooja);
-    debugPrint('[Detail] build: p.deityDoc=${p.deityDoc} p.deityName="${p.deityName}"');
+    debugPrint(
+      '[Detail] build: p.deityDoc=${p.deityDoc} p.deityName="${p.deityName}"',
+    );
     final hasCalendarPujas = _calendarPoojasFor(p).isNotEmpty;
     final showGetStartedButton =
         _tabController.index == 0 &&
@@ -758,11 +778,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                       const HeaderDivider(),
                       const SizedBox(height: 14),
 
-                      if (p.description.isNotEmpty)
+                      if (p.deityDescription.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: RichTextDisplay(
-                            p.description,
+                            p.deityDescription,
                             textAlign: TextAlign.justify,
                             style: AppTypography.inter(
                               fontSize: 14,
@@ -964,7 +984,12 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final steps = pooja.steps;
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).padding.bottom + 16),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          MediaQuery.of(context).padding.bottom + 26,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -996,9 +1021,15 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               const SizedBox(height: 16),
               Row(
                 children: [
-                  _previewChip(Icons.timer_outlined, pooja.duration.isNotEmpty ? pooja.duration : '—'),
+                  _previewChip(
+                    Icons.timer_outlined,
+                    pooja.duration.isNotEmpty ? pooja.duration : '—',
+                  ),
                   const SizedBox(width: 12),
-                  _previewChip(Icons.format_list_numbered, '${steps.length} Step${steps.length == 1 ? '' : 's'}'),
+                  _previewChip(
+                    Icons.format_list_numbered,
+                    '${steps.length} Step${steps.length == 1 ? '' : 's'}',
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1011,44 +1042,49 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 ),
               ),
               const SizedBox(height: 8),
-              ...steps.map((step) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [AppColors.gradientStart, AppColors.gradientEnd],
+              ...steps.map(
+                (step) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.gradientStart,
+                              AppColors.gradientEnd,
+                            ],
+                          ),
                         ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${step.number}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        child: Center(
+                          child: Text(
+                            '${step.number}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        step.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color(0xFF333333),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          step.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF333333),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -1090,10 +1126,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
           const SizedBox(width: 6),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF5C3A1E),
-            ),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF5C3A1E)),
           ),
         ],
       ),
@@ -1104,6 +1137,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
 // ════════════════════════════════════════════════════════════════
 //  Hero Header  (saffron decorative top + circular deity portrait)
 // ════════════════════════════════════════════════════════════════
+
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.pooja});
   final PoojaView pooja;
@@ -1112,61 +1146,96 @@ class _HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(color: Color(0XFFFFF4E0)),
+      color: const Color(0xFFFFF4E0),
       child: Column(
         children: [
           Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.bottomCenter,
             children: [
-              // 1. Background image (Temple header with dynamic hero image overlay)
               SizedBox(
                 width: double.infinity,
-                height: 200,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Background Image (Asset)
-                    Image.asset(
-                      'assets/images/appHeaderImg.png',
-                      fit: BoxFit.fill,
-                    ),
-
-                    // Network Image (stretched over background)
-                    if (pooja.heroImage != null && pooja.heroImage!.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: pooja.heroImage!,
-                        fit: BoxFit.fill, // IMPORTANT
-                        alignment: Alignment.center,
-                        color: Colors.black.withOpacity(
-                          0.2,
-                        ), // optional overlay
-                        colorBlendMode: BlendMode.darken,
-                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                        placeholder: (_, __) => const SizedBox.shrink(),
-                      ),
-                  ],
-                ),
+                height: 220,
+                child: _ShapedHeaderBanner(networkUrl: pooja.heroImage),
               ),
-              // 3. Circular Deity Portrait
               Positioned(
-                bottom: -25,
+                bottom: -40,
                 child: _DeityPortrait(imageUrl: pooja.heroImage),
               ),
             ],
           ),
-
-          const SizedBox(height: 30), // Space for the overlapping portrait
+          const SizedBox(height: 50),
           Text(
             pooja.deityName,
             style: AppTypography.lora(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF3B1E08),
             ),
           ),
           const SizedBox(height: 4),
         ],
+      ),
+    );
+  }
+}
+
+/// Draws the network hero image clipped to the shape (alpha) of appHeaderImg.png.
+/// Falls back to the raw asset if the network image is missing or still loading.
+class _ShapedHeaderBanner extends StatefulWidget {
+  final String? networkUrl;
+  const _ShapedHeaderBanner({this.networkUrl});
+
+  @override
+  State<_ShapedHeaderBanner> createState() => _ShapedHeaderBannerState();
+}
+
+class _ShapedHeaderBannerState extends State<_ShapedHeaderBanner> {
+  ui.Image? _maskImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMask();
+  }
+
+  Future<void> _loadMask() async {
+    final ByteData data = await rootBundle.load(
+      'assets/images/appHeaderImg.png',
+    );
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(),
+    );
+    final ui.FrameInfo fi = await codec.getNextFrame();
+    if (mounted) setState(() => _maskImage = fi.image);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNetwork =
+        widget.networkUrl != null && widget.networkUrl!.isNotEmpty;
+
+    // Until the mask asset is decoded OR when no network image → show the raw asset.
+    if (_maskImage == null || !hasNetwork) {
+      return Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.fill);
+    }
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn, // keep only the pixels where mask is opaque
+      shaderCallback: (Rect bounds) {
+        final double sx = bounds.width / _maskImage!.width;
+        final double sy = bounds.height / _maskImage!.height;
+        final matrix = Matrix4.identity().scaled(sx, sy, 1.0).storage;
+        return ImageShader(_maskImage!, TileMode.clamp, TileMode.clamp, matrix);
+      },
+      child: CachedNetworkImage(
+        imageUrl: widget.networkUrl!,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        placeholder: (_, __) =>
+            Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.cover),
+        errorWidget: (_, __, ___) =>
+            Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.cover),
       ),
     );
   }
@@ -1459,7 +1528,7 @@ class _AboutDeityTab extends StatelessWidget {
                 deityDoc?['appearance'],
           );
     final whyPray = _extractString(
-      deityDoc?['why_pray'] ?? deityDoc?['whyPray'] ?? purpose['why'],
+      deityDoc?['why_pray'] ?? deityDoc?['whyPray'],
     );
     final keyQualities = _list(
       deityDoc?['key_qualities'] ??
@@ -1556,10 +1625,33 @@ class _AboutDeityTab extends StatelessWidget {
         // 5. Divine Structure (Modern or Legacy)
         if (structure != null && structure.isNotEmpty) ...[
           const SizedBox(height: 14),
-          const SectionHeader(title: 'Divine Structure & Symbolism'),
+          const SectionHeader(
+            title: 'Family/ Divine association; and Iconography',
+          ),
           const SizedBox(height: 10),
           for (final s in structure.whereType<Map>())
             DeitySectionCard(section: s.cast<String, dynamic>()),
+          // Render physical items / appearance even if we have structure
+          if (physicalItems.isNotEmpty)
+            _LabeledTitleDescriptionList(
+              label: 'Physical Description',
+              items: physicalItems,
+            ),
+          // Render symbols & weapons even if we have structure
+          if (weapons.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            const SectionHeader(title: 'Symbols & Weapons'),
+            const SizedBox(height: 10),
+            for (final w in weapons)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: LabeledField(
+                  label: w.title,
+                  value: w.description,
+                  multiline: true,
+                ),
+              ),
+          ],
         ] else if (family.isNotEmpty ||
             posture.isNotEmpty ||
             physicalItems.isNotEmpty ||
@@ -1567,7 +1659,9 @@ class _AboutDeityTab extends StatelessWidget {
           // Legacy/Fallback Structure
           if (family.isNotEmpty) ...[
             const SizedBox(height: 4),
-            const SectionHeader(title: 'Divine Structure & Lineage'),
+            const SectionHeader(
+              title: 'Family/ Divine association; and Iconography',
+            ),
             const SizedBox(height: 10),
             LabeledField(
               label: 'Family / Divine Associations',
@@ -1742,12 +1836,6 @@ class _AboutDeityTab extends StatelessWidget {
           const SizedBox(height: 4),
           const SectionHeader(title: 'Purpose of the Ritual'),
           const SizedBox(height: 10),
-          if (divineRole.isNotEmpty)
-            LabeledField(
-              label: 'Who is the Deity?',
-              value: divineRole,
-              multiline: true,
-            ),
           if (whyPray.isNotEmpty)
             LabeledField(
               label: 'Why Pray to This Deity',

@@ -39,6 +39,15 @@ class PoojaView {
     return _extractString(v);
   }
 
+  String get deityDescription {
+    final dDoc = deityDoc;
+    if (dDoc != null) {
+      final v = dDoc['description'];
+      return _extractString(v);
+    }
+    return '';
+  }
+
   String get status => (_raw['status'] ?? '').toString();
   String get date => (_raw['date'] ?? '').toString();
 
