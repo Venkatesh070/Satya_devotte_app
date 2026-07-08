@@ -23,7 +23,6 @@ class DeityModel {
     this.connectingHowToPray = '',
     this.connectingWhatPleases = const [],
     this.connectingDispleases = const [],
-    this.connectingIdealTime = '',
     this.chantingMantra = '',
     this.chantingRepetitions = '',
     this.chantingBenefits = const [],
@@ -63,7 +62,6 @@ class DeityModel {
   final String connectingHowToPray;
   final List<String> connectingWhatPleases;
   final List<String> connectingDispleases;
-  final String connectingIdealTime;
   final String chantingMantra;
   final String chantingRepetitions;
   final List<String> chantingBenefits;
@@ -120,9 +118,6 @@ class DeityModel {
       connectingDispleases: _listOfStrings(
         (json['connecting'] as Map?)?['displeases'] ??
             (json['connecting'] as Map?)?['what_displeases'],
-      ),
-      connectingIdealTime: _stringFromAny(
-        (json['connecting'] as Map?)?['ideal_time'],
       ),
       chantingMantra: ((json['chanting'] as Map?)?['mantra'] ?? '').toString(),
       chantingRepetitions: ((json['chanting'] as Map?)?['repetitions'] ?? '')

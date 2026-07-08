@@ -945,6 +945,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   late final TextEditingController _titleCtrl;
   List<String> _selectedDeityIds = [];
   late final TextEditingController _durationCtrl;
+  late final TextEditingController _idealTimeCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _purposeWhyCtrl;
   late final TextEditingController _purposeBenefitsCtrl;
@@ -988,6 +989,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   late String _category;
   late List<_StepDraft> _stepEntries;
   late List<String> _items;
+  late List<String> _idealTimes;
   late List<String> _purposeBenefits;
   late List<String> _deitySummaryBlessings;
   late List<String> _mantraAdditional;
@@ -1052,6 +1054,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     _titleCtrl = TextEditingController(text: p?.title ?? '');
     _selectedDeityIds = List<String>.from(p?.deities ?? const []);
     _durationCtrl = TextEditingController(text: p?.duration ?? '');
+    _idealTimeCtrl = TextEditingController();
     _descCtrl = TextEditingController(text: p?.description ?? '');
     _purposeWhyCtrl = TextEditingController(text: p?.purposeWhy ?? '');
     _purposeWhyRich = p?.purposeWhy;
@@ -1094,6 +1097,7 @@ class _PoojaFormState extends State<_PoojaForm> {
       (p?.steps ?? <String>[]).map(_decodeStoredStep),
     );
     _items = List.from(p?.requiredItems ?? []);
+    _idealTimes = List.from(p?.idealTime ?? const []);
     _purposeBenefits = List.from(p?.purposeBenefits ?? const []);
     _deitySummaryBlessings = List.from(p?.deitySummaryBlessings ?? const []);
     _mantraAdditional = List.from(p?.mantraAdditional ?? const []);
@@ -1125,6 +1129,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   void dispose() {
     _titleCtrl.dispose();
     _durationCtrl.dispose();
+    _idealTimeCtrl.dispose();
     _descCtrl.dispose();
     _purposeWhyCtrl.dispose();
     _purposeBenefitsCtrl.dispose();
@@ -1383,6 +1388,7 @@ class _PoojaFormState extends State<_PoojaForm> {
   void _applyGaneshaTemplate() {
     _titleCtrl.text = 'Ganesha Pooja';
     _durationCtrl.text = '45-60 min';
+    _idealTimes = ['Morning'];
     _category = 'Festival';
     _difficulty = 'Beginner';
     _descCtrl.text =
@@ -1996,6 +2002,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           duration: _durationCtrl.text.trim(),
           description: _descCtrl.text.trim(),
           status: status,
+          idealTime: List<String>.from(_idealTimes),
           imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
           steps: _serializedSteps(),
           requiredItems: _items,
@@ -2035,6 +2042,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         duration: _durationCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         status: status,
+        idealTime: List<String>.from(_idealTimes),
         imageUrl: _pickedImage != null ? null : _trimMediaUrl(_imageUrl),
         steps: _serializedSteps(),
         requiredItems: _items,
@@ -2159,6 +2167,45 @@ class _PoojaFormState extends State<_PoojaForm> {
             controller: _durationCtrl,
           ),
           const SizedBox(height: 12),
+          const Text(
+            'Ideal Time',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _InputRow(
+            ctrl: _idealTimeCtrl,
+            hint: 'Add ideal time (e.g. Morning)',
+            onAdd: () => setState(
+              () => _addChipValue(_idealTimeCtrl, _idealTimes),
+            ),
+          ),
+          if (_idealTimes.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _idealTimes.asMap().entries.map(
+                    (e) => _Chip(
+                      label: e.value,
+                      onEdit: () => setState(
+                        () => _startEditChipText(
+                          _idealTimeCtrl,
+                          _idealTimes,
+                          e.key,
+                        ),
+                      ),
+                      onRemove: () =>
+                          setState(() => _idealTimes.removeAt(e.key)),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -2209,14 +2256,14 @@ class _PoojaFormState extends State<_PoojaForm> {
             onChanged: _onCategoryChanged,
           ),
           const SizedBox(height: 12),
+          _buildDailyScheduleSection(),
+          const SizedBox(height: 12),
           CmsFormField(
             label: 'Description',
             hint: 'Enter a brief description...',
             controller: _descCtrl,
             maxLines: 4,
           ),
-          const SizedBox(height: 12),
-          _buildDailyScheduleSection(),
           const SizedBox(height: 12),
           Obx(() {
             final festivals = _approvedFestivals;

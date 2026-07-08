@@ -539,10 +539,10 @@ class _DeityFormState extends State<_DeityForm> {
   String? _connectingHowToPrayRich;
   late final TextEditingController _connectingWhatPleasesCtrl;
   late final TextEditingController _connectingDispleasesCtrl;
-  late final TextEditingController _connectingIdealTimeCtrl;
   String? _chantingMantraRich;
   late final TextEditingController _chantingRepetitionsCtrl;
   late final TextEditingController _chantingBenefitsCtrl;
+  late final TextEditingController _chantingPreferredDaysCtrl;
   late final TextEditingController _chantingAssociatedColorsCtrl;
   late final TextEditingController _homePlacementCtrl;
   late final TextEditingController _homeOfferingsCtrl;
@@ -565,22 +565,12 @@ class _DeityFormState extends State<_DeityForm> {
   final List<String> _whatPleases = <String>[];
   final List<String> _displeases = <String>[];
   final List<String> _chantBenefits = <String>[];
-  final List<String> _preferredDays = <String>[];
   final List<String> _associatedColors = <String>[];
   final List<String> _homeOfferings = <String>[];
   final List<String> _homeDos = <String>[];
   final List<String> _homeDonts = <String>[];
   final List<PoojaModel> _poojaOptions = <PoojaModel>[];
   bool _isLoadingPoojas = false;
-  static const List<String> _weekDays = <String>[
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
   bool _showLineageFormsEditor = false;
   bool _showAppearanceEditor = false;
   bool _showSpiritualEditor = false;
@@ -628,14 +618,14 @@ class _DeityFormState extends State<_DeityForm> {
     _connectingHowToPrayRich = initial?.connectingHowToPray;
     _connectingWhatPleasesCtrl = TextEditingController();
     _connectingDispleasesCtrl = TextEditingController();
-    _connectingIdealTimeCtrl = TextEditingController(
-      text: initial?.connectingIdealTime ?? '',
-    );
     _chantingMantraRich = initial?.chantingMantra;
     _chantingRepetitionsCtrl = TextEditingController(
       text: initial?.chantingRepetitions ?? '',
     );
     _chantingBenefitsCtrl = TextEditingController();
+    _chantingPreferredDaysCtrl = TextEditingController(
+      text: initial?.chantingPreferredDays.join(', ') ?? '',
+    );
     _chantingAssociatedColorsCtrl = TextEditingController();
     _homePlacementCtrl = TextEditingController(
       text: initial?.homePlacement ?? '',
@@ -659,7 +649,6 @@ class _DeityFormState extends State<_DeityForm> {
       _whatPleases.addAll(initial.connectingWhatPleases);
       _displeases.addAll(initial.connectingDispleases);
       _chantBenefits.addAll(initial.chantingBenefits);
-      _preferredDays.addAll(initial.chantingPreferredDays);
       _associatedColors.addAll(initial.chantingAssociatedColors);
       _homeOfferings.addAll(initial.homeOfferings);
       _homeDos.addAll(initial.homeDo);
@@ -693,9 +682,9 @@ class _DeityFormState extends State<_DeityForm> {
     _spiritualTitleCtrl.dispose();
     _connectingWhatPleasesCtrl.dispose();
     _connectingDispleasesCtrl.dispose();
-    _connectingIdealTimeCtrl.dispose();
     _chantingRepetitionsCtrl.dispose();
     _chantingBenefitsCtrl.dispose();
+    _chantingPreferredDaysCtrl.dispose();
     _chantingAssociatedColorsCtrl.dispose();
     _homePlacementCtrl.dispose();
     _homeOfferingsCtrl.dispose();
@@ -919,7 +908,7 @@ class _DeityFormState extends State<_DeityForm> {
       ],
     );
     final metaCard = CmsFormCard(
-      title: 'Divine Structure & Lineage',
+      title: 'Family/ Divine association and Iconography',
       children: [
         _KeyValueEditor(
           heading: 'Family / Divine Associations / Seating / Iconography',
@@ -1143,12 +1132,6 @@ class _DeityFormState extends State<_DeityForm> {
           ),
           onRemove: (index) => setState(() => _displeases.removeAt(index)),
         ),
-        const SizedBox(height: 12),
-        CmsFormField(
-          label: 'Ideal Time',
-          hint: 'e.g. Morning',
-          controller: _connectingIdealTimeCtrl,
-        ),
       ],
     );
     final chantingCard = CmsFormCard(
@@ -1180,41 +1163,11 @@ class _DeityFormState extends State<_DeityForm> {
           onRemove: (index) => setState(() => _chantBenefits.removeAt(index)),
         ),
         const SizedBox(height: 12),
-        _MultiSelectPickerField(
-          fieldLabel: 'Preferred Days',
-          hintText: 'Select preferred days',
-          options: _weekDays
-              .map((d) => _MultiSelectOption(value: d, label: d))
-              .toList(),
-          selectedValues: _preferredDays,
-          onChanged: (values) => setState(() {
-            _preferredDays
-              ..clear()
-              ..addAll(values);
-          }),
+        CmsFormField(
+          label: 'Preferred Days',
+          hint: 'e.g. Full moon, Ekadashi, Morning',
+          controller: _chantingPreferredDaysCtrl,
         ),
-        const SizedBox(height: 10),
-        if (_preferredDays.isEmpty)
-          Text(
-            'No entries added yet',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _preferredDays
-                .asMap()
-                .entries
-                .map(
-                  (entry) => _CompactChip(
-                    label: entry.value,
-                    onRemove: () =>
-                        setState(() => _preferredDays.removeAt(entry.key)),
-                  ),
-                )
-                .toList(),
-          ),
         const SizedBox(height: 12),
         _ChipListEditor(
           label: 'Associated Colors',
@@ -1559,13 +1512,12 @@ class _DeityFormState extends State<_DeityForm> {
             _connectingDispleasesCtrl,
             _displeases,
           ),
-          'ideal_time': _csv(_connectingIdealTimeCtrl.text),
         },
         'chanting': {
           'mantra': _chantingMantraRich ?? '',
           'repetitions': _chantingRepetitionsCtrl.text.trim(),
           'benefits': _valuesWithPending(_chantingBenefitsCtrl, _chantBenefits),
-          'preferred_days': List<String>.from(_preferredDays),
+          'preferred_days': _csv(_chantingPreferredDaysCtrl.text),
           'associated_colors': _valuesWithPending(
             _chantingAssociatedColorsCtrl,
             _associatedColors,

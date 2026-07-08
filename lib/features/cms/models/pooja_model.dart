@@ -83,6 +83,7 @@ class PoojaModel {
     this.date,
     this.schedules = const [],
     this.daily = false,
+    this.idealTime = const [],
     this.imageUrl,
     this.audioUrl,
     this.videoUrl,
@@ -130,6 +131,7 @@ class PoojaModel {
   final String? date;
   final List<Map<String, String>> schedules;
   final bool daily;
+  final List<String> idealTime;
   final String? imageUrl;
   final String? audioUrl;
   final String? videoUrl;
@@ -213,6 +215,10 @@ class PoojaModel {
   }
 
   static List<String> _listOfStrings(dynamic raw) {
+    if (raw is String) {
+      final trimmed = raw.trim();
+      return trimmed.isEmpty ? const [] : [trimmed];
+    }
     if (raw is! List) return const [];
     return raw
         .map((e) => e?.toString().trim() ?? '')
@@ -418,6 +424,7 @@ class PoojaModel {
       date: json['date'] as String?,
       schedules: _extractSchedules(json),
       daily: json['daily'] == true,
+      idealTime: _listOfStrings(json['ideal_time'] ?? json['idealTime']),
       imageUrl:
           json['imageUrl'] as String? ??
           json['image'] as String? ??
@@ -537,6 +544,7 @@ class PoojaModel {
     'status': _toApiStatus(status), // 'Pending' → 'PENDING', 'Draft' → 'DRAFT'
     'daily': daily,
     'schedules': normalizedSchedules,
+    'ideal_time': idealTime,
     if (imageUrl != null) 'imageUrl': imageUrl,
     if (audioUrl != null) 'audioUrl': audioUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
@@ -610,6 +618,7 @@ class PoojaModel {
     String? date,
     List<Map<String, String>>? schedules,
     bool? daily,
+    List<String>? idealTime,
     Object? imageUrl = _keepMediaUrl,
     Object? audioUrl = _keepMediaUrl,
     Object? videoUrl = _keepMediaUrl,
@@ -651,6 +660,7 @@ class PoojaModel {
       date: date ?? this.date,
       schedules: schedules ?? this.schedules,
       daily: daily ?? this.daily,
+      idealTime: idealTime ?? this.idealTime,
       imageUrl: identical(imageUrl, _keepMediaUrl)
           ? this.imageUrl
           : imageUrl as String?,
