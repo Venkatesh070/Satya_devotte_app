@@ -33,8 +33,8 @@ class _CmsApprovalContentState extends State<CmsApprovalContent>
     _deityCtrl = Get.find<DeityController>();
     // Load all items for super admin
     _poojaCtrl.loadAllPoojas();
-    _festivalCtrl.loadFestivals();
-    _deityCtrl.loadDeities();
+    _festivalCtrl.loadFestivals(page: 1, limit: 100);
+    _deityCtrl.loadDeities(page: 1, limit: 100, force: true);
   }
 
   @override
@@ -1257,7 +1257,7 @@ class _DeityList extends StatelessWidget {
 
       return RefreshIndicator(
         color: CmsColors.orange,
-        onRefresh: () => ctrl.loadDeities(),
+        onRefresh: () => ctrl.loadDeities(page: 1, limit: 100, force: true),
         child: ListView.separated(
           padding: EdgeInsets.all(isWeb ? 20 : 14),
           itemCount: list.length,

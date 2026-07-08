@@ -15,6 +15,8 @@ class ApiLoadingOverlay extends StatelessWidget {
     '/',
     AppRoutes.splash,
     AppRoutes.onboarding,
+    AppRoutes.userDonationConfirming,
+    AppRoutes.poojaKitPayment,
   };
 
   @override

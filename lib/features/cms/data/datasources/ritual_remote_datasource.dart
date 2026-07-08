@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
+import 'package:satya_devotte_app/features/cms/data/models/cms_paged_result.dart';
 
 class RitualRemoteDataSource {
   RitualRemoteDataSource(this._apiClient);
@@ -34,6 +35,44 @@ class RitualRemoteDataSource {
     return list
         .map((e) => RitualModel.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<CmsPagedResult<RitualModel>> getRitualsPage({
+    required bool superAdmin,
+    int page = 1,
+    int limit = 10,
+    String? status,
+    String? search,
+  }) async {
+    final endpoint =
+        superAdmin ? ApiEndpoints.allRituals : ApiEndpoints.myRituals;
+    final response = await _apiClient.dio.get(
+      endpoint,
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    final body = response.data;
+    final list = _extractList(body is Map<String, dynamic> ? body : const {});
+    final items = list
+        .map((e) => RitualModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final pagination = CmsPaginationParser.fromBody(
+      body,
+      requestedPage: page,
+      requestedLimit: limit,
+      itemCount: items.length,
+    );
+    return CmsPagedResult<RitualModel>(
+      items: items,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
   }
 
   Future<List<RitualModel>> getMyRituals() async {

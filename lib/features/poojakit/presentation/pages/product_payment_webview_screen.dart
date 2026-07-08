@@ -32,6 +32,7 @@ class _ProductPaymentWebViewScreenState
 
   WebViewController? _webview;
   bool _completed = false;
+  bool _pageLoading = true;
 
   Timer? _pollTimer;
   static const _pollEvery = Duration(seconds: 5);
@@ -40,7 +41,7 @@ class _ProductPaymentWebViewScreenState
   void initState() {
     super.initState();
     final arg = Get.arguments;
-    if (arg is! OrderInitData || arg.authorizationUrl.isEmpty) {
+    if (arg is! OrderInitData || !arg.checkout.isValid) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Get.back();
       });
@@ -78,7 +79,11 @@ class _ProductPaymentWebViewScreenState
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() => _pageLoading = true);
+          },
           onPageFinished: (url) {
+            if (mounted) setState(() => _pageLoading = false);
             if (_isTerminalUrl(url)) _onTerminalUrl(url);
           },
           onNavigationRequest: (req) {
@@ -88,15 +93,36 @@ class _ProductPaymentWebViewScreenState
             }
             return NavigationDecision.navigate;
           },
+          onWebResourceError: (_) {
+            if (mounted) setState(() => _pageLoading = false);
+          },
         ),
-      )
-      ..loadRequest(Uri.parse(_init!.authorizationUrl));
+      );
     _webview = c;
+    _loadCheckout(c);
+  }
+
+  Future<void> _loadCheckout(WebViewController controller) async {
+    final checkout = _init!.checkout;
+    if (checkout.postHtml.isNotEmpty) {
+      await controller.loadHtmlString(
+        checkout.postHtml,
+        baseUrl: checkout.postBaseUrl.isNotEmpty ? checkout.postBaseUrl : null,
+      );
+      return;
+    }
+    final url = checkout.redirectUrl;
+    if (url.isNotEmpty) {
+      await controller.loadRequest(Uri.parse(url));
+    }
   }
 
   Future<void> _launchWebPopup() async {
+    final checkout = _init!.checkout;
+    final url = checkout.redirectUrl;
+    if (url.isEmpty) return;
     try {
-      await launchUrl(Uri.parse(_init!.authorizationUrl));
+      await launchUrl(Uri.parse(url));
     } catch (_) {}
   }
 
@@ -174,9 +200,83 @@ class _ProductPaymentWebViewScreenState
         foregroundColor: AppColors.textColor,
         elevation: 0,
       ),
-      body: _webview != null
-          ? WebViewWidget(controller: _webview!)
-          : const SizedBox.shrink(),
+      body: kIsWeb
+          ? _PaymentWebFallback(
+              reference: _init?.reference ?? '',
+              relaunch: _launchWebPopup,
+              verifyNow: () => _verifyAndRoute(),
+            )
+          : Stack(
+              children: [
+                if (_webview != null)
+                  WebViewWidget(controller: _webview!)
+                else
+                  const SizedBox.shrink(),
+                if (_pageLoading)
+                  const ColoredBox(
+                    color: Colors.white,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _PaymentWebFallback extends StatelessWidget {
+  const _PaymentWebFallback({
+    required this.reference,
+    required this.relaunch,
+    required this.verifyNow,
+  });
+
+  final String reference;
+  final Future<void> Function() relaunch;
+  final Future<void> Function() verifyNow;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Spacer(),
+            const Icon(Icons.lock_outline, size: 48, color: AppColors.textColor),
+            const SizedBox(height: 14),
+            const Text(
+              'Complete the payment in the secure tab',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Finish payment in the opened tab. We will detect completion '
+              'automatically when you return.',
+              textAlign: TextAlign.center,
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () => verifyNow(),
+              child: const Text("I've completed the payment"),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => relaunch(),
+              child: const Text('Re-open payment page'),
+            ),
+            if (reference.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                'Ref: $reference',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

@@ -2708,7 +2708,7 @@ class _ProductFormState extends State<_ProductForm> {
                           label:
                               _isEdit ? 'Product Image' : 'Product Image ',
                           icon: Icons.image_outlined,
-                          accept: 'JPG, PNG up to 5MB',
+                          accept: '800 × 800 px, JPG, PNG up to 5MB',
                           mediaType: PickMediaType.image,
                           initialUrl: widget.product?.imageUrl,
                           onPicked: (f) => setState(() => _image = f),
@@ -2758,7 +2758,7 @@ class _ProductFormState extends State<_ProductForm> {
                   CmsUploadBox(
                     label: _isEdit ? 'Product Image' : 'Product Image *',
                     icon: Icons.image_outlined,
-                    accept: 'JPG, PNG up to 5MB',
+                    accept: '800 × 800 px, JPG, PNG up to 5MB',
                     mediaType: PickMediaType.image,
                     initialUrl: widget.product?.imageUrl,
                     onPicked: (f) => setState(() => _image = f),

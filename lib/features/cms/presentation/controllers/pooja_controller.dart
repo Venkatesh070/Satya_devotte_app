@@ -17,18 +17,35 @@ class PoojaController extends GetxController {
   final _error = RxnString();
   final _filter = 'All'.obs;
   final _deities = <Map<String, String>>[].obs;
+  final _isLoadingDeities = false.obs;
+  final _deitiesLoaded = false.obs;
+  final _page = 1.obs;
+  final _limit = 10.obs;
+  final _total = 0.obs;
+  final _totalPages = 1.obs;
+  final _search = ''.obs;
 
   List<PoojaModel> get poojas => _poojas;
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
   String get filter => _filter.value;
+  int get page => _page.value;
+  int get limit => _limit.value;
+  int get total => _total.value;
+  int get totalPages => _totalPages.value;
+  String get search => _search.value;
   List<Map<String, String>> get deities => _deities;
+  bool get isLoadingDeities => _isLoadingDeities.value;
+  bool get deitiesLoaded => _deitiesLoaded.value;
 
-  // Client-side filter — data is already loaded (all statuses), we just filter
+  // Client-side filter on the current server page (All hides Rejected unless searching).
   List<PoojaModel> get filteredPoojas {
-    if (_filter.value == 'All') return _poojas.toList();
-    return _poojas.where((p) => p.status == _filter.value).toList();
+    if (_search.value.isNotEmpty) return _poojas.toList();
+    if (_filter.value == 'All') {
+      return _poojas.where((p) => p.status != 'Rejected').toList();
+    }
+    return _poojas.toList();
   }
 
   // Pending poojas count — shown on dashboard (best-effort across current list)
@@ -45,31 +62,59 @@ class PoojaController extends GetxController {
     });
   }
 
-  // ── Set filter — pure client-side, no API call needed ───────
-  void setFilter(String f) => _filter.value = f;
+  // ── Set filter — reloads from server page 1 ───────────────────
+  void setFilter(String f) {
+    if (_filter.value == f) return;
+    _filter.value = f;
+    loadPoojas(page: 1);
+  }
+
+  Future<void> goToPage(int target) async {
+    final p = target.clamp(1, _totalPages.value);
+    if (p == _page.value && _poojas.isNotEmpty) return;
+    await loadPoojas(page: p);
+  }
+
+  Future<void> setPageSize(int size) async {
+    if (size <= 0 || size == _limit.value) return;
+    _limit.value = size;
+    await loadPoojas(page: 1);
+  }
 
   /// Called when entering Manage Poojas tab — resets to All and reloads.
   /// Use this instead of setFilter('All') when navigating back from Approvals
   /// so stale loadAllPoojas data is replaced with properly filtered data.
   void resetAndLoad() {
     _filter.value = 'All';
-    loadPoojas(showErrorSnackbar: false);
+    loadPoojas(page: 1, showErrorSnackbar: false);
   }
 
-  Future<void> loadPoojas({bool showErrorSnackbar = true}) async {
+  void setSearch(String value) {
+    final q = value.trim();
+    if (_search.value == q) return;
+    _search.value = q;
+    loadPoojas(page: 1);
+  }
+
+  Future<void> loadPoojas({bool showErrorSnackbar = true, int? page}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
       final auth = Get.find<AuthController>();
-      List<PoojaModel> result;
-      if (auth.isSuperAdmin) {
-        // SuperAdmin: GET /poojas/all — sees every pooja from all admins
-        result = await _dataSource.getAllPoojasSuperAdmin();
-      } else {
-        // Admin: GET /poojas/all — sees only their own poojas
-        result = await _dataSource.getMyPoojas();
-      }
-      _poojas.assignAll(result);
+      final status =
+          _filter.value == 'All' ? null : _filter.value.toUpperCase();
+      final result = await _dataSource.getPoojasPage(
+        superAdmin: auth.isSuperAdmin,
+        page: page ?? _page.value,
+        limit: _limit.value,
+        status: status,
+        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+      );
+      _poojas.assignAll(result.items);
+      _page.value = result.page;
+      _limit.value = result.limit;
+      _total.value = result.total;
+      _totalPages.value = result.totalPages;
     } catch (e) {
       _error.value = _parseError(e);
       if (showErrorSnackbar) {
@@ -105,11 +150,16 @@ class PoojaController extends GetxController {
   }
 
   Future<void> loadDeities() async {
+    if (_isLoadingDeities.value) return;
+    _isLoadingDeities.value = true;
     try {
-      final result = await _dataSource.getDeities();
+      final result = await _dataSource.getDeities(status: 'APPROVED');
       _deities.assignAll(result);
     } catch (_) {
-      // Keep UI usable with manual id entry fallback.
+      _deities.clear();
+    } finally {
+      _isLoadingDeities.value = false;
+      _deitiesLoaded.value = true;
     }
   }
 
@@ -119,7 +169,7 @@ class PoojaController extends GetxController {
     PickedFile? pickedImage,
     PickedFile? pickedAudio,
     PickedFile? pickedVideo,
-    required String deity,
+    required List<String> deities,
     required String category,
     required String difficulty,
     required String duration,
@@ -152,6 +202,8 @@ class PoojaController extends GetxController {
     String? audioUrl,
     String? videoUrl,
     String? date,
+    List<Map<String, String>> schedules = const [],
+    bool daily = false,
     String status = 'Pending',
     List<List<PickedFile>> stepImagesByStep = const [],
   }) async {
@@ -161,13 +213,15 @@ class PoojaController extends GetxController {
       final pooja = PoojaModel(
         id: '',
         title: title,
-        deity: deity,
+        deities: deities,
         category: category,
         difficulty: difficulty,
         duration: duration,
         description: description,
         status: status,
         date: date,
+        schedules: schedules,
+        daily: daily,
         imageUrl: imageUrl,
         audioUrl: audioUrl,
         videoUrl: videoUrl,

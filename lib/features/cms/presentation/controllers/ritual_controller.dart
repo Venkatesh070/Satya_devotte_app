@@ -23,6 +23,10 @@ class RitualController extends GetxController {
   final _deities = <Map<String, String>>[].obs;
   final _isLoadingDeities = false.obs;
   final _deitiesLoaded = false.obs;
+  final _page = 1.obs;
+  final _limit = 10.obs;
+  final _total = 0.obs;
+  final _totalPages = 1.obs;
 
   List<RitualModel> get rituals => _rituals;
   bool get isLoading => _isLoading.value;
@@ -30,33 +34,22 @@ class RitualController extends GetxController {
   String? get error => _error.value;
   String get filter => _filter.value;
   String get search => _search.value;
+  int get page => _page.value;
+  int get limit => _limit.value;
+  int get total => _total.value;
+  int get totalPages => _totalPages.value;
   List<Map<String, String>> get deities => _deities;
   bool get isLoadingDeities => _isLoadingDeities.value;
   bool get deitiesLoaded => _deitiesLoaded.value;
 
-  void setSearch(String q) => _search.value = q.trim().toLowerCase();
-
-  List<RitualModel> get filteredRituals {
-    var list = _rituals.toList();
-    if (_filter.value != 'All') {
-      list = list
-          .where((r) => r.status == _filter.value.toUpperCase())
-          .toList();
-    }
-    final q = _search.value;
-    if (q.isNotEmpty) {
-      list = list
-          .where(
-            (r) =>
-                r.title.toLowerCase().contains(q) ||
-                (r.slug ?? '').toLowerCase().contains(q) ||
-                (r.category ?? '').toLowerCase().contains(q) ||
-                (r.purpose ?? '').toLowerCase().contains(q),
-          )
-          .toList();
-    }
-    return list;
+  void setSearch(String value) {
+    final q = value.trim();
+    if (_search.value == q) return;
+    _search.value = q;
+    loadRituals(page: 1);
   }
+
+  List<RitualModel> get filteredRituals => _rituals.toList();
 
   @override
   void onInit() {
@@ -67,20 +60,43 @@ class RitualController extends GetxController {
     });
   }
 
-  void setFilter(String f) => _filter.value = f;
+  void setFilter(String f) {
+    if (_filter.value == f) return;
+    _filter.value = f;
+    loadRituals(page: 1);
+  }
 
-  Future<void> loadRituals({bool showErrorSnackbar = true}) async {
+  Future<void> goToPage(int target) async {
+    final p = target.clamp(1, _totalPages.value);
+    if (p == _page.value && _rituals.isNotEmpty) return;
+    await loadRituals(page: p);
+  }
+
+  Future<void> setPageSize(int size) async {
+    if (size <= 0 || size == _limit.value) return;
+    _limit.value = size;
+    await loadRituals(page: 1);
+  }
+
+  Future<void> loadRituals({bool showErrorSnackbar = true, int? page}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
       final auth = Get.find<AuthController>();
-      List<RitualModel> result;
-      if (auth.isSuperAdmin) {
-        result = await _dataSource.getAllRitualsSuperAdmin();
-      } else {
-         result = await _dataSource.getAllRitualsSuperAdmin();
-      }
-      _rituals.assignAll(result);
+      final status =
+          _filter.value == 'All' ? null : _filter.value.toUpperCase();
+      final result = await _dataSource.getRitualsPage(
+        superAdmin: auth.isSuperAdmin,
+        page: page ?? _page.value,
+        limit: _limit.value,
+        status: status,
+        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+      );
+      _rituals.assignAll(result.items);
+      _page.value = result.page;
+      _limit.value = result.limit;
+      _total.value = result.total;
+      _totalPages.value = result.totalPages;
     } catch (e) {
       _error.value = _parseError(e);
       if (showErrorSnackbar) {
@@ -111,7 +127,7 @@ class RitualController extends GetxController {
 
   Future<bool> createRitual({
     required String title,
-    required String deity,
+    required List<String> deities,
     required String description,
     required List<RitualDay> days,
     required List<RitualSection> sections,
@@ -138,7 +154,7 @@ class RitualController extends GetxController {
         id: '',
         title: title,
         slug: slug,
-        deity: deity,
+        deities: deities,
         description: description,
         days: days,
         sections: sections,

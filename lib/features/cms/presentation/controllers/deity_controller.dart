@@ -13,47 +13,80 @@ class DeityController extends GetxController {
   final _isLoading = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
+  final _page = 1.obs;
+  final _limit = 10.obs;
+  final _total = 0.obs;
+  final _totalPages = 1.obs;
+  final _statusFilter = RxnString();
+  final _search = ''.obs;
+
   bool _loadInFlight = false;
-  DateTime? _lastLoadedAt;
-  String? _lastStatus;
-  int? _lastPage;
-  int? _lastLimit;
 
   List<DeityModel> get deities => _deities;
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
+  int get page => _page.value;
+  int get limit => _limit.value;
+  int get total => _total.value;
+  int get totalPages => _totalPages.value;
+  String? get statusFilter => _statusFilter.value;
+  String get search => _search.value;
+
+  void setSearch(String value) {
+    final q = value.trim();
+    if (_search.value == q) return;
+    _search.value = q;
+    loadDeities(page: 1, force: true);
+  }
+
+  Future<void> goToPage(int target) async {
+    final p = target.clamp(1, _totalPages.value);
+    if (p == _page.value && _deities.isNotEmpty) return;
+    await loadDeities(page: p, force: true);
+  }
+
+  Future<void> setPageSize(int size) async {
+    if (size <= 0 || size == _limit.value) return;
+    _limit.value = size;
+    await loadDeities(page: 1, force: true);
+  }
+
+  Future<void> setStatusFilter(String? status) async {
+    _statusFilter.value = status;
+    await loadDeities(page: 1, force: true);
+  }
 
   Future<void> loadDeities({
-    int page = 1,
-    int limit = 10,
+    int? page,
+    int? limit,
     String? status,
+    String? search,
     bool force = false,
   }) async {
-    if (_loadInFlight) return;
-    final now = DateTime.now();
-    final sameQuery =
-        _lastStatus == status && _lastPage == page && _lastLimit == limit;
-    if (!force &&
-        sameQuery &&
-        _lastLoadedAt != null &&
-        now.difference(_lastLoadedAt!).inSeconds < 15) {
-      return;
-    }
+    if (_loadInFlight && !force) return;
+    final targetPage = page ?? _page.value;
+    final targetLimit = limit ?? _limit.value;
+    final targetStatus = status ?? _statusFilter.value;
+    final targetSearch = search ?? _search.value;
+
     _loadInFlight = true;
     _isLoading.value = true;
     _error.value = null;
     try {
       final result = await _dataSource.getDeities(
-        page: page,
-        limit: limit,
-        status: status,
+        page: targetPage,
+        limit: targetLimit,
+        status: targetStatus,
+        search: targetSearch.trim().isEmpty ? null : targetSearch.trim(),
       );
-      _deities.assignAll(result);
-      _lastLoadedAt = DateTime.now();
-      _lastStatus = status;
-      _lastPage = page;
-      _lastLimit = limit;
+      _deities.assignAll(result.items);
+      _page.value = result.page;
+      _limit.value = result.limit;
+      _total.value = result.total;
+      _totalPages.value = result.totalPages;
+      _statusFilter.value = targetStatus;
+      _search.value = targetSearch.trim();
     } catch (_) {
       _error.value = 'Failed to load deities';
       showCmsSnackbar(

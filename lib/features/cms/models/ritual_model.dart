@@ -205,7 +205,7 @@ class RitualModel {
     required this.title,
     this.slug,
     this.description,
-    required this.deity,
+    required this.deities,
     this.category,
     this.purpose,
     this.startingDay,
@@ -232,7 +232,8 @@ class RitualModel {
   final String title;
   final String? slug;
   final String? description;
-  final String deity;
+  final List<String> deities;
+  String get deity => deities.join(', ');
   final String? category;
   final String? purpose;
   final String? startingDay;
@@ -253,6 +254,28 @@ class RitualModel {
   final String? videoUrl;
   final String? createdAt;
   final String? updatedAt;
+
+  static List<String> _extractDeityIds(Map<String, dynamic> json) {
+    final raw = json['deity'] ?? json['deities'];
+    if (raw is List) {
+      return raw
+          .map((e) {
+            if (e is Map) {
+              return (e['_id'] ?? e['id'] ?? '').toString().trim();
+            }
+            return e.toString().trim();
+          })
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    if (raw is Map) {
+      final id = (raw['_id'] ?? raw['id'] ?? '').toString().trim();
+      if (id.isNotEmpty) return [id];
+    }
+    final single = (json['deity'] ?? '').toString().trim();
+    if (single.isNotEmpty) return [single];
+    return const [];
+  }
 
   factory RitualModel.fromJson(Map<String, dynamic> json) {
     final daysList = (json['days'] is List)
@@ -282,11 +305,7 @@ class RitualModel {
       title: (json['title'] ?? '').toString(),
       slug: json['slug']?.toString(),
       description: json['description']?.toString(),
-      deity:
-          (json['deity'] is Map
-                  ? (json['deity']['_id'] ?? json['deity']['id'] ?? '')
-                  : (json['deity'] ?? ''))
-              .toString(),
+      deities: _extractDeityIds(json),
       category: json['category']?.toString(),
       purpose: json['purpose']?.toString(),
       startingDay: json['startingDay']?.toString(),
@@ -329,7 +348,7 @@ class RitualModel {
       'title': title,
       if (slug != null && slug!.isNotEmpty) 'slug': slug,
       if (description != null) 'description': description,
-      'deity': deity,
+      'deity': deities,
       if (category != null && category!.isNotEmpty) 'category': category,
       if (purpose != null && purpose!.isNotEmpty) 'purpose': purpose,
       if (startingDay != null && startingDay!.isNotEmpty)
@@ -356,7 +375,7 @@ class RitualModel {
     String? title,
     String? slug,
     String? description,
-    String? deity,
+    List<String>? deities,
     String? category,
     String? purpose,
     String? startingDay,
@@ -381,7 +400,7 @@ class RitualModel {
       title: title ?? this.title,
       slug: slug ?? this.slug,
       description: description ?? this.description,
-      deity: deity ?? this.deity,
+      deities: deities ?? this.deities,
       category: category ?? this.category,
       purpose: purpose ?? this.purpose,
       startingDay: startingDay ?? this.startingDay,

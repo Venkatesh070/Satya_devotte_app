@@ -4,6 +4,7 @@
 // the project-wide auth interceptor (Firebase ID / session token), so
 // nothing extra is needed for authorisation here.
 import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 
@@ -80,6 +81,7 @@ class DonationsRepository {
     try {
       final res = await _apiClient.dio.get<dynamic>(
         ApiEndpoints.verifyPayment(reference),
+        options: Options(extra: {kSkipApiLoaderKey: true}),
       );
       final data = res.data;
       if (data is! Map<String, dynamic>) {

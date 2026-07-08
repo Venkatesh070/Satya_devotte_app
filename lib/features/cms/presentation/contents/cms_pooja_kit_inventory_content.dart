@@ -1878,7 +1878,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                                     ? 'Product Image'
                                     : 'Product Image *',
                                 icon: Icons.image_outlined,
-                                accept: 'JPG, PNG up to 5MB',
+                                accept: '800 × 800 px, JPG, PNG up to 5MB',
                                 mediaType: PickMediaType.image,
                                 initialUrl: widget.item?.imageUrl,
                                 onPicked: (f) => setState(() => _image = f),
@@ -1901,7 +1901,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                         CmsUploadBox(
                           label: _isEdit ? 'Product Image' : 'Product Image *',
                           icon: Icons.image_outlined,
-                          accept: 'JPG, PNG up to 5MB',
+                          accept: '800 × 800 px, JPG, PNG up to 5MB',
                           mediaType: PickMediaType.image,
                           initialUrl: widget.item?.imageUrl,
                           onPicked: (f) => setState(() => _image = f),

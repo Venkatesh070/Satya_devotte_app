@@ -54,6 +54,7 @@ class _DonationPaystackWebViewScreenState
 
   WebViewController? _webview;
   bool _completed = false;
+  bool _pageLoading = true;
 
   // Auto-verify polling on web (where we can't intercept the redirect
   // from a popup window). Mobile uses navigation interception instead.
@@ -64,7 +65,7 @@ class _DonationPaystackWebViewScreenState
   void initState() {
     super.initState();
     final arg = Get.arguments;
-    if (arg is! DonationInitData || arg.authorizationUrl.isEmpty) {
+    if (arg is! DonationInitData || !arg.checkout.isValid) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Get.back();
       });
@@ -104,7 +105,11 @@ class _DonationPaystackWebViewScreenState
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() => _pageLoading = true);
+          },
           onPageFinished: (url) {
+            if (mounted) setState(() => _pageLoading = false);
             if (_isTerminalUrl(url)) _onTerminalUrl(url);
           },
           onNavigationRequest: (req) {
@@ -114,18 +119,38 @@ class _DonationPaystackWebViewScreenState
             }
             return NavigationDecision.navigate;
           },
-          onWebResourceError: (_) {},
+          onWebResourceError: (_) {
+            if (mounted) setState(() => _pageLoading = false);
+          },
         ),
-      )
-      ..loadRequest(Uri.parse(_init!.authorizationUrl));
+      );
     _webview = c;
+    _loadCheckout(c);
+  }
+
+  Future<void> _loadCheckout(WebViewController controller) async {
+    final checkout = _init!.checkout;
+    if (checkout.postHtml.isNotEmpty) {
+      await controller.loadHtmlString(
+        checkout.postHtml,
+        baseUrl: checkout.postBaseUrl.isNotEmpty ? checkout.postBaseUrl : null,
+      );
+      return;
+    }
+    final url = checkout.redirectUrl;
+    if (url.isNotEmpty) {
+      await controller.loadRequest(Uri.parse(url));
+    }
   }
 
   // ── Web fallback (popup + poll) ─────────────────────────────
   Future<void> _launchWebPopup() async {
+    final checkout = _init!.checkout;
+    final url = checkout.redirectUrl;
+    if (url.isEmpty) return;
     try {
       await launchUrl(
-        Uri.parse(_init!.authorizationUrl),
+        Uri.parse(url),
         mode: LaunchMode.platformDefault,
       );
     } catch (_) {
@@ -253,9 +278,19 @@ class _DonationPaystackWebViewScreenState
               relaunch: _launchWebPopup,
               verifyNow: () => _verifyAndRoute(),
             )
-          : (_webview != null
-              ? WebViewWidget(controller: _webview!)
-              : const SizedBox.shrink()),
+          : Stack(
+              children: [
+                if (_webview != null)
+                  WebViewWidget(controller: _webview!)
+                else
+                  const SizedBox.shrink(),
+                if (_pageLoading)
+                  const ColoredBox(
+                    color: Colors.white,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
       ),
     );
   }

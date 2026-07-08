@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
+import 'package:satya_devotte_app/features/cms/data/models/cms_paged_result.dart';
 
 import 'package:get/get.dart' hide MultipartFile, FormData;
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -14,13 +15,14 @@ class DeityRemoteDataSource {
   DeityRemoteDataSource(this._apiClient);
   final ApiClient _apiClient;
 
-  Future<List<DeityModel>> getDeities({
+  Future<CmsPagedResult<DeityModel>> getDeities({
     int page = 1,
     int limit = 10,
     String? status,
+    String? search,
   }) async {
     final offlineService = Get.find<OfflineService>();
-    final cacheKey = 'deities_list_${page}_${limit}_$status';
+    final cacheKey = 'deities_list_${page}_${limit}_${status}_$search';
 
     try {
       dynamic raw;
@@ -31,6 +33,7 @@ class DeityRemoteDataSource {
             'page': page,
             'limit': limit,
             if (status != null && status.isNotEmpty) 'status': status,
+            if (search != null && search.isNotEmpty) 'search': search,
           },
         );
         raw = response.data;
@@ -49,10 +52,23 @@ class DeityRemoteDataSource {
       } else if (raw is List) {
         list = raw;
       }
-      return list
+      final items = list
           .whereType<Map>()
           .map((e) => DeityModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+      final pagination = CmsPaginationParser.fromBody(
+        raw,
+        requestedPage: page,
+        requestedLimit: limit,
+        itemCount: items.length,
+      );
+      return CmsPagedResult<DeityModel>(
+        items: items,
+        page: pagination.page,
+        limit: pagination.limit,
+        total: pagination.total,
+        totalPages: pagination.totalPages,
+      );
     } catch (e) {
       debugPrint('DeityRemoteDataSource: getDeities error: $e');
       final cached = offlineService.getCachedData(cacheKey);

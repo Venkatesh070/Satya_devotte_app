@@ -62,7 +62,10 @@ class CmsFormField extends StatefulWidget {
     this.initialValue,
     this.maxLines = 1,
     this.controller,
+    this.focusNode,
     this.onChanged,
+    this.onFieldSubmitted,
+    this.textInputAction,
     this.inputFormatters,
   });
   final String label;
@@ -70,7 +73,10 @@ class CmsFormField extends StatefulWidget {
   final String? initialValue;
   final int maxLines;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
 
   @override
@@ -98,12 +104,19 @@ class _CmsFormFieldState extends State<CmsFormField> {
 
   @override
   Widget build(BuildContext context) {
+    final isMultiline = widget.maxLines > 1;
     final field = TextFormField(
       initialValue: widget.controller == null ? widget.initialValue : null,
       controller: widget.controller,
+      focusNode: widget.focusNode,
       maxLines: widget.maxLines,
       scrollController: _scrollController,
       onChanged: widget.onChanged,
+      onFieldSubmitted: isMultiline ? null : widget.onFieldSubmitted,
+      textInputAction: widget.textInputAction ??
+          (isMultiline ? TextInputAction.newline : TextInputAction.done),
+      keyboardType:
+          isMultiline ? TextInputType.multiline : TextInputType.text,
       inputFormatters: widget.inputFormatters,
       style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
       decoration: InputDecoration(
@@ -320,6 +333,277 @@ class CmsStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// ── Multi-select dropdown (deities, tags, etc.) ───────────────────
+class CmsSelectOption {
+  const CmsSelectOption({required this.value, required this.label});
+  final String value;
+  final String label;
+}
+
+class CmsMultiSelectField extends StatelessWidget {
+  const CmsMultiSelectField({
+    super.key,
+    required this.label,
+    required this.hintText,
+    required this.options,
+    required this.selectedValues,
+    required this.onChanged,
+    this.isLoading = false,
+    this.loadingText = 'Loading...',
+    this.emptyText = 'No options found',
+  });
+
+  final String label;
+  final String hintText;
+  final List<CmsSelectOption> options;
+  final List<String> selectedValues;
+  final ValueChanged<List<String>> onChanged;
+  final bool isLoading;
+  final String loadingText;
+  final String emptyText;
+
+  String _summaryText() {
+    if (selectedValues.isEmpty) return hintText;
+    final labels = <String>[];
+    for (final id in selectedValues) {
+      for (final o in options) {
+        if (o.value == id) {
+          labels.add(o.label);
+          break;
+        }
+      }
+    }
+    if (labels.isEmpty) {
+      return '${selectedValues.length} selected';
+    }
+    if (labels.length <= 2) return labels.join(', ');
+    return '${labels.length} selected';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canPick = !isLoading && options.isNotEmpty;
+    final sheetOptions = isLoading
+        ? <CmsSelectOption>[
+            CmsSelectOption(value: '__loading__', label: loadingText),
+          ]
+        : options.isEmpty
+        ? [CmsSelectOption(value: '__empty__', label: emptyText)]
+        : options;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: () async {
+            final current = List<String>.from(selectedValues);
+            final picked = await showDialog<List<String>>(
+              context: context,
+              barrierDismissible: true,
+              builder: (ctx) => _CmsMultiSelectDialog(
+                title: label,
+                options: sheetOptions,
+                initialValues: current,
+                canPick: canPick,
+                emptyText: emptyText,
+              ),
+            );
+            if (picked != null && canPick) onChanged(picked);
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: CmsColors.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: CmsColors.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isLoading ? loadingText : _summaryText(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: selectedValues.isEmpty || isLoading
+                          ? CmsThemeColors.inputHint
+                          : CmsThemeColors.inputText,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: CmsColors.textSecond,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CmsMultiSelectDialog extends StatefulWidget {
+  const _CmsMultiSelectDialog({
+    required this.title,
+    required this.options,
+    required this.initialValues,
+    required this.canPick,
+    required this.emptyText,
+  });
+
+  final String title;
+  final List<CmsSelectOption> options;
+  final List<String> initialValues;
+  final bool canPick;
+  final String emptyText;
+
+  @override
+  State<_CmsMultiSelectDialog> createState() => _CmsMultiSelectDialogState();
+}
+
+class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
+  late List<String> _temp;
+
+  @override
+  void initState() {
+    super.initState();
+    _temp = List<String>.from(widget.initialValues);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRealOptions = widget.options.any(
+      (o) => o.value != '__loading__' && o.value != '__empty__',
+    );
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 520),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 20),
+                    color: CmsColors.textSecond,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: CmsColors.border),
+            Flexible(
+              child: hasRealOptions
+                  ? ListView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: widget.options.length,
+                      itemBuilder: (context, index) {
+                        final o = widget.options[index];
+                        final isPlaceholder =
+                            o.value == '__loading__' || o.value == '__empty__';
+                        final checked = _temp.contains(o.value);
+                        return CheckboxListTile(
+                          dense: true,
+                          enabled: !isPlaceholder && widget.canPick,
+                          value: isPlaceholder ? false : checked,
+                          title: Text(
+                            o.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isPlaceholder
+                                  ? CmsThemeColors.inputHint
+                                  : CmsThemeColors.inputText,
+                            ),
+                          ),
+                          onChanged: isPlaceholder || !widget.canPick
+                              ? null
+                              : (v) {
+                                  setState(() {
+                                    if (v == true) {
+                                      if (!_temp.contains(o.value)) {
+                                        _temp.add(o.value);
+                                      }
+                                    } else {
+                                      _temp.remove(o.value);
+                                    }
+                                  });
+                                },
+                        );
+                      },
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        widget.emptyText,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: CmsThemeColors.inputHint,
+                        ),
+                      ),
+                    ),
+            ),
+            const Divider(height: 1, color: CmsColors.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: widget.canPick
+                        ? () => Navigator.of(context).pop(_temp)
+                        : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: CmsColors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -752,4 +1036,223 @@ Future<bool?> showCmsDeleteDialog(
       ],
     ),
   );
+}
+
+// ── Pagination bar (shared across CMS list screens) ───────────────
+class CmsPaginationBar extends StatelessWidget {
+  const CmsPaginationBar({
+    super.key,
+    required this.page,
+    required this.pageSize,
+    required this.totalPages,
+    required this.totalRows,
+    required this.isLoading,
+    required this.onPageSelected,
+    required this.onPageSizeChanged,
+    this.pageSizes = const [10, 20, 50, 100],
+  });
+
+  final int page;
+  final int pageSize;
+  final int totalPages;
+  final int totalRows;
+  final bool isLoading;
+  final ValueChanged<int> onPageSelected;
+  final ValueChanged<int> onPageSizeChanged;
+  final List<int> pageSizes;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 768;
+    final start = totalRows == 0 ? 0 : (page - 1) * pageSize + 1;
+    final end = (page * pageSize).clamp(0, totalRows);
+
+    final left = <Widget>[
+      Text(
+        'Showing $start–$end of $totalRows',
+        style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+      ),
+      const SizedBox(width: 18),
+      const Text(
+        'Rows per page:',
+        style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+      ),
+      const SizedBox(width: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: CmsColors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: pageSizes.contains(pageSize) ? pageSize : pageSizes.first,
+            isDense: true,
+            style: const TextStyle(
+              fontSize: 12,
+              color: CmsColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+            items: pageSizes
+                .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
+                .toList(),
+            onChanged: isLoading
+                ? null
+                : (v) {
+                    if (v != null) onPageSizeChanged(v);
+                  },
+          ),
+        ),
+      ),
+    ];
+
+    final pager = <Widget>[
+      _CmsPagerBtn(
+        icon: Icons.chevron_left,
+        enabled: page > 1 && !isLoading,
+        onTap: () => onPageSelected(page - 1),
+      ),
+      for (final n in _pageRange(page, totalPages))
+        n == -1
+            ? const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                child: Text('...', style: TextStyle(color: CmsColors.textSecond)),
+              )
+            : _CmsPageNumberBtn(
+                number: n,
+                isActive: n == page,
+                onTap: () => onPageSelected(n),
+              ),
+      _CmsPagerBtn(
+        icon: Icons.chevron_right,
+        enabled: page < totalPages && !isLoading,
+        onTap: () => onPageSelected(page + 1),
+      ),
+    ];
+
+    final decoration = BoxDecoration(
+      color: CmsColors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: CmsColors.border),
+    );
+
+    if (isWide) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: decoration,
+        child: Row(
+          children: [
+            ...left,
+            const Spacer(),
+            ...pager.map(
+              (w) => Padding(padding: const EdgeInsets.only(left: 4), child: w),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: decoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(spacing: 8, runSpacing: 8, children: left),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: pager),
+        ],
+      ),
+    );
+  }
+
+  static List<int> _pageRange(int current, int total) {
+    if (total <= 1) return [1];
+    if (total <= 7) return List.generate(total, (i) => i + 1);
+    final pages = <int>{1, total, current, current - 1, current + 1};
+    final sorted = pages.where((p) => p >= 1 && p <= total).toList()..sort();
+    final out = <int>[];
+    for (var i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.add(-1);
+      out.add(sorted[i]);
+    }
+    return out;
+  }
+}
+
+class _CmsPagerBtn extends StatelessWidget {
+  const _CmsPagerBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: enabled ? CmsColors.bg : CmsColors.bg.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CmsColors.border),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? CmsColors.textPrimary : CmsColors.textSecond,
+        ),
+      ),
+    );
+  }
+}
+
+class _CmsPageNumberBtn extends StatelessWidget {
+  const _CmsPageNumberBtn({
+    required this.number,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final int number;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        margin: const EdgeInsets.only(left: 4),
+        decoration: BoxDecoration(
+          color: isActive ? CmsColors.orange : CmsColors.bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? CmsColors.orange : CmsColors.border,
+          ),
+        ),
+        child: Text(
+          '$number',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isActive ? Colors.white : CmsColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
 }

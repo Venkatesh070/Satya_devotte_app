@@ -16,6 +16,11 @@ class FestivalController extends GetxController {
   final _error = RxnString();
   final _filter = 'All'.obs;
   final _selectedMonth = DateTime.now().month.obs;
+  final _page = 1.obs;
+  final _limit = 10.obs;
+  final _total = 0.obs;
+  final _totalPages = 1.obs;
+  final _search = ''.obs;
 
   List<FestivalModel> get festivals => _festivals;
   bool get isLoading => _isLoading.value;
@@ -23,18 +28,16 @@ class FestivalController extends GetxController {
   String? get error => _error.value;
   String get filter => _filter.value;
   int get selectedMonth => _selectedMonth.value;
+  int get page => _page.value;
+  int get limit => _limit.value;
+  int get total => _total.value;
+  int get totalPages => _totalPages.value;
+  String get search => _search.value;
 
-  List<FestivalModel> get filteredFestivals {
-    var list = _festivals.toList();
-    if (_filter.value != 'All') {
-      list = list
-          .where((f) => f.status.toLowerCase() == _filter.value.toLowerCase())
-          .toList();
-    }
-    return list;
-  }
+  List<FestivalModel> get filteredFestivals => _festivals.toList();
 
   List<FestivalModel> get festivalsByMonth {
+    if (_search.value.isNotEmpty) return filteredFestivals;
     final auth = Get.find<AuthController>();
     // SuperAdmin sees ALL months always — month picker is for admin only
     if (auth.isSuperAdmin) return filteredFestivals;
@@ -53,19 +56,53 @@ class FestivalController extends GetxController {
     Future.microtask(() => loadFestivals(showErrorSnackbar: false));
   }
 
-  void setFilter(String f) => _filter.value = f;
+  void setFilter(String f) {
+    if (_filter.value == f) return;
+    _filter.value = f;
+    loadFestivals(page: 1);
+  }
+
   void setMonth(int m) => _selectedMonth.value = m;
 
+  Future<void> goToPage(int target) async {
+    final p = target.clamp(1, _totalPages.value);
+    if (p == _page.value && _festivals.isNotEmpty) return;
+    await loadFestivals(page: p);
+  }
+
+  Future<void> setPageSize(int size) async {
+    if (size <= 0 || size == _limit.value) return;
+    _limit.value = size;
+    await loadFestivals(page: 1);
+  }
+
+  void setSearch(String value) {
+    final q = value.trim();
+    if (_search.value == q) return;
+    _search.value = q;
+    loadFestivals(page: 1);
+  }
+
   // ── LOAD ──────────────────────────────────────────────────────
-  Future<void> loadFestivals({bool showErrorSnackbar = true}) async {
+  Future<void> loadFestivals({bool showErrorSnackbar = true, int? page}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
       final auth = Get.find<AuthController>();
-      final result = auth.isSuperAdmin
-          ? await _dataSource.getAllFestivals()
-          : await _dataSource.getMyFestivals();
-      _festivals.assignAll(result);
+      final status =
+          _filter.value == 'All' ? null : _filter.value.toUpperCase();
+      final result = await _dataSource.getFestivalsPage(
+        superAdmin: auth.isSuperAdmin,
+        page: page ?? _page.value,
+        limit: _limit.value,
+        status: status,
+        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+      );
+      _festivals.assignAll(result.items);
+      _page.value = result.page;
+      _limit.value = result.limit;
+      _total.value = result.total;
+      _totalPages.value = result.totalPages;
     } catch (e) {
       _error.value = _parseError(e);
       if (showErrorSnackbar) {
