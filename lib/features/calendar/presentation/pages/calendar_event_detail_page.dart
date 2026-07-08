@@ -23,15 +23,11 @@ class CalendarEventDetailPage extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.88;
         return Padding(
           padding: EdgeInsets.only(
             top: MediaQuery.sizeOf(sheetContext).height * 0.08,
           ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: CalendarEventDetailPage(event: event),
-          ),
+          child: CalendarEventDetailPage(event: event),
         );
       },
     );

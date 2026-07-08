@@ -845,9 +845,12 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                       statusForPooja: (pooja) =>
                           _statusForPooja(pooja, pending, finished),
                       onSelectPooja: (pooja) {
-                        setState(() {
-                          _pooja = _mergeDeityIntoPooja(pooja, _selectedDeity);
-                        });
+                        final merged = _mergeDeityIntoPooja(
+                          pooja,
+                          _selectedDeity,
+                        );
+                        setState(() => _pooja = merged);
+                        _showPujaPreviewModal(context, PoojaView(merged));
                       },
                     );
                   }),
@@ -890,51 +893,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               ),
             ),
           ),
-          if (showGetStartedButton)
-            Obx(() {
-              final pending = _historyController.pendingPoojas;
-              Map? session;
-              for (final s in pending) {
-                if (s is Map && _sessionMatchesPooja(s, activePooja)) {
-                  session = s;
-                  break;
-                }
-              }
-
-              final isPending = session != null;
-              final label = isPending ? 'Resume Puja' : 'Get Started';
-
-              return Positioned(
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(context).padding.bottom + 16,
-                child: CustomButton(
-                  label: label,
-                  borderRadius: 14,
-                  onTap: () {
-                    if (isPending) {
-                      final step = _intValue(session!['currentStep']);
-                      final sid = (session['_id'] ?? session['id'])?.toString();
-                      Get.toNamed(
-                        AppRoutes.poojaWizard,
-                        arguments: {
-                          'pooja': p,
-                          'initialStep': step,
-                          'sessionId': sid,
-                        },
-                      );
-                    } else {
-                      _showPujaPreviewModal(context, p);
-                    }
-                  },
-                  textColor: AppColors.white,
-                  gradientColors: const [
-                    AppColors.gradientStart,
-                    AppColors.gradientEnd,
-                  ],
-                ),
-              );
-            }),
+          if (showGetStartedButton) const SizedBox.shrink(),
         ],
       ),
     );
@@ -972,12 +931,6 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         .toLowerCase();
     final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
     return sessionTitle.isNotEmpty && sessionTitle == title;
-  }
-
-  int _intValue(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   void _showPujaPreviewModal(BuildContext context, PoojaView pooja) {
