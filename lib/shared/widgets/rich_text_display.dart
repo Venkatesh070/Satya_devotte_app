@@ -90,10 +90,13 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       enableInteractiveSelection: false,
       showCursor: false,
     );
-    Widget child = QuillEditor.basic(
-      controller: _controller,
-      config: config,
-      scrollController: ScrollController(),
+    Widget child = DefaultTextStyle(
+      style: TextStyle(color: widget.style?.color ?? Colors.white),
+      child: QuillEditor.basic(
+        controller: _controller,
+        config: config,
+        scrollController: ScrollController(),
+      ),
     );
 
     // If maxLines is provided, constrain the height

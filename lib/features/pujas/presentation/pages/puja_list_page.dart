@@ -643,6 +643,7 @@ class DeityListItem {
     required this.title,
     required this.description,
     required this.imageUrl,
+    this.scheduledDate,
   });
 
   factory DeityListItem.fromJson(Map<String, dynamic> e) {
@@ -670,7 +671,6 @@ class DeityListItem {
             .join(', ');
       }
       if (v is Map) {
-        // Try to get name or title from map
         final name = v['name'] ?? v['title'] ?? '';
         return _extractString(name);
       }
@@ -682,12 +682,20 @@ class DeityListItem {
       return _extractString(raw);
     }
 
+    String? resolveScheduledDate() {
+      final raw = e['scheduledDate'] ?? e['scheduledAt'] ?? e['date'];
+      if (raw == null) return null;
+      final s = raw.toString().trim();
+      return s.isNotEmpty ? s : null;
+    }
+
     return DeityListItem(
       id: (e['_id'] ?? e['id'] ?? '').toString(),
       name: (e['name'] ?? e['title'] ?? 'Untitled Deity').toString(),
       title: (e['title'] ?? e['subtitle'] ?? '').toString(),
       description: getDescription(),
       imageUrl: resolveImageUrl(),
+      scheduledDate: resolveScheduledDate(),
     );
   }
 
@@ -713,6 +721,20 @@ class DeityListItem {
   final String title;
   final String description;
   final String? imageUrl;
+  final String? scheduledDate;
+}
+
+String? _formatListItemDate(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  final trimmed = raw.trim();
+  DateTime? parsed = DateTime.tryParse(trimmed);
+  if (parsed == null) return trimmed;
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final day = parsed.day.toString().padLeft(2, '0');
+  return '$day ${months[parsed.month - 1]} ${parsed.year}';
 }
 
 class _DeityCard extends StatelessWidget {
@@ -733,6 +755,7 @@ class _DeityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = item.imageUrl != null && item.imageUrl!.trim().isNotEmpty;
+    final scheduledDate = _formatListItemDate(item.scheduledDate);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -812,6 +835,23 @@ class _DeityCard extends StatelessWidget {
                         color: const Color(0xFF8C775F),
                       ),
                     ),
+                  if (scheduledDate != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_month_outlined, size: 14, color: const Color(0xFF8C775F)),
+                        const SizedBox(width: 5),
+                        Text(
+                          scheduledDate,
+                          style: AppTypography.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF8C775F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (statusLabel != null) ...[
                     const SizedBox(height: 7),
                     _PujaStatusBadge(label: statusLabel!),

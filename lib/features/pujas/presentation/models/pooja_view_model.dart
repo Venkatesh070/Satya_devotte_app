@@ -49,7 +49,16 @@ class PoojaView {
   }
 
   String get status => (_raw['status'] ?? '').toString();
-  String get date => (_raw['date'] ?? '').toString();
+  String get date {
+    final d = _raw['date'] ?? _raw['scheduledDate'] ?? _raw['scheduledAt'];
+    if (d != null) return d.toString();
+    final schedules = _decodeList(_raw['schedules']);
+    if (schedules.isNotEmpty && schedules.first is Map) {
+      final s = (schedules.first as Map)['date'];
+      if (s != null) return s.toString();
+    }
+    return '';
+  }
 
   String get deityColor {
     final dDoc = deityDoc;

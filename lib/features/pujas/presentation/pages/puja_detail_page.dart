@@ -2297,33 +2297,27 @@ class _CalendarPujaCard extends StatelessWidget {
                           _PujaSessionStatusBadge(label: statusLabel!),
                         ],
                         const SizedBox(height: 10),
-                        if (date != null) ...[
-                          Row(
-                            children: [
+                        Row(
+                          children: [
+                            if (date != null) ...[
                               const Icon(
                                 Icons.calendar_month_outlined,
                                 size: 15,
                                 color: Color(0xFF1C1917),
                               ),
                               const SizedBox(width: 5),
-                              Expanded(
-                                child: Text(
-                                  date,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF1C1917),
-                                  ),
+                              Text(
+                                date,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1C1917),
                                 ),
                               ),
+                              const SizedBox(width: 16),
                             ],
-                          ),
-                          const SizedBox(height: 6),
-                        ],
-                        Row(
-                          children: [
                             const Icon(
                               Icons.access_time,
                               size: 15,
