@@ -972,20 +972,22 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
+             Row(
                 children: [
-                  _previewChip(
-                    Icons.timer_outlined,
-                    pooja.duration.isNotEmpty ? pooja.duration : '—',
+                  Flexible(
+                    flex: 3,
+                    child: _previewChip(Icons.timer_outlined, pooja.duration),
                   ),
                   const SizedBox(width: 12),
-                  _previewChip(
-                    Icons.format_list_numbered,
-                    '${steps.length} Step${steps.length == 1 ? '' : 's'}',
+                  Flexible(
+                    flex: 2,
+                    child: _previewChip(
+                      Icons.format_list_numbered,
+                      '${steps.length} Steps',
+                    ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
+              ), const SizedBox(height: 20),
               const Text(
                 'Steps',
                 style: TextStyle(
@@ -1062,24 +1064,36 @@ class _RitualDetailPageState extends State<RitualDetailPage>
           ),
         ),
       ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 
-  Widget _previewChip(IconData icon, String text) {
+  Widget _previewChip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7E8),
+        color: const Color(
+          0xFFFFF1E0,
+        ), // matches your screenshot's peach chip bg
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFFE69138)),
+          Icon(icon, size: 16, color: const Color(0xFFB5651D)),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF5C3A1E)),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1C1917),
+              ),
+            ),
           ),
         ],
       ),
@@ -1184,7 +1198,7 @@ class _ShapedHeaderBannerState extends State<_ShapedHeaderBanner> {
       child: CachedNetworkImage(
         imageUrl: widget.networkUrl!,
         fit: BoxFit.cover,
-        alignment: Alignment.center,
+        alignment: const Alignment(0, -0.6),
         placeholder: (_, __) =>
             Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.cover),
         errorWidget: (_, __, ___) =>
@@ -2169,7 +2183,7 @@ class _CalendarTab extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
+      padding: const EdgeInsets.fromLTRB(5, 16, 5, 20),
       children: [
         for (final raw in calendarPoojas) ...[
           Builder(
@@ -2306,14 +2320,16 @@ class _CalendarPujaCard extends StatelessWidget {
                                 color: Color(0xFF1C1917),
                               ),
                               const SizedBox(width: 5),
-                              Text(
-                                date,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.inter(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF1C1917),
+                              Flexible(
+                                child: Text(
+                                  date,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF1C1917),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -2324,12 +2340,16 @@ class _CalendarPujaCard extends StatelessWidget {
                               color: Color(0xFF1C1917),
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              duration,
-                              style: AppTypography.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF1C1917),
+                            Flexible(
+                              child: Text(
+                                duration,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1C1917),
+                                ),
                               ),
                             ),
                           ],
