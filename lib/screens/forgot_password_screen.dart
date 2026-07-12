@@ -114,7 +114,7 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                                     : controller.sendResetLink,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFED844D),
-                                  foregroundColor: Colors.white,
+                                  foregroundColor: Color(0xFFFCF7EF),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -124,7 +124,7 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
-                                          color: Colors.white,
+                                          color: Color(0xFFFCF7EF),
                                           strokeWidth: 2,
                                         ),
                                       )

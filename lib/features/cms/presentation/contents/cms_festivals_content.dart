@@ -287,7 +287,7 @@ class _FestivalListState extends State<_FestivalList> {
                             f,
                             style: TextStyle(
                               color: isSel
-                                  ? Colors.white
+                                  ? Color(0xFFFCF7EF)
                                   : CmsColors.textSecond,
                               fontSize: 12,
                               fontWeight: isSel
@@ -304,7 +304,7 @@ class _FestivalListState extends State<_FestivalList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -313,7 +313,7 @@ class _FestivalListState extends State<_FestivalList> {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -327,7 +327,7 @@ class _FestivalListState extends State<_FestivalList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -336,7 +336,7 @@ class _FestivalListState extends State<_FestivalList> {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -400,7 +400,7 @@ class _FestivalListState extends State<_FestivalList> {
                               _months[i],
                               style: TextStyle(
                                 color: isSel
-                                    ? Colors.white
+                                    ? Color(0xFFFCF7EF)
                                     : CmsColors.textSecond,
                                 fontSize: 12,
                                 fontWeight: isSel
@@ -602,7 +602,7 @@ class _FestivalListState extends State<_FestivalList> {
             label: const Text('Approve & Publish'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -703,7 +703,7 @@ class _FestivalListState extends State<_FestivalList> {
                   'Please enter a reason',
                   snackPosition: SnackPosition.TOP,
                   backgroundColor: CmsColors.orange,
-                  colorText: Colors.white,
+                  colorText: Color(0xFFFCF7EF),
                   margin: const EdgeInsets.all(12),
                 );
                 return;
@@ -715,7 +715,7 @@ class _FestivalListState extends State<_FestivalList> {
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1085,7 +1085,7 @@ class _FestivalFormState extends State<_FestivalForm> {
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.light(
             primary: CmsColors.orange,
-            onPrimary: Colors.white,
+            onPrimary: Color(0xFFFCF7EF),
           ),
         ),
         child: child!,
@@ -1133,7 +1133,7 @@ class _FestivalFormState extends State<_FestivalForm> {
         err,
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orangeDark,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;
@@ -1427,7 +1427,7 @@ class _FestivalFormState extends State<_FestivalForm> {
               onPressed: loading ? null : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -1440,7 +1440,7 @@ class _FestivalFormState extends State<_FestivalForm> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     )
                   : Text(
@@ -1624,7 +1624,7 @@ class _PoojaPickerField extends StatelessWidget {
         'No more pujas to add',
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orange,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;

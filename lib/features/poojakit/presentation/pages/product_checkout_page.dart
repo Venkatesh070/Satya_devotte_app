@@ -666,7 +666,7 @@ class _LocationPickerView extends StatelessWidget {
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.02),
+                        color: Color(0xFFFCF7EF).withValues(alpha: 0.02),
                       ),
                     ),
                   ),
@@ -744,7 +744,7 @@ class _SearchWithSuggestions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Material(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           borderRadius: BorderRadius.circular(8),
           elevation: 4,
           shadowColor: const Color(0x18000000),
@@ -784,7 +784,7 @@ class _SearchWithSuggestions extends StatelessWidget {
         if (suggestions.isNotEmpty) ...[
           const SizedBox(height: 8),
           Material(
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
             elevation: 8,
             shadowColor: const Color(0x22000000),
             borderRadius: BorderRadius.circular(10),
@@ -882,7 +882,7 @@ class _MapBottomSheet extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: isLocating ? null : onCurrentLocationTap,
             style: OutlinedButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: Color(0xFFFCF7EF),
               foregroundColor: const Color(0xFF4A1C00),
               side: const BorderSide(color: Color(0xFFE8E0D6)),
               shape: RoundedRectangleBorder(
@@ -909,7 +909,7 @@ class _MapBottomSheet extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               borderRadius: BorderRadius.circular(16),
               boxShadow: const [
                 BoxShadow(
@@ -993,7 +993,7 @@ class _CircleIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
       shape: const CircleBorder(),
       elevation: 5,
       shadowColor: const Color(0x22000000),
@@ -1106,7 +1106,7 @@ class _MapTileFallbackPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final road = Paint()
-      ..color = Colors.white
+      ..color = Color(0xFFFCF7EF)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 14
       ..strokeCap = StrokeCap.round;
@@ -1182,7 +1182,7 @@ class _ReceiverCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: Color(0xFFFCF7EF).withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1340,7 +1340,7 @@ class _AddressInput extends StatelessWidget {
             ? null
             : Icon(suffixIcon, size: 18, color: const Color(0xFF6C5B46)),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Color(0xFFFCF7EF),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 12,
@@ -1429,7 +1429,7 @@ class _GradientButton extends StatelessWidget {
           style: AppTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
           ),
         ),
       ),

@@ -123,7 +123,7 @@ class _OrderCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.62),
+          color: Color(0xFFFCF7EF).withValues(alpha: 0.62),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
@@ -192,7 +192,7 @@ class _OrderCard extends StatelessWidget {
                         width: double.infinity,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           borderRadius: BorderRadius.circular(11),
                         ),
                         child: Text(
@@ -332,7 +332,7 @@ class _CompactOrderLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
+        color: Color(0xFFFCF7EF).withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -481,7 +481,7 @@ class _TopBar extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Material(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           shape: const CircleBorder(),
           elevation: 5,
           shadowColor: const Color(0x22000000),

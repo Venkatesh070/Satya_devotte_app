@@ -109,9 +109,9 @@ class ProfileCurvedHeader extends StatelessWidget {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
+                    border: Border.all(color: Color(0xFFFCF7EF), width: 4),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -292,7 +292,7 @@ class DonationHistoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap,
@@ -316,7 +316,7 @@ class DonationHistoryChip extends StatelessWidget {
                 child: Icon(
                   Icons.history_rounded,
                   size: 18,
-                  color: Colors.white, // must be opaque white
+                  color: Color(0xFFFCF7EF), // must be opaque white
                 ),
               ),
               const SizedBox(width: 6),
@@ -424,7 +424,7 @@ class DonationOrangeButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: DonationUi.headerOrange,
-          foregroundColor: Colors.white,
+          foregroundColor: Color(0xFFFCF7EF),
           disabledBackgroundColor: DonationUi.headerOrange.withOpacity(0.5),
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -436,7 +436,7 @@ class DonationOrangeButton extends StatelessWidget {
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   strokeWidth: 2,
                 ),
               )

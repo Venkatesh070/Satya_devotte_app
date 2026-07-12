@@ -289,8 +289,9 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         if (!didPop) _previousPage();
       },
       child: AppBackground(
-        showPattern: false,
+        showPattern: true,
         rotateFooter: true,
+        animatePatterns: true,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: PageView(
@@ -322,178 +323,172 @@ class _BaseWizardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      showPattern: showPattern,
-      rotateFooter: true,
-      animatePatterns: showPattern,
-      child: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: // Inside _BaseWizardScreen's build → SafeArea → Column → Padding → Row:
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Back button — always shown
-                      GestureDetector(
-                        onTap: onBack,
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.08),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.14),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-
-                      // Logo
-                      GestureDetector(
-                        onTap: () => Get.offAllNamed(AppRoutes.home),
-                        child: Image.asset(
-                          'assets/images/logoWhite.png',
-                          height: 32,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-
-                      // Right Actions
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Play Mantra button — only when audioUrl is present
-                          if (audioUrl != null) ...[
-                            GestureDetector(
-                              onTap: () {
-                                // TODO: trigger audio playback
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.07),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.18),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Gradient play circle
-                                    Container(
-                                      width: 20,
-                                      height: 20,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Color(0xFFFFBF00),
-                                            Color(0xFFFF6200),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.play_arrow,
-                                        color: Colors.white,
-                                        size: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Play mantra',
-                                      style: AppTypography.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                          ],
-
-                          // Share button
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                debugPrint('Share button tapped');
-                                const shareText =
-                                    'Check out this Puja/App on Sathya! \n\n'
-                                    'Download for Android: https://play.google.com/store/apps/details?id=com.satya_devotte_app \n'
-                                    'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
-                                Share.share(shareText).catchError((e) {
-                                  debugPrint('Share error: $e');
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  color: Colors.white.withOpacity(0.08),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.14),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.share_outlined,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Share App/Puja',
-                                      style: AppTypography.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+    return Stack(
+      children: [
+        SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
                 ),
-                Expanded(child: child),
-              ],
-            ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Back button — always shown
+                    GestureDetector(
+                      onTap: onBack,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFFCF7EF).withValues(alpha: 0.08),
+                          border: Border.all(
+                            color: Color(0xFFFCF7EF).withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Color(0xFFFCF7EF),
+                          size: 18,
+                        ),
+                      ),
+                    ),
+
+                    // Logo
+                    GestureDetector(
+                      onTap: () => Get.offAllNamed(AppRoutes.home),
+                      child: Image.asset(
+                        'assets/images/logoWhite.png',
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+
+                    // Right Actions
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Play Mantra button — only when audioUrl is present
+                        if (audioUrl != null) ...[
+                          GestureDetector(
+                            onTap: () {
+                              // TODO: trigger audio playback
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFFCF7EF).withValues(alpha: 0.07),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Color(0xFFFCF7EF).withValues(alpha: 0.18),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Gradient play circle
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Color(0xFFFFBF00),
+                                          Color(0xFFFF6200),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow,
+                                      color: Color(0xFFFCF7EF),
+                                      size: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Play mantra',
+                                    style: AppTypography.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFFFCF7EF).withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+
+                        // Share button
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              debugPrint('Share button tapped');
+                              const shareText =
+                                  'Check out this Puja/App on Sathya! \n\n'
+                                  'Download for Android: https://play.google.com/store/apps/details?id=com.satya_devotte_app \n'
+                                  'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
+                              Share.share(shareText).catchError((e) {
+                                debugPrint('Share error: $e');
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: Color(0xFFFCF7EF).withValues(alpha: 0.08),
+                                border: Border.all(
+                                  color: Color(0xFFFCF7EF).withValues(alpha: 0.14),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.share_outlined,
+                                    color: Color(0xFFFCF7EF),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Share App/Puja',
+                                    style: AppTypography.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFFCF7EF),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: child),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -550,10 +545,10 @@ class _IntroScreen extends StatelessWidget {
                         AppTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ).copyWith(
                           decoration: TextDecoration.underline,
-                          decorationColor: Colors.white,
+                          decorationColor: Color(0xFFFCF7EF),
                           decorationThickness: 2.0,
                         ),
                   ),
@@ -735,7 +730,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 14,
                 height: 1.55,
-                color: Colors.white.withOpacity(0.92),
+                color: Color(0xFFFCF7EF).withOpacity(0.92),
                 decoration: TextDecoration.none,
               ),
             ),
@@ -752,7 +747,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
                       '• ',
                       style: AppTypography.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.92),
+                        color: Color(0xFFFCF7EF).withOpacity(0.92),
                         decoration: TextDecoration.none,
                       ),
                     ),
@@ -762,7 +757,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
                         style: AppTypography.inter(
                           fontSize: 14,
                           height: 1.5,
-                          color: Colors.white.withOpacity(0.92),
+                          color: Color(0xFFFCF7EF).withOpacity(0.92),
                           decoration: TextDecoration.none,
                         ),
                       ),
@@ -885,14 +880,14 @@ class _ListScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Color(0xFFFCF7EF).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         items[index],
                         style: AppTypography.inter(
                           fontSize: 15,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           height: 1.4,
                         ),
                       ),
@@ -990,12 +985,12 @@ class _IngredientChecklistTileState extends State<_IngredientChecklistTile> {
         decoration: BoxDecoration(
           color: _checked
               ? const Color(0xFFFFD180).withValues(alpha: 0.14)
-              : Colors.white.withValues(alpha: 0.09),
+              : Color(0xFFFCF7EF).withValues(alpha: 0.09),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: _checked
                 ? const Color(0xFFFFD11A).withValues(alpha: 0.28)
-                : Colors.white.withValues(alpha: 0.04),
+                : Color(0xFFFCF7EF).withValues(alpha: 0.04),
           ),
         ),
         child: Row(
@@ -1005,7 +1000,7 @@ class _IngredientChecklistTileState extends State<_IngredientChecklistTile> {
                 widget.label,
                 style: AppTypography.inter(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Color(0xFFFCF7EF).withValues(alpha: 0.9),
                   height: 1.25,
                 ),
               ),
@@ -1020,7 +1015,7 @@ class _IngredientChecklistTileState extends State<_IngredientChecklistTile> {
                 checkColor: const Color(0xFF4A1C00),
                 activeColor: const Color(0xFFFFD11A),
                 side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.86),
+                  color: Color(0xFFFCF7EF).withValues(alpha: 0.86),
                   width: 1.8,
                 ),
                 shape: RoundedRectangleBorder(
@@ -1141,7 +1136,7 @@ class _AutoScrollCarouselState extends State<_AutoScrollCarousel> {
                           )
                         : null,
                     color: _currentPage != index
-                        ? Colors.white.withOpacity(0.4)
+                        ? Color(0xFFFCF7EF).withOpacity(0.4)
                         : null,
                   ),
                 );
@@ -1335,7 +1330,7 @@ class _PujaStepScreen extends StatelessWidget {
             text,
             style: AppTypography.inter(
               fontSize: 13,
-              color: Colors.white.withOpacity(0.75),
+              color: Color(0xFFFCF7EF).withOpacity(0.75),
               height: 1.6,
             ),
           ),
@@ -1346,14 +1341,14 @@ class _PujaStepScreen extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Color(0xFFFCF7EF).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: RichTextDisplay(
             text,
             style: AppTypography.inter(
               fontSize: 15,
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               height: 1.6,
             ),
           ),
@@ -1380,7 +1375,7 @@ class _PujaStepScreen extends StatelessWidget {
                 style: AppTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Color(0xFFFCF7EF).withOpacity(0.6),
                 ),
               ),
             ),
@@ -1473,7 +1468,7 @@ class _CompletionScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Color(0xFFFCF7EF).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1489,7 +1484,7 @@ class _CompletionScreen extends StatelessWidget {
               style: AppTypography.lora(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
                 height: 1.2,
               ),
             ),
@@ -1499,7 +1494,7 @@ class _CompletionScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppTypography.inter(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.8),
+                color: Color(0xFFFCF7EF).withOpacity(0.8),
                 height: 1.5,
               ),
             ),
@@ -1535,12 +1530,12 @@ class _CompletionScreen extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Color(0xFFFCF7EF).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.volunteer_activism_outlined,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         size: 26,
                       ),
                     ),
@@ -1552,7 +1547,7 @@ class _CompletionScreen extends StatelessWidget {
                           Text(
                             'Make a Contribution',
                             style: AppTypography.inter(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Color(0xFFFCF7EF).withValues(alpha: 0.8),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1561,7 +1556,7 @@ class _CompletionScreen extends StatelessWidget {
                           Text(
                             'Help us give you an outstanding experience',
                             style: AppTypography.lora(
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               height: 1.2,
@@ -1584,7 +1579,7 @@ class _CompletionScreen extends StatelessWidget {
                         style: AppTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ),
                       ),
                     ),
@@ -1727,7 +1722,7 @@ class _WizardButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
+          backgroundColor: Color(0xFFFCF7EF),
           foregroundColor: const Color(0xFF255AE2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),

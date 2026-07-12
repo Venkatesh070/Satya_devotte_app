@@ -299,7 +299,7 @@ class _PoojaListState extends State<_PoojaList> {
                             f,
                             style: TextStyle(
                               color: isSel
-                                  ? Colors.white
+                                  ? Color(0xFFFCF7EF)
                                   : CmsColors.textSecond,
                               fontSize: 12,
                               fontWeight: isSel
@@ -317,7 +317,7 @@ class _PoojaListState extends State<_PoojaList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -326,7 +326,7 @@ class _PoojaListState extends State<_PoojaList> {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -340,7 +340,7 @@ class _PoojaListState extends State<_PoojaList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -349,7 +349,7 @@ class _PoojaListState extends State<_PoojaList> {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -549,7 +549,7 @@ class _PoojaListState extends State<_PoojaList> {
             label: const Text('Approve & Publish'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -646,7 +646,7 @@ class _PoojaListState extends State<_PoojaList> {
                   'Please enter a reason',
                   snackPosition: SnackPosition.TOP,
                   backgroundColor: CmsColors.orange,
-                  colorText: Colors.white,
+                  colorText: Color(0xFFFCF7EF),
                   margin: const EdgeInsets.all(12),
                 );
                 return;
@@ -658,7 +658,7 @@ class _PoojaListState extends State<_PoojaList> {
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1656,7 +1656,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: CmsColors.orange,
-              onPrimary: Colors.white,
+              onPrimary: Color(0xFFFCF7EF),
               onSurface: CmsColors.textPrimary,
             ),
           ),
@@ -1678,7 +1678,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: CmsColors.orange,
-              onPrimary: Colors.white,
+              onPrimary: Color(0xFFFCF7EF),
               onSurface: CmsColors.textPrimary,
             ),
           ),
@@ -1776,7 +1776,7 @@ class _PoojaFormState extends State<_PoojaForm> {
               ),
               Switch(
                 value: _dailyRepeat,
-                activeThumbColor: Colors.white,
+                activeThumbColor: Color(0xFFFCF7EF),
                 activeTrackColor: CmsColors.orange,
                 onChanged: (value) => setState(() {
                   _dailyRepeat = value;
@@ -1980,7 +1980,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         err,
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orangeDark,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;
@@ -2674,7 +2674,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                   ),
                   child: Icon(
                     _showStepEditor ? Icons.remove : Icons.add,
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     size: 18,
                   ),
                 ),
@@ -3304,7 +3304,7 @@ class _PoojaFormState extends State<_PoojaForm> {
               onPressed: loading ? null : () => _submit(isDraft: false),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -3317,7 +3317,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     )
                   : Text(
@@ -3442,7 +3442,7 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
               ),
               child: Icon(
                 widget.showEditor ? Icons.remove : Icons.add,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
                 size: 18,
               ),
             ),
@@ -3604,7 +3604,7 @@ class _InputRowState extends State<_InputRow> {
             color: CmsColors.orange,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.add, color: Colors.white, size: 18),
+          child: const Icon(Icons.add, color: Color(0xFFFCF7EF), size: 18),
         ),
       ),
     ],
@@ -3846,7 +3846,7 @@ class _StepImageThumb extends StatelessWidget {
                 color: Colors.black87,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, size: 12, color: Colors.white),
+              child: const Icon(Icons.close, size: 12, color: Color(0xFFFCF7EF)),
             ),
           ),
         ),
@@ -3960,7 +3960,7 @@ class _StepRow extends StatelessWidget {
                   child: Text(
                     '$index',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),

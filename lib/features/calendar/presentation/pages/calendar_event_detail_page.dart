@@ -227,7 +227,7 @@ class _EventDetailActions extends StatelessWidget {
                     children: [
                       Icon(
                         isAdded ? Icons.check_circle_outline : Icons.event,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -241,7 +241,7 @@ class _EventDetailActions extends StatelessWidget {
                           style: AppTypography.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                            color: Color(0xFFFCF7EF),
                           ),
                         ),
                       ),
@@ -251,7 +251,7 @@ class _EventDetailActions extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Material(
-                color: isReminded ? kCalendarActionGradient[0] : Colors.white,
+                color: isReminded ? kCalendarActionGradient[0] : Color(0xFFFCF7EF),
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   onTap: canAct ? () => controller.toggleReminder(event) : null,
@@ -274,7 +274,7 @@ class _EventDetailActions extends StatelessWidget {
                           ? Icons.notifications_active
                           : Icons.notifications_outlined,
                       color: isReminded
-                          ? Colors.white
+                          ? Color(0xFFFCF7EF)
                           : kCalendarActionGradient[0],
                       size: 24,
                     ),

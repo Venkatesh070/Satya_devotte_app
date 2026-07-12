@@ -238,7 +238,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Material(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         clipBehavior: Clip.antiAlias,
         child: Padding(
@@ -420,7 +420,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ? const Icon(
                                     Icons.person,
                                     size: 50,
-                                    color: Colors.white,
+                                    color: Color(0xFFFCF7EF),
                                   )
                                 : null,
                           ),
@@ -446,7 +446,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       ? Icons.edit
                                       : Icons.camera_alt,
                                   size: 20,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -601,7 +601,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     AppColors.gradientStart,
                     AppColors.gradientEnd,
                   ],
-                  textColor: Colors.white,
+                  textColor: Color(0xFFFCF7EF),
                   onTap: _submit,
                 ),
                 const SizedBox(height: 20),

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -20,8 +19,8 @@ import 'package:satya_devotte_app/features/calendar/presentation/controllers/cal
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
-import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
+import 'package:satya_devotte_app/features/home/presentation/pages/search_page.dart';
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
@@ -32,11 +31,7 @@ import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
-
-import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
-import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -721,51 +716,53 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
-        child: SizedBox(
-          height: navHeight + bottomSafe,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              if (bottomSafe > 0)
+        child: SafeArea(
+          child: SizedBox(
+            height: navHeight + bottomSafe,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                if (bottomSafe > 0)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: bottomSafe,
+                    child: const ColoredBox(color: Color(0xFFF8F1E2)),
+                  ),
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: 0,
-                  height: bottomSafe,
-                  child: const ColoredBox(color: Color(0xFFF8F1E2)),
-                ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: bottomSafe,
-                height: navHeight,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 380),
-                  curve: Curves.easeInOutCubicEmphasized,
-                  offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
-                  onEnd: _onBottomNavSlideEnd,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeInOutCubic,
-                    opacity: _showBottomNav ? 1 : 0,
-                    child: _hideNavContent
-                        ? const SizedBox.shrink()
-                        : _BottomNavBar(
-                            currentIndex: _currentIndex,
-                            pageController: _pageController,
-                            onTap: _onTabSelected,
-                          ),
+                  bottom: bottomSafe,
+                  height: navHeight,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 380),
+                    curve: Curves.easeInOutCubicEmphasized,
+                    offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
+                    onEnd: _onBottomNavSlideEnd,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeInOutCubic,
+                      opacity: _showBottomNav ? 1 : 0,
+                      child: _hideNavContent
+                          ? const SizedBox.shrink()
+                          : _BottomNavBar(
+                              currentIndex: _currentIndex,
+                              pageController: _pageController,
+                              onTap: _onTabSelected,
+                            ),
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                bottom: bottomSafe + 5,
-                child: _StickyShopButton(
-                  onTap: () => Get.to(() => const PoojaKitPage()),
+                Positioned(
+                  left: 0,
+                  bottom: bottomSafe + 5,
+                  child: _StickyShopButton(
+                    onTap: () => Get.to(() => const PoojaKitPage()),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -819,175 +816,8 @@ class _HomeTabContent extends StatefulWidget {
 }
 
 class _HomeTabContentState extends State<_HomeTabContent> {
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _searchDebounce;
-  bool _isSearching = false;
-  bool _hasSearched = false;
-  String? _searchError;
-  List<_GlobalSearchResult> _searchResults = const [];
-
-  bool get _isSearchMode =>
-      _searchController.text.trim().length >= 2 ||
-      _isSearching ||
-      _hasSearched ||
-      _searchError != null;
-
-  @override
-  void dispose() {
-    _searchDebounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    _searchDebounce?.cancel();
-    final q = value.trim();
-    if (q.length < 2) {
-      setState(() {
-        _isSearching = false;
-        _hasSearched = false;
-        _searchError = null;
-        _searchResults = const [];
-      });
-      return;
-    }
-    setState(() {
-      _isSearching = true;
-      _hasSearched = false;
-      _searchError = null;
-      _searchResults = const [];
-    });
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 320),
-      () => _search(q),
-    );
-  }
-
-  Future<void> _search(String q) async {
-    setState(() {
-      _isSearching = true;
-      _searchError = null;
-    });
-    try {
-      final response = await Get.find<ApiClient>().dio.get<dynamic>(
-        ApiEndpoints.search,
-        queryParameters: {'q': q, 'limit': 8, 'maxTotal': 20},
-      );
-      if (!mounted || _searchController.text.trim() != q) return;
-      setState(() {
-        _hasSearched = true;
-        _searchResults = _extractResults(response.data);
-      });
-    } on DioException catch (error) {
-      if (!mounted || _searchController.text.trim() != q) return;
-      setState(() {
-        _hasSearched = true;
-        _searchResults = const [];
-        _searchError = _messageForSearchError(error);
-      });
-    } catch (_) {
-      if (!mounted || _searchController.text.trim() != q) return;
-      setState(() {
-        _hasSearched = true;
-        _searchResults = const [];
-        _searchError = 'Search failed.';
-      });
-    } finally {
-      if (mounted && _searchController.text.trim() == q) {
-        setState(() => _isSearching = false);
-      }
-    }
-  }
-
-  List<_GlobalSearchResult> _extractResults(dynamic payload) {
-    dynamic data = payload;
-    if (payload is Map) {
-      data = payload['data'] ?? payload;
-      if (data is Map) {
-        data =
-            data['results'] ??
-            data['items'] ??
-            data['docs'] ??
-            data['data'] ??
-            data;
-      }
-    }
-    if (data is! List) return const [];
-    return data
-        .whereType<Map>()
-        .map((raw) => _GlobalSearchResult.fromJson(raw))
-        .where((result) => result.title.isNotEmpty)
-        .toList(growable: false);
-  }
-
-  String _messageForSearchError(DioException error) {
-    final code = error.response?.statusCode;
-    if (code == 404) {
-      return 'Search is not available. Check that the app uses the latest API.';
-    }
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.connectionError) {
-      return 'No connection. Check your network and try again.';
-    }
-    final data = error.response?.data;
-    if (data is Map) {
-      final msg = data['message'] ?? data['error'];
-      if (msg != null && msg.toString().trim().isNotEmpty) {
-        return msg.toString();
-      }
-    }
-    return 'Search failed. Please try again.';
-  }
-
-  void _clearSearch() {
-    _searchDebounce?.cancel();
-    _searchController.clear();
-    setState(() {
-      _isSearching = false;
-      _hasSearched = false;
-      _searchError = null;
-      _searchResults = const [];
-    });
-  }
-
-  Future<void> _openSearchResult(_GlobalSearchResult result) async {
-    FocusScope.of(context).unfocus();
-    switch (result.type) {
-      case 'pooja':
-        if (result.id.isEmpty) return;
-        await Get.toNamed<dynamic>(
-          AppRoutes.ritualDetail,
-          arguments: result.toDetailArgs(),
-        );
-        return;
-      case 'deity':
-        if (result.id.isEmpty) return;
-        await Get.toNamed<dynamic>(
-          AppRoutes.ritualDetail,
-          arguments: result.toDeityArgs(),
-        );
-        return;
-      case 'donation':
-        if (result.id.isEmpty) return;
-        await Get.toNamed<dynamic>(
-          AppRoutes.userDonationDetails,
-          arguments: Donation(
-            id: result.id,
-            title: result.title,
-            description: result.description,
-            imageUrl: result.imageUrl,
-          ),
-        );
-        return;
-      case 'festival':
-        await widget.onOpenTab(2);
-        return;
-      case 'ritual':
-      default:
-        await widget.onOpenTab(1);
-    }
+  void _openSearch() {
+    Get.to<dynamic>(() => const SearchPage());
   }
 
   @override
@@ -1006,14 +836,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
           child: Column(
             children: [
               _HomeHeader(
-                isSearchMode: _isSearchMode,
-                searchController: _searchController,
-                onSearchChanged: _onSearchChanged,
-                onSearchSubmitted: (value) {
-                  final q = value.trim();
-                  if (q.length >= 2) _search(q);
-                },
-                onClearSearch: _clearSearch,
+                onOpenSearch: _openSearch,
                 todayDateAndTithi: widget.todayDateAndTithi,
                 dailySloka: widget.dailySloka,
                 slokaAuthor: widget.slokaAuthor,
@@ -1023,28 +846,21 @@ class _HomeTabContentState extends State<_HomeTabContent> {
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-                child: _isSearchMode
-                    ? _GlobalSearchResultsSection(
-                        isSearching: _isSearching,
-                        error: _searchError,
-                        results: _searchResults,
-                        onResultTap: _openSearchResult,
-                      )
-                    : _HomeBodySections(
-                        poojas: widget.poojas,
-                        festivals: widget.festivals,
-                        featuredProducts: widget.featuredProducts,
-                        poojasCompleted: widget.poojasCompleted,
-                        dayStreak: widget.dayStreak,
-                        onPoojasViewMore: widget.onPoojasViewMore,
-                        onFestivalsViewMore: widget.onFestivalsViewMore,
-                        onPujaTap: widget.onPujaTap,
-                        onFestivalTap: widget.onFestivalTap,
-                      ),
+                child: _HomeBodySections(
+                  poojas: widget.poojas,
+                  festivals: widget.festivals,
+                  featuredProducts: widget.featuredProducts,
+                  poojasCompleted: widget.poojasCompleted,
+                  dayStreak: widget.dayStreak,
+                  onPoojasViewMore: widget.onPoojasViewMore,
+                  onFestivalsViewMore: widget.onFestivalsViewMore,
+                  onPujaTap: widget.onPujaTap,
+                  onFestivalTap: widget.onFestivalTap,
+                ),
               ),
               const SizedBox(height: 16),
               _Footer(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 35),
             ],
           ),
         ),
@@ -1082,7 +898,7 @@ class _HomeBodySections extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
           child: _HomeCircleSection(
             title: 'Upcoming Puja',
             items: poojas,
@@ -1098,7 +914,7 @@ class _HomeBodySections extends StatelessWidget {
         // ],
         SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
           child: _HomeCircleSection(
             title: 'Upcoming Festivals',
             items: festivals,
@@ -1170,7 +986,7 @@ class _AchievementCard extends StatelessWidget {
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xF8FFFFFF),
+        color: const Color(0xF8FCF7EF),
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(
@@ -1235,7 +1051,7 @@ class _HomeCircleSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+      padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1460,13 +1276,80 @@ class _BottomNavBarState extends State<_BottomNavBar> {
   }
 }
 
+class _HomeSearchBar extends StatelessWidget {
+  const _HomeSearchBar({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color(0xFFFCF7EF),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE5D5C5), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFFFCF7EF),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Search pujas, deities, festivals...',
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF9B8B7B),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.tune_rounded,
+                  color: Color(0xFF9B8B7B),
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
-    required this.isSearchMode,
-    required this.searchController,
-    required this.onSearchChanged,
-    required this.onSearchSubmitted,
-    required this.onClearSearch,
+    required this.onOpenSearch,
     required this.todayDateAndTithi,
     required this.dailySloka,
     required this.slokaAuthor,
@@ -1475,11 +1358,7 @@ class _HomeHeader extends StatelessWidget {
     required this.slokaPrayer,
   });
 
-  final bool isSearchMode;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<String> onSearchSubmitted;
-  final VoidCallback onClearSearch;
+  final VoidCallback onOpenSearch;
   final String todayDateAndTithi;
   final String dailySloka;
   final String slokaAuthor;
@@ -1495,8 +1374,7 @@ class _HomeHeader extends StatelessWidget {
           profileController.resolvedUser,
         );
         final topInset = MediaQuery.paddingOf(context).top;
-        // Search mode: content height + safe area; a fixed 240 caused Column overflow.
-        final headerHeight = isSearchMode ? topInset + 250 : 500.0;
+        const headerHeight = 500.0;
 
         return SizedBox(
           width: double.infinity,
@@ -1533,13 +1411,13 @@ class _HomeHeader extends StatelessWidget {
                         Image(
                           image: const AssetImage('assets/images/appLogo.png'),
                           height: 52,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ),
                         Spacer(),
                         Text(
                           todayDateAndTithi,
                           style: AppTypography.inter(
-                            color: Colors.white,
+                            color: Color(0xFFFCF7EF),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1558,7 +1436,7 @@ class _HomeHeader extends StatelessWidget {
                                   width: 18,
                                   height: 18,
                                   colorFilter: const ColorFilter.mode(
-                                    Colors.white,
+                                    Color(0xFFFCF7EF),
                                     BlendMode.srcIn,
                                   ),
                                 ),
@@ -1592,7 +1470,7 @@ class _HomeHeader extends StatelessWidget {
                                   width: 38,
                                   height: 38,
                                   decoration: const BoxDecoration(
-                                    color: Colors.white,
+                                    color: Color(0xFFFCF7EF),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -1614,14 +1492,14 @@ class _HomeHeader extends StatelessWidget {
                                         color: const Color(0xFFE44D4D),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: Colors.white,
+                                          color: Color(0xFFFCF7EF),
                                           width: 1.2,
                                         ),
                                       ),
                                       child: Text(
                                         count > 99 ? '99+' : '$count',
                                         style: AppTypography.inter(
-                                          color: Colors.white,
+                                          color: Color(0xFFFCF7EF),
                                           fontSize: 9,
                                           fontWeight: FontWeight.w700,
                                           height: 1.0,
@@ -1648,33 +1526,26 @@ class _HomeHeader extends StatelessWidget {
                     Text(
                       displayName,
                       style: AppTypography.lora(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontSize: 20,
                         fontWeight: FontWeight.w400,
                         height: 1.15,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _GlobalSearchField(
-                      controller: searchController,
-                      onChanged: onSearchChanged,
-                      onSubmitted: onSearchSubmitted,
-                      onClear: onClearSearch,
+                    _HomeSearchBar(onTap: onOpenSearch),
+                    const SizedBox(height: 8),
+                    const _HeaderDivider(),
+                    const SizedBox(height: 8),
+                    _QuoteCard(
+                      quote: dailySloka,
+                      author: slokaAuthor,
+                      meaning: slokaMeaning,
+                      contemplation: slokaContemplation,
+                      prayer: slokaPrayer,
                     ),
-                    if (!isSearchMode) ...[
-                      const SizedBox(height: 8),
-                      const _HeaderDivider(),
-                      const SizedBox(height: 8),
-                      _QuoteCard(
-                        quote: dailySloka,
-                        author: slokaAuthor,
-                        meaning: slokaMeaning,
-                        contemplation: slokaContemplation,
-                        prayer: slokaPrayer,
-                      ),
-                      const SizedBox(height: 5),
-                      const _HeaderDivider(),
-                    ],
+                    const SizedBox(height: 5),
+                    const _HeaderDivider(),
                   ],
                 ),
               ),
@@ -1739,392 +1610,6 @@ class _Footer extends StatelessWidget {
       ),
     );
   }
-}
-
-class _GlobalSearchField extends StatelessWidget {
-  const _GlobalSearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasQuery = controller.text.trim().isNotEmpty;
-    return Material(
-      color: Colors.white,
-      elevation: 0,
-      shadowColor: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
-        textInputAction: TextInputAction.search,
-        style: AppTypography.inter(
-          fontSize: 12,
-          color: const Color(0xFF3D2B1F),
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: 'Search pujas, deities, festivals...',
-          hintStyle: AppTypography.inter(
-            fontSize: 12,
-            color: const Color(0xFF9B8B7B),
-            fontWeight: FontWeight.w400,
-          ),
-          prefixIcon: ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ).createShader(bounds),
-            blendMode: BlendMode.srcIn,
-            child: Icon(
-              Icons.search_rounded,
-              // color: Color(0xFF8E5C25),
-              size: 20,
-            ),
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 44,
-            minHeight: 44,
-          ),
-          suffixIcon: hasQuery
-              ? ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ).createShader(bounds),
-                  blendMode: BlendMode.srcIn,
-                  child: IconButton(
-                    onPressed: onClear,
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                  ),
-                )
-              : null,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          focusedErrorBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 14,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlobalSearchResultsSection extends StatelessWidget {
-  const _GlobalSearchResultsSection({
-    required this.isSearching,
-    required this.error,
-    required this.results,
-    required this.onResultTap,
-  });
-
-  final bool isSearching;
-  final String? error;
-  final List<_GlobalSearchResult> results;
-  final Future<void> Function(_GlobalSearchResult result) onResultTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 118),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Search Results',
-            style: AppTypography.lora(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (isSearching && results.isEmpty)
-            const SizedBox(
-              height: 220,
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: ChakraLoadingIndicator(size: 24),
-                ),
-              ),
-            )
-          else if (error != null)
-            _SearchMessage(text: error!, height: 180)
-          else if (results.isEmpty)
-            const _SearchMessage(text: 'No results found.', height: 180)
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: results.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final result = results[index];
-                return _GlobalSearchResultTile(
-                  result: result,
-                  onTap: () => onResultTap(result),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SearchMessage extends StatelessWidget {
-  const _SearchMessage({required this.text, this.height = 64});
-  final String text;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: Center(
-        child: Text(
-          text,
-          style: AppTypography.inter(
-            color: const Color(0xFF7A5A3D),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlobalSearchResultTile extends StatelessWidget {
-  const _GlobalSearchResultTile({required this.result, required this.onTap});
-  final _GlobalSearchResult result;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              _SearchResultImage(result: result),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      result.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF332218),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (result.description.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      RichTextDisplay(
-                        result.description,
-                        style: AppTypography.inter(
-                          fontSize: 11,
-                          height: 1.25,
-                          color: const Color(0xFF7B6A5A),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              _SearchTypePill(type: result.typeLabel),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchResultImage extends StatelessWidget {
-  const _SearchResultImage({required this.result});
-  final _GlobalSearchResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = result.imageUrl?.trim() ?? '';
-    final placeholder = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3E2C3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(result.icon, size: 22, color: const Color(0xFF8E5C25)),
-    );
-    if (imageUrl.isEmpty) return placeholder;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        imageUrl,
-        width: 44,
-        height: 44,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => placeholder,
-      ),
-    );
-  }
-}
-
-class _SearchTypePill extends StatelessWidget {
-  const _SearchTypePill({required this.type});
-  final String type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4E6CC),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        type,
-        style: AppTypography.inter(
-          fontSize: 10,
-          color: const Color(0xFF8E5C25),
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _GlobalSearchResult {
-  const _GlobalSearchResult({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.description,
-    required this.imageUrl,
-    required this.raw,
-  });
-
-  factory _GlobalSearchResult.fromJson(Map<dynamic, dynamic> json) {
-    final normalized = json.map(
-      (key, value) => MapEntry(key.toString(), value),
-    );
-
-    String _extractString(dynamic v) {
-      if (v == null) return '';
-      if (v is String) return v.trim();
-      if (v is List) {
-        return v
-            .map((e) => _extractString(e))
-            .where((s) => s.isNotEmpty)
-            .join(', ');
-      }
-      if (v is Map) {
-        // Try to get name or title from map
-        final name = v['name'] ?? v['title'] ?? '';
-        return _extractString(name);
-      }
-      return v.toString().trim();
-    }
-
-    String valueOf(List<String> keys) {
-      for (final key in keys) {
-        final value = normalized[key];
-        final text = _extractString(value);
-        if (text.isNotEmpty) return text;
-      }
-      return '';
-    }
-
-    return _GlobalSearchResult(
-      id: valueOf(['id', '_id']),
-      type: valueOf(['type']).toLowerCase(),
-      title: valueOf(['title', 'name']),
-      description: valueOf(['description', 'about']),
-      imageUrl: valueOf(['imageUrl', 'image']).isEmpty
-          ? null
-          : valueOf(['imageUrl', 'image']),
-      raw: Map<String, dynamic>.from(normalized),
-    );
-  }
-
-  final String id;
-  final String type;
-  final String title;
-  final String description;
-  final String? imageUrl;
-  final Map<String, dynamic> raw;
-
-  String get typeLabel {
-    if (type.isEmpty) return 'result';
-    return type[0].toUpperCase() + type.substring(1);
-  }
-
-  IconData get icon {
-    switch (type) {
-      case 'donation':
-        return Icons.volunteer_activism_outlined;
-      case 'festival':
-        return Icons.event_available_outlined;
-      case 'ritual':
-        return Icons.local_fire_department_outlined;
-      case 'deity':
-        return Icons.temple_hindu_outlined;
-      case 'pooja':
-      default:
-        return Icons.spa_outlined;
-    }
-  }
-
-  Map<String, dynamic> toDetailArgs() => {
-    ...raw,
-    '_id': id,
-    'id': id,
-    'title': title,
-    'description': description,
-    if (imageUrl != null) 'imageUrl': imageUrl,
-  };
-
-  Map<String, dynamic> toDeityArgs() => {
-    'type': 'deity',
-    ...toDetailArgs(),
-    'name': title,
-    if (imageUrl != null)
-      'media': {
-        'images': [imageUrl],
-      },
-  };
 }
 
 class _QuoteCard extends StatefulWidget {
@@ -2193,21 +1678,27 @@ class _QuoteCardState extends State<_QuoteCard> {
                       child: _SlokaTabBtn(
                         label: 'Meaning',
                         selected: _selectedTab == 0,
-                        onTap: () => setState(() => _selectedTab = 0),
+                        onTap: () => setState(
+                          () => _selectedTab = _selectedTab == 0 ? -1 : 0,
+                        ),
                       ),
                     ),
                     Expanded(
                       child: _SlokaTabBtn(
                         label: 'Contemplation',
                         selected: _selectedTab == 1,
-                        onTap: () => setState(() => _selectedTab = 1),
+                        onTap: () => setState(
+                          () => _selectedTab = _selectedTab == 1 ? -1 : 1,
+                        ),
                       ),
                     ),
                     Expanded(
                       child: _SlokaTabBtn(
                         label: 'Prayer',
                         selected: _selectedTab == 2,
-                        onTap: () => setState(() => _selectedTab = 2),
+                        onTap: () => setState(
+                          () => _selectedTab = _selectedTab == 2 ? -1 : 2,
+                        ),
                       ),
                     ),
                   ],
@@ -2278,7 +1769,7 @@ class _QuoteCardState extends State<_QuoteCard> {
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.lora(
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                               fontSize: 18,
                               fontWeight: FontWeight.w400,
                               height: 1.2,
@@ -2350,7 +1841,7 @@ class _SlokaTabBtn extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                color: selected ? Colors.white : const Color(0x99FFFFFF),
+                color: selected ? Color(0xFFFCF7EF) : const Color(0x99FFFFFF),
                 fontSize: 10,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 height: 1,
@@ -2593,8 +2084,8 @@ class _CircleItem extends StatelessWidget {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.white, width: 2),
+                color: Color(0xFFFCF7EF),
+                border: Border.all(color: Color(0xFFFCF7EF), width: 2),
                 boxShadow: useFestivalStyle
                     ? const [
                         BoxShadow(
@@ -2609,7 +2100,7 @@ class _CircleItem extends StatelessWidget {
                 child: item.imagePath.isEmpty
                     ? isDatePlaceholder
                           ? ColoredBox(
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -2715,7 +2206,7 @@ class _StickyShopButton extends StatelessWidget {
             child: Text(
               'Shop',
               style: AppTypography.inter(
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -2762,7 +2253,7 @@ class _BottomItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: selected
-                        ? Colors.white.withValues(alpha: 0.14)
+                        ? Color(0xFFFCF7EF).withValues(alpha: 0.14)
                         : Colors.transparent,
                     border: Border.all(
                       color: selected
@@ -2780,7 +2271,11 @@ class _BottomItem extends StatelessWidget {
                               end: Alignment.bottomRight,
                             ).createShader(bounds),
                             blendMode: BlendMode.srcIn,
-                            child: Icon(icon, size: 22, color: Colors.white),
+                            child: Icon(
+                              icon,
+                              size: 22,
+                              color: Color(0xFFFCF7EF),
+                            ),
                           )
                         : Icon(icon, size: 18, color: color),
                   ),
@@ -2794,7 +2289,7 @@ class _BottomItem extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ).createShader(bounds),
                         blendMode: BlendMode.srcIn,
-                        child: Icon(icon, size: 26, color: Colors.white),
+                        child: Icon(icon, size: 26, color: Color(0xFFFCF7EF)),
                       )
                     : Icon(icon, size: 20, color: color)),
               const SizedBox(height: 2),
@@ -2810,7 +2305,7 @@ class _BottomItem extends StatelessWidget {
                         label,
                         style: AppTypography.inter(
                           fontSize: 11,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           fontWeight: FontWeight.w700,
                         ),
                       ),

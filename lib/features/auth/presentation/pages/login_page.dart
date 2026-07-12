@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage>
           //     child: const Text(
           //       'Skip >>',
           //       style: TextStyle(
-          //         color: Colors.white,
+          //         color: Color(0xFFFCF7EF),
           //         fontWeight: FontWeight.w700,
           //         fontSize: 14,
           //       ),
@@ -112,7 +112,7 @@ class _LoginPageState extends State<LoginPage>
                     children: [
                       _SocialButton(
                         label: 'Continue with Google',
-                        backgroundColor: Colors.white,
+                        backgroundColor: Color(0xFFFCF7EF),
                         textColor: const Color(0xFF1F1F1F),
                         hasBorder: true,
                         leading: SvgPicture.asset(
@@ -142,7 +142,7 @@ class _LoginPageState extends State<LoginPage>
                       _SocialButton(
                         label: 'Continue with Apple',
                         backgroundColor: Colors.black,
-                        textColor: Colors.white,
+                        textColor: Color(0xFFFCF7EF),
                         leading: SvgPicture.asset(
                           'assets/svgs/apple.svg',
                           width: 18,
@@ -173,7 +173,7 @@ class _LoginPageState extends State<LoginPage>
                           AppColors.gradientStart,
                           AppColors.gradientEnd,
                         ],
-                        textColor: Colors.white,
+                        textColor: Color(0xFFFCF7EF),
                         isLoading: isEmailLoading,
                         enabled: !isEmailLoading && !isLoading,
                         borderRadius: 14,

@@ -185,7 +185,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                   AppColors.gradientStart,
                   AppColors.gradientEnd,
                 ],
-                textColor: Colors.white,
+                textColor: Color(0xFFFCF7EF),
                 borderRadius: 14,
                 onTap: _resendVerificationEmail,
               ),

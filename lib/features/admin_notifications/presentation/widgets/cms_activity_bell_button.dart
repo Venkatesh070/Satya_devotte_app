@@ -215,7 +215,7 @@ class _CmsNotificationCountBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           fontSize: fontSize,
           fontWeight: FontWeight.w700,
           height: 1,

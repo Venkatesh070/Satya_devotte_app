@@ -375,13 +375,13 @@ class _UsersTable extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Color(0xFFFCF7EF).withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.close,
                             size: 16,
-                            color: Colors.white,
+                            color: Color(0xFFFCF7EF),
                           ),
                         ),
                       ),
@@ -393,7 +393,7 @@ class _UsersTable extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
+                          color: Color(0xFFFCF7EF).withOpacity(0.4),
                           width: 2,
                         ),
                       ),
@@ -405,7 +405,7 @@ class _UsersTable extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -413,7 +413,7 @@ class _UsersTable extends StatelessWidget {
                       u.email,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Color(0xFFFCF7EF).withOpacity(0.7),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -424,17 +424,17 @@ class _UsersTable extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Color(0xFFFCF7EF).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Color(0xFFFCF7EF).withOpacity(0.3),
                         ),
                       ),
                       child: Text(
                         u.roleLabel,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -614,7 +614,7 @@ class _Avatar extends StatelessWidget {
       child: Text(
         user.initials,
         style: TextStyle(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           fontSize: radius * 0.75,
           fontWeight: FontWeight.w700,
         ),
@@ -956,7 +956,7 @@ class _UsersPageNumberBtn extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: isActive ? Colors.white : CmsColors.textPrimary,
+          color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
         ),
       ),
     ),

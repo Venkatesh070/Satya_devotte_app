@@ -67,7 +67,7 @@ class _AchievementCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: DonationUi.cardBorder),
       ),

@@ -741,19 +741,28 @@ class AuthController extends GetxController {
   }
 
   // ─── Error mappers ────────────────────────────────────────────
-  String _mapGoogleSignInError(Object error) {
+  String? _mapGoogleSignInError(Object error) {
     final message = error.toString();
+
+    // Check if this is a user cancellation event (e.g. clicked outside the account modal, pressed back, or closed the popup).
+    // ApiException: 12501 - Android cancellation code
+    // google-sign-in-cancelled - Custom code from FirebaseService when signIn() returns null
+    // popup_closed - Web popup closed by user
+    // sign_in_cancelled - iOS/macOS general cancellation code
+    if (message.contains('12501') ||
+        message.contains('google-sign-in-cancelled') ||
+        message.contains('popup_closed') ||
+        message.contains('sign_in_cancelled') ||
+        message.toLowerCase().contains('cancelled by user') ||
+        message.toLowerCase().contains('user cancelled')) {
+      return null;
+    }
+
     if (message.contains('people.googleapis.com') ||
         message.contains('People API') ||
         message.contains('SERVICE_DISABLED')) {
       return 'Google People API is disabled for this project. '
           'Enable it in Google Cloud Console, wait a few minutes, and try again.';
-    }
-    if (message.contains('google-sign-in-cancelled')) {
-      return 'Google sign in was cancelled.';
-    }
-    if (message.contains('popup_closed')) {
-      return 'Google login popup was closed. Please try again and keep the popup open.';
     }
     if (message.contains('popup_blocked_by_browser') ||
         message.contains('popup_blocked')) {

@@ -188,7 +188,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       style: AppTypography.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     ),
                   ),
@@ -218,7 +218,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       style: AppTypography.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     ),
                   ),
@@ -253,7 +253,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                       style: AppTypography.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     ),
                   ),
@@ -317,7 +317,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                           : () => _submit(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Color(0xFFFCF7EF),
                         shadowColor: Colors.transparent,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -329,7 +329,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: Color(0xFFFCF7EF),
                                 strokeWidth: 2,
                               ),
                             )
@@ -487,7 +487,7 @@ class _AmountPresetTile extends StatelessWidget {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? null : Colors.white,
+          color: selected ? null : Color(0xFFFCF7EF),
           gradient: selected
               ? const LinearGradient(
                   colors: [
@@ -508,7 +508,7 @@ class _AmountPresetTile extends StatelessWidget {
           style: AppTypography.inter(
             fontSize: 14,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : DonationUi.textPrimary,
+            color: selected ? Color(0xFFFCF7EF) : DonationUi.textPrimary,
           ),
         ),
       ),

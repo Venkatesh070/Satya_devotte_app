@@ -79,7 +79,7 @@ class _GeneralDonationCard extends StatelessWidget {
             style: AppTypography.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.8),
+              color: Color(0xFFFCF7EF).withOpacity(0.8),
             ),
           ),
           const SizedBox(height: 12),
@@ -88,7 +88,7 @@ class _GeneralDonationCard extends StatelessWidget {
             style: AppTypography.lora(
               fontSize: 20,
               fontWeight: FontWeight.w500,
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               height: 1.3,
             ),
           ),
@@ -98,7 +98,7 @@ class _GeneralDonationCard extends StatelessWidget {
             style: AppTypography.inter(
               fontSize: 11,
               fontWeight: FontWeight.w400,
-              color: Colors.white.withOpacity(0.7),
+              color: Color(0xFFFCF7EF).withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 40),
@@ -108,7 +108,7 @@ class _GeneralDonationCard extends StatelessWidget {
               onPressed: onDonate,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE87C3E),
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
@@ -152,7 +152,7 @@ class _FigmaDonationsHeader extends StatelessWidget {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: IconButton(

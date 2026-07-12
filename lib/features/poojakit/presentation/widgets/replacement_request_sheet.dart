@@ -91,10 +91,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
             child: Wrap(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.photo_library, color: Colors.white),
+                  leading: const Icon(Icons.photo_library, color: Color(0xFFFCF7EF)),
                   title: const Text(
                     'Choose from Gallery',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: Color(0xFFFCF7EF)),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -102,10 +102,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt, color: Colors.white),
+                  leading: const Icon(Icons.camera_alt, color: Color(0xFFFCF7EF)),
                   title: const Text(
                     'Take Photo',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: Color(0xFFFCF7EF)),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -179,7 +179,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
               style: AppTypography.lora(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
             const SizedBox(height: 8),
@@ -193,7 +193,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
               style: AppTypography.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
             const SizedBox(height: 8),
@@ -201,23 +201,23 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
               controller: _reasonCtrl,
               maxLines: 4,
               maxLength: 500,
-              style: AppTypography.inter(color: Colors.white),
+              style: AppTypography.inter(color: Color(0xFFFCF7EF)),
               decoration: InputDecoration(
                 hintText:
                     'e.g. Package arrived crushed, items damaged — need replacement',
                 hintStyle: AppTypography.inter(color: Colors.white38),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.08),
+                fillColor: Color(0xFFFCF7EF).withValues(alpha: 0.08),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Color(0xFFFCF7EF).withValues(alpha: 0.15),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Color(0xFFFCF7EF).withValues(alpha: 0.15),
                   ),
                 ),
                 counterStyle: AppTypography.inter(
@@ -235,7 +235,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                   style: AppTypography.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                   ),
                 ),
                 TextButton.icon(
@@ -256,7 +256,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Color(0xFFFCF7EF).withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white12),
                 ),
@@ -296,7 +296,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                             onPressed: _submitting
                                 ? null
                                 : () => _removeImage(index),
-                            icon: const Icon(Icons.cancel, color: Colors.white),
+                            icon: const Icon(Icons.cancel, color: Color(0xFFFCF7EF)),
                             style: IconButton.styleFrom(
                               backgroundColor: Colors.black54,
                               padding: const EdgeInsets.all(4),
@@ -327,7 +327,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           strokeWidth: 2,
                         ),
                       )

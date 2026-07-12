@@ -128,13 +128,13 @@ class _CartBadge extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFE95700),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white, width: 1.2),
+                border: Border.all(color: Color(0xFFFCF7EF), width: 1.2),
               ),
               constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
               child: Text(
                 '$count',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
@@ -200,7 +200,7 @@ class _CircleIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
       shape: const CircleBorder(),
       elevation: 5,
       shadowColor: const Color(0x22000000),
@@ -309,7 +309,7 @@ class _ProductHeroImage extends StatelessWidget {
       width: isPujakit ? 147 : double.infinity,
       height: isPujakit ? 111 : 250,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(
@@ -410,7 +410,7 @@ class _KitItemPill extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(
@@ -479,7 +479,7 @@ class _GradientCtaBar extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
           ),

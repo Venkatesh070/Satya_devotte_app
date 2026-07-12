@@ -26,7 +26,7 @@ class ProductCard extends StatelessWidget {
       child: Container(
         width: width,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -93,7 +93,7 @@ class ProductCard extends StatelessWidget {
                       child: const Text(
                         'SALE',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -116,7 +116,7 @@ class ProductCard extends StatelessWidget {
                       child: const Text(
                         'CLOSED',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -184,7 +184,7 @@ class ProductCard extends StatelessWidget {
                               product.inStock && !product.isOrderClosed
                               ? AppColors.primary
                               : Colors.grey,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Color(0xFFFCF7EF),
                           padding: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),

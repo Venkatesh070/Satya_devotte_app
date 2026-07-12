@@ -87,7 +87,7 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
                 elevation: 0,
               ),
             ),
@@ -566,15 +566,15 @@ class _TodaySlokaCardState extends State<_TodaySlokaCard> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Color(0xFFFCF7EF).withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Color(0xFFFCF7EF).withOpacity(0.1)),
       ),
       child: Text(
         text.isNotEmpty ? text : '—',
         style: const TextStyle(
           fontSize: 15,
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           height: 1.7,
           fontWeight: FontWeight.w400,
         ),
@@ -633,7 +633,7 @@ class _TodaySlokaCardState extends State<_TodaySlokaCard> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                 ),
               ),
               const Spacer(),
@@ -644,7 +644,7 @@ class _TodaySlokaCardState extends State<_TodaySlokaCard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Color(0xFFFCF7EF).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -738,10 +738,10 @@ class _SlokaActionBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.08),
+          color: selected ? Color(0xFFFCF7EF).withOpacity(0.2) : Color(0xFFFCF7EF).withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? Colors.white.withOpacity(0.35) : Colors.white.withOpacity(0.12),
+            color: selected ? Color(0xFFFCF7EF).withOpacity(0.35) : Color(0xFFFCF7EF).withOpacity(0.12),
           ),
         ),
         child: Column(
@@ -759,7 +759,7 @@ class _SlokaActionBtn extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10,
-                color: selected ? Colors.white : Colors.white70,
+                color: selected ? Color(0xFFFCF7EF) : Colors.white70,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),

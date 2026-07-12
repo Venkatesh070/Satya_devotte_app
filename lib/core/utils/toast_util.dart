@@ -60,7 +60,7 @@ class ToastUtil {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(

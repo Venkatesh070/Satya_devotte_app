@@ -230,7 +230,7 @@ class _SplashPageState extends State<SplashPage>
                   Text(
                     'Puja is peace in action',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),

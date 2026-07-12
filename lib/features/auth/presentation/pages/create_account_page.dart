@@ -252,7 +252,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Material(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         elevation: 4,
                         shadowColor: Colors.black26,
                         shape: const CircleBorder(),
@@ -596,7 +596,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       AppColors.gradientStart,
                       AppColors.gradientEnd,
                     ],
-                    textColor: Colors.white,
+                    textColor: Color(0xFFFCF7EF),
                     onTap: _step == 0
                         ? _goNext
                         : () async {

@@ -29,7 +29,7 @@ class InlineForgotPasswordForm extends StatelessWidget {
           children: [
             if (showTopBackButton) ...[
               Material(
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
                 elevation: 4,
                 shadowColor: Colors.black26,
                 shape: const CircleBorder(),

@@ -289,19 +289,19 @@ class _MobileLayout extends StatelessWidget {
       backgroundColor: CmsColors.bg,
       appBar: AppBar(
         backgroundColor: CmsColors.orange,
-        foregroundColor: Colors.white,
+        foregroundColor: Color(0xFFFCF7EF),
         elevation: 0,
         title: Text(
           _pageTitle(selectedIndex),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
           ),
         ),
         leading: Builder(
           builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
+            icon: const Icon(Icons.menu, color: Color(0xFFFCF7EF)),
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
@@ -329,11 +329,11 @@ class _MobileLayout extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 12),
                 child: CircleAvatar(
                   radius: 16,
-                  backgroundColor: Colors.white.withOpacity(0.3),
+                  backgroundColor: Color(0xFFFCF7EF).withOpacity(0.3),
                   child: Text(
                     auth.displayInitial,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -403,7 +403,7 @@ class _Sidebar extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.self_improvement,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         size: 20,
                       ),
                     ),
@@ -413,7 +413,7 @@ class _Sidebar extends StatelessWidget {
                 const Text(
                   'Sathya',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
@@ -434,12 +434,12 @@ class _Sidebar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: auth.isSuperAdmin
                       ? CmsColors.orange.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.1),
+                      : Color(0xFFFCF7EF).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: auth.isSuperAdmin
                         ? CmsColors.orange.withOpacity(0.4)
-                        : Colors.white.withOpacity(0.2),
+                        : Color(0xFFFCF7EF).withOpacity(0.2),
                   ),
                 ),
                 child: Text(
@@ -565,8 +565,8 @@ class _SidebarItem extends StatelessWidget {
     final Color iconColor;
     final Color labelColor;
     if (isSelected) {
-      iconColor = Colors.white;
-      labelColor = Colors.white;
+      iconColor = Color(0xFFFCF7EF);
+      labelColor = Color(0xFFFCF7EF);
     } else if (item.isSpecial) {
       iconColor = CmsColors.orange;
       labelColor = CmsColors.orange;
@@ -587,10 +587,10 @@ class _SidebarItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           hoverColor: onLight
               ? Colors.black.withOpacity(0.05)
-              : Colors.white.withOpacity(0.08),
+              : Color(0xFFFCF7EF).withOpacity(0.08),
           splashColor: onLight
               ? Colors.black.withOpacity(0.08)
-              : Colors.white.withOpacity(0.12),
+              : Color(0xFFFCF7EF).withOpacity(0.12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -661,10 +661,10 @@ class _SidebarGroupHeader extends StatelessWidget {
     }
     final hoverColor = onLight
         ? Colors.black.withOpacity(0.05)
-        : Colors.white.withOpacity(0.08);
+        : Color(0xFFFCF7EF).withOpacity(0.08);
     final splashColor = onLight
         ? Colors.black.withOpacity(0.08)
-        : Colors.white.withOpacity(0.12);
+        : Color(0xFFFCF7EF).withOpacity(0.12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
@@ -753,7 +753,7 @@ List<Widget> _renderEntry(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -849,7 +849,7 @@ class _MobileDrawer extends StatelessWidget {
                           ),
                           child: const Icon(
                             Icons.self_improvement,
-                            color: Colors.white,
+                            color: Color(0xFFFCF7EF),
                             size: 22,
                           ),
                         ),
@@ -859,7 +859,7 @@ class _MobileDrawer extends StatelessWidget {
                     const Text(
                       'Sathya',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1019,7 +1019,7 @@ class _WebTopBar extends StatelessWidget {
                     child: Text(
                       auth.displayInitial,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),

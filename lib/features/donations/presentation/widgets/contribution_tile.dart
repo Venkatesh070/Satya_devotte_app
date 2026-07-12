@@ -30,7 +30,7 @@ class ContributionTile extends StatelessWidget {
       Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(

@@ -315,7 +315,7 @@ class _SendNotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
@@ -395,9 +395,9 @@ class _SendNotificationCard extends StatelessWidget {
                 onPressed: isSending() ? null : onSubmit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _orange,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Color(0xFFFCF7EF),
                   disabledBackgroundColor: _orange.withOpacity(0.6),
-                  disabledForegroundColor: Colors.white,
+                  disabledForegroundColor: Color(0xFFFCF7EF),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 14,
@@ -412,7 +412,7 @@ class _SendNotificationCard extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ),
                       )
                     : Icon(
@@ -610,7 +610,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: isActive ? Colors.white : CmsColors.textPrimary,
+            color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
           ),
         ),
       ),
@@ -643,7 +643,7 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
@@ -1046,7 +1046,7 @@ class _PageNumberBtn extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : CmsColors.textPrimary,
+              color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
             ),
           ),
         ),
@@ -1078,7 +1078,7 @@ class _ListEmpty extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: CmsColors.border),
       ),
@@ -1120,7 +1120,7 @@ class _ListError extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: CmsColors.border),
       ),
@@ -1140,7 +1140,7 @@ class _ListError extends StatelessWidget {
             label: const Text('Try again'),
             style: ElevatedButton.styleFrom(
               backgroundColor: CmsColors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
             ).copyWith(mouseCursor: _cmsButtonClickCursor),
           ),
         ],

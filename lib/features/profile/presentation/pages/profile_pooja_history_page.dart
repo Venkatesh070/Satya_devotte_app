@@ -362,7 +362,7 @@ class _HistoryList extends StatelessWidget {
                   style: AppTypography.inter(
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                   ),
                 ),
               ),

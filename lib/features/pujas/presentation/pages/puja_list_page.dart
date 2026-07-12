@@ -402,7 +402,7 @@ class _RitualListPageState extends State<RitualListPage> {
                         style: AppTypography.lora(
                           fontSize: 28,
                           fontWeight: FontWeight.w400,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ),
                       ),
                     ),
@@ -441,49 +441,88 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   Widget _buildSearchField() {
+    final hasQuery = _searchController.text.isNotEmpty;
     return Container(
-      height: 44,
+      height: 48,
       decoration: BoxDecoration(
-        color: const Color(0x22FFFFFF),
-        borderRadius: BorderRadius.circular(12),
+        color: Color(0xFFFCF7EF).withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Color(0xFFFCF7EF).withValues(alpha: 0.3),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Colors.white, size: 20),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFCF7EF).withValues(alpha: 0.18),
+            ),
+            child: const Icon(
+              Icons.search_rounded,
+              color: Color(0xFFFCF7EF),
+              size: 18,
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v),
-              cursorColor: Colors.black,
+              cursorColor: Color(0xFFFCF7EF),
               style: AppTypography.inter(
                 fontSize: 14,
-                color: const Color(0xFF232323),
+                color: Color(0xFFFCF7EF),
+                fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
                 isCollapsed: true,
+                hintText: 'Search god name...',
+                hintStyle: AppTypography.inter(
+                  fontSize: 14,
+                  color: Color(0xFFFCF7EF).withValues(alpha: 0.65),
+                  fontWeight: FontWeight.w400,
+                ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
                 errorBorder: InputBorder.none,
                 focusedErrorBorder: InputBorder.none,
-                hintText: 'Search god name...',
-                hintStyle: AppTypography.inter(
-                  fontSize: 14,
-                  color: const Color(0xFFFFFFFF),
-                ),
               ),
             ),
           ),
+          if (hasQuery)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFFCF7EF).withValues(alpha: 0.2),
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: Color(0xFFFCF7EF),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -619,7 +658,7 @@ class _RitualListPageState extends State<RitualListPage> {
             onPressed: _loadDeities,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gradientEnd,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -946,7 +985,7 @@ class _FavoriteBadge extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFEAD9BC), width: 1),
           boxShadow: const [
@@ -966,7 +1005,7 @@ class _FavoriteBadge extends StatelessWidget {
           child: Icon(
             isFavorite ? Icons.favorite : Icons.favorite_border,
             size: 19,
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
           ),
         ),
       ),
@@ -1164,7 +1203,7 @@ class _HeaderFavoriteButton extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               shape: BoxShape.circle,
               boxShadow: const [
                 BoxShadow(
@@ -1183,7 +1222,7 @@ class _HeaderFavoriteButton extends StatelessWidget {
               child: const Icon(
                 Icons.favorite_border,
                 size: 23,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
           ),
@@ -1205,7 +1244,7 @@ class _HeaderFavoriteButton extends StatelessWidget {
                   style: AppTypography.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                   ),
                 ),
               ),
@@ -1292,7 +1331,7 @@ class _CategoryTabChip extends StatelessWidget {
           style: AppTypography.inter(
             fontSize: 32 / 3,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: Color(0xFFFCF7EF),
             height: 1.15,
           ),
         ),

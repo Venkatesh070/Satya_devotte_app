@@ -76,7 +76,7 @@ class _ProductPaymentWebViewScreenState
   void _setupWebView() {
     final c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
+      ..setBackgroundColor(Color(0xFFFCF7EF))
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
@@ -196,7 +196,7 @@ class _ProductPaymentWebViewScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment'),
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFFCF7EF),
         foregroundColor: AppColors.textColor,
         elevation: 0,
       ),
@@ -214,7 +214,7 @@ class _ProductPaymentWebViewScreenState
                   const SizedBox.shrink(),
                 if (_pageLoading)
                   const ColoredBox(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     child: Center(child: CircularProgressIndicator()),
                   ),
               ],

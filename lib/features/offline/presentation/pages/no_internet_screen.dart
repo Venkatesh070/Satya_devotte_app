@@ -63,7 +63,7 @@ class NoInternetScreen extends StatelessWidget {
                           return const Icon(
                             Icons.wifi_off_rounded,
                             size: 50,
-                            color: Colors.white,
+                            color: Color(0xFFFCF7EF),
                           );
                         },
                       ),
@@ -114,7 +114,7 @@ class NoInternetScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Color(0xFFFCF7EF),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

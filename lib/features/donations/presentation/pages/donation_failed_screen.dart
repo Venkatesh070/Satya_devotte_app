@@ -163,7 +163,7 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
                         (loading || _args.reference.isEmpty) ? null : _retryVerify,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFB10F33),
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -174,7 +174,7 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                               strokeWidth: 2,
                             ),
                           )

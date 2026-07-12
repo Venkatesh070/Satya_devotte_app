@@ -444,7 +444,7 @@ class NotificationService with WidgetsBindingObserver {
             '${scheduledDateTime.minute.toString().padLeft(2, '0')}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.withOpacity(0.8),
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
       );
 
       if (kDebugMode) {

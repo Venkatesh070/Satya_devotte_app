@@ -78,7 +78,7 @@ class ProfileLinkTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: const Color(0xFFFCF7EF),
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(14),
         elevation: 5,
         shadowColor: const Color(0x1A7A4E12),
@@ -243,7 +243,7 @@ class _ProfileConfirmSheet extends StatelessWidget {
                 const SizedBox(height: 32),
                 CustomButton(
                   label: confirmLabel,
-                  textColor: Colors.white,
+                  textColor: Color(0xFFFCF7EF),
                   gradientColors: kFigmaActionGradient,
                   borderRadius: 14,
                   onTap: onConfirm,
@@ -364,7 +364,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                       color: DonationUi.textMuted.withValues(alpha: 0.5),
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Color(0xFFFCF7EF),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 14,
@@ -391,7 +391,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 const SizedBox(height: 24),
                 CustomButton(
                   label: 'Yes, Delete',
-                  textColor: Colors.white,
+                  textColor: Color(0xFFFCF7EF),
                   gradientColors: kFigmaActionGradient,
                   borderRadius: 14,
                   enabled: _canDelete,

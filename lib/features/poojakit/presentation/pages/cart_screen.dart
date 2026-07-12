@@ -253,7 +253,7 @@ class _CartItemTile extends StatelessWidget {
 
   Widget _qtyBtn(IconData icon, VoidCallback? onTap) {
     return Material(
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
       borderRadius: BorderRadius.circular(2),
       child: InkWell(
         onTap: onTap,
@@ -406,7 +406,7 @@ class _CircleIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
       shape: const CircleBorder(),
       elevation: 5,
       shadowColor: const Color(0x22000000),
@@ -479,7 +479,7 @@ class _DeliveryLocationSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE8E0D6)),
       ),
@@ -622,7 +622,7 @@ class _BillSummarySection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE8E0D6)),
       ),
@@ -703,7 +703,7 @@ class _GradientCtaBar extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
           ),

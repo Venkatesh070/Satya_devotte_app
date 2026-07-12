@@ -24,27 +24,26 @@ class CalendarPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: CalendarUi.background,
-      body: Column(
-        children: [
-          _CalendarOrangeHeader(controller: controller),
-          Obx(() {
-            final tab = controller.activeTab.value;
-            return Material(
-              color: CalendarUi.background,
-              child: CalendarFilterTabs(
-                labels: const ['Festivals', 'Lunar cycle', 'Events'],
-                selectedIndex: tab.index,
-                onSelected: (i) =>
-                    controller.setActiveTab(CalendarFilterTab.values[i]),
-              ),
-            );
-          }),
-          Expanded(
-            child: Obx(() {
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _CalendarOrangeHeader(controller: controller),
+            Obx(() {
+              final tab = controller.activeTab.value;
+              return Material(
+                color: CalendarUi.background,
+                child: CalendarFilterTabs(
+                  labels: const ['Festivals', 'Lunar cycle', 'Events'],
+                  selectedIndex: tab.index,
+                  onSelected: (i) =>
+                      controller.setActiveTab(CalendarFilterTab.values[i]),
+                ),
+              );
+            }),
+            Obx(() {
               if (controller.isLoading.value) {
                 return const SizedBox.shrink();
               }
-              // Read observables here so GetX tracks them (not in child widgets).
               controller.focusedDate.value;
               controller.festivals.length;
               controller.poojas.length;
@@ -60,8 +59,8 @@ class CalendarPage extends StatelessWidget {
                   return _EventsList(controller: controller);
               }
             }),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -91,7 +90,7 @@ class _CalendarOrangeHeader extends StatelessWidget {
                         style: AppTypography.lora(
                           fontSize: 28,
                           fontWeight: FontWeight.w400,
-                          color: Colors.white,
+                          color: Color(0xFFFCF7EF),
                         ),
                       ),
                     ),
@@ -185,7 +184,7 @@ class _MonthGrid extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, color: Colors.white),
+              icon: const Icon(Icons.chevron_left, color: Color(0xFFFCF7EF)),
               onPressed: () {
                 controller.focusedDate.value = DateTime(
                   focused.year,
@@ -198,11 +197,11 @@ class _MonthGrid extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.white),
+              icon: const Icon(Icons.chevron_right, color: Color(0xFFFCF7EF)),
               onPressed: () {
                 controller.focusedDate.value = DateTime(
                   focused.year,
@@ -223,7 +222,7 @@ class _MonthGrid extends StatelessWidget {
                       style: AppTypography.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Color(0xFFFCF7EF).withValues(alpha: 0.85),
                       ),
                     ),
                   ),
@@ -277,7 +276,7 @@ class _MonthGrid extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -295,7 +294,7 @@ class _MonthGrid extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? CalendarUi.headerOrange
-                          : Colors.white,
+                          : Color(0xFFFCF7EF),
                     ),
                   ),
                   if (events.isNotEmpty)
@@ -306,7 +305,7 @@ class _MonthGrid extends StatelessWidget {
                         children: events.map((e) {
                           Color dotColor = isSelected
                               ? CalendarUi.headerOrange
-                              : Colors.white.withValues(alpha: 0.9);
+                              : Color(0xFFFCF7EF).withValues(alpha: 0.9);
 
                           if (e is PoojaView) {
                             // ... existing pooja color logic ...
@@ -337,7 +336,7 @@ class _MonthGrid extends StatelessWidget {
                             final isFull = e.type.toUpperCase().contains(
                               'FULL',
                             );
-                            dotColor = isFull ? Colors.white : Colors.black;
+                            dotColor = isFull ? Color(0xFFFCF7EF) : Colors.black;
                           } else if (e is FestivalModel) {
                             // Branded Gold/Orange for Festivals
                             dotColor = const Color(0xFFE8A13A);
@@ -544,6 +543,8 @@ class _FestivalsList extends StatelessWidget {
       return _empty('That is all for now!');
     }
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: CalendarUi.listScrollPadding(context),
       itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -698,6 +699,8 @@ class _LunarList extends StatelessWidget {
       return _empty('That is all for now!');
     }
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: CalendarUi.listScrollPadding(context),
       itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -767,6 +770,8 @@ class _EventsList extends StatelessWidget {
       return _empty('That is all for now!');
     }
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: CalendarUi.listScrollPadding(context),
       itemCount: list.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -880,7 +885,7 @@ class _CalendarEntryCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(

@@ -143,7 +143,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: CalendarUi.cardBorder),
                       ),
@@ -190,7 +190,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: CustomButton(
                 label: 'Add Event',
-                textColor: Colors.white,
+                textColor: Color(0xFFFCF7EF),
                 gradientColors: kCalendarActionGradient,
                 borderRadius: 14,
                 onTap: _submit,
@@ -207,7 +207,7 @@ class _CalendarAddEventPageState extends State<CalendarAddEventPage> {
       hintText: hint,
       hintStyle: TextStyle(color: Colors.black.withOpacity(0.25), fontSize: 13),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Color(0xFFFCF7EF),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

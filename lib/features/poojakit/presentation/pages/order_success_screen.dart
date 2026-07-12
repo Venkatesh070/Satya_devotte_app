@@ -141,7 +141,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                                     scale: _checkScale.value,
                                     child: const Icon(
                                       Icons.check_rounded,
-                                      color: Colors.white,
+                                      color: Color(0xFFFCF7EF),
                                       size: 48,
                                     ),
                                   ),

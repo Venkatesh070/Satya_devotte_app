@@ -335,7 +335,7 @@ class _Pill extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : CmsColors.orangeDark,
+            color: selected ? Color(0xFFFCF7EF) : CmsColors.orangeDark,
           ),
         ),
       ),
@@ -1143,7 +1143,7 @@ Future<void> _showDecisionDialog(
             style: ElevatedButton.styleFrom(
               backgroundColor:
                   isApprove ? CmsColors.orange : CmsColors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),

@@ -875,7 +875,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
             child: Material(
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               shape: const CircleBorder(),
               elevation: 2,
               child: InkWell(
@@ -944,7 +944,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
           MediaQuery.of(context).padding.bottom + 26,
         ),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SingleChildScrollView(
@@ -1019,7 +1019,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                           child: Text(
                             '${step.number}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1220,7 +1220,7 @@ class _DeityPortrait extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.appBgColor,
-        border: Border.all(color: Colors.white, width: 4),
+        border: Border.all(color: Color(0xFFFCF7EF), width: 4),
         boxShadow: const [
           BoxShadow(
             color: Color(0x40000000),
@@ -1324,7 +1324,7 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
                             ],
                           )
                         : null,
-                    color: selected ? null : Colors.white,
+                    color: selected ? null : Color(0xFFFCF7EF),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: selected
@@ -1347,7 +1347,7 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
                     style: AppTypography.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: selected ? Colors.white : const Color(0xFF3B1E08),
+                      color: selected ? Color(0xFFFCF7EF) : const Color(0xFF3B1E08),
                     ),
                   ),
                 ),
@@ -1872,7 +1872,7 @@ class _LabeledTitleDescriptionList extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
@@ -2093,7 +2093,7 @@ class _StoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -2449,7 +2449,7 @@ class _CalendarThumb extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   shape: BoxShape.circle,
                   boxShadow: const [
                     BoxShadow(
@@ -2469,7 +2469,7 @@ class _CalendarThumb extends StatelessWidget {
                   child: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
                     size: 20,
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                   ),
                 ),
               ),
@@ -2615,7 +2615,7 @@ class _MantraCardState extends State<_MantraCard> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -2692,7 +2692,7 @@ class _MantraCardState extends State<_MantraCard> {
                     !hasAudio
                         ? Icons.volume_off
                         : (isPlaying ? Icons.pause : Icons.play_arrow),
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     size: 22,
                   ),
                 ),
@@ -2798,7 +2798,7 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -2822,7 +2822,7 @@ class _SectionCard extends StatelessWidget {
                     colors: [AppColors.gradientStart, AppColors.gradientEnd],
                   ),
                 ),
-                child: Icon(icon, size: 16, color: Colors.white),
+                child: Icon(icon, size: 16, color: Color(0xFFFCF7EF)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -2997,7 +2997,7 @@ class _StepTile extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
           ),
@@ -3194,7 +3194,7 @@ class _RitualCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -3419,7 +3419,7 @@ class _DayItemState extends State<_DayItem> {
                   child: Text(
                     '$dayNumber',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

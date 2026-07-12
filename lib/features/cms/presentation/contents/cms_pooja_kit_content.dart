@@ -289,7 +289,7 @@ class _ProductList extends StatelessWidget {
                             f,
                             style: TextStyle(
                               color: isSel
-                                  ? Colors.white
+                                  ? Color(0xFFFCF7EF)
                                   : CmsColors.textSecond,
                               fontSize: 12,
                               fontWeight: isSel
@@ -407,7 +407,7 @@ class _ProductList extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
         color: isSelected
-            ? Colors.white.withOpacity(0.3)
+            ? Color(0xFFFCF7EF).withOpacity(0.3)
             : CmsColors.orange,
         borderRadius: BorderRadius.circular(10),
       ),
@@ -416,7 +416,7 @@ class _ProductList extends StatelessWidget {
         style: const TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w800,
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
         ),
       ),
     );
@@ -489,7 +489,7 @@ void _approveDialog(
           label: const Text('Approve & Publish'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
@@ -595,7 +595,7 @@ void _rejectDialog(
           label: const Text('Reject'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
@@ -1148,9 +1148,9 @@ class _StatusSwitch extends StatelessWidget {
               child: Switch(
                 value: isActive,
                 onChanged: (v) => onChanged(v),
-                activeColor: Colors.white,
+                activeColor: Color(0xFFFCF7EF),
                 activeTrackColor: const Color(0xFF2E7D32),
-                inactiveThumbColor: Colors.white,
+                inactiveThumbColor: Color(0xFFFCF7EF),
                 inactiveTrackColor: const Color(0xFFC62828).withOpacity(0.45),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -1403,7 +1403,7 @@ class _PageNumberBtn extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : CmsColors.textPrimary,
+              color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
             ),
           ),
         ),
@@ -1512,14 +1512,14 @@ class _ProductCard extends StatelessWidget {
                             Icon(
                               Icons.star_rounded,
                               size: 11,
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                             ),
                             SizedBox(width: 3),
                             Text(
                               'Featured',
                               style: TextStyle(
                                 fontSize: 9,
-                                color: Colors.white,
+                                color: Color(0xFFFCF7EF),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1883,9 +1883,9 @@ class _ActiveInactiveToggle extends StatelessWidget {
             child: Switch(
               value: isActive,
               onChanged: pending ? null : (v) => onChanged(v),
-              activeColor: Colors.white,
+              activeColor: Color(0xFFFCF7EF),
               activeTrackColor: activeColor,
-              inactiveThumbColor: Colors.white,
+              inactiveThumbColor: Color(0xFFFCF7EF),
               inactiveTrackColor: inactiveColor.withOpacity(0.5),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -2942,7 +2942,7 @@ class _ProductFormState extends State<_ProductForm> {
                     onPressed: loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -2955,7 +2955,7 @@ class _ProductFormState extends State<_ProductForm> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                             ),
                           )
                         : Text(

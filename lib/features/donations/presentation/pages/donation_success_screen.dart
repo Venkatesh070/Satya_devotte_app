@@ -159,7 +159,7 @@ class _DonationSuccessScreenState extends State<DonationSuccessScreen>
                                     scale: _checkScale.value,
                                     child: const Icon(
                                       Icons.check_rounded,
-                                      color: Colors.white,
+                                      color: Color(0xFFFCF7EF),
                                       size: 56,
                                     ),
                                   ),

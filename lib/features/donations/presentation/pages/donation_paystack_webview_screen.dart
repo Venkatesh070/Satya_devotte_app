@@ -102,7 +102,7 @@ class _DonationPaystackWebViewScreenState
   void _setupWebView() {
     final c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
+      ..setBackgroundColor(Color(0xFFFCF7EF))
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
@@ -258,7 +258,7 @@ class _DonationPaystackWebViewScreenState
         if (shouldPop && mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFFCF7EF),
         appBar: AppBar(
           title: const Text('Complete payment'),
           backgroundColor: AppColors.appBgColor,
@@ -286,7 +286,7 @@ class _DonationPaystackWebViewScreenState
                   const SizedBox.shrink(),
                 if (_pageLoading)
                   const ColoredBox(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     child: Center(child: CircularProgressIndicator()),
                   ),
               ],
@@ -366,7 +366,7 @@ class _WebFallback extends StatelessWidget {
                 onPressed: () => verifyNow(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFB10F33),
-                  foregroundColor: Colors.white,
+                  foregroundColor: Color(0xFFFCF7EF),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

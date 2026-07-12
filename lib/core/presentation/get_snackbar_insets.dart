@@ -52,12 +52,12 @@ void showAppSnackbar({
     backgroundColor: isError
         ? const Color(0xFFF44336)
         : const Color(0xFF4CAF50),
-    colorText: Colors.white,
+    colorText: Color(0xFFFCF7EF),
     margin: inset.margin,
     borderRadius: 10,
     icon: Icon(
       isError ? Icons.error_outline : Icons.check_circle_outline,
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
     ),
     duration: const Duration(seconds: 3),
     boxShadows: [

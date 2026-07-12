@@ -124,7 +124,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 child: const Text(
                   'Skip >>',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
@@ -169,7 +169,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.headlineSmall
                                     ?.copyWith(
-                                      color: Colors.white,
+                                      color: Color(0xFFFCF7EF),
                                       fontSize: 24,
                                       height: 32 / 24,
                                       shadows: [
@@ -193,7 +193,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
-                                      color: Colors.white,
+                                      color: Color(0xFFFCF7EF),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       height: 1.35,
@@ -217,8 +217,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                         width: isActive ? 18 : 6,
                         decoration: BoxDecoration(
                           color: isActive
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.3),
+                              ? Color(0xFFFCF7EF)
+                              : Color(0xFFFCF7EF).withOpacity(0.3),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       );

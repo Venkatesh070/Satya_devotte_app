@@ -230,7 +230,7 @@ class _TopBar extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Material(
-          color: Colors.white,
+          color: Color(0xFFFCF7EF),
           shape: const CircleBorder(),
           elevation: 5,
           shadowColor: const Color(0x22000000),

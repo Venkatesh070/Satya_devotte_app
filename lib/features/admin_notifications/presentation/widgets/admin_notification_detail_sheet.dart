@@ -129,7 +129,7 @@ class AdminNotificationDetailSheet extends StatelessWidget {
             },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFF5A623),
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             child: const Text('View'),

@@ -374,7 +374,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : CmsColors.orangeDark,
+            color: selected ? Color(0xFFFCF7EF) : CmsColors.orangeDark,
           ),
         ),
       ),
@@ -850,7 +850,7 @@ class _InventoryBody extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     style: IconButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                     ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   ),
                 ],
@@ -1350,9 +1350,9 @@ class _InventoryStatusSwitch extends StatelessWidget {
             child: Switch(
               value: isActive,
               onChanged: pending ? null : (v) => onChanged(v),
-              activeThumbColor: Colors.white,
+              activeThumbColor: Color(0xFFFCF7EF),
               activeTrackColor: const Color(0xFF2E7D32),
-              inactiveThumbColor: Colors.white,
+              inactiveThumbColor: Color(0xFFFCF7EF),
               inactiveTrackColor: const Color(
                 0xFFC62828,
               ).withValues(alpha: 0.45),
@@ -2001,7 +2001,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                           onPressed: loading ? null : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: CmsColors.orange,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Color(0xFFFCF7EF),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -2014,7 +2014,7 @@ class _InventoryFormState extends State<_InventoryForm> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: Color(0xFFFCF7EF),
                                   ),
                                 )
                               : Text(

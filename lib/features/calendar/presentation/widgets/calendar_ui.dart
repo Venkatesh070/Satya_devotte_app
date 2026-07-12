@@ -70,7 +70,7 @@ class CalendarFilterTabs extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(right: i < labels.length - 1 ? 8 : 0),
               child: Material(
-                color: selected ? CalendarUi.tabSelected : Colors.white,
+                color: selected ? CalendarUi.tabSelected : Color(0xFFFCF7EF),
                 borderRadius: BorderRadius.circular(999),
                 child: InkWell(
                   onTap: () => onSelected(i),
@@ -89,7 +89,7 @@ class CalendarFilterTabs extends StatelessWidget {
                       style: AppTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : CalendarUi.textMuted,
+                        color: selected ? Color(0xFFFCF7EF) : CalendarUi.textMuted,
                       ),
                     ),
                   ),

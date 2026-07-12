@@ -91,7 +91,7 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       showCursor: false,
     );
     Widget child = DefaultTextStyle(
-      style: TextStyle(color: widget.style?.color ?? Colors.white),
+      style: TextStyle(color: widget.style?.color ?? Color(0xFFFCF7EF)),
       child: QuillEditor.basic(
         controller: _controller,
         config: config,

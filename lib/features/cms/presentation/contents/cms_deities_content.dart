@@ -218,7 +218,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: sel ? Colors.white : CmsColors.textSecond,
+                          color: sel ? Color(0xFFFCF7EF) : CmsColors.textSecond,
                         ),
                       ),
                     ),
@@ -1439,9 +1439,9 @@ class _DeityFormState extends State<_DeityForm> {
                   onPressed: _isSaving ? null : _submitDeity,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CmsColors.orange,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Color(0xFFFCF7EF),
                     disabledBackgroundColor: CmsColors.orange.withOpacity(0.6),
-                    disabledForegroundColor: Colors.white,
+                    disabledForegroundColor: Color(0xFFFCF7EF),
                   ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   child: _isSaving
                       ? const SizedBox(
@@ -1449,7 +1449,7 @@ class _DeityFormState extends State<_DeityForm> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                            valueColor: AlwaysStoppedAnimation(Color(0xFFFCF7EF)),
                           ),
                         )
                       : const Text('Save Deity'),
@@ -1689,7 +1689,7 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
               onPressed: _handleAdd,
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1952,7 +1952,7 @@ class _InputRowState extends State<_InputRow> {
               color: CmsColors.orange,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.add, color: Colors.white, size: 18),
+            child: const Icon(Icons.add, color: Color(0xFFFCF7EF), size: 18),
           ),
         ),
       ],
@@ -2545,7 +2545,7 @@ class _CmsColorPickerDialogState extends State<_CmsColorPickerDialog> {
           onPressed: () => Navigator.of(context).pop(_selected),
           style: ElevatedButton.styleFrom(
             backgroundColor: CmsColors.orange,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             elevation: 0,
           ).copyWith(mouseCursor: _cmsButtonClickCursor),
           child: const Text('Select'),

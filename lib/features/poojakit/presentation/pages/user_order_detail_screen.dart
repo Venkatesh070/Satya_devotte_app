@@ -152,7 +152,7 @@ class _OrderItemCard extends StatelessWidget {
                     width: double.infinity,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Text(
@@ -229,7 +229,7 @@ class _DeliveryCard extends StatelessWidget {
             shaderCallback: (bounds) => const LinearGradient(
               colors: [Color(0xFF183EA4), Color(0xFFE35600)],
             ).createShader(bounds),
-            child: const Icon(Icons.location_on, size: 16, color: Colors.white),
+            child: const Icon(Icons.location_on, size: 16, color: Color(0xFFFCF7EF)),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -571,7 +571,7 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
                         color: DonationUi.textMuted.withValues(alpha: 0.5),
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Color(0xFFFCF7EF),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 14,
@@ -598,7 +598,7 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
                   const SizedBox(height: 24),
                   CustomButton(
                     label: _submitting ? 'Cancelling...' : 'Yes, Cancel',
-                    textColor: Colors.white,
+                    textColor: Color(0xFFFCF7EF),
                     gradientColors: _figmaActionGradient,
                     borderRadius: 14,
                     enabled: !_submitting,
@@ -695,7 +695,7 @@ class _SummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: Color(0xFFFCF7EF).withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -742,7 +742,7 @@ class _RowLine extends StatelessWidget {
               shaderCallback: (bounds) => const LinearGradient(
                 colors: [Color(0xFF183EA4), Color(0xFFE35600)],
               ).createShader(bounds),
-              child: Icon(icon, size: 14, color: Colors.white),
+              child: Icon(icon, size: 14, color: Color(0xFFFCF7EF)),
             ),
             const SizedBox(width: 7),
           ],
@@ -823,7 +823,7 @@ class _CompactOrderLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
+        color: Color(0xFFFCF7EF).withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -971,7 +971,7 @@ class _TopBar extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Material(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         shape: const CircleBorder(),
         elevation: 5,
         shadowColor: const Color(0x22000000),

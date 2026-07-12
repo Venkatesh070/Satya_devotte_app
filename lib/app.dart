@@ -58,6 +58,17 @@ class _DialogObserver extends NavigatorObserver {
 class SathyaApp extends StatelessWidget {
   SathyaApp({super.key});
   final _dialogObserver = _DialogObserver();
+  static bool _imagesPrecached = false;
+
+  void _precacheChakraImages(BuildContext context) {
+    if (_imagesPrecached) return;
+    _imagesPrecached = true;
+    precacheImage(const AssetImage('assets/images/chakra1.png'), context);
+    precacheImage(const AssetImage('assets/images/chakra2.png'), context);
+    precacheImage(const AssetImage('assets/images/chakra3.png'), context);
+    precacheImage(const AssetImage('assets/images/chakra4.png'), context);
+    precacheImage(const AssetImage('assets/images/onBoardBgOverlay.png'), context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +103,7 @@ class SathyaApp extends StatelessWidget {
         }
       },
       builder: (context, child) {
+        _precacheChakraImages(context);
         if (kIsWeb || child == null) return child ?? const SizedBox.shrink();
         return Stack(
           children: [

@@ -182,7 +182,7 @@ class _CmsShlokaContentState extends State<CmsShlokaContent> {
         'Unable to read selected file',
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orangeDark,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;
@@ -220,7 +220,7 @@ class _DateSelector extends StatelessWidget {
             data: Theme.of(ctx).copyWith(
               colorScheme: const ColorScheme.light(
                 primary: CmsColors.orange,
-                onPrimary: Colors.white,
+                onPrimary: Color(0xFFFCF7EF),
               ),
             ),
             child: child!,
@@ -606,7 +606,7 @@ class _RecentList extends StatelessWidget {
                                 'Today',
                                 style: TextStyle(
                                   fontSize: 9,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -672,7 +672,7 @@ class _SlokaFormState extends State<_SlokaForm> {
         'Sloka text is required',
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orangeDark,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;
@@ -827,7 +827,7 @@ class _SlokaFormState extends State<_SlokaForm> {
                     onPressed: loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -840,7 +840,7 @@ class _SlokaFormState extends State<_SlokaForm> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                             ),
                           )
                         : Text(

@@ -182,7 +182,7 @@ class _TabLabel extends StatelessWidget {
           child: Text(
             '$count',
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFFFCF7EF),
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
@@ -371,7 +371,7 @@ class _PoojaList extends StatelessWidget {
             label: const Text('Approve & Publish'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -474,7 +474,7 @@ class _PoojaList extends StatelessWidget {
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -673,7 +673,7 @@ class _FestivalList extends StatelessWidget {
             label: const Text('Approve & Publish'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -780,7 +780,7 @@ class _FestivalList extends StatelessWidget {
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -932,18 +932,18 @@ class _PoojaApprovalCard extends StatelessWidget {
                     icon: const Icon(
                       Icons.check_circle_outline,
                       size: 15,
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                     ),
                     label: const Text(
                       'Approve & Publish',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1119,18 +1119,18 @@ class _FestivalApprovalCard extends StatelessWidget {
                     icon: const Icon(
                       Icons.check_circle_outline,
                       size: 15,
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                     ),
                     label: const Text(
                       'Approve & Publish',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1325,7 +1325,7 @@ class _DeityList extends StatelessWidget {
             label: const Text('Approve & Publish'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1389,7 +1389,7 @@ class _DeityList extends StatelessWidget {
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Color(0xFFFCF7EF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1540,18 +1540,18 @@ class _DeityApprovalCard extends StatelessWidget {
                     icon: const Icon(
                       Icons.check_circle_outline,
                       size: 15,
-                      color: Colors.white,
+                      color: Color(0xFFFCF7EF),
                     ),
                     label: const Text(
                       'Approve & Publish',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

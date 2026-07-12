@@ -318,7 +318,7 @@ class _Pill extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : CmsColors.orangeDark,
+            color: selected ? Color(0xFFFCF7EF) : CmsColors.orangeDark,
           ),
         ),
       ),
@@ -921,7 +921,7 @@ class _PaymentsPageNumberBtnMini extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : CmsColors.textPrimary,
+              color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
             ),
           ),
         ),

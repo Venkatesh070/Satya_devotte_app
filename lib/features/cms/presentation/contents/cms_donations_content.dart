@@ -252,7 +252,7 @@ class _DonationList extends StatelessWidget {
                             f,
                             style: TextStyle(
                               color: isSel
-                                  ? Colors.white
+                                  ? Color(0xFFFCF7EF)
                                   : CmsColors.textSecond,
                               fontSize: 12,
                               fontWeight: isSel
@@ -269,7 +269,7 @@ class _DonationList extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -278,7 +278,7 @@ class _DonationList extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -292,7 +292,7 @@ class _DonationList extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -301,7 +301,7 @@ class _DonationList extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -526,7 +526,7 @@ void _approveDialog(
           label: const Text('Approve & Publish'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -623,7 +623,7 @@ void _rejectDialog(BuildContext ctx, DonationModel d, DonationController ctrl) {
                 'Please enter a reason',
                 snackPosition: SnackPosition.TOP,
                 backgroundColor: CmsColors.orange,
-                colorText: Colors.white,
+                colorText: Color(0xFFFCF7EF),
                 margin: const EdgeInsets.all(12),
               );
               return;
@@ -635,7 +635,7 @@ void _rejectDialog(BuildContext ctx, DonationModel d, DonationController ctrl) {
           label: const Text('Reject'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -920,7 +920,7 @@ class _DonationFormState extends State<_DonationForm> {
         'Title is required',
         snackPosition: SnackPosition.TOP,
         backgroundColor: CmsColors.orangeDark,
-        colorText: Colors.white,
+        colorText: Color(0xFFFCF7EF),
         margin: const EdgeInsets.all(12),
       );
       return;
@@ -1068,7 +1068,7 @@ class _DonationFormState extends State<_DonationForm> {
                     onPressed: loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -1081,7 +1081,7 @@ class _DonationFormState extends State<_DonationForm> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Color(0xFFFCF7EF),
                             ),
                           )
                         : Text(
@@ -1275,7 +1275,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: isActive ? Colors.white : CmsColors.textPrimary,
+            color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
           ),
         ),
       ),
@@ -2047,7 +2047,7 @@ class _PageNumberBtnMini extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : CmsColors.textPrimary,
+              color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
             ),
           ),
         ),
@@ -2103,7 +2103,7 @@ class _ContributionsError extends StatelessWidget {
               label: const Text('Try again'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CmsColors.orange,
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFFCF7EF),
               ).copyWith(mouseCursor: _cmsButtonClickCursor),
             ),
           ],

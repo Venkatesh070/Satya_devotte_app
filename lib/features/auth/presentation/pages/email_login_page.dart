@@ -61,7 +61,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Material(
-                    color: Colors.white,
+                    color: Color(0xFFFCF7EF),
                     elevation: 4,
                     shadowColor: Colors.black26,
                     shape: const CircleBorder(),
@@ -167,7 +167,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           AppColors.gradientStart,
                           AppColors.gradientEnd,
                         ],
-                        textColor: Colors.white,
+                        textColor: Color(0xFFFCF7EF),
                         onTap: () async {
                           final offlineService = Get.find<OfflineService>();
                           if (!offlineService.checkAndShowDialog()) return;

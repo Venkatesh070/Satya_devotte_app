@@ -273,7 +273,7 @@ class _ProfileHeader extends StatelessWidget {
               style: AppTypography.lora(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: Color(0xFFFCF7EF),
               ),
             ),
           ),
@@ -330,7 +330,7 @@ class _ProfileAvatar extends StatelessWidget {
       height: 84,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         shape: BoxShape.circle,
         boxShadow: const [
           BoxShadow(
@@ -409,7 +409,7 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCF7EF),
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(14),
         // border: Border.all(color: const Color(0xFFF2E6D1)),
         boxShadow: const [
@@ -494,7 +494,7 @@ class _InfoCard extends StatelessWidget {
                       style: AppTypography.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                       ),
                     ),
                   ),

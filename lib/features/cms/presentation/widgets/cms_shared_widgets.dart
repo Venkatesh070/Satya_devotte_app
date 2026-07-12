@@ -595,7 +595,7 @@ class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
                         : null,
                     style: FilledButton.styleFrom(
                       backgroundColor: CmsColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFCF7EF),
                     ),
                     child: const Text('Apply'),
                   ),
@@ -625,12 +625,12 @@ void showCmsSnackbar({
     backgroundColor: isError
         ? const Color(0xFFF44336)
         : const Color(0xFF4CAF50),
-    colorText: Colors.white,
+    colorText: Color(0xFFFCF7EF),
     margin: inset.margin,
     borderRadius: 10,
     icon: Icon(
       isError ? Icons.error_outline : Icons.check_circle_outline,
-      color: Colors.white,
+      color: Color(0xFFFCF7EF),
     ),
     duration: const Duration(seconds: 3),
     boxShadows: [
@@ -856,20 +856,20 @@ class CmsPrimaryButton extends StatelessWidget {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(Color(0xFFFCF7EF)),
                   ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, color: Colors.white, size: 16),
+                      Icon(icon, color: Color(0xFFFCF7EF), size: 16),
                       const SizedBox(width: 6),
                     ],
                     Text(
                       label,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFFCF7EF),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -1025,7 +1025,7 @@ Future<bool?> showCmsDeleteDialog(
           onPressed: () => Navigator.pop(context, true),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            foregroundColor: Color(0xFFFCF7EF),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -1249,7 +1249,7 @@ class _CmsPageNumberBtn extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: isActive ? Colors.white : CmsColors.textPrimary,
+            color: isActive ? Color(0xFFFCF7EF) : CmsColors.textPrimary,
           ),
         ),
       ),

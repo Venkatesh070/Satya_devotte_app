@@ -48,12 +48,17 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // If initialValue is null, always reset to empty
+    // If the parent didn't change the initialValue prop, do nothing to preserve the undo/redo stack
+    if (widget.initialValue == oldWidget.initialValue) return;
+
+    // If initialValue is null, reset to empty
     if (widget.initialValue == null) {
       _externalInitialValue = null;
       _lastSentValue = null;
-      final newDoc = documentFromValue(null);
-      _controller.document = newDoc;
+      final currentSerialized = serializeDocument(_controller.document);
+      if (currentSerialized.isNotEmpty) {
+        _controller.document = documentFromValue(null);
+      }
       return;
     }
 

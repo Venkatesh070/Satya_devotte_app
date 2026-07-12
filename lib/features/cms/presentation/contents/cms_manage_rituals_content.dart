@@ -214,7 +214,7 @@ class _RitualListState extends State<_RitualList> {
                       child: Text(
                         f,
                         style: TextStyle(
-                          color: isSel ? Colors.white : CmsColors.textSecond,
+                          color: isSel ? Color(0xFFFCF7EF) : CmsColors.textSecond,
                           fontSize: 12,
                           fontWeight: isSel
                               ? FontWeight.w600
@@ -730,7 +730,7 @@ class _RitualFormState extends State<_RitualForm> {
                       onPressed: loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CmsColors.orange,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Color(0xFFFCF7EF),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -743,7 +743,7 @@ class _RitualFormState extends State<_RitualForm> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: Color(0xFFFCF7EF),
                               ),
                             )
                           : Text(
@@ -1188,7 +1188,7 @@ class _DayTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: CmsColors.border),
       ),
@@ -1201,7 +1201,7 @@ class _DayTile extends StatelessWidget {
                 backgroundColor: CmsColors.orange,
                 child: Text(
                   '${index + 1}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                  style: const TextStyle(fontSize: 11, color: Color(0xFFFCF7EF)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1379,7 +1379,7 @@ class _SectionEditorTile extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFFFCF7EF),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: CmsColors.border),
                 ),
