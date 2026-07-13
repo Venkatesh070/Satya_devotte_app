@@ -84,7 +84,7 @@ class FestivalController extends GetxController {
   }
 
   // ── LOAD ──────────────────────────────────────────────────────
-  Future<void> loadFestivals({bool showErrorSnackbar = true, int? page}) async {
+  Future<void> loadFestivals({bool showErrorSnackbar = true, int? page, int? limit}) async {
     _isLoading.value = true;
     _error.value = null;
     try {
@@ -94,7 +94,7 @@ class FestivalController extends GetxController {
       final result = await _dataSource.getFestivalsPage(
         superAdmin: auth.isSuperAdmin,
         page: page ?? _page.value,
-        limit: _limit.value,
+        limit: limit ?? _limit.value,
         status: status,
         search: _search.value.trim().isEmpty ? null : _search.value.trim(),
       );

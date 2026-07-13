@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:satya_devotte_app/app.dart';
@@ -15,12 +16,12 @@ import 'package:get/get.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Flutter web defaults to path-based URLs (`/login`). The browser then
-  // requests `/login` as a real path; static/dev servers often have no
-  // SPA fallback and return 404 ("Failed to load resource: login").
-  // Hash strategy keeps routes in the fragment (`/#/login`) so only `/`
-  // and asset files are fetched from the server. On native platforms
-  // `configureUrlStrategy` resolves to a no-op stub via conditional import.
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
   configureUrlStrategy();
   if (kIsWeb) {
     // `initialRoute` renders `/login` but hash strategy may leave the URL at

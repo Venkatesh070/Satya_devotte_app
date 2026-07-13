@@ -33,6 +33,10 @@ class _SplashPageState extends State<SplashPage>
       duration: const Duration(seconds: 24),
     )..repeat();
     if (!kIsWeb) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.find<AppMusicService>().start();
       });

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
@@ -27,6 +29,12 @@ class _LoginPageState extends State<LoginPage>
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
     _rotationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 24),

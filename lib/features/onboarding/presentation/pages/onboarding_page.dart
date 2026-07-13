@@ -43,6 +43,12 @@ class _OnboardingPageState extends State<OnboardingPage>
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!kIsWeb) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
     _rotationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 24),
