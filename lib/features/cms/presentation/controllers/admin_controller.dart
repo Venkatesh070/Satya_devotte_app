@@ -25,6 +25,7 @@ class AdminController extends GetxController {
   final _regularUsersPageSize = 10.obs;
   final _regularUsersTotal = 0.obs;
   final _regularUsersTotalPages = 1.obs;
+  final _regularUsersSearch = ''.obs;
   // Admin IDs that are currently mid-flight for the panel-access toggle.
   // The UI watches this set to disable / spin the corresponding switch.
   final _panelAccessPendingIds = <String>{}.obs;
@@ -46,6 +47,7 @@ class AdminController extends GetxController {
   int get regularUsersPageSize => _regularUsersPageSize.value;
   int get regularUsersTotal => _regularUsersTotal.value;
   int get regularUsersTotalPages => _regularUsersTotalPages.value;
+  String get regularUsersSearch => _regularUsersSearch.value;
   bool isPanelAccessPending(String id) => _panelAccessPendingIds.contains(id);
   bool isPasswordResetPending(String id) =>
       _passwordResetPendingIds.contains(id);
@@ -126,26 +128,34 @@ class AdminController extends GetxController {
     await loadAdmins(page: 1, limit: size);
   }
 
-  Future<void> loadRegularUsers({int? page, int? limit}) async {
+  Future<void> loadRegularUsers({int? page, int? limit, String? search}) async {
     _isLoadingRegularUsers.value = true;
     final targetPage = page ?? _regularUsersPage.value;
     final targetLimit = limit ?? _regularUsersPageSize.value;
+    final targetSearch = search ?? _regularUsersSearch.value;
     try {
       final result = await _dataSource.getRegularUsersPage(
         page: targetPage,
         limit: targetLimit,
+        search: targetSearch.trim().isEmpty ? null : targetSearch.trim(),
       );
       _regularUsers.assignAll(result.items);
       _regularUsersPage.value = result.page;
       _regularUsersPageSize.value = result.limit;
       _regularUsersTotal.value = result.total;
       _regularUsersTotalPages.value = result.totalPages;
+      _regularUsersSearch.value = targetSearch;
     } catch (e) {
       _error.value = _parseError(e);
       print('loadRegularUsers error: $e');
     } finally {
       _isLoadingRegularUsers.value = false;
     }
+  }
+
+  void setRegularUsersSearch(String value) {
+    if (_regularUsersSearch.value == value) return;
+    loadRegularUsers(page: 1, search: value);
   }
 
   Future<void> setRegularUsersPage(int page) async {

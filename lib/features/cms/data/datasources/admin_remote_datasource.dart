@@ -161,15 +161,24 @@ class AdminRemoteDataSource {
     ).map((e) => AdminModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// GET /admin/regular-users?page=&limit= — paginated users list.
+  /// GET /admin/regular-users?page=&limit=&search= — paginated users list.
   Future<({List<AdminModel> items, int page, int limit, int total, int totalPages})>
   getRegularUsersPage({
     int page = 1,
     int limit = 10,
+    String? search,
   }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
+    final q = search?.trim();
+    if (q != null && q.isNotEmpty) {
+      query['search'] = q;
+    }
     final res = await _apiClient.dio.get<Map<String, dynamic>>(
       '/api/v1/admin/regular-users',
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: query,
     );
     final body = res.data;
     if (body == null) {

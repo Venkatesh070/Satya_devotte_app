@@ -8,7 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forgot_password_form.dart';
-import 'package:satya_devotte_app/shared/widgets/animated_chakra_stack.dart';
+import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
@@ -99,35 +99,51 @@ class _WebLoginPageState extends State<WebLoginPage>
     final size = MediaQuery.sizeOf(context);
     final isWide = size.width >= 960;
 
+    if (isWide) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF1F1F1F),
+        body: SafeArea(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _buildLoginCard(isFullHeight: true),
+              ),
+              Expanded(
+                child: OnboardingStyleBackground(
+                  rotationController: _rotationController,
+                  wrapInPositioned: false,
+                  backgroundImage: 'assets/images/home/login_bg.png',
+                  chakraVerticalOffset: 0,
+                  chakraScale: 0.95,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Narrow/Mobile screen layout
     return Scaffold(
-      backgroundColor: const Color(0xFFF2EBDC),
+      backgroundColor: const Color(0xFF1F1F1F),
       body: Stack(
         children: [
-          Positioned(
-            top: -30,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/appHeaderImg.png',
-              fit: BoxFit.fitWidth,
-              width: double.infinity,
-            ),
+          OnboardingStyleBackground(
+            rotationController: _rotationController,
+            wrapInPositioned: true,
+            backgroundImage: 'assets/images/home/login_bg.png',
+            chakraVerticalOffset: -80,
+            chakraScale: 0.7,
           ),
           SafeArea(
-            child: isWide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildLoginCard(isFullHeight: true),
-                      ),
-                      Expanded(
-                        child: Center(child: _buildChakraAnimation()),
-                      ),
-                    ],
-                  )
-                : Center(child: _buildLoginCard()),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: _buildLoginCard(),
+              ),
+            ),
           ),
         ],
       ),
@@ -247,8 +263,8 @@ class _WebLoginPageState extends State<WebLoginPage>
     final card = Card(
       margin: EdgeInsets.zero,
       elevation: 8,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: isFullHeight ? BorderRadius.zero : BorderRadius.circular(16),
       ),
       clipBehavior: Clip.hardEdge,
       child: cardBody,
@@ -268,20 +284,6 @@ class _WebLoginPageState extends State<WebLoginPage>
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
         child: card,
-      ),
-    );
-  }
-
-  Widget _buildChakraAnimation() {
-    return Transform.scale(
-      scale: 0.9,
-      child: AnimatedChakraStack(
-        rotationController: _rotationController,
-        logo: SvgPicture.asset(
-          'assets/svgs/whiteLogo.svg',
-          width: 84,
-          height: 102,
-        ),
       ),
     );
   }

@@ -197,14 +197,22 @@ class _CmsNotificationCountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = count > 99 ? '99+' : '$count';
+    final isMultiDigit = label.length > 1;
+
     return Container(
-      width: diameter,
       height: diameter,
+      constraints: BoxConstraints(
+        minWidth: diameter,
+        minHeight: diameter,
+      ),
+      padding: isMultiDigit
+          ? const EdgeInsets.symmetric(horizontal: 4)
+          : EdgeInsets.zero,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: CmsColors.orange,
-        shape: BoxShape.circle,
-        boxShadow: [
+        borderRadius: BorderRadius.circular(diameter / 2),
+        boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
             blurRadius: 4,
@@ -215,8 +223,8 @@ class _CmsNotificationCountBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: Color(0xFFFCF7EF),
-          fontSize: fontSize,
+          color: const Color(0xFFFCF7EF),
+          fontSize: label.length > 2 ? fontSize - 1 : fontSize,
           fontWeight: FontWeight.w700,
           height: 1,
         ),

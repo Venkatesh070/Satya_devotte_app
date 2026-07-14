@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/contents/cms_users_content.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/models/admin_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -34,13 +35,23 @@ class CmsUsersContent extends StatefulWidget {
 
 class _CmsUsersContentState extends State<CmsUsersContent> {
   late final AdminController _ctrl;
-  String _search = '';
+  late final CmsSearchScheduler _searchScheduler;
 
   @override
   void initState() {
     super.initState();
     _ctrl = Get.find<AdminController>();
-    _ctrl.loadRegularUsers();
+    _searchScheduler = CmsSearchScheduler(
+      onSearch: _ctrl.setRegularUsersSearch,
+    );
+    // Reset search query on enter so we get fresh data
+    _ctrl.loadRegularUsers(page: 1, search: '');
+  }
+
+  @override
+  void dispose() {
+    _searchScheduler.dispose();
+    super.dispose();
   }
 
   @override
@@ -61,7 +72,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search users...',
-                  onChanged: (v) => setState(() => _search = v.toLowerCase()),
+                  onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
               const SizedBox(width: 12),
@@ -151,24 +162,17 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
               );
             }
 
-            // Filter by search
-            final users = _ctrl.regularUsers
-                .where(
-                  (u) =>
-                      _search.isEmpty ||
-                      u.displayName.toLowerCase().contains(_search) ||
-                      u.email.toLowerCase().contains(_search),
-                )
-                .toList();
+            final users = _ctrl.regularUsers;
+            final isSearchEmpty = _ctrl.regularUsersSearch.isEmpty;
 
             // Empty
             if (users.isEmpty) {
               return CmsEmptyState(
                 icon: Icons.people_outline,
-                title: _search.isEmpty ? 'No Users Yet' : 'No Results',
-                subtitle: _search.isEmpty
+                title: isSearchEmpty ? 'No Users Yet' : 'No Results',
+                subtitle: isSearchEmpty
                     ? 'Registered users will appear here'
-                    : 'No users match "$_search"',
+                    : 'No users match "${_ctrl.regularUsersSearch}"',
               );
             }
 
