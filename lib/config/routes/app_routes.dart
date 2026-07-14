@@ -12,6 +12,7 @@ class AppRoutes {
   static const String poojaHistory = '/pooja-history';
   static const String poojaWizard = '/pooja-wizard';
   static const String editProfile = '/edit-profile';
+  static const String search = '/search';
 
   // ─── User-facing donations flow ───────────────────────────────
   /// All approved donations (full list).

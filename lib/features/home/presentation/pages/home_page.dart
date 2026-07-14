@@ -817,7 +817,7 @@ class _HomeTabContent extends StatefulWidget {
 
 class _HomeTabContentState extends State<_HomeTabContent> {
   void _openSearch() {
-    Get.to<dynamic>(() => const SearchPage());
+    Get.to<dynamic>(() => const SearchPage(), routeName: AppRoutes.search);
   }
 
   @override
@@ -1332,11 +1332,7 @@ class _HomeSearchBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.tune_rounded,
-                  color: Color(0xFF9B8B7B),
-                  size: 18,
-                ),
+
                 const SizedBox(width: 10),
               ],
             ),

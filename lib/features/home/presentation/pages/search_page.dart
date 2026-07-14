@@ -9,8 +9,8 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
-import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class GlobalSearchResult {
@@ -119,7 +119,6 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  Timer? _searchDebounce;
   bool _isSearching = false;
   String? _searchError;
   List<GlobalSearchResult> _searchResults = const [];
@@ -132,38 +131,29 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
-    _searchDebounce?.cancel();
     final q = value.trim();
-    if (q.length < 2) {
+    if (q.isEmpty) {
       setState(() {
         _isSearching = false;
         _searchError = null;
         _searchResults = const [];
       });
-      return;
+    } else {
+      setState(() {});
     }
-    setState(() {
-      _isSearching = true;
-      _searchError = null;
-      _searchResults = const [];
-    });
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 320),
-      () => _search(q),
-    );
   }
 
   Future<void> _search(String q) async {
     setState(() {
       _isSearching = true;
       _searchError = null;
+      _searchResults = const [];
     });
     try {
       final response = await Get.find<ApiClient>().dio.get<dynamic>(
@@ -236,7 +226,6 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _clearSearch() {
-    _searchDebounce?.cancel();
     _searchController.clear();
     _searchFocus.requestFocus();
     setState(() {
@@ -344,9 +333,7 @@ class _SearchHeader extends StatelessWidget {
     final hasQuery = controller.text.trim().isNotEmpty;
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
-      decoration: const BoxDecoration(
-        color: Colors.transparent,
-      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Row(
         children: [
           IconButton(
@@ -361,10 +348,7 @@ class _SearchHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Color(0xFFFCF7EF),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFE5D5C5),
-                  width: 1.2,
-                ),
+                border: Border.all(color: const Color(0xFFE5D5C5), width: 1.2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -469,6 +453,8 @@ class _SearchResultsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    // 1. Initial State (no query, not searching, no error, no results)
     if (!hasQuery && results.isEmpty && !isSearching && error == null) {
       return Center(
         child: Padding(
@@ -484,53 +470,68 @@ class _SearchResultsSection extends StatelessWidget {
         ),
       );
     }
+
+    // 2. Loading State (isSearching is true, and we have no results yet)
+    if (isSearching && results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomInset + 80),
+          child: ChakraLoaderPage(),
+        ),
+      );
+    }
+
+    // 3. Error State
+    if (error != null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomInset + 80),
+          child: _SearchMessage(text: error!),
+        ),
+      );
+    }
+
+    // 4. No Data Found State (has query, not searching, no results)
+    if (results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottomInset + 80),
+          child: const _SearchMessage(text: 'No data added'),
+        ),
+      );
+    }
+
+    // 5. Search Results State
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (results.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                'Search Results',
-                style: AppTypography.lora(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFFFCF7EF),
-                ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Search Results',
+              style: AppTypography.lora(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFFCF7EF),
               ),
             ),
-          if (isSearching && results.isEmpty)
-            const SizedBox(
-              height: 220,
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: ChakraLoadingIndicator(size: 24),
-                ),
-              ),
-            )
-          else if (error != null)
-            _SearchMessage(text: error!, height: 180)
-          else if (results.isEmpty)
-            const _SearchMessage(text: 'No data found', height: 180)
-          else
-            Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount: results.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 6),
-                itemBuilder: (context, index) {
-                  final result = results[index];
-                  return _SearchResultTile(
-                    result: result,
-                    onTap: () => onResultTap(result),
-                  );
-                },
-              ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: results.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final result = results[index];
+                return _SearchResultTile(
+                  result: result,
+                  onTap: () => onResultTap(result),
+                );
+              },
             ),
+          ),
         ],
       ),
     );
@@ -538,25 +539,30 @@ class _SearchResultsSection extends StatelessWidget {
 }
 
 class _SearchMessage extends StatelessWidget {
-  const _SearchMessage({required this.text, this.height = 64});
+  const _SearchMessage({required this.text, this.height});
   final String text;
-  final double height;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: Center(
-        child: Text(
-          text,
-          style: AppTypography.inter(
-            color: const Color(0xFFFCF7EF),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+    final textWidget = Text(
+      text,
+      textAlign: TextAlign.center,
+      style: AppTypography.inter(
+        color: const Color(0xFFFCF7EF),
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
       ),
     );
+
+    if (height != null) {
+      return SizedBox(
+        height: height,
+        child: Center(child: textWidget),
+      );
+    }
+
+    return textWidget;
   }
 }
 
@@ -596,11 +602,7 @@ class _SearchResultTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        _SearchTypePill(type: result.typeLabel),
-                      ],
-                    ),
+                    Row(children: [_SearchTypePill(type: result.typeLabel)]),
                     if (result.description.isNotEmpty) ...[
                       const SizedBox(height: 5),
                       RichTextDisplay(
@@ -633,7 +635,7 @@ class _SearchResultImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = result.imageUrl?.trim() ?? '';
     final hasImage = imageUrl.isNotEmpty;
-    
+
     final placeholder = Container(
       color: const Color(0xFFF3E2C3),
       child: Center(
@@ -647,10 +649,7 @@ class _SearchResultImage extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFAECD2),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFFFAECD2),
-          width: 3,
-        ),
+        border: Border.all(color: const Color(0xFFFAECD2), width: 3),
       ),
       child: Padding(
         padding: const EdgeInsets.all(2),

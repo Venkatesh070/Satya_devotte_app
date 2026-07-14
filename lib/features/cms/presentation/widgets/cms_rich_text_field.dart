@@ -24,13 +24,10 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   late final QuillController _controller;
   late final FocusNode _focusNode;
   bool _focused = false;
-  String? _externalInitialValue;
-  String? _lastSentValue;
 
   @override
   void initState() {
     super.initState();
-    _externalInitialValue = widget.initialValue;
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       if (mounted) {
@@ -44,35 +41,23 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
     _controller.addListener(_onControllerChange);
   }
 
+  bool _areValuesEqual(String? val1, String? val2) {
+    if (val1 == val2) return true;
+    final doc1 = documentFromValue(val1);
+    final doc2 = documentFromValue(val2);
+    return serializeDocument(doc1) == serializeDocument(doc2);
+  }
+
   @override
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // If the parent didn't change the initialValue prop, do nothing to preserve the undo/redo stack
-    if (widget.initialValue == oldWidget.initialValue) return;
+    final currentSerialized = serializeDocument(_controller.document);
+    final isDifferent = !_areValuesEqual(widget.initialValue, currentSerialized);
 
-    // If initialValue is null, reset to empty
-    if (widget.initialValue == null) {
-      _externalInitialValue = null;
-      _lastSentValue = null;
-      final currentSerialized = serializeDocument(_controller.document);
-      if (currentSerialized.isNotEmpty) {
-        _controller.document = documentFromValue(null);
-      }
-      return;
-    }
-
-    // If widget.initialValue is the last value we sent, skip (prevents loop)
-    if (widget.initialValue == _lastSentValue) return;
-
-    // Only update the document if the parent is passing a new initialValue that's not what we already have
-    if (widget.initialValue != _externalInitialValue) {
-      _externalInitialValue = widget.initialValue;
-      final currentSerialized = serializeDocument(_controller.document);
-      if (widget.initialValue != currentSerialized) {
-        final newDoc = documentFromValue(widget.initialValue);
-        _controller.document = newDoc;
-      }
+    if (isDifferent) {
+      final newDoc = documentFromValue(widget.initialValue);
+      _controller.document = newDoc;
     }
   }
 
@@ -86,7 +71,6 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
 
   void _onControllerChange() {
     final value = serializeDocument(_controller.document);
-    _lastSentValue = value;
     widget.onChanged?.call(value);
   }
 
@@ -112,8 +96,8 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
       showCodeBlock: false,
       showIndent: false,
       showLink: false,
-      showUndo: true,
-      showRedo: true,
+      showUndo: false,
+      showRedo: false,
       showDirection: false,
       showSearchButton: false,
       showSubscript: false,

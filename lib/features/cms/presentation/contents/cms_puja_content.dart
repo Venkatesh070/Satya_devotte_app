@@ -2219,7 +2219,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                     hintText: 'Select deities',
                     isLoading: isLoading && !loaded,
                     loadingText: 'Loading deities...',
-                    emptyText: 'No deities found',
+                    emptyText: 'No data added',
                     options: deities
                         .map(
                           (d) => CmsSelectOption(
