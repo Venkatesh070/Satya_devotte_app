@@ -183,12 +183,19 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                               password: password,
                             );
                           } catch (error) {
-                            showAppSnackbar(
-                              title: 'Login Failed',
-                              message:
-                                  controller.lastAuthError ?? 'Login failed',
-                              isError: true,
-                            );
+                            final errMsg = controller.lastAuthError ?? 'Login failed';
+                            if (errMsg.toLowerCase().contains('invalid') ||
+                                errMsg.toLowerCase().contains('wrong') ||
+                                errMsg.toLowerCase().contains('incorrect') ||
+                                errMsg.toLowerCase().contains('not found')) {
+                              _showInvalidCredentialsDialog(errMsg);
+                            } else {
+                              showAppSnackbar(
+                                title: 'Login Failed',
+                                message: errMsg,
+                                isError: true,
+                              );
+                            }
                           }
                         },
                       ),
@@ -309,6 +316,92 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.gradientStart),
       ),
+    );
+  }
+
+  void _showInvalidCredentialsDialog(String message) {
+    Get.dialog<dynamic>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFFFCF7EF),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFECE0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_person_outlined,
+                  color: Color(0xFFE35600),
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Login Failed',
+                style: AppTypography.lora(
+                  color: const Color(0xFF4A1C00),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.inter(
+                  color: const Color(0xFF7A6B58),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              CustomButton(
+                label: 'Try Again',
+                gradientColors: const [
+                  AppColors.gradientStart,
+                  AppColors.gradientEnd,
+                ],
+                textColor: const Color(0xFFFCF7EF),
+                borderRadius: 12,
+                onTap: () {
+                  Get.back();
+                  _passwordController.clear();
+                },
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  Get.back();
+                  Get.to(() => const CreateAccountPage());
+                },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0x33B07A3A)),
+                  ),
+                ),
+                child: Text(
+                  'Create New Account',
+                  style: AppTypography.inter(
+                    color: const Color(0xFF4A1C00),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
     );
   }
 }

@@ -134,7 +134,7 @@ class FirebaseService {
     /// When `false`, only Firebase email/password sign-in runs — no
     /// `fetchSignInMethodsForEmail` pre-check and no Google popup / linking.
     /// Used by the Flutter **web** admin login (`signInAsAdmin`).
-    bool allowGoogleAccountLinking = true,
+    bool allowGoogleAccountLinking = false,
   }) async {
     final normalizedEmail = email.trim();
 
