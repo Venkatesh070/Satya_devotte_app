@@ -972,7 +972,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 ),
               ),
               const SizedBox(height: 16),
-             Row(
+              Row(
                 children: [
                   Flexible(
                     flex: 3,
@@ -987,7 +987,8 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                     ),
                   ),
                 ],
-              ), const SizedBox(height: 20),
+              ),
+              const SizedBox(height: 20),
               const Text(
                 'Steps',
                 style: TextStyle(
@@ -1347,7 +1348,9 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
                     style: AppTypography.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: selected ? Color(0xFFFCF7EF) : const Color(0xFF3B1E08),
+                      color: selected
+                          ? Color(0xFFFCF7EF)
+                          : const Color(0xFF3B1E08),
                     ),
                   ),
                 ),
@@ -1582,28 +1585,34 @@ class _AboutDeityTab extends StatelessWidget {
             label: 'Derivation/ Other Names / Forms (if applicable)',
             items: altNames,
           ),
-        if (divineRole.isNotEmpty)
-          LabeledField(
-            label: 'Divine Role (God/ Goddess of)',
-            value: divineRole,
-            multiline: true,
-          ),
+        // if (divineRole.isNotEmpty)
+        //   LabeledField(
+        //     label: 'Divine Role (God/ Goddess of)',
+        //     value: divineRole,
+        //     multiline: true,
+        //   ),
 
         // 5. Divine Structure (Modern or Legacy)
         if (structure != null && structure.isNotEmpty) ...[
           const SizedBox(height: 14),
           const SectionHeader(
-            title: 'Family/ Divine association; and Iconography',
+            title: 'Family/ Divine association and Iconography',
           ),
           const SizedBox(height: 10),
           for (final s in structure.whereType<Map>())
             DeitySectionCard(section: s.cast<String, dynamic>()),
           // Render physical items / appearance even if we have structure
-          if (physicalItems.isNotEmpty)
+          if (physicalItems.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const SectionHeader(
+              title: 'Appearance & Symbolism',
+            ),
+            const SizedBox(height: 10),
             _LabeledTitleDescriptionList(
               label: 'Physical Description',
               items: physicalItems,
             ),
+          ],
           // Render symbols & weapons even if we have structure
           if (weapons.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -1627,7 +1636,7 @@ class _AboutDeityTab extends StatelessWidget {
           if (family.isNotEmpty) ...[
             const SizedBox(height: 4),
             const SectionHeader(
-              title: 'Family/ Divine association; and Iconography',
+              title: 'Family/ Divine association and Iconography',
             ),
             const SizedBox(height: 10),
             LabeledField(
@@ -1642,11 +1651,17 @@ class _AboutDeityTab extends StatelessWidget {
               value: posture,
               multiline: true,
             ),
-          if (physicalItems.isNotEmpty)
+          if (physicalItems.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const SectionHeader(
+              title: 'Appearance & Symbolism',
+            ),
+            const SizedBox(height: 10),
             _LabeledTitleDescriptionList(
               label: 'Physical Description',
               items: physicalItems,
             ),
+          ],
           if (weapons.isNotEmpty) ...[
             const SizedBox(height: 4),
             const SectionHeader(title: 'Symbols & Weapons'),
@@ -1801,7 +1816,7 @@ class _AboutDeityTab extends StatelessWidget {
             chakra.isNotEmpty ||
             astrology.isNotEmpty) ...[
           const SizedBox(height: 4),
-          const SectionHeader(title: 'Purpose of the Ritual'),
+          // const SectionHeader(title: 'Purpose of the Ritual'),
           const SizedBox(height: 10),
           if (whyPray.isNotEmpty)
             LabeledField(
