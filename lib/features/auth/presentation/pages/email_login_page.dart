@@ -372,6 +372,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                 borderRadius: 12,
                 onTap: () {
                   Get.back();
+                  _emailController.clear();
                   _passwordController.clear();
                 },
               ),
