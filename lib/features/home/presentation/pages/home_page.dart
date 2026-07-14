@@ -2251,12 +2251,6 @@ class _BottomItem extends StatelessWidget {
                     color: selected
                         ? Color(0xFFFCF7EF).withValues(alpha: 0.14)
                         : Colors.transparent,
-                    border: Border.all(
-                      color: selected
-                          ? const Color(0xFFF2C94C)
-                          : Colors.transparent,
-                      width: 1.2,
-                    ),
                   ),
                   child: Center(
                     child: selected
