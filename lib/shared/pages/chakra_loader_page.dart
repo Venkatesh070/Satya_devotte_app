@@ -1,126 +1,58 @@
-import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
-class ChakraLoaderPage extends StatefulWidget {
+class ChakraLoaderPage extends StatelessWidget {
   const ChakraLoaderPage({super.key, this.asOverlay = false});
 
   final bool asOverlay;
 
   @override
-  State<ChakraLoaderPage> createState() => _ChakraLoaderPageState();
-}
-
-class _ChakraLoaderPageState extends State<ChakraLoaderPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _rotationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _rotationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final overlayColor = widget.asOverlay
-        ? Colors.black.withValues(alpha: 0.7)
+    final overlayColor = asOverlay
+        ? Colors.black.withValues(alpha: 0.6)
         : Colors.transparent;
-    const loaderSize = 150.0;
-    final loaderBody = ColoredBox(
+    final loaderBody = Container(
       color: overlayColor,
       child: Stack(
         children: [
+          if (asOverlay)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
+                child: const SizedBox.shrink(),
+              ),
+            ),
           Align(
             alignment: Alignment.center,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0.0, end: 1.0),
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              builder: (context, opacity, child) {
-                return Opacity(
-                  opacity: opacity,
-                  child: child,
-                );
-              },
-              child: AnimatedBuilder(
-                animation: _rotationController,
-                builder: (context, child) {
-                  final spin = _rotationController.value * 8 * math.pi;
-                  return SizedBox(
-                    width: loaderSize,
-                    height: loaderSize,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Transform.rotate(
-                          angle: spin,
-                          child: Image.asset(
-                            'assets/images/chakra1.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
-                          ),
-                        ),
-                        Transform.rotate(
-                          angle: -spin,
-                          child: Transform.scale(
-                            scale: 0.90,
-                            child: Image.asset(
-                              'assets/images/chakra2.png',
-                              filterQuality: FilterQuality.high,
-                              gaplessPlayback: true,
-                            ),
-                          ),
-                        ),
-                        Transform.rotate(
-                          angle: spin,
-                          child: Transform.scale(
-                            scale: 0.80,
-                            child: Image.asset(
-                              'assets/images/chakra3.png',
-                              filterQuality: FilterQuality.high,
-                              gaplessPlayback: true,
-                            ),
-                          ),
-                        ),
-                        Transform.rotate(
-                          angle: -spin,
-                          child: Transform.scale(
-                            scale: 0.53,
-                            child: Image.asset(
-                              'assets/images/chakra4.png',
-                              filterQuality: FilterQuality.high,
-                              gaplessPlayback: true,
-                            ),
-                          ),
-                        ),
-                        Opacity(
-                          opacity: 0.8,
-                          child: Image.asset(
-                            'assets/images/onBoardBgOverlay.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
-                          ),
-                        ),
-                        SvgPicture.asset(
-                          'assets/svgs/whiteLogo.svg',
-                          width: 40,
-                          height: 40,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFFED5A00), Color(0xFFFFD180)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: LoadingAnimationWidget.fourRotatingDots(
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
               ),
             ),
           ),
@@ -128,7 +60,7 @@ class _ChakraLoaderPageState extends State<ChakraLoaderPage>
       ),
     );
 
-    if (widget.asOverlay) {
+    if (asOverlay) {
       return Positioned.fill(child: AbsorbPointer(child: loaderBody));
     }
 

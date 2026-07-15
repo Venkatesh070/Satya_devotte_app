@@ -1,0 +1,137 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+class OriginalChakraLoaderPage extends StatefulWidget {
+  const OriginalChakraLoaderPage({super.key, this.asOverlay = false});
+
+  final bool asOverlay;
+
+  @override
+  State<OriginalChakraLoaderPage> createState() => _OriginalChakraLoaderPageState();
+}
+
+class _OriginalChakraLoaderPageState extends State<OriginalChakraLoaderPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final overlayColor = widget.asOverlay
+        ? Colors.black.withValues(alpha: 0.7)
+        : Colors.transparent;
+    const loaderSize = 150.0;
+    final loaderBody = ColoredBox(
+      color: overlayColor,
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              builder: (context, opacity, child) {
+                return Opacity(
+                  opacity: opacity,
+                  child: child,
+                );
+              },
+              child: AnimatedBuilder(
+                animation: _rotationController,
+                builder: (context, child) {
+                  final spin = _rotationController.value * 8 * math.pi;
+                  return SizedBox(
+                    width: loaderSize,
+                    height: loaderSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Transform.rotate(
+                          angle: spin,
+                          child: Image.asset(
+                            'assets/images/chakra1.png',
+                            filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
+                          ),
+                        ),
+                        Transform.rotate(
+                          angle: -spin,
+                          child: Transform.scale(
+                            scale: 0.90,
+                            child: Image.asset(
+                              'assets/images/chakra2.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ),
+                        Transform.rotate(
+                          angle: spin,
+                          child: Transform.scale(
+                            scale: 0.80,
+                            child: Image.asset(
+                              'assets/images/chakra3.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ),
+                        Transform.rotate(
+                          angle: -spin,
+                          child: Transform.scale(
+                            scale: 0.53,
+                            child: Image.asset(
+                              'assets/images/chakra4.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ),
+                        Opacity(
+                          opacity: 0.8,
+                          child: Image.asset(
+                            'assets/images/onBoardBgOverlay.png',
+                            filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
+                          ),
+                        ),
+                        SvgPicture.asset(
+                          'assets/svgs/whiteLogo.svg',
+                          width: 40,
+                          height: 40,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.asOverlay) {
+      return Positioned.fill(child: AbsorbPointer(child: loaderBody));
+    }
+
+    return Scaffold(backgroundColor: Colors.transparent, body: loaderBody);
+  }
+}
