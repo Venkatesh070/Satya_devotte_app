@@ -80,7 +80,13 @@ class DeityController extends GetxController {
         status: targetStatus,
         search: targetSearch.trim().isEmpty ? null : targetSearch.trim(),
       );
-      _deities.assignAll(result.items);
+      final sortedItems = List<DeityModel>.from(result.items)
+        ..sort((a, b) {
+          final cmp = a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
+          if (cmp != 0) return cmp;
+          return a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
+        });
+      _deities.assignAll(sortedItems);
       _page.value = result.page;
       _limit.value = result.limit;
       _total.value = result.total;

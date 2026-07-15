@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart'
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -47,7 +48,7 @@ class _CartScreenState extends State<CartScreen> {
 
                 final cart = c.cart;
                 if (cart == null || cart.isEmpty) {
-                  return _EmptyCart(onBack: () => Get.back());
+                  return const _EmptyCart();
                 }
 
                 return SingleChildScrollView(
@@ -84,13 +85,17 @@ class _CartScreenState extends State<CartScreen> {
             ),
             Obx(() {
               final cart = c.cart;
-              final enabled = cart != null && !cart.isEmpty;
+              if (cart == null || cart.isEmpty) {
+                return _GradientCtaBar(
+                  enabled: true,
+                  label: 'Go to shopping',
+                  onTap: () => Get.off(() => const PoojaKitPage()),
+                );
+              }
               return _GradientCtaBar(
-                enabled: enabled,
+                enabled: true,
                 label: 'Proceed to Payment',
-                onTap: enabled
-                    ? () => _handleProceedToPayment(c, checkoutCtrl)
-                    : null,
+                onTap: () => _handleProceedToPayment(c, checkoutCtrl),
               );
             }),
           ],
@@ -424,8 +429,7 @@ class _CircleIconButton extends StatelessWidget {
 }
 
 class _EmptyCart extends StatelessWidget {
-  const _EmptyCart({required this.onBack});
-  final VoidCallback onBack;
+  const _EmptyCart();
 
   @override
   Widget build(BuildContext context) {
@@ -446,8 +450,6 @@ class _EmptyCart extends StatelessWidget {
               color: AppColors.textColor.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 18),
-          _GradientCtaBar(enabled: true, label: 'Go Shopping', onTap: onBack),
         ],
       ),
     );

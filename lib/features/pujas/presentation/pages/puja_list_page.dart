@@ -99,7 +99,12 @@ class _RitualListPageState extends State<RitualListPage> {
       final mapped = list
           .whereType<Map>()
           .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+          .toList()
+        ..sort((a, b) {
+          final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          if (cmp != 0) return cmp;
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        });
       if (!mounted) return;
       setState(() => _items = mapped);
     } on DioException catch (e) {
@@ -122,7 +127,12 @@ class _RitualListPageState extends State<RitualListPage> {
         final mapped = list
             .whereType<Map>()
             .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
+            .toList()
+          ..sort((a, b) {
+            final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            if (cmp != 0) return cmp;
+            return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+          });
         setState(() => _items = mapped);
       } else {
         setState(() => _error = e.message ?? 'Failed to load deities.');
@@ -293,7 +303,7 @@ class _RitualListPageState extends State<RitualListPage> {
 
   List<DeityListItem> get _filteredItems {
     final q = _searchQuery.trim().toLowerCase();
-    return _items.where((item) {
+    final list = _items.where((item) {
       final selectedCategory = _selectedCategory.trim().toLowerCase();
       if (selectedCategory != 'all deities') {
         final itemName = item.name.toLowerCase();
@@ -314,17 +324,31 @@ class _RitualListPageState extends State<RitualListPage> {
 
       return true;
     }).toList();
+
+    // Sort alphabetically by name, then title (trimmed, case-insensitive)
+    list.sort((a, b) {
+      final cmp = a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
+      if (cmp != 0) return cmp;
+      return a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
+    });
+    return list;
   }
 
   List<String> get _categoryTabs {
     final tabs = <String>['All Deities'];
     final seen = <String>{};
+    final uniqueLabels = <String>[];
     for (final item in _items) {
       final label = item.name.trim();
       if (label.isEmpty) continue;
-      if (seen.add(label.toLowerCase())) tabs.add(label);
-      if (tabs.length >= 8) break;
+      if (seen.add(label.toLowerCase())) {
+        uniqueLabels.add(label);
+      }
     }
+    // Sort unique labels alphabetically
+    uniqueLabels.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    // Take the first 7 unique labels
+    tabs.addAll(uniqueLabels.take(7));
     return tabs;
   }
 

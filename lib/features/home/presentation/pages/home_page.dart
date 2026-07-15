@@ -1593,7 +1593,7 @@ class _Footer extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Made with devotion for spiritual seekers by',
+            'Developed by',
             style: AppTypography.lora(
               fontSize: 12,
               fontStyle: FontStyle.italic,

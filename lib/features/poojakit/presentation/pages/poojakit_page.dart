@@ -68,9 +68,7 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                   if (index >= controller.products.length) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 18),
-                      child: Center(
-                        child: _GradientSpinner(size: 24),
-                      ),
+                      child: Center(child: _GradientSpinner(size: 24)),
                     );
                   }
 
@@ -263,7 +261,7 @@ class _ProductListTile extends StatelessWidget {
                             child: SizedBox(
                               width: 18,
                               height: 18,
-                              child: _GradientSpinner(size: 18),
+                              child: _GradientSpinner(size: 24),
                             ),
                           ),
                         ),
@@ -468,7 +466,7 @@ class _GradientSpinner extends StatelessWidget {
         width: size,
         height: size,
         child: CircularProgressIndicator(
-          strokeWidth: 3,
+          strokeWidth: 2,
           valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFCF7EF)),
         ),
       ),
