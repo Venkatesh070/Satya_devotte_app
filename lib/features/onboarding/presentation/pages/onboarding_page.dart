@@ -2,10 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
@@ -23,11 +23,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   int _currentIndex = 0;
 
   static const _slides = [
-    (
-      title: 'Welcome to Sathya',
-      subtitle:
-          'Your spiritual companion for Hindu rituals\nand divine practices',
-    ),
+    (title: '', subtitle: 'Your spiritual companion'),
     (
       title: 'Guided Rituals',
       subtitle:
@@ -150,14 +146,16 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
             ),
             Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.6 + 50,
+              top: _currentIndex == 0
+                  ? MediaQuery.sizeOf(context).height * 0.6 + 40
+                  : MediaQuery.sizeOf(context).height * 0.6 + 50,
               left: 0,
               right: 0,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: 90, // Reduced height to fit text and dots below
+                    height: 180, // Increased height to fit logo and divider
                     child: PageView.builder(
                       controller: _pageController,
                       itemCount: _slides.length,
@@ -165,45 +163,62 @@ class _OnboardingPageState extends State<OnboardingPage>
                           setState(() => _currentIndex = index),
                       itemBuilder: (context, index) {
                         final slide = _slides[index];
+                        final isFirst = index == 0;
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                slide.title,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(
-                                      color: Color(0xFFFCF7EF),
-                                      fontSize: 24,
-                                      height: 32 / 24,
-                                      shadows: [
-                                        Shadow(
-                                          color: const Color.fromARGB(
-                                            255,
-                                            242,
-                                            237,
-                                            237,
-                                          ).withValues(alpha: 0.25),
-                                          offset: const Offset(0, 1),
-                                          blurRadius: 8,
-                                        ),
-                                      ],
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              const SizedBox(height: 15),
+                              if (isFirst) ...[
+                                Image.asset(
+                                  'assets/images/SathyaLogo.png',
+                                  height: 100,
+                                  width: 344,
+                                  fit: BoxFit.cover,
+                                ),
+                                // const SizedBox(height: 10),
+                                Image.asset(
+                                  'assets/images/divider.png',
+                                  height: 23,
+                                  width: 152,
+                                  fit: BoxFit.cover,
+                                ),
+                              ] else ...[
+                                Text(
+                                  slide.title,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        color: Color(0xFFFCF7EF),
+                                        fontSize: 24,
+                                        height: 32 / 24,
+                                        shadows: [
+                                          Shadow(
+                                            color: const Color.fromARGB(
+                                              255,
+                                              242,
+                                              237,
+                                              237,
+                                            ).withValues(alpha: 0.25),
+                                            offset: const Offset(0, 1),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                              const SizedBox(height: 1),
                               Text(
                                 slide.subtitle,
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Color(0xFFFCF7EF),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.35,
-                                    ),
+                                style: AppTypography.lora(
+                                  fontSize: 16,
+                                  color: Color(0XFFFFFFFF),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
@@ -238,7 +253,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
