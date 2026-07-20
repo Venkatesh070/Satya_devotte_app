@@ -191,34 +191,66 @@ class _ProductPaymentWebViewScreenState
       r.status == VerifyStatus.failed ||
       r.status == VerifyStatus.abandoned;
 
+  // ── Back-press handling ────────────────────────────────────
+  Future<bool> _onBack() async {
+    if (_completed) return true;
+    // Best-effort verify before leaving — the user may have actually paid or cancelled.
+    await _verifyAndRoute(silent: true);
+    if (_completed) return true;
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment'),
+    if (_init == null) {
+      return const Scaffold(
         backgroundColor: Color(0xFFFCF7EF),
-        foregroundColor: AppColors.textColor,
-        elevation: 0,
+        body: SizedBox.shrink(),
+      );
+    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldPop = await _onBack();
+        if (shouldPop && mounted) Get.back();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Payment'),
+          backgroundColor: Color(0xFFFCF7EF),
+          foregroundColor: AppColors.textColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final shouldPop = await _onBack();
+              if (shouldPop && mounted) {
+                Get.back();
+              }
+            },
+          ),
+        ),
+        body: kIsWeb
+            ? _PaymentWebFallback(
+                reference: _init?.reference ?? '',
+                relaunch: _launchWebPopup,
+                verifyNow: () => _verifyAndRoute(),
+              )
+            : Stack(
+                children: [
+                  if (_webview != null)
+                    WebViewWidget(controller: _webview!)
+                  else
+                    const SizedBox.shrink(),
+                  if (_pageLoading)
+                    const ColoredBox(
+                      color: Color(0xFFFCF7EF),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
       ),
-      body: kIsWeb
-          ? _PaymentWebFallback(
-              reference: _init?.reference ?? '',
-              relaunch: _launchWebPopup,
-              verifyNow: () => _verifyAndRoute(),
-            )
-          : Stack(
-              children: [
-                if (_webview != null)
-                  WebViewWidget(controller: _webview!)
-                else
-                  const SizedBox.shrink(),
-                if (_pageLoading)
-                  const ColoredBox(
-                    color: Color(0xFFFCF7EF),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-              ],
-            ),
     );
   }
 }

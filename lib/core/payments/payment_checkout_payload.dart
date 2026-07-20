@@ -203,6 +203,14 @@ Redirecting to secure payment&hellip;
     if (u.contains('donation/return')) return true;
     if (u.contains('order/return')) return true;
 
+    // App / backend cancel handlers.
+    final isCancelParameter = u.contains('cancel_url') ||
+        u.contains('cancel-url') ||
+        u.contains('cancelurl') ||
+        u.contains('cancel_return') ||
+        u.contains('cancel_redirect');
+    if (u.contains('cancel') && !isCancelParameter) return true;
+
     return false;
   }
 }

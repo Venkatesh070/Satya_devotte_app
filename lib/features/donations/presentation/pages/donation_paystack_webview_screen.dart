@@ -227,16 +227,7 @@ class _DonationPaystackWebViewScreenState
   // ── Back-press handling ────────────────────────────────────
   Future<bool> _onBack() async {
     if (_completed) return true;
-    // Let the WebView consume back navigation first (Paystack flows often
-    // have internal "back" steps like switching card type).
-    if (_webview != null) {
-      final canGoBack = await _webview!.canGoBack();
-      if (canGoBack) {
-        await _webview!.goBack();
-        return false;
-      }
-    }
-      // Best-effort verify before leaving — the user may have actually paid.
+    // Best-effort verify before leaving — the user may have actually paid.
     await _verifyAndRoute(silent: true);
     if (_completed) return true;
     return true;
@@ -255,7 +246,7 @@ class _DonationPaystackWebViewScreenState
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldPop = await _onBack();
-        if (shouldPop && mounted) Navigator.of(context).pop();
+        if (shouldPop && mounted) Get.back();
       },
       child: Scaffold(
         backgroundColor: Color(0xFFFCF7EF),
@@ -268,7 +259,7 @@ class _DonationPaystackWebViewScreenState
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               final shouldPop = await _onBack();
-              if (shouldPop && mounted) Navigator.of(context).pop();
+              if (shouldPop && mounted) Get.back();
             },
           ),
         ),
