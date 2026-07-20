@@ -1555,6 +1555,9 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['names'] ??
           deityDoc?['derivation'],
     );
+    final roles = _list(
+      deityDoc?['roles'] ?? deityDoc?['role'],
+    );
     final divineRole =
         _extractString(
           deityDoc?['divine_role'] ??
@@ -1682,6 +1685,11 @@ class _AboutDeityTab extends StatelessWidget {
           LabeledChipsField(
             label: 'Derivation/ Other Names / Forms (if applicable)',
             items: altNames,
+          ),
+        if (roles.isNotEmpty)
+          LabeledChipsField(
+            label: 'Roles',
+            items: roles,
           ),
         // if (divineRole.isNotEmpty)
         //   LabeledField(
