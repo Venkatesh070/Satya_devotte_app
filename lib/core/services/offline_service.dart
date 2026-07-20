@@ -161,7 +161,10 @@ class OfflineService extends GetxService {
           );
           return true;
         case 'start_pooja':
-          final res = await historyRepo.startPooja(payload['poojaId']);
+          final res = await historyRepo.startPooja(
+            payload['poojaId'],
+            scheduleId: payload['scheduleId'],
+          );
           return res['data'];
         case 'update_pooja_progress':
           await historyRepo.updateProgress(
@@ -173,7 +176,10 @@ class OfflineService extends GetxService {
           if (payload.containsKey('sessionId')) {
             await historyRepo.finishPoojaBySession(payload['sessionId']);
           } else {
-            await historyRepo.finishPooja(payload['poojaId']);
+            await historyRepo.finishPooja(
+              payload['poojaId'],
+              scheduleId: payload['scheduleId'],
+            );
           }
           return true;
         default:

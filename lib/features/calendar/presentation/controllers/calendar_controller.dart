@@ -338,7 +338,7 @@ class CalendarController extends GetxController {
         id: 'pooja_${event.title}_${event.date}',
         title: event.title,
         description: event.description,
-        date: DateTime(date.year, date.month, date.day),
+        date: date,
         reminderType: 'pooja',
       );
     }
@@ -405,7 +405,70 @@ class CalendarController extends GetxController {
           festivals.assignAll(
             rawFestivals.map((e) => FestivalModel.fromJson(e)).toList(),
           );
-          poojas.assignAll(rawPoojas.map((e) => PoojaView(e)).toList());
+          
+          final explodedPoojas = <PoojaView>[];
+          for (final raw in rawPoojas) {
+            if (raw is Map) {
+              final isDaily = raw['daily'] == true || raw['isDaily'] == true;
+              if (isDaily) {
+                explodedPoojas.add(PoojaView(Map<String, dynamic>.from(raw)));
+              } else {
+                final schedules = raw['schedules'];
+                if (schedules is List && schedules.isNotEmpty) {
+                  for (final s in schedules) {
+                    if (s is Map) {
+                      final dateVal = s['date']?.toString() ?? '';
+                      final timeVal = s['time']?.toString() ?? '';
+                      if (dateVal.isNotEmpty) {
+                        String combined = dateVal;
+                        try {
+                          final dateOnly = dateVal.split('T').first.trim();
+                          if (timeVal.isNotEmpty) {
+                            if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOnly)) {
+                              combined = '${dateOnly}T$timeVal:00';
+                            } else if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(dateOnly)) {
+                              final parts = dateOnly.split('-');
+                              combined = '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
+                            } else {
+                              final parsedDate = DateTime.tryParse(dateVal);
+                              if (parsedDate != null) {
+                                final parts = timeVal.split(':');
+                                final hour = int.tryParse(parts.first) ?? 0;
+                                final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                                final combinedDt = DateTime(
+                                  parsedDate.year,
+                                  parsedDate.month,
+                                  parsedDate.day,
+                                  hour,
+                                  minute,
+                                );
+                                combined = combinedDt.toIso8601String();
+                              }
+                            }
+                          }
+                        } catch (_) {}
+                        final copy = Map<String, dynamic>.from(raw);
+                        copy['scheduleId'] = (s['_id'] ?? s['id'])?.toString();
+                        explodedPoojas.add(
+                          PoojaView(
+                            copy,
+                            customDate: combined,
+                            scheduleId: copy['scheduleId'],
+                          ),
+                        );
+                      }
+                    }
+                  }
+                } else {
+                  explodedPoojas.add(PoojaView(Map<String, dynamic>.from(raw)));
+                }
+              }
+            } else {
+              explodedPoojas.add(PoojaView(raw));
+            }
+          }
+          poojas.assignAll(explodedPoojas);
+
           moonPhases.assignAll(
             rawMoonPhases.map((e) => MoonPhaseModel.fromJson(e)).toList(),
           );
@@ -550,7 +613,7 @@ class CalendarController extends GetxController {
     );
 
     events.addAll(
-      poojas.where((p) {
+      poojas.where((p) => !p.daily).where((p) {
         final pDate = _parseDate(p.date);
         return pDate != null &&
             pDate.year == dayOnly.year &&
@@ -558,6 +621,25 @@ class CalendarController extends GetxController {
             pDate.day == dayOnly.day;
       }),
     );
+
+    for (final p in poojas.where((p) => p.daily)) {
+      final startD = _parseDate(p.raw['date'] ?? p.raw['scheduledDate'] ?? p.raw['scheduledAt'] ?? '');
+      final firstSchedule = p.schedules.isNotEmpty ? p.schedules.first : null;
+      final schedDateStr = firstSchedule?['date']?.toString();
+      final schedD = schedDateStr != null ? _parseDate(schedDateStr) : null;
+      
+      final effectiveStart = startD ?? schedD ?? DateTime(2000);
+      final dayOnlyStart = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day);
+      
+      if (!dayOnly.isBefore(dayOnlyStart)) {
+        events.add(
+          PoojaView(
+            p.raw,
+            customDate: dayOnly.toIso8601String().split('T').first,
+          ),
+        );
+      }
+    }
 
     events.addAll(
       moonPhases.where((m) {

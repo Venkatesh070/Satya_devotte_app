@@ -94,6 +94,7 @@ class AppPages {
         pooja: Get.arguments['pooja'],
         initialStep: Get.arguments['initialStep'],
         sessionId: Get.arguments['sessionId'],
+        scheduleId: Get.arguments['scheduleId'],
       ),
       middlewares: [AuthGuard()],
     ),

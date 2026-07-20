@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart';
 // ════════════════════════════════════════════════════════════════
 
 class PoojaView {
-  PoojaView(this._raw);
+  PoojaView(this._raw, {this.customDate, this.scheduleId});
   final Map<String, dynamic> _raw;
+  final String? customDate;
+  final String? scheduleId;
 
   String _extractString(dynamic v) {
     if (v == null) return '';
@@ -49,16 +51,38 @@ class PoojaView {
   }
 
   String get status => (_raw['status'] ?? '').toString();
+
   String get date {
+    if (customDate != null) return customDate!;
+    final cd = _raw['customDate'];
+    if (cd != null) return cd.toString();
     final d = _raw['date'] ?? _raw['scheduledDate'] ?? _raw['scheduledAt'];
     if (d != null) return d.toString();
-    final schedules = _decodeList(_raw['schedules']);
-    if (schedules.isNotEmpty && schedules.first is Map) {
-      final s = (schedules.first as Map)['date'];
+    final schedulesList = _decodeList(_raw['schedules']);
+    if (schedulesList.isNotEmpty && schedulesList.first is Map) {
+      final s = (schedulesList.first as Map)['date'];
       if (s != null) return s.toString();
     }
     return '';
   }
+
+  List<Map<String, dynamic>> get schedules {
+    final list = _decodeList(_raw['schedules']);
+    return list.map((e) => _decodeMap(e)).toList();
+  }
+
+  bool get daily => _raw['daily'] == true || _raw['isDaily'] == true;
+
+  String get dailyTimeText {
+    final list = schedules;
+    if (list.isNotEmpty) {
+      final time = list.first['time']?.toString() ?? '';
+      if (time.isNotEmpty) return 'Daily at $time';
+    }
+    return 'Daily';
+  }
+
+  String? get selectedScheduleId => scheduleId ?? (_raw['scheduleId'] ?? _raw['selectedScheduleId'])?.toString();
 
   String get deityColor {
     final dDoc = deityDoc;

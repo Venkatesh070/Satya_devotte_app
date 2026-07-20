@@ -40,7 +40,9 @@ class CalendarEventDetailPage extends StatelessWidget {
     final date = _date(event);
     final imageUrl = _imageUrl(event);
     final dateLabel = date != null
-        ? DateFormat('EEEE, MMMM dd').format(date)
+        ? (date.hour != 0 || date.minute != 0
+            ? '${DateFormat('EEEE, MMMM dd').format(date)} at ${DateFormat('HH:mm').format(date)}'
+            : DateFormat('EEEE, MMMM dd').format(date))
         : '';
 
     return Material(

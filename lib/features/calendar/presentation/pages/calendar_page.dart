@@ -524,6 +524,7 @@ class _DayEventListTile extends StatelessWidget {
         title: event.title,
         description: event.description,
         date: _parseDate(event.date),
+        dateLabel: event.daily ? event.dailyTimeText : null,
         onTap: onTap,
       );
     }
@@ -805,6 +806,7 @@ class _EventsList extends StatelessWidget {
             title: e.title,
             description: e.description,
             date: _parseDate(e.date),
+            dateLabel: e.daily ? e.dailyTimeText : null,
             onTap: () => CalendarEventDetailPage.show(context, event: e),
           );
         }
@@ -820,12 +822,14 @@ class _GenericEventCard extends StatelessWidget {
     required this.description,
     required this.date,
     required this.onTap,
+    this.dateLabel,
   });
 
   final String title;
   final String description;
   final DateTime? date;
   final VoidCallback onTap;
+  final String? dateLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -834,6 +838,7 @@ class _GenericEventCard extends StatelessWidget {
       date: date,
       subtitle: description,
       onTap: onTap,
+      dateLabel: dateLabel,
     );
   }
 }
@@ -845,12 +850,14 @@ class _CalendarEntryCard extends StatelessWidget {
     required this.date,
     required this.subtitle,
     required this.onTap,
+    this.dateLabel,
   });
 
   final String title;
   final DateTime? date;
   final String subtitle;
   final VoidCallback onTap;
+  final String? dateLabel;
 
   static const _dateGradient = LinearGradient(
     colors: [Color(0xFF183EA4), Color(0xFFE35600)],
@@ -864,9 +871,11 @@ class _CalendarEntryCard extends StatelessWidget {
     final month = date != null
         ? DateFormat('MMM').format(date!).toUpperCase()
         : '---';
-    final dateLine = date != null
-        ? DateFormat('EEEE, MMMM dd').format(date!)
-        : '';
+    final dateLine = dateLabel ?? (date != null
+        ? (date!.hour != 0 || date!.minute != 0
+            ? '${DateFormat('EEEE, MMMM dd').format(date!)} - ${DateFormat('HH:mm').format(date!)}'
+            : DateFormat('EEEE, MMMM dd').format(date!))
+        : '');
 
     return Material(
       color: Colors.transparent,

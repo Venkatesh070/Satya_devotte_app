@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 
@@ -13,11 +15,31 @@ class PoojaHistoryController extends GetxController {
   final history = <String, dynamic>{}.obs;
   final pendingPoojas = <dynamic>[].obs;
   final finishedPoojas = <dynamic>[].obs;
+  final sessionDates = <String, String>{}.obs;
 
   @override
   void onInit() {
     super.onInit();
+    _loadSessionDates();
     fetchHistory();
+  }
+
+  Future<void> _saveSessionDates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pooja_session_dates_map', jsonEncode(sessionDates.value));
+    } catch (_) {}
+  }
+
+  Future<void> _loadSessionDates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('pooja_session_dates_map');
+      if (raw != null) {
+        final Map decoded = jsonDecode(raw);
+        sessionDates.assignAll(decoded.map((k, v) => MapEntry(k.toString(), v.toString())));
+      }
+    } catch (_) {}
   }
 
   Future<void> fetchHistory() async {
@@ -135,7 +157,7 @@ class PoojaHistoryController extends GetxController {
     return null;
   }
 
-  Future<Map<String, dynamic>?> startPooja(String poojaId) async {
+  Future<Map<String, dynamic>?> startPooja(String poojaId, {String? scheduleDate, String? scheduleId}) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
       // Offline start: create a temporary session
@@ -143,12 +165,28 @@ class PoojaHistoryController extends GetxController {
       await offlineService.queueAction('start_pooja', {
         'poojaId': poojaId,
         'tempId': tempId,
+        if (scheduleId != null) 'scheduleId': scheduleId,
       });
-      return {'_id': tempId, 'poojaId': poojaId, 'currentStep': 0};
+      final data = {'_id': tempId, 'poojaId': poojaId, 'currentStep': 0};
+      if (scheduleDate != null) {
+        sessionDates[tempId] = scheduleDate;
+        await _saveSessionDates();
+      }
+      return data;
     }
     try {
-      final result = await _repository.startPooja(poojaId);
-      return result['data'];
+      final result = await _repository.startPooja(poojaId, scheduleId: scheduleId);
+      final data = result['data'] ?? result;
+      debugPrint('[History Controller Debug] startPooja data = $data');
+      if (data is Map && scheduleDate != null) {
+        final sId = (data['_id'] ?? data['id'] ?? '').toString();
+        debugPrint('[History Controller Debug] startPooja sId = $sId | scheduleDate = $scheduleDate');
+        if (sId.isNotEmpty) {
+          sessionDates[sId] = scheduleDate;
+          await _saveSessionDates();
+        }
+      }
+      return data as Map<String, dynamic>?;
     } catch (e) {
       print('Error starting pooja: $e');
       return null;
@@ -171,14 +209,17 @@ class PoojaHistoryController extends GetxController {
     }
   }
 
-  Future<void> finishPooja(String poojaId) async {
+  Future<void> finishPooja(String poojaId, {String? scheduleId}) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
-      await offlineService.queueAction('finish_pooja', {'poojaId': poojaId});
+      await offlineService.queueAction('finish_pooja', {
+        'poojaId': poojaId,
+        if (scheduleId != null) 'scheduleId': scheduleId,
+      });
       return;
     }
     try {
-      await _repository.finishPooja(poojaId);
+      await _repository.finishPooja(poojaId, scheduleId: scheduleId);
       fetchHistory();
     } catch (e) {
       print('Error finishing pooja: $e');

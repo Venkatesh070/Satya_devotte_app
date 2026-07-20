@@ -833,8 +833,8 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 controller: _tabController,
                 children: [
                   Obx(() {
-                    final pending = _historyController.pendingPoojas.toList();
-                    final finished = _historyController.finishedPoojas.toList();
+                    final pending = _historyController.history['pending'] as List? ?? const [];
+                    final finished = _historyController.history['finished'] as List? ?? const [];
                     return _CalendarTab(
                       key: ValueKey('cal_${p.title}'),
                       pooja: p,
@@ -920,17 +920,106 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   bool _sessionMatchesPooja(Map session, Map<String, dynamic> pooja) {
     final sessionPooja = session['pooja'];
     if (sessionPooja is! Map) return false;
+    
+    // 1. Basic match: ID or Title must match
+    bool basicMatch = false;
     final sessionPoojaId = _entityId(sessionPooja);
     final poojaId = _entityId(pooja);
     if (sessionPoojaId.isNotEmpty && poojaId.isNotEmpty) {
-      return sessionPoojaId == poojaId;
+      basicMatch = sessionPoojaId == poojaId;
+    } else {
+      final sessionTitle = (sessionPooja['title'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
+      basicMatch = sessionTitle.isNotEmpty && sessionTitle == title;
     }
-    final sessionTitle = (sessionPooja['title'] ?? '')
-        .toString()
-        .trim()
-        .toLowerCase();
-    final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
-    return sessionTitle.isNotEmpty && sessionTitle == title;
+    if (!basicMatch) return false;
+
+    // 2. Schedule ID or Date matching
+    final isDaily = pooja['daily'] == true || pooja['isDaily'] == true;
+    final rawSchedules = pooja['schedules'];
+    final hasSchedules = rawSchedules is List && rawSchedules.isNotEmpty;
+
+    if (isDaily || hasSchedules) {
+      // Try scheduleId match first (most accurate)
+      final pScheduleId = pooja['scheduleId'] ?? pooja['selectedScheduleId'];
+      final sScheduleId = session['scheduleId'] ?? session['schedule'] ?? session['pooja']?['scheduleId'];
+      if (pScheduleId != null && sScheduleId != null && pScheduleId.toString().isNotEmpty && sScheduleId.toString().isNotEmpty) {
+        return pScheduleId.toString() == sScheduleId.toString();
+      }
+
+      // Fallback: Try date match
+      final sId = (session['_id'] ?? session['id'] ?? '').toString();
+      final localSavedDate = _historyController.sessionDates[sId];
+      
+      DateTime? sDate;
+      if (localSavedDate != null) {
+        sDate = DateTime.tryParse(localSavedDate);
+      }
+      sDate ??= _extractSessionDate(session);
+
+      final pDate = _extractPoojaDate(pooja);
+      if (sDate != null && pDate != null) {
+        final localS = sDate.toLocal();
+        final localP = pDate.toLocal();
+        return localS.year == localP.year &&
+               localS.month == localP.month &&
+               localS.day == localP.day;
+      }
+      
+      // If we are a scheduled or daily puja but could not match by ID or date, return false
+      // to avoid highlighting every occurrence as completed.
+      return false;
+    }
+
+    return true;
+  }
+
+  DateTime? _extractSessionDate(Map session) {
+    final dateFields = [
+      'poojaDate',
+      'scheduledDate',
+      'date',
+      'scheduledAt',
+      'finishedAt',
+      'createdAt',
+    ];
+    for (final field in dateFields) {
+      final raw = session[field] ?? session['pooja']?[field];
+      if (raw != null) {
+        try {
+          return DateTime.parse(raw.toString());
+        } catch (_) {}
+      }
+    }
+    return null;
+  }
+
+  DateTime? _extractPoojaDate(Map<String, dynamic> pooja) {
+    final customDate = pooja['customDate'];
+    if (customDate != null) {
+      try {
+        return DateTime.parse(customDate.toString());
+      } catch (_) {}
+    }
+    final d = pooja['date'] ?? pooja['scheduledDate'] ?? pooja['scheduledAt'];
+    if (d != null) {
+      try {
+        return DateTime.parse(d.toString());
+      } catch (_) {}
+    }
+    final schedules = pooja['schedules'];
+    if (schedules is List && schedules.isNotEmpty && schedules.first is Map) {
+      final s = (schedules.first as Map)['date'];
+      if (s != null) {
+        try {
+          return DateTime.parse(s.toString());
+        } catch (_) {}
+      }
+    }
+    return null;
   }
 
   void _showPujaPreviewModal(BuildContext context, PoojaView pooja) {
@@ -1049,9 +1138,18 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                   borderRadius: 14,
                   onTap: () {
                     Get.back();
+                    final rawPooja = pooja.raw;
+                    dynamic scheduleId = pooja.selectedScheduleId ?? rawPooja['scheduleId'] ?? rawPooja['selectedScheduleId'];
+                    if (scheduleId == null && pooja.schedules.isNotEmpty) {
+                      final firstSched = pooja.schedules.first;
+                      scheduleId = firstSched['_id'] ?? firstSched['id'];
+                    }
                     Get.toNamed(
                       AppRoutes.poojaWizard,
-                      arguments: {'pooja': pooja},
+                      arguments: {
+                        'pooja': pooja,
+                        'scheduleId': scheduleId?.toString(),
+                      },
                     );
                   },
                   textColor: AppColors.white,
@@ -2184,11 +2282,67 @@ class _CalendarTab extends StatelessWidget {
     final activePoojaId = (pooja.raw['_id'] ?? pooja.raw['id'] ?? '')
         .toString()
         .trim();
-    final calendarPoojas = poojas.isNotEmpty
+    final rawList = poojas.isNotEmpty
         ? poojas
         : activePoojaId.isNotEmpty
         ? [pooja.raw]
         : const <Map<String, dynamic>>[];
+
+    final List<Map<String, dynamic>> calendarPoojas = [];
+    for (final raw in rawList) {
+      final isDaily = raw['daily'] == true || raw['isDaily'] == true;
+      if (isDaily) {
+        final copy = Map<String, dynamic>.from(raw);
+        final todayStr = DateTime.now().toIso8601String().split('T').first;
+        copy['customDate'] = todayStr;
+        calendarPoojas.add(copy);
+      } else {
+        final schedules = raw['schedules'];
+        if (schedules is List && schedules.isNotEmpty) {
+          for (final s in schedules) {
+            if (s is Map) {
+              final dateVal = s['date']?.toString() ?? '';
+              final timeVal = s['time']?.toString() ?? '';
+              if (dateVal.isNotEmpty) {
+                String combined = dateVal;
+                try {
+                  final dateOnly = dateVal.split('T').first.trim();
+                  if (timeVal.isNotEmpty) {
+                    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOnly)) {
+                      combined = '${dateOnly}T$timeVal:00';
+                    } else if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(dateOnly)) {
+                      final parts = dateOnly.split('-');
+                      combined = '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
+                    } else {
+                      final parsedDate = DateTime.tryParse(dateVal);
+                      if (parsedDate != null) {
+                        final parts = timeVal.split(':');
+                        final hour = int.tryParse(parts.first) ?? 0;
+                        final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                        final combinedDt = DateTime(
+                          parsedDate.year,
+                          parsedDate.month,
+                          parsedDate.day,
+                          hour,
+                          minute,
+                        );
+                        combined = combinedDt.toIso8601String();
+                      }
+                    }
+                  }
+                } catch (_) {}
+                final copy = Map<String, dynamic>.from(raw);
+                copy['customDate'] = combined;
+                copy['scheduleId'] = (s['_id'] ?? s['id'])?.toString();
+                calendarPoojas.add(copy);
+              }
+            }
+          }
+        } else {
+          calendarPoojas.add(raw);
+        }
+      }
+    }
 
     if (calendarPoojas.isEmpty) {
       return _EmptyView(
@@ -2234,7 +2388,20 @@ class _CalendarTab extends StatelessWidget {
   static bool _samePooja(Map<String, dynamic> a, Map<String, dynamic> b) {
     final aId = (a['_id'] ?? a['id'] ?? '').toString();
     final bId = (b['_id'] ?? b['id'] ?? '').toString();
-    if (aId.isNotEmpty && bId.isNotEmpty) return aId == bId;
+    if (aId.isNotEmpty && bId.isNotEmpty) {
+      if (aId != bId) return false;
+      
+      // Try scheduleId match first
+      final aSchedId = a['scheduleId'] ?? a['selectedScheduleId'];
+      final bSchedId = b['scheduleId'] ?? b['selectedScheduleId'];
+      if (aSchedId != null && bSchedId != null && aSchedId.toString().isNotEmpty && bSchedId.toString().isNotEmpty) {
+        return aSchedId.toString() == bSchedId.toString();
+      }
+      
+      final aDate = a['customDate'] ?? a['date'] ?? a['scheduledDate'];
+      final bDate = b['customDate'] ?? b['date'] ?? b['scheduledDate'];
+      return aDate == bDate;
+    }
     return identical(a, b);
   }
 }
@@ -2265,7 +2432,7 @@ class _CalendarPujaCard extends StatelessWidget {
         ? pooja.deityName
         : pooja.category;
     final duration = pooja.duration.isNotEmpty ? pooja.duration : '45 min';
-    final date = _formatCalendarDate(pooja.date);
+    final date = pooja.daily ? pooja.dailyTimeText : _formatCalendarDate(pooja.date);
 
     return InkWell(
       onTap: onTap,
@@ -2407,7 +2574,13 @@ class _CalendarPujaCard extends StatelessWidget {
       'Dec',
     ];
     final day = parsed.day.toString().padLeft(2, '0');
-    return '$day ${months[parsed.month - 1]} ${parsed.year}';
+    final monthStr = months[parsed.month - 1];
+    if (parsed.hour != 0 || parsed.minute != 0) {
+      final hour = parsed.hour.toString().padLeft(2, '0');
+      final minute = parsed.minute.toString().padLeft(2, '0');
+      return '$day $monthStr ${parsed.year} at $hour:$minute';
+    }
+    return '$day $monthStr ${parsed.year}';
   }
 
   static DateTime? _parseDayMonthYear(String value) {

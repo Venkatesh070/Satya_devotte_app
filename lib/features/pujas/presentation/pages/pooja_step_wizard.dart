@@ -19,10 +19,12 @@ class PoojaStepWizard extends StatefulWidget {
     required this.pooja,
     this.initialStep,
     this.sessionId,
+    this.scheduleId,
   });
   final PoojaView pooja;
   final int? initialStep;
   final String? sessionId;
+  final String? scheduleId;
 
   @override
   State<PoojaStepWizard> createState() => _PoojaStepWizardState();
@@ -86,7 +88,11 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
     try {
       final historyCtrl = Get.find<PoojaHistoryController>();
-      final result = await historyCtrl.startPooja(widget.pooja.id);
+      final result = await historyCtrl.startPooja(
+        widget.pooja.id,
+        scheduleDate: widget.pooja.date,
+        scheduleId: widget.scheduleId,
+      );
       if (result != null) {
         if (mounted) {
           setState(() {
@@ -274,7 +280,10 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         _sessionId!,
       );
     } else {
-      await Get.find<PoojaHistoryController>().finishPooja(widget.pooja.id);
+      await Get.find<PoojaHistoryController>().finishPooja(
+        widget.pooja.id,
+        scheduleId: widget.scheduleId,
+      );
     }
     if (!mounted) return;
     Get.offAllNamed(AppRoutes.home);
