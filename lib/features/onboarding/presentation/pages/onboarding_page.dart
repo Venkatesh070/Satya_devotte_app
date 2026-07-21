@@ -177,12 +177,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   fit: BoxFit.cover,
                                 ),
                                 // const SizedBox(height: 10),
-                                Image.asset(
-                                  'assets/images/divider.png',
-                                  height: 23,
-                                  width: 152,
-                                  fit: BoxFit.cover,
-                                ),
+                                // Image.asset(
+                                //   'assets/images/divider.png',
+                                //   height: 23,
+                                //   width: 152,
+                                //   fit: BoxFit.cover,
+                                // ),
                               ] else ...[
                                 Text(
                                   slide.title,

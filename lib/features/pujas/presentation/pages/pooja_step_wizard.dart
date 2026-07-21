@@ -393,10 +393,14 @@ class _BaseWizardScreen extends StatelessWidget {
                                 vertical: 7,
                               ),
                               decoration: BoxDecoration(
-                                color: Color(0xFFFCF7EF).withValues(alpha: 0.07),
+                                color: Color(
+                                  0xFFFCF7EF,
+                                ).withValues(alpha: 0.07),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Color(0xFFFCF7EF).withValues(alpha: 0.18),
+                                  color: Color(
+                                    0xFFFCF7EF,
+                                  ).withValues(alpha: 0.18),
                                 ),
                               ),
                               child: Row(
@@ -429,7 +433,9 @@ class _BaseWizardScreen extends StatelessWidget {
                                     style: AppTypography.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Color(0xFFFCF7EF).withValues(alpha: 0.9),
+                                      color: Color(
+                                        0xFFFCF7EF,
+                                      ).withValues(alpha: 0.9),
                                     ),
                                   ),
                                 ],
@@ -461,9 +467,13 @@ class _BaseWizardScreen extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
-                                color: Color(0xFFFCF7EF).withValues(alpha: 0.08),
+                                color: Color(
+                                  0xFFFCF7EF,
+                                ).withValues(alpha: 0.08),
                                 border: Border.all(
-                                  color: Color(0xFFFCF7EF).withValues(alpha: 0.14),
+                                  color: Color(
+                                    0xFFFCF7EF,
+                                  ).withValues(alpha: 0.14),
                                 ),
                               ),
                               child: Row(
@@ -1598,7 +1608,11 @@ class _CompletionScreen extends StatelessWidget {
             ),
 
             const Spacer(),
-            _WizardButton(label: 'Back to Home', onTap: onFinish),
+            _WizardButton(
+              label: 'Back to Home',
+              onTap: onFinish,
+              showHome: false,
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -1719,19 +1733,51 @@ class _StepBlock {
 }
 
 class _WizardButton extends StatelessWidget {
-  const _WizardButton({required this.label, required this.onTap});
+  const _WizardButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.showHome = true,
+  });
+
   final String label;
   final VoidCallback onTap;
+  final bool showHome;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
+    final homeBtn = SizedBox(
+      height: 56,
+      child: OutlinedButton(
+        onPressed: () => Get.offAllNamed(AppRoutes.home),
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          foregroundColor: const Color(0xFFFCF7EF),
+          side: BorderSide(
+            color: const Color(0xFFFCF7EF).withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
+        child: Text(
+          'Home',
+          style: AppTypography.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+
+    final proceedBtn = SizedBox(
       height: 56,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFFFCF7EF),
+          padding: EdgeInsets.zero,
+          backgroundColor: const Color(0xFFFCF7EF),
           foregroundColor: const Color(0xFF255AE2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -1740,9 +1786,24 @@ class _WizardButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
+          style: AppTypography.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
+
+    if (showHome) {
+      return Row(
+        children: [
+          Expanded(child: homeBtn),
+          const SizedBox(width: 12),
+          Expanded(child: proceedBtn),
+        ],
+      );
+    }
+
+    return SizedBox(width: double.infinity, child: proceedBtn);
   }
 }
