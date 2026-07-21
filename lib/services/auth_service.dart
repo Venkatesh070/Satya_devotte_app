@@ -13,6 +13,15 @@ class AuthService {
       final methods = await _firebaseAuth.fetchSignInMethodsForEmail(
         normalizedEmail,
       );
+      // ignore: avoid_print
+      print("FORGOT_PASSWORD_DEBUG: Methods for $normalizedEmail: $methods");
+
+      if (methods.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'This email is not registered. Please sign up first.',
+        );
+      }
 
       if (methods.contains('google.com') && !methods.contains('password')) {
         throw FirebaseAuthException(
@@ -27,16 +36,10 @@ class AuthService {
         );
       }
       if (!methods.contains('password')) {
-        // When methods is empty/limited due Firebase project settings
-        // (e.g. Email Enumeration Protection), do not hard-fail here.
-        // We'll attempt sendPasswordResetEmail and rely on Firebase's
-        // explicit exception if truly invalid.
-        if (methods.isNotEmpty) {
-          throw FirebaseAuthException(
-            code: 'password-provider-not-enabled',
-            message: 'This account is not registered with email/password.',
-          );
-        }
+        throw FirebaseAuthException(
+          code: 'password-provider-not-enabled',
+          message: 'This account is not registered with email/password.',
+        );
       }
 
       await _firebaseAuth.sendPasswordResetEmail(email: normalizedEmail);
