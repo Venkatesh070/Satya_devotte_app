@@ -1163,9 +1163,6 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Pooja name is required';
-    if (_selectedDeityIds.isEmpty) {
-      return 'At least one deity is required';
-    }
     if (_durationCtrl.text.trim().isEmpty) return 'Duration is required';
     return null;
   }
@@ -2215,7 +2212,7 @@ class _PoojaFormState extends State<_PoojaForm> {
                   final loaded = widget.controller.deitiesLoaded;
 
                   return CmsMultiSelectField(
-                    label: 'Deity *',
+                    label: 'Deity',
                     hintText: 'Select deities',
                     isLoading: isLoading && !loaded,
                     loadingText: 'Loading deities...',
