@@ -9,40 +9,49 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F1E8),
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Card(
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Obx(
-                      () => Form(
-                        key: controller.formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            IconButton(
-                              onPressed: controller.isLoading.value
-                                  ? null
-                                  : Get.back,
-                              icon: const Icon(Icons.arrow_back),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Forgot Password',
-                              style: TextStyle(
-                                fontSize: 24,
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          controller.resetState();
+        }
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF5F1E8),
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Obx(
+                        () => Form(
+                          key: controller.formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              IconButton(
+                                onPressed: controller.isLoading.value
+                                    ? null
+                                    : () {
+                                        controller.resetState();
+                                        Get.back();
+                                      },
+                                icon: const Icon(Icons.arrow_back),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Forgot Password',
+                                style: TextStyle(
+                                  fontSize: 24,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -186,6 +195,7 @@ class ForgotPasswordScreen extends GetView<ForgotPasswordController> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ),

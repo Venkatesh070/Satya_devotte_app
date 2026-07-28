@@ -18,6 +18,32 @@ class ForgotPasswordController extends GetxController {
   final cooldownSeconds = 0.obs;
   Timer? _cooldownTimer;
 
+  @override
+  void onInit() {
+    super.onInit();
+    emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    if (isSuccess.value) {
+      isSuccess.value = false;
+    }
+    if (emailController.text.trim().isEmpty) {
+      resetState(clearText: false);
+    }
+  }
+
+  void resetState({bool clearText = true}) {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = null;
+    cooldownSeconds.value = 0;
+    isSuccess.value = false;
+    isLoading.value = false;
+    if (clearText) {
+      emailController.clear();
+    }
+  }
+
   String? validateEmail(String? value) {
     final email = (value ?? '').trim().toLowerCase();
     if (email.isEmpty) return 'Email is required';
@@ -59,14 +85,8 @@ class ForgotPasswordController extends GetxController {
         return 'This email is not registered. Please sign up first.';
       case 'network-request-failed':
         return 'Network error. Please check your internet connection';
-      case 'google-sign-in-only':
-        return 'This account uses Google Sign-In';
-      case 'apple-sign-in-only':
-        return 'This account uses Apple Sign-In';
       case 'too-many-requests':
         return 'Too many requests. Please try again later';
-      case 'password-provider-not-enabled':
-        return 'This account is not registered with email/password.';
       default:
         return e.message ?? 'Unable to send reset link';
     }
@@ -88,6 +108,7 @@ class ForgotPasswordController extends GetxController {
 
   @override
   void onClose() {
+    emailController.removeListener(_onEmailChanged);
     _cooldownTimer?.cancel();
     emailController.dispose();
     super.onClose();

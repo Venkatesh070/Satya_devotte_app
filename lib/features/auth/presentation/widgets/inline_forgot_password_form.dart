@@ -35,7 +35,12 @@ class InlineForgotPasswordForm extends StatelessWidget {
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: forgotCtrl.isLoading.value ? null : onBack,
+                  onTap: forgotCtrl.isLoading.value
+                      ? null
+                      : () {
+                          forgotCtrl.resetState();
+                          onBack();
+                        },
                   child: const Padding(
                     padding: EdgeInsets.all(9),
                     child: Icon(

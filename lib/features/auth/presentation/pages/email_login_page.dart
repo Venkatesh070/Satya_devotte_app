@@ -38,12 +38,14 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
 
   void _openForgotPassword() {
     final forgotCtrl = Get.find<ForgotPasswordController>();
+    forgotCtrl.resetState(clearText: false);
     forgotCtrl.emailController.text = _emailController.text.trim();
-    forgotCtrl.isSuccess.value = false;
     setState(() => _showForgotPassword = true);
   }
 
   void _closeForgotPassword() {
+    final forgotCtrl = Get.find<ForgotPasswordController>();
+    forgotCtrl.resetState();
     setState(() => _showForgotPassword = false);
   }
 
