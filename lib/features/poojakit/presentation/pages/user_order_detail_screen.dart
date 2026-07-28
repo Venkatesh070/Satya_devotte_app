@@ -32,12 +32,14 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
   void initState() {
     super.initState();
     _order = Get.arguments as AdminOrder;
+    debugPrint('UserOrderDetailScreen: order.id=${_order.id}, payfastPaymentId=${_order.payfastPaymentId}, paymentReference=${_order.paymentReference}');
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
   Future<void> _refresh() async {
     final updated = await _c.refreshOrderDetail(_order.id);
     if (updated != null && mounted) {
+      debugPrint('UserOrderDetailScreen (refreshed): order.id=${updated.id}, payfastPaymentId=${updated.payfastPaymentId}, paymentReference=${updated.paymentReference}');
       setState(() => _order = updated);
     }
   }
@@ -229,7 +231,11 @@ class _DeliveryCard extends StatelessWidget {
             shaderCallback: (bounds) => const LinearGradient(
               colors: [Color(0xFF183EA4), Color(0xFFE35600)],
             ).createShader(bounds),
-            child: const Icon(Icons.location_on, size: 16, color: Color(0xFFFCF7EF)),
+            child: const Icon(
+              Icons.location_on,
+              size: 16,
+              color: Color(0xFFFCF7EF),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -327,6 +333,7 @@ class _TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('_TransactionCard build: payfastPaymentId=${order.payfastPaymentId}');
     return _SummaryCard(
       title: 'Transaction Summary',
       child: Column(
@@ -334,9 +341,9 @@ class _TransactionCard extends StatelessWidget {
           _RowLine(label: 'Transaction Date', value: order.formattedDate),
           _RowLine(
             label: 'Transaction ID',
-            value: order.paymentReference.isEmpty
-                ? order.orderNumber
-                : order.paymentReference,
+            value: (order.payfastPaymentId ?? '').trim().isEmpty
+                ? '—'
+                : order.payfastPaymentId!,
           ),
           _RowLine(
             label: 'Order Status',

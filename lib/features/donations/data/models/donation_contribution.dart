@@ -33,6 +33,7 @@ class DonationContribution {
     required this.donationId,
     required this.donationTitle,
     this.reference,
+    this.payfastPaymentId,
     this.transactionId,
     this.createdAt,
     this.note,
@@ -49,6 +50,7 @@ class DonationContribution {
   final String donationId;
   final String donationTitle;
   final String? reference;
+  final String? payfastPaymentId;
   /// Gateway / processor transaction id (e.g. PayFast payment id).
   final String? transactionId;
   final DateTime? createdAt;
@@ -96,6 +98,9 @@ class DonationContribution {
             json['paymentReference'] ??
             json['payfastReference'] ??
             json['paystackReference'],
+      ),
+      payfastPaymentId: _nullableStr(
+        json['payfastPaymentId'] ?? json['pf_payment_id'],
       ),
       transactionId: _nullableStr(json['transactionId']),
       createdAt: () {
@@ -146,14 +151,10 @@ class DonationContribution {
     return '$d • $t';
   }
 
-  /// Shown under amount on history (payment ref / contribution #).
+  /// Shown under amount on history (payfastPaymentId if present, else '—').
   String get displayTransactionLine {
-    final tid = (transactionId ?? '').trim();
-    if (tid.isNotEmpty) return tid;
-    final cn = contributionNumber.trim();
-    if (cn.isNotEmpty) return cn;
-    final ref = (reference ?? '').trim();
-    if (ref.isNotEmpty) return ref;
-    return '';
+    final pf = (payfastPaymentId ?? '').trim();
+    if (pf.isNotEmpty) return pf;
+    return '—';
   }
 }

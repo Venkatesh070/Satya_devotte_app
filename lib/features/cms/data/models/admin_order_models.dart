@@ -3,6 +3,7 @@
 // up the UI.
 //
 // Source of truth: Flutter-cms-refund&orders&payments.plan §6.
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 /// Fulfilment status from the backend `orderStatus` enum.
@@ -401,6 +402,7 @@ class AdminOrder {
     required this.paymentStatus,
     required this.paymentMethod,
     required this.paymentReference,
+    this.payfastPaymentId,
     required this.currency,
     required this.totalAmount,
     required this.subtotalAmount,
@@ -426,6 +428,7 @@ class AdminOrder {
   final PaymentStatus paymentStatus;
   final String paymentMethod;
   final String paymentReference;
+  final String? payfastPaymentId;
   final String currency;
   final double totalAmount;
   final double subtotalAmount;
@@ -512,6 +515,13 @@ class AdminOrder {
                   json['reference'] ??
                   '')
               .toString(),
+      payfastPaymentId: () {
+        final pfId = (json['payfastPaymentId'] ?? json['pf_payment_id']) != null
+            ? (json['payfastPaymentId'] ?? json['pf_payment_id']).toString()
+            : null;
+        debugPrint('AdminOrder.fromJson: orderNumber=${json['orderNumber']}, payfastPaymentId=$pfId');
+        return pfId;
+      }(),
       currency:
           (json['currency'] ?? 'ZAR').toString().toUpperCase().trim().isEmpty
           ? 'ZAR'
@@ -571,6 +581,7 @@ class AdminOrder {
       paymentStatus: paymentStatus,
       paymentMethod: paymentMethod,
       paymentReference: paymentReference,
+      payfastPaymentId: payfastPaymentId,
       currency: currency,
       totalAmount: totalAmount,
       subtotalAmount: subtotalAmount,

@@ -1556,7 +1556,7 @@ class _WideTable extends StatelessWidget {
                           : CmsColors.textPrimary,
                     ),
                   )),
-                  _pad(_ReferenceCell(reference: c.reference)),
+                  _pad(_ReferenceCell(reference: c.payfastPaymentId)),
                 ],
               ),
           ],
@@ -1689,7 +1689,7 @@ class _ContributionCard extends StatelessWidget {
               ),
               Expanded(
                 child: _ReferenceCell(
-                  reference: c.reference,
+                  reference: c.payfastPaymentId,
                   dense: true,
                 ),
               ),

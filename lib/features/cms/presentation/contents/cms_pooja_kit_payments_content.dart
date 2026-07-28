@@ -516,7 +516,9 @@ class _PaymentRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(top: 2),
               child: SelectableText(
-                order.paymentReference.isEmpty ? '—' : order.paymentReference,
+                (order.payfastPaymentId ?? '').trim().isEmpty
+                    ? '—'
+                    : order.payfastPaymentId!,
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
@@ -600,7 +602,7 @@ class _PaymentsCards extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               SelectableText(
-                'Ref: ${o.paymentReference.isEmpty ? '—' : o.paymentReference}',
+                'Ref: ${(o.payfastPaymentId ?? '').trim().isEmpty ? '—' : o.payfastPaymentId!}',
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',

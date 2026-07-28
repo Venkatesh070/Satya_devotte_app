@@ -446,7 +446,7 @@ class DeitySectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          RichTextDisplay(
             title,
             style: AppTypography.lora(
               fontSize: 12,
@@ -457,7 +457,7 @@ class DeitySectionCard extends StatelessWidget {
           ),
           if (summaryText.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(
+            RichTextDisplay(
               summaryText,
               style: AppTypography.inter(
                 fontSize: 13,
@@ -474,7 +474,7 @@ class DeitySectionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if ((item['title']?.toString() ?? '').isNotEmpty)
-                    Text(
+                    RichTextDisplay(
                       item['title'].toString(),
                       style: AppTypography.inter(
                         fontSize: 13,
@@ -484,7 +484,7 @@ class DeitySectionCard extends StatelessWidget {
                     ),
                   const SizedBox(height: 3),
                   if ((item['description']?.toString() ?? '').isNotEmpty)
-                    Text(
+                    RichTextDisplay(
                       item['description'].toString(),
                       style: AppTypography.inter(
                         fontSize: 13,

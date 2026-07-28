@@ -1168,9 +1168,9 @@ class _SummaryCard extends StatelessWidget {
         const SizedBox(height: 12),
         _MetaPair(
           label: 'Reference',
-          value: order.paymentReference.isEmpty
+          value: (order.payfastPaymentId ?? '').trim().isEmpty
               ? '—'
-              : order.paymentReference,
+              : order.payfastPaymentId!,
         ),
         const SizedBox(height: 12),
         _MetaPair(

@@ -2017,7 +2017,7 @@ class _LabeledTitleDescriptionList extends StatelessWidget {
           const SizedBox(height: 8),
           for (int i = 0; i < items.length; i++) ...[
             if (items[i].title.isNotEmpty)
-              Text(
+              RichTextDisplay(
                 items[i].title,
                 style: AppTypography.inter(
                   fontSize: 13.5,

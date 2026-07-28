@@ -65,6 +65,8 @@ class ContributionTile extends StatelessWidget {
               _ReceiptRow('Date', contribution.formattedDate),
             if (contribution.contributionNumber.isNotEmpty)
               _ReceiptRow('Receipt #', contribution.contributionNumber),
+            if ((contribution.payfastPaymentId ?? '').trim().isNotEmpty)
+              _ReceiptRow('PayFast Ref', contribution.payfastPaymentId!.trim()),
             const SizedBox(height: 20),
             DonationOrangeButton(label: 'Close', onPressed: Get.back),
           ],
