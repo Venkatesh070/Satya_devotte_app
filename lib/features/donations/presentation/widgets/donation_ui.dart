@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation_contribution.dart';
+import 'package:satya_devotte_app/features/donations/presentation/widgets/status_badge.dart';
 
 /// Design tokens from Sathya Devotee Figma (profile + donations).
 abstract final class DonationUi {
@@ -548,78 +549,88 @@ class RecordDonationTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: DonationUi.cardFill,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 8),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                decoration: BoxDecoration(
+                  color: DonationUi.cardFill,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: DonationUi.textPrimary,
-                        ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: DonationUi.textPrimary,
+                            ),
+                          ),
+                          if (dateLine.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              dateLine,
+                              style: AppTypography.inter(
+                                fontSize: 12,
+                                height: 1.35,
+                                color: DonationUi.textMuted,
+                              ),
+                            ),
+                          ],
+                          if (txnLine.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ref: $txnLine',
+                              style: AppTypography.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: DonationUi.textMuted,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      if (dateLine.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const SizedBox(height: 24),
                         Text(
-                          dateLine,
+                          contribution.formattedAmount,
                           style: AppTypography.inter(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: DonationUi.textMuted,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: DonationUi.textPrimary,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      contribution.formattedAmount,
-                      style: AppTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: DonationUi.textPrimary,
-                      ),
                     ),
-                    if (txnLine.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        txnLine,
-                        textAlign: TextAlign.right,
-                        style: AppTypography.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: DonationUi.textMuted,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-              ],
-            ),
+              ),
+              Positioned(
+                top: 0,
+                right: -6,
+                child: StatusBadge(status: contribution.status),
+              ),
+            ],
           ),
         ),
       ),
