@@ -165,7 +165,54 @@ class AuthController extends GetxController {
       if (isRegularUser) {
         _startRegularUserBackgroundMusic();
       }
+    } else if (_authSessionService.wasSessionExpiredOnLaunch) {
+      _showExpiredSnackBar(
+        'Your session expired due to 7 days of inactivity. Please sign in again.',
+      );
     }
+  }
+
+  bool _isHandlingSessionExpired = false;
+
+  /// Triggered automatically when an API request encounters HTTP 401.
+  Future<void> handleSessionExpired({String? message}) async {
+    if (_isHandlingSessionExpired) return;
+    _isHandlingSessionExpired = true;
+
+    try {
+      _stopCmsBackgroundMusicIfNeeded();
+      _stopRegularUserBackgroundMusic();
+
+      _isAuthenticated.value = false;
+      _userRole.value = 'user';
+      await _clearAuthSession();
+      _clearProfileControllerCache();
+      _clearCartOnLogout();
+
+      try {
+        await _firebaseService.signOut();
+      } catch (_) {}
+
+      final msg = message ?? 'Your session has expired. Please sign in again.';
+      _showExpiredSnackBar(msg);
+
+      Get.offAllNamed(AppRoutes.login);
+    } finally {
+      _isHandlingSessionExpired = false;
+    }
+  }
+
+  void _showExpiredSnackBar(String message) {
+    if (Get.isSnackbarOpen) return;
+    Get.snackbar(
+      'Session Expired',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF2C2C2E),
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 4),
+    );
   }
 
   /// Keeps [ProfileController] in sync after login / cold-start restore so

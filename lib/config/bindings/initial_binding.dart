@@ -77,6 +77,12 @@ class InitialBinding extends Bindings {
       ApiClient(
         loadingService: Get.find<ApiLoadingService>(),
         tokenProvider: () => Get.find<AuthSessionService>().getAccessToken(),
+        onActivityTouch: () => Get.find<AuthSessionService>().touchActivity(),
+        onUnauthorized: () {
+          if (Get.isRegistered<AuthController>()) {
+            Get.find<AuthController>().handleSessionExpired();
+          }
+        },
       ),
       permanent: true,
     );

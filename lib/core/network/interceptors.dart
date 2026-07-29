@@ -44,8 +44,9 @@ class ApiLoadingInterceptor extends Interceptor {
 }
 
 class AuthTokenInterceptor extends Interceptor {
-  AuthTokenInterceptor(this._tokenProvider);
+  AuthTokenInterceptor(this._tokenProvider, {this.onActivityTouch});
   final Future<String?> Function() _tokenProvider;
+  final void Function()? onActivityTouch;
 
   bool _hasAuthorizationHeader(RequestOptions options) {
     final existingHeader = options.headers.entries.firstWhere(
@@ -68,16 +69,19 @@ class AuthTokenInterceptor extends Interceptor {
     final token = await _tokenProvider();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+      onActivityTouch?.call();
     }
     handler.next(options);
   }
 }
 
 class ApiErrorInterceptor extends Interceptor {
-  ApiErrorInterceptor(this._dio);
+  ApiErrorInterceptor(this._dio, {this.onUnauthorized});
 
   final Dio _dio;
+  final void Function()? onUnauthorized;
   static const int _maxRateLimitRetries = 2;
+  static bool _isHandlingUnauthorized = false;
 
   int _retryCount(RequestOptions options) =>
       (options.extra['rateLimitRetryCount'] as int?) ?? 0;
@@ -100,11 +104,32 @@ class ApiErrorInterceptor extends Interceptor {
     return Duration(seconds: attempt + 1);
   }
 
+  bool _isAuthLoginEndpoint(String path) {
+    final lower = path.toLowerCase();
+    return lower.contains('/auth/login') ||
+        lower.contains('/auth/admin/login') ||
+        lower.contains('/auth/firebase-login');
+  }
+
   @override
   Future<void> onError(
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
+    final statusCode = err.response?.statusCode;
+
+    // Handle 401 Unauthorized for expired tokens on protected endpoints
+    if (statusCode == 401 && !_isAuthLoginEndpoint(err.requestOptions.path)) {
+      if (!_isHandlingUnauthorized) {
+        _isHandlingUnauthorized = true;
+        onUnauthorized?.call();
+        // Reset guard after 3 seconds to allow future auth cycles
+        Future.delayed(const Duration(seconds: 3), () {
+          _isHandlingUnauthorized = false;
+        });
+      }
+    }
+
     if (_canRetry(err)) {
       final options = err.requestOptions;
       final nextRetryCount = _retryCount(options) + 1;
