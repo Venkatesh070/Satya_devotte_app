@@ -8,21 +8,12 @@ class ApiClient {
   ApiClient({
     required ApiLoadingService loadingService,
     Future<String?> Function()? tokenProvider,
-    void Function()? onActivityTouch,
-    void Function()? onUnauthorized,
   }) : dio = Dio(_baseOptions()) {
     dio.interceptors.add(ApiLoadingInterceptor(loadingService));
     if (tokenProvider != null) {
-      dio.interceptors.add(
-        AuthTokenInterceptor(
-          tokenProvider,
-          onActivityTouch: onActivityTouch,
-        ),
-      );
+      dio.interceptors.add(AuthTokenInterceptor(tokenProvider));
     }
-    dio.interceptors.add(
-      ApiErrorInterceptor(dio, onUnauthorized: onUnauthorized),
-    );
+    dio.interceptors.add(ApiErrorInterceptor(dio));
   }
 
   final Dio dio;
