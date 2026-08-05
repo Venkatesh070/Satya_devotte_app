@@ -95,8 +95,8 @@ class StoryCard extends StatelessWidget {
             Text(
               title,
               style: AppTypography.lora(
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
                 color: const Color(0xFF1C1917),
                 height: 1.3,
               ),

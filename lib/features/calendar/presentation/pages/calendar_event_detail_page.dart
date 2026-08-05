@@ -338,7 +338,7 @@ class _EventDetailActions extends StatelessWidget {
                     if (confirmed == true) {
                       final userEvent = event as UserCalendarEvent;
                       controller.removeUserEvent(userEvent.id);
-                      Navigator.of(context).pop();
+                      if (context.mounted) Navigator.of(context).pop();
                       ToastUtil.showInfo('${userEvent.name} removed');
                     }
                   });
@@ -425,20 +425,23 @@ class _HeroImage extends StatelessWidget {
     final placeholder = Image.asset(
       'assets/images/default_img.png',
       fit: BoxFit.cover,
+      alignment: Alignment.center,
     );
     if (url == null || url!.isEmpty) return placeholder;
     if (url!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: url!,
         fit: BoxFit.cover,
-        placeholder: (_, __) => placeholder,
-        errorWidget: (_, __, ___) => placeholder,
+        alignment: Alignment.topCenter,
+        placeholder: (_, _) => placeholder,
+        errorWidget: (_, _, _) => placeholder,
       );
     }
     return Image.asset(
       url!,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => placeholder,
+      alignment: Alignment.topCenter,
+      errorBuilder: (_, _, _) => placeholder,
     );
   }
 }

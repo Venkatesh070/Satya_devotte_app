@@ -670,20 +670,23 @@ class _FestivalImage extends StatelessWidget {
     final ph = Image.asset(
       'assets/images/default_img.png',
       fit: BoxFit.cover,
+      alignment: Alignment.center,
     );
     if (url == null || url!.isEmpty) return ph;
     if (url!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: url!,
         fit: BoxFit.cover,
-        placeholder: (_, __) => ph,
-        errorWidget: (_, __, ___) => ph,
+        alignment: Alignment.topCenter,
+        placeholder: (_, _) => ph,
+        errorWidget: (_, _, _) => ph,
       );
     }
     return Image.asset(
       url!,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => ph,
+      alignment: Alignment.topCenter,
+      errorBuilder: (_, _, _) => ph,
     );
   }
 }
