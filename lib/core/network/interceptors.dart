@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:satya_devotte_app/core/services/api_loading_service.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 /// Set on [RequestOptions.extra] to skip the global chakra loader for a call.
 const String kSkipApiLoaderKey = 'skipApiLoader';
@@ -105,6 +108,29 @@ class ApiErrorInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
+    final statusCode = err.response?.statusCode;
+    final path = err.requestOptions.path.toLowerCase();
+
+    // Auto-logout user if server returns 401 Unauthorized on protected calls
+    if (statusCode == 401 &&
+        !path.contains('/login') &&
+        !path.contains('/register') &&
+        !path.contains('/auth/firebase-login')) {
+      if (Get.isRegistered<AuthController>()) {
+        final authController = Get.find<AuthController>();
+        if (authController.isAuthenticated) {
+          debugPrint(
+            'ApiErrorInterceptor: 401 Unauthorized received on $path. Triggering automatic logout.',
+          );
+          Future.microtask(() {
+            authController.handleExpiredToken(
+              reason: 'Your session has expired. Please sign in again.',
+            );
+          });
+        }
+      }
+    }
+
     if (_canRetry(err)) {
       final options = err.requestOptions;
       final nextRetryCount = _retryCount(options) + 1;

@@ -75,6 +75,7 @@ class OnboardingStyleBackground extends StatelessWidget {
                         child: Image.asset(
                           'assets/images/chakra1.png',
                           filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
                         ),
                       ),
                       Transform.rotate(
@@ -84,6 +85,7 @@ class OnboardingStyleBackground extends StatelessWidget {
                           child: Image.asset(
                             'assets/images/chakra2.png',
                             filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
                           ),
                         ),
                       ),
@@ -94,6 +96,7 @@ class OnboardingStyleBackground extends StatelessWidget {
                           child: Image.asset(
                             'assets/images/chakra3.png',
                             filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
                           ),
                         ),
                       ),
@@ -104,6 +107,7 @@ class OnboardingStyleBackground extends StatelessWidget {
                           child: Image.asset(
                             'assets/images/chakra4.png',
                             filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
                           ),
                         ),
                       ),
@@ -112,6 +116,7 @@ class OnboardingStyleBackground extends StatelessWidget {
                         child: Image.asset(
                           'assets/images/onBoardBgOverlay.png',
                           filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
                         ),
                       ),
                     ],

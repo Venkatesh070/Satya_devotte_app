@@ -52,7 +52,7 @@ class _SplashPageState extends State<SplashPage>
 
   Future<void> _navigate() async {
     // Wait for splash to show
-    await Future<void>.delayed(const Duration(seconds: 2));
+    await Future<void>.delayed(const Duration(seconds: 5));
     if (!mounted) return;
 
     final auth = Get.find<AuthController>();
@@ -76,7 +76,8 @@ class _SplashPageState extends State<SplashPage>
         debugPrint('[splash cold] type=${initialMsg.data['type']}');
       }
       if (!AdminNotificationRouter.isOperationalType(
-          initialMsg.data['type']?.toString())) {
+        initialMsg.data['type']?.toString(),
+      )) {
         Get.offAllNamed(AppRoutes.notifications, arguments: initialMsg.data);
       }
       await Get.find<NotificationService>().processPendingNotifications();
@@ -160,7 +161,10 @@ class _SplashPageState extends State<SplashPage>
                             children: [
                               Transform.rotate(
                                 angle: spin,
-                                child: Image.asset('assets/images/chakra1.png'),
+                                child: Image.asset(
+                                  'assets/images/chakra1.png',
+                                  gaplessPlayback: true,
+                                ),
                               ),
                               Transform.rotate(
                                 angle: -spin,
@@ -168,6 +172,7 @@ class _SplashPageState extends State<SplashPage>
                                   scale: 0.90,
                                   child: Image.asset(
                                     'assets/images/chakra2.png',
+                                    gaplessPlayback: true,
                                   ),
                                 ),
                               ),
@@ -177,6 +182,7 @@ class _SplashPageState extends State<SplashPage>
                                   scale: 0.80,
                                   child: Image.asset(
                                     'assets/images/chakra3.png',
+                                    gaplessPlayback: true,
                                   ),
                                 ),
                               ),
@@ -186,6 +192,7 @@ class _SplashPageState extends State<SplashPage>
                                   scale: 0.53,
                                   child: Image.asset(
                                     'assets/images/chakra4.png',
+                                    gaplessPlayback: true,
                                   ),
                                 ),
                               ),

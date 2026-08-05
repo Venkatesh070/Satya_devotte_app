@@ -91,6 +91,7 @@ class _AppBackgroundState extends State<AppBackground>
       width: width,
       height: height,
       fit: BoxFit.contain,
+      gaplessPlayback: true,
       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
     );
 
@@ -115,6 +116,7 @@ class _AppBackgroundState extends State<AppBackground>
           Image.asset(
             AppBackground.assetPath,
             fit: BoxFit.cover,
+            gaplessPlayback: true,
             errorBuilder: (context, error, stackTrace) => const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -137,6 +139,7 @@ class _AppBackgroundState extends State<AppBackground>
               width: glowSize,
               height: glowSize,
               fit: BoxFit.contain,
+              gaplessPlayback: true,
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
@@ -162,6 +165,7 @@ class _AppBackgroundState extends State<AppBackground>
                           width: vectorSize,
                           height: vectorSize,
                           fit: BoxFit.contain,
+                          gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                         ),
                       )
@@ -170,6 +174,7 @@ class _AppBackgroundState extends State<AppBackground>
                         width: vectorSize,
                         height: vectorSize,
                         fit: BoxFit.contain,
+                        gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                       ),
               ),
@@ -188,6 +193,7 @@ class _AppBackgroundState extends State<AppBackground>
                           width: vectorSize,
                           height: vectorSize,
                           fit: BoxFit.contain,
+                          gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                         ),
                       )
@@ -196,6 +202,7 @@ class _AppBackgroundState extends State<AppBackground>
                         width: vectorSize,
                         height: vectorSize,
                         fit: BoxFit.contain,
+                        gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                       ),
               ),

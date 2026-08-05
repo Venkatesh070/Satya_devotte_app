@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
@@ -148,10 +150,71 @@ class AuthController extends GetxController {
     });
   }
 
+  /// Decodes local JWT payload to check if exp timestamp is in the past.
+  bool isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      final normalized = base64Url.normalize(parts[1]);
+      final resp = utf8.decode(base64Url.decode(normalized));
+      final payload = jsonDecode(resp);
+      if (payload is Map && payload.containsKey('exp')) {
+        final exp = payload['exp'];
+        if (exp is num) {
+          final expiryDate =
+              DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+          return DateTime.now().isAfter(expiryDate);
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Automatically log out when the auth token is expired (either checked on app launch or on receiving HTTP 401).
+  Future<void> handleExpiredToken({String? reason}) async {
+    if (!_isAuthenticated.value && _authSessionService.accessToken == null) {
+      return;
+    }
+
+    debugPrint(
+      'AuthController.handleExpiredToken: ${reason ?? 'Session expired.'}',
+    );
+
+    _stopCmsBackgroundMusicIfNeeded();
+    _stopRegularUserBackgroundMusic();
+
+    _isAuthenticated.value = false;
+    _userRole.value = 'user';
+    await _clearAuthSession();
+    _clearProfileControllerCache();
+    _clearCartOnLogout();
+
+    try {
+      await _firebaseService.signOut();
+    } catch (_) {}
+
+    ToastUtil.showInfo(
+      reason ?? 'Your session has expired. Please sign in again.',
+    );
+
+    Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
+  }
+
   /// Call this from SplashPage to restore session on app start.
   Future<void> loadSavedSession() async {
     final restored = await _authSessionService.loadPersistedSession();
     if (restored) {
+      final token = _authSessionService.accessToken;
+      if (token != null && token.isNotEmpty && isTokenExpired(token)) {
+        debugPrint(
+          'AuthController.loadSavedSession: Access token is expired on launch. Logging out.',
+        );
+        await handleExpiredToken(
+          reason: 'Your session has expired. Please sign in again.',
+        );
+        return;
+      }
+
       _isAuthenticated.value = true;
       _userRole.value = _authSessionService.userRole;
       _syncSessionUser();
