@@ -397,7 +397,7 @@ class DonationsOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          DonationOrangeButton(label: 'Contribute Now', onPressed: onDonate),
+          DonationOrangeButton(label: 'Donate Now', onPressed: onDonate),
         ],
       ),
     );

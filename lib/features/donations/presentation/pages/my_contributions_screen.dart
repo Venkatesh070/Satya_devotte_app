@@ -55,7 +55,7 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'History of Contributions',
+          'History of Donations',
           style: AppTypography.lora(
             fontSize: 18,
             fontWeight: FontWeight.w500,

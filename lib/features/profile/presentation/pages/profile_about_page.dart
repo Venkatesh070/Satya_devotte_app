@@ -32,7 +32,7 @@ The Authentic Puja Store: Sourcing individual items for specific prayers can be 
 
 Reliable Warehouse-to-Door Logistics: Through our dedicated shipping partnership with The Courier Guy, all ordered Puja Kits are securely dispatched from our production centers and delivered straight to your home address with real-time tracking and automated waybill generation.
 
-Secure Payment Architecture & Streamlined Administration: Enjoy complete peace of mind during transactions. Whether purchasing a ritual kit or making a voluntary spiritual contributions, all financial data is safely encrypted and processed via our verified payment gateway partner, PayFast.
+Secure Payment Architecture & Streamlined Administration: Enjoy complete peace of mind during transactions. Whether purchasing a ritual kit or making a voluntary spiritual donations, all financial data is safely encrypted and processed via our verified payment gateway partner, PayFast.
 
 Operational Transparency & Control:
 
@@ -228,7 +228,7 @@ Step into a more organized, deeply connected spiritual routine. Download the Sat
             ),
             const SizedBox(height: 4),
             Text(
-              'Enjoy complete peace of mind during transactions. Whether purchasing a ritual kit or making a voluntary spiritual contribution, all financial data is safely encrypted and processed via our verified payment gateway partner, PayFast.',
+              'Enjoy complete peace of mind during transactions. Whether purchasing a ritual kit or making a voluntary spiritual donation, all financial data is safely encrypted and processed via our verified payment gateway partner, PayFast.',
               style: AppTypography.inter(
                 fontSize: 14,
                 height: 1.6,

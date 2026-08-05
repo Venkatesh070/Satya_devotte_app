@@ -32,7 +32,7 @@ class DonationsListScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Contributions',
+                    'Donations',
                     style: AppTypography.lora(
                       fontSize: 24,
                       fontWeight: FontWeight.w500,
@@ -75,7 +75,7 @@ class _GeneralDonationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Make Contribution',
+            'Make Donation',
             style: AppTypography.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -119,7 +119,7 @@ class _GeneralDonationCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Contribute Now',
+                'Donate Now',
                 style: AppTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

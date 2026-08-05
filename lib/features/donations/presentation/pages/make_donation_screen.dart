@@ -158,7 +158,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                     ],
                   ),
                   Text(
-                    'Make a Contribution',
+                    'Make a Donation',
                     style: AppTypography.lora(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -167,7 +167,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Your contribution can make a difference.',
+                    'Your Donation can make a difference.',
                     style: AppTypography.inter(
                       fontSize: 14,
                       color: DonationUi.textMuted,
@@ -334,7 +334,7 @@ class _MakeDonationScreenState extends State<MakeDonationScreen> {
                               ),
                             )
                           : Text(
-                              'Make Contribution',
+                              'Make Donation',
                               style: AppTypography.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

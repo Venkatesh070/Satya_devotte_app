@@ -1574,24 +1574,24 @@ class _Footer extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          FutureBuilder<PackageInfo>(
-            future: PackageInfo.fromPlatform(),
-            builder: (context, snapshot) {
-              final info = snapshot.data;
-              final version = info?.version ?? '';
-              final buildNumber = info?.buildNumber ?? '';
-              final label = version.isEmpty
-                  ? 'Sathya'
-                  : buildNumber.isEmpty
-                  ? 'Sathya v$version'
-                  : 'Sathya v$version ($buildNumber)';
-              return Text(
-                label,
-                style: AppTypography.inter(fontSize: 12, color: Colors.grey),
-              );
-            },
-          ),
-          const SizedBox(height: 4),
+          // FutureBuilder<PackageInfo>(
+          //   future: PackageInfo.fromPlatform(),
+          //   builder: (context, snapshot) {
+          //     final info = snapshot.data;
+          //     final version = info?.version ?? '';
+          //     final buildNumber = info?.buildNumber ?? '';
+          //     final label = version.isEmpty
+          //         ? 'Sathya'
+          //         : buildNumber.isEmpty
+          //         ? 'Sathya v$version'
+          //         : 'Sathya v$version ($buildNumber)';
+          //     return Text(
+          //       label,
+          //       style: AppTypography.inter(fontSize: 12, color: Colors.grey),
+          //     );
+          //   },
+          // ),
+          // const SizedBox(height: 4),
           Text(
             'Developed by',
             style: AppTypography.lora(
@@ -1601,7 +1601,7 @@ class _Footer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Image.asset('assets/images/redin_logo.png', width: 116, height: 32),
+          Image.asset('assets/images/redin_logo.png', width: 136, height: 42),
         ],
       ),
     );

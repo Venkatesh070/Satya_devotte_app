@@ -62,7 +62,7 @@ class DonationDetailsScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: CustomButton(
-                label: 'Contribute Now',
+                label: 'Donate Now',
                 textColor: Color(0xFFFCF7EF),
                 gradientColors: kFigmaActionGradient,
                 borderRadius: 14,

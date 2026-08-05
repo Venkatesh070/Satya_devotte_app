@@ -1564,7 +1564,7 @@ class _CompletionScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Make a Contribution',
+                            'Make a Donation',
                             style: AppTypography.inter(
                               color: Color(0xFFFCF7EF).withValues(alpha: 0.8),
                               fontSize: 12,
@@ -1594,7 +1594,7 @@ class _CompletionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Contribute',
+                        'Donate',
                         style: AppTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1763,10 +1763,7 @@ class _WizardButton extends StatelessWidget {
         ),
         child: Text(
           'Home',
-          style: AppTypography.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -1786,10 +1783,7 @@ class _WizardButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTypography.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),
     );
