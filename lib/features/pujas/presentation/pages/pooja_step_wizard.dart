@@ -668,45 +668,53 @@ class _PoojaKnowMoreScreen extends StatelessWidget {
       );
     }
 
-    return _BaseWizardScreen(
+    return AppBackground(
       showPattern: true,
-      onBack: () => Get.back(),
-      child: DefaultTextStyle(
-        style: const TextStyle(decoration: TextDecoration.none),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFFFFBF00), Color(0xFFFF6200)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ).createShader(bounds),
-                blendMode: BlendMode.srcIn,
-                child: Text(
-                  'Know More about the Puja',
-                  style: AppTypography.lora(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFFFFD180),
-                    height: 1.2,
-                    decoration: TextDecoration.none,
+      rotateFooter: true,
+      animatePatterns: true,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _BaseWizardScreen(
+          showPattern: true,
+          onBack: () => Get.back(),
+          child: DefaultTextStyle(
+            style: const TextStyle(decoration: TextDecoration.none),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFFFFBF00), Color(0xFFFF6200)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ).createShader(bounds),
+                    blendMode: BlendMode.srcIn,
+                    child: Text(
+                      'Know More about the Puja',
+                      style: AppTypography.lora(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFFD180),
+                        height: 1.2,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: sections.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (_, index) => sections[index],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: sections.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (_, index) => sections[index],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         ),
       ),
