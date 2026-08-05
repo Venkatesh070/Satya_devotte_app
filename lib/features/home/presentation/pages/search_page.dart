@@ -8,6 +8,9 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
@@ -70,6 +73,7 @@ class GlobalSearchResult {
 
   String get typeLabel {
     if (type.isEmpty) return 'result';
+    if (type == 'pooja') return 'Puja';
     return type[0].toUpperCase() + type.substring(1);
   }
 
@@ -265,7 +269,57 @@ class _SearchPageState extends State<SearchPage> {
         );
         return;
       case 'festival':
-        Get.back();
+        final controller = Get.isRegistered<CalendarController>()
+            ? Get.find<CalendarController>()
+            : Get.put(CalendarController());
+
+        if (controller.festivals.isEmpty && !controller.isLoading.value) {
+          await controller.fetchData();
+        }
+
+        final match = controller.festivals.firstWhereOrNull(
+          (f) =>
+              (f.id.isNotEmpty && f.id == result.id) ||
+              (f.title.toLowerCase().trim() ==
+                  result.title.toLowerCase().trim()),
+        );
+
+        FestivalModel festival;
+        if (match != null) {
+          festival = match;
+        } else {
+          var dateStr = result.raw['date']?.toString() ??
+              result.raw['startDate']?.toString() ??
+              result.raw['festivalDate']?.toString() ??
+              result.raw['scheduledDate']?.toString() ??
+              '';
+          if (dateStr.isEmpty) {
+            final now = DateTime.now();
+            dateStr =
+                '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          }
+          final fullDesc = (result.raw['description'] ??
+                  result.raw['about'] ??
+                  result.raw['summary'] ??
+                  result.description)
+              ?.toString()
+              .trim() ??
+              '';
+          festival = FestivalModel(
+            id: result.id.isNotEmpty ? result.id : result.title,
+            title: result.title,
+            description: fullDesc.isNotEmpty ? fullDesc : result.description,
+            date: dateStr,
+            status: 'Approved',
+            imageUrl: result.imageUrl ??
+                result.raw['imageUrl']?.toString() ??
+                result.raw['image']?.toString(),
+          );
+        }
+
+        if (mounted) {
+          await CalendarEventDetailPage.show(context, event: festival);
+        }
         return;
       default:
         Get.back();

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -30,7 +31,8 @@ const int _maxPendingNotifications = 50;
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     final data = message.data;
-    final displayTitle = data['title'] ?? message.notification?.title ?? 'Satya';
+    final displayTitle =
+        data['title'] ?? message.notification?.title ?? 'Satya';
     final displayBody = data['body'] ?? message.notification?.body ?? '';
     if (displayBody.isEmpty && displayTitle.isEmpty) return;
 
@@ -43,7 +45,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           final List<dynamic> existing = jsonDecode(content);
           for (final item in existing) {
             if (item is Map) {
-              pending.add(item.map((k, v) => MapEntry(k.toString(), v.toString())));
+              pending.add(
+                item.map((k, v) => MapEntry(k.toString(), v.toString())),
+              );
             }
           }
         }
@@ -245,7 +249,9 @@ class NotificationService with WidgetsBindingObserver {
     if (_processingPending) return;
     _processingPending = true;
     try {
-      final file = File('${Directory.systemTemp.path}/$_pendingNotificationFile');
+      final file = File(
+        '${Directory.systemTemp.path}/$_pendingNotificationFile',
+      );
       if (!await file.exists()) return;
       final content = await file.readAsString();
       if (content.isEmpty) return;
@@ -315,9 +321,7 @@ class NotificationService with WidgetsBindingObserver {
     if (displayBody.isEmpty && displayTitle.isEmpty) return;
 
     if (kDebugMode) {
-      debugPrint(
-        '[fcm fg] type=${message.data['type']} title=$displayTitle',
-      );
+      debugPrint('[fcm fg] type=${message.data['type']} title=$displayTitle');
     }
     final payload = jsonEncode(_dataAsMap(message.data));
     final details = NotificationDetails(
@@ -391,7 +395,9 @@ class NotificationService with WidgetsBindingObserver {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
     if (kDebugMode) {
-      debugPrint('[fcm] APNs token not available yet — push may register later');
+      debugPrint(
+        '[fcm] APNs token not available yet — push may register later',
+      );
     }
   }
 
@@ -411,11 +417,8 @@ class NotificationService with WidgetsBindingObserver {
       await _fcm.subscribeToTopic(cleanTopic);
 
       final now = DateTime.now();
-      DateTime scheduledDateTime = eventDate.subtract(
-        const Duration(minutes: 1),
-      );
-      // DEBUG/TEST: If event is today, always trigger in 10 seconds for
-      // verification.
+      DateTime scheduledDateTime = eventDate;
+      // DEBUG/TEST: If event is today or past, trigger in 10 seconds for testing
       if (scheduledDateTime.isBefore(now.add(const Duration(seconds: 30)))) {
         scheduledDateTime = now.add(const Duration(seconds: 10));
       }
@@ -427,24 +430,33 @@ class NotificationService with WidgetsBindingObserver {
         scheduledDate: scheduledDateTime,
       );
 
-      await _firestore.collection('ritual_reminders').doc(eventId).set({
-        'eventId': eventId,
-        'title': title,
-        'type': type,
-        'eventDate': eventDate.toIso8601String(),
-        'topicName': cleanTopic,
-        'scheduledTime': Timestamp.fromDate(scheduledDateTime),
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      try {
+        await _firestore.collection('ritual_reminders').doc(eventId).set({
+          'eventId': eventId,
+          'title': title,
+          'type': type,
+          'eventDate': eventDate.toIso8601String(),
+          'topicName': cleanTopic,
+          'scheduledTime': Timestamp.fromDate(scheduledDateTime),
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            'NotificationService: Firestore reminder sync skipped/denied: $e',
+          );
+        }
+      }
 
+      final dateFormatted = DateFormat(
+        'MMM dd \'at\' hh:mm a',
+      ).format(scheduledDateTime);
       Get.snackbar(
         'Reminder Set',
-        'We will notify you at '
-            '${scheduledDateTime.hour}:'
-            '${scheduledDateTime.minute.toString().padLeft(2, '0')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.8),
-        colorText: Color(0xFFFCF7EF),
+        'We will notify you on $dateFormatted',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.withValues(alpha: 0.8),
+        colorText: const Color(0xFFFCF7EF),
       );
 
       if (kDebugMode) {
