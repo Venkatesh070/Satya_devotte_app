@@ -322,13 +322,15 @@ class _BaseWizardScreen extends StatelessWidget {
     this.showBackButton = true,
     this.audioUrl,
     this.showPattern = false,
-    this.onBack, // ← NEW
+    this.onBack,
+    this.useBackButtonTopLeft = false,
   });
   final Widget child;
   final bool showBackButton;
   final String? audioUrl;
   final bool showPattern;
-  final VoidCallback? onBack; // ← NEW
+  final VoidCallback? onBack;
+  final bool useBackButtonTopLeft;
 
   @override
   Widget build(BuildContext context) {
@@ -346,9 +348,11 @@ class _BaseWizardScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Back button — always shown
+                    // Top Left button — Home button (or Back for sub-pages)
                     GestureDetector(
-                      onTap: onBack,
+                      onTap: useBackButtonTopLeft
+                          ? (onBack ?? () => Get.back())
+                          : () => Get.offAllNamed(AppRoutes.home),
                       child: Container(
                         width: 38,
                         height: 38,
@@ -359,10 +363,12 @@ class _BaseWizardScreen extends StatelessWidget {
                             color: Color(0xFFFCF7EF).withValues(alpha: 0.14),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Color(0xFFFCF7EF),
-                          size: 18,
+                        child: Icon(
+                          useBackButtonTopLeft
+                              ? Icons.arrow_back
+                              : Icons.home_outlined,
+                          color: const Color(0xFFFCF7EF),
+                          size: useBackButtonTopLeft ? 18 : 20,
                         ),
                       ),
                     ),
@@ -577,7 +583,7 @@ class _IntroScreen extends StatelessWidget {
             const Spacer(),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 240),
-              child: _WizardButton(label: 'Proceed', onTap: onNext),
+              child: _WizardButton(label: 'Proceed', onTap: onNext, onBack: onBack),
             ),
             const SizedBox(height: 20),
           ],
@@ -676,6 +682,7 @@ class _PoojaKnowMoreScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: _BaseWizardScreen(
           showPattern: true,
+          useBackButtonTopLeft: true,
           onBack: () => Get.back(),
           child: DefaultTextStyle(
             style: const TextStyle(decoration: TextDecoration.none),
@@ -861,7 +868,7 @@ class _SimpleInfoScreen extends StatelessWidget {
             const Spacer(),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 240),
-              child: _WizardButton(label: buttonLabel, onTap: onNext),
+              child: _WizardButton(label: buttonLabel, onTap: onNext, onBack: onBack),
             ),
             const SizedBox(height: 20),
           ],
@@ -925,7 +932,7 @@ class _ListScreen extends StatelessWidget {
             ),
             _WizardFadeSlideIn(
               delay: Duration(milliseconds: 220 + (items.length * 70)),
-              child: _WizardButton(label: 'Next', onTap: onNext),
+              child: _WizardButton(label: 'Next', onTap: onNext, onBack: onBack),
             ),
             const SizedBox(height: 20),
           ],
@@ -975,7 +982,7 @@ class _IngredientsScreen extends StatelessWidget {
             ),
             _WizardFadeSlideIn(
               delay: Duration(milliseconds: 200 + (items.length * 60)),
-              child: _WizardButton(label: 'Next', onTap: onNext),
+              child: _WizardButton(label: 'Next', onTap: onNext, onBack: onBack),
             ),
             const SizedBox(height: 20),
           ],
@@ -1460,6 +1467,7 @@ class _PujaStepScreen extends StatelessWidget {
               child: _WizardButton(
                 label: step.number == totalSteps ? 'Complete Puja' : 'Next',
                 onTap: onNext,
+                onBack: onBack,
               ),
             ),
             const SizedBox(height: 20),
@@ -1619,7 +1627,7 @@ class _CompletionScreen extends StatelessWidget {
             _WizardButton(
               label: 'Back to Home',
               onTap: onFinish,
-              showHome: false,
+              showBack: false,
             ),
             const SizedBox(height: 24),
           ],
@@ -1745,19 +1753,21 @@ class _WizardButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
-    this.showHome = true,
+    this.onBack,
+    this.showBack = true,
   });
 
   final String label;
   final VoidCallback onTap;
-  final bool showHome;
+  final VoidCallback? onBack;
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
-    final homeBtn = SizedBox(
+    final backBtn = SizedBox(
       height: 56,
       child: OutlinedButton(
-        onPressed: () => Get.offAllNamed(AppRoutes.home),
+        onPressed: onBack ?? () => Get.back(),
         style: OutlinedButton.styleFrom(
           padding: EdgeInsets.zero,
           foregroundColor: const Color(0xFFFCF7EF),
@@ -1770,7 +1780,7 @@ class _WizardButton extends StatelessWidget {
           ),
         ),
         child: Text(
-          'Home',
+          'Back',
           style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),
@@ -1796,10 +1806,10 @@ class _WizardButton extends StatelessWidget {
       ),
     );
 
-    if (showHome) {
+    if (showBack) {
       return Row(
         children: [
-          Expanded(child: homeBtn),
+          Expanded(child: backBtn),
           const SizedBox(width: 12),
           Expanded(child: proceedBtn),
         ],
