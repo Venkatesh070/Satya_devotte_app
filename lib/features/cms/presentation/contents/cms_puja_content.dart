@@ -690,12 +690,7 @@ class _PoojaCard extends StatelessWidget {
   final VoidCallback onQueue;
   final VoidCallback onReject;
 
-  bool get canEdit {
-    final auth = Get.find<AuthController>();
-    return auth.isSuperAdmin ||
-        pooja.status == 'Draft' ||
-        pooja.status == 'Rejected';
-  }
+  bool get canEdit => true;
 
   String _formatDate(String s) {
     try {
@@ -1579,6 +1574,7 @@ class _PoojaFormState extends State<_PoojaForm> {
       _selectedScheduleDates.addAll(parsed);
     } else if (parsed.isNotEmpty) {
       _selectedDate = parsed.first;
+      _selectedScheduleDates.addAll(parsed);
     }
   }
 
@@ -1609,9 +1605,10 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   List<Map<String, String>> _schedulesApi() {
     if (_isDailyPuja && _dailyRepeat) return const [];
-    final source = _isDailyPuja
-        ? List<DateTime>.from(_selectedScheduleDates)
-        : (_selectedDate != null ? [_selectedDate!] : <DateTime>[]);
+    final source = List<DateTime>.from(_selectedScheduleDates);
+    if (source.isEmpty && _selectedDate != null) {
+      source.add(_selectedDate!);
+    }
     source.sort((a, b) => a.compareTo(b));
     return source
         .map(
@@ -1696,22 +1693,76 @@ class _PoojaFormState extends State<_PoojaForm> {
   }
 
   Future<void> _pickScheduleDate() async {
-    final initial = _isDailyPuja
-        ? (_selectedScheduleDates.isNotEmpty
-            ? _selectedScheduleDates.last
-            : DateTime.now())
+    final initial = _selectedScheduleDates.isNotEmpty
+        ? _selectedScheduleDates.last
         : (_selectedDate ?? DateTime.now());
     final combined = await _pickScheduleDateTime(initial: initial);
     if (combined == null) return;
     setState(() {
-      if (_isDailyPuja) {
-        if (_selectedScheduleDates.any((d) => _isSameDateTime(d, combined))) {
-          return;
+      if (_selectedScheduleDates.any((d) => _isSameDateTime(d, combined))) {
+        return;
+      }
+      _selectedScheduleDates.add(combined);
+      _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+      if (_selectedScheduleDates.isNotEmpty) {
+        _selectedDate = _selectedScheduleDates.first;
+      }
+    });
+  }
+
+  Future<void> _pickScheduleRange() async {
+    final now = DateTime.now();
+    final pickedRange = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDateRange: DateTimeRange(
+        start: now,
+        end: now.add(const Duration(days: 6)),
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: CmsColors.orange,
+              onPrimary: Color(0xFFFCF7EF),
+              onSurface: CmsColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (pickedRange == null || !mounted) return;
+
+    final time = await _pickScheduleTime(initial: pickedRange.start);
+    if (time == null || !mounted) return;
+
+    setState(() {
+      DateTime current = DateTime(
+        pickedRange.start.year,
+        pickedRange.start.month,
+        pickedRange.start.day,
+        time.hour,
+        time.minute,
+      );
+      final end = DateTime(
+        pickedRange.end.year,
+        pickedRange.end.month,
+        pickedRange.end.day,
+        time.hour,
+        time.minute,
+      );
+
+      while (!current.isAfter(end)) {
+        if (!_selectedScheduleDates.any((d) => _isSameDateTime(d, current))) {
+          _selectedScheduleDates.add(current);
         }
-        _selectedScheduleDates.add(combined);
-        _selectedScheduleDates.sort((a, b) => a.compareTo(b));
-      } else {
-        _selectedDate = combined;
+        current = current.add(const Duration(days: 1));
+      }
+      _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+      if (_selectedScheduleDates.isNotEmpty) {
+        _selectedDate = _selectedScheduleDates.first;
       }
     });
   }
@@ -1728,6 +1779,9 @@ class _PoojaFormState extends State<_PoojaForm> {
       if (duplicate) return;
       _selectedScheduleDates[index] = updated;
       _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+      if (_selectedScheduleDates.isNotEmpty) {
+        _selectedDate = _selectedScheduleDates.first;
+      }
     });
   }
 
@@ -1791,79 +1845,66 @@ class _PoojaFormState extends State<_PoojaForm> {
     );
   }
 
-  Widget _buildScheduleDateField() {
-    if (_isDailyPuja) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Schedule Dates & Times',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _cmsClickable(
-            onTap: _pickScheduleDate,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: CmsColors.bg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: CmsColors.border),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.event_available_outlined,
-                    size: 16,
-                    color: CmsColors.orange,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Add date & time',
-                    style: TextStyle(fontSize: 13, color: CmsColors.textSecond),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_selectedScheduleDates.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: _selectedScheduleDates.asMap().entries.map((e) {
-                final date = e.value;
-                return _Chip(
-                  label: _formatDisplayDateTime(date),
-                  onEdit: () => _editScheduleAt(e.key),
-                  onRemove: () =>
-                      setState(() => _selectedScheduleDates.removeAt(e.key)),
-                );
-              }).toList(),
-            ),
-          ],
-        ],
-      );
-    }
+  Future<void> _showUnifiedDatePickerDialog() async {
+    final initial = _selectedScheduleDates.isNotEmpty
+        ? _selectedScheduleDates.last
+        : (_selectedDate ?? DateTime.now());
 
+    final results = await showDialog<List<DateTime>>(
+      context: context,
+      builder: (ctx) => _FigmaDateRangePickerModuleDialog(initialDate: initial),
+    );
+
+    if (results == null || results.isEmpty || !mounted) return;
+
+    setState(() {
+      for (final dt in results) {
+        if (!_selectedScheduleDates.any((d) => _isSameDateTime(d, dt))) {
+          _selectedScheduleDates.add(dt);
+        }
+      }
+      _selectedScheduleDates.sort((a, b) => a.compareTo(b));
+      if (_selectedScheduleDates.isNotEmpty) {
+        _selectedDate = _selectedScheduleDates.first;
+      }
+    });
+  }
+
+  Widget _buildScheduleDateField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Schedule Date & Time',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: CmsColors.textPrimary,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Schedule Dates & Times',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+            if (_selectedScheduleDates.isNotEmpty)
+              _cmsClickable(
+                onTap: () => setState(() {
+                  _selectedScheduleDates.clear();
+                  _selectedDate = null;
+                }),
+                child: const Text(
+                  'Clear All',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 6),
         _cmsClickable(
-          onTap: _pickScheduleDate,
+          onTap: _showUnifiedDatePickerDialog,
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -1879,37 +1920,55 @@ class _PoojaFormState extends State<_PoojaForm> {
                 Icon(
                   Icons.event_available_outlined,
                   size: 16,
-                  color: _selectedDate != null
+                  color: _selectedScheduleDates.isNotEmpty
                       ? CmsColors.orange
                       : CmsColors.textSecond,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _selectedDate != null
-                        ? _formatDisplayDateTime(_selectedDate!)
-                        : 'Select date & time',
+                    _selectedScheduleDates.isNotEmpty
+                        ? 'Add more dates or date range'
+                        : 'Select date or date range & time',
                     style: TextStyle(
                       fontSize: 13,
-                      color: _selectedDate != null
+                      color: _selectedScheduleDates.isNotEmpty
                           ? CmsColors.textPrimary
                           : CmsColors.textSecond,
                     ),
                   ),
                 ),
-                if (_selectedDate != null)
-                  _cmsClickable(
-                    onTap: () => setState(() => _selectedDate = null),
-                    child: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: CmsColors.textSecond,
-                    ),
-                  ),
+                const Icon(
+                  Icons.arrow_drop_down,
+                  size: 20,
+                  color: CmsColors.textSecond,
+                ),
               ],
             ),
           ),
         ),
+        if (_selectedScheduleDates.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _selectedScheduleDates.asMap().entries.map((e) {
+              final date = e.value;
+              return _Chip(
+                label: _formatDisplayDateTime(date),
+                onEdit: () => _editScheduleAt(e.key),
+                onRemove: () => setState(() {
+                  _selectedScheduleDates.removeAt(e.key);
+                  if (_selectedScheduleDates.isNotEmpty) {
+                    _selectedDate = _selectedScheduleDates.first;
+                  } else {
+                    _selectedDate = null;
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
@@ -4047,4 +4106,449 @@ class _SmBtn extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _FigmaDateRangePickerModuleDialog extends StatefulWidget {
+  final DateTime? initialDate;
+  const _FigmaDateRangePickerModuleDialog({this.initialDate});
+
+  @override
+  State<_FigmaDateRangePickerModuleDialog> createState() =>
+      __FigmaDateRangePickerModuleDialogState();
+}
+
+class __FigmaDateRangePickerModuleDialogState
+    extends State<_FigmaDateRangePickerModuleDialog> {
+  late DateTime _displayedMonth;
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
+  late TimeOfDay _selectedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = widget.initialDate ?? DateTime.now();
+    _displayedMonth = DateTime(now.year, now.month);
+    _rangeStart = DateTime(now.year, now.month, now.day);
+    _rangeEnd = DateTime(now.year, now.month, now.day).add(const Duration(days: 6));
+    _selectedTime = TimeOfDay.fromDateTime(now);
+  }
+
+  void _selectPreset(String preset) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      switch (preset) {
+        case 'Today':
+          _rangeStart = today;
+          _rangeEnd = today;
+          break;
+        case 'Tomorrow':
+          final tom = today.add(const Duration(days: 1));
+          _rangeStart = tom;
+          _rangeEnd = tom;
+          break;
+        case 'Next 7 days':
+          _rangeStart = today;
+          _rangeEnd = today.add(const Duration(days: 6));
+          break;
+        case 'Next 14 days':
+          _rangeStart = today;
+          _rangeEnd = today.add(const Duration(days: 13));
+          break;
+        case 'This month':
+          _rangeStart = DateTime(now.year, now.month, 1);
+          final lastDay = DateTime(now.year, now.month + 1, 0);
+          _rangeEnd = lastDay;
+          break;
+        case 'Next 30 days':
+          _rangeStart = today;
+          _rangeEnd = today.add(const Duration(days: 29));
+          break;
+      }
+      if (_rangeStart != null) {
+        _displayedMonth = DateTime(_rangeStart!.year, _rangeStart!.month);
+      }
+    });
+  }
+
+  void _onDayTapped(DateTime day) {
+    setState(() {
+      if (_rangeStart == null || (_rangeStart != null && _rangeEnd != null)) {
+        _rangeStart = day;
+        _rangeEnd = null;
+      } else if (_rangeStart != null && _rangeEnd == null) {
+        if (day.isBefore(_rangeStart!)) {
+          _rangeStart = day;
+        } else {
+          _rangeEnd = day;
+        }
+      }
+    });
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool _isInRange(DateTime day) {
+    if (_rangeStart == null || _rangeEnd == null) return false;
+    return day.isAfter(_rangeStart!) && day.isBefore(_rangeEnd!);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: CmsColors.orange,
+              onPrimary: Color(0xFFFCF7EF),
+              onSurface: CmsColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedTime = picked);
+    }
+  }
+
+  String _formatMonthYear(DateTime dt) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[dt.month - 1]} ${dt.year}';
+  }
+
+  String _formatRangePill() {
+    if (_rangeStart == null) return 'Select Date Range';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final startStr = '${_rangeStart!.day} ${months[_rangeStart!.month - 1]} ${_rangeStart!.year % 100}';
+    if (_rangeEnd == null) return startStr;
+    final endStr = '${_rangeEnd!.day} ${months[_rangeEnd!.month - 1]} ${_rangeEnd!.year % 100}';
+    return '$startStr  -  $endStr';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0).day;
+    final firstWeekday = DateTime(_displayedMonth.year, _displayedMonth.month, 1).weekday; // 1 = Mon ... 7 = Sun
+    final offset = firstWeekday - 1;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        width: 520,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Date Range Display Pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatRangePill(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: CmsColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_drop_down, size: 16, color: CmsColors.textSecond),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Two Column Content: Left Presets Sidebar | Right Calendar View
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left Column: Presets
+                SizedBox(
+                  width: 110,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _presetItem('Today'),
+                      _presetItem('Tomorrow'),
+                      _presetItem('Next 7 days'),
+                      _presetItem('Next 14 days'),
+                      _presetItem('This month'),
+                      _presetItem('Next 30 days'),
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _rangeStart = null;
+                            _rangeEnd = null;
+                          });
+                        },
+                        child: const Text(
+                          'Reset',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: CmsColors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 240,
+                  color: const Color(0xFFE5E7EB),
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                // Right Column: Calendar Header & Grid
+                Expanded(
+                  child: Column(
+                    children: [
+                      // Month Navigator Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatMonthYear(_displayedMonth),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: CmsColors.textPrimary,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  setState(() {
+                                    _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month - 1);
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  setState(() {
+                                    _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1);
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Weekday Headers
+                      Row(
+                        children: const ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+                            .map((w) => Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      w,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: CmsColors.textSecond,
+                                      ),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 8),
+                      // Days Grid
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: offset + daysInMonth,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 0,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemBuilder: (context, index) {
+                          if (index < offset) {
+                            return const SizedBox.shrink();
+                          }
+                          final dayNum = index - offset + 1;
+                          final date = DateTime(_displayedMonth.year, _displayedMonth.month, dayNum);
+                          final isStart = _rangeStart != null && _isSameDay(date, _rangeStart!);
+                          final isEnd = _rangeEnd != null && _isSameDay(date, _rangeEnd!);
+                          final inRange = _isInRange(date);
+
+                          BoxDecoration? cellDecoration;
+                          Color textColor = CmsColors.textPrimary;
+
+                          if (isStart || isEnd) {
+                            cellDecoration = const BoxDecoration(
+                              color: CmsColors.orange,
+                              shape: BoxShape.circle,
+                            );
+                            textColor = Colors.white;
+                          } else if (inRange) {
+                            cellDecoration = BoxDecoration(
+                              color: CmsColors.orange.withOpacity(0.18),
+                              shape: BoxShape.rectangle,
+                            );
+                            textColor = CmsColors.orangeDark;
+                          }
+
+                          return GestureDetector(
+                            onTap: () => _onDayTapped(date),
+                            child: Container(
+                              decoration: cellDecoration,
+                              child: Center(
+                                child: Text(
+                                  '$dayNum',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: (isStart || isEnd) ? FontWeight.bold : FontWeight.normal,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            // Daily Time & Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                InkWell(
+                  onTap: _pickTime,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: CmsColors.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: CmsColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 16, color: CmsColors.orange),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Time: ${_selectedTime.format(context)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: CmsColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CmsColors.orange,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (_rangeStart == null) {
+                          Navigator.pop(context);
+                          return;
+                        }
+                        final results = <DateTime>[];
+                        final start = _rangeStart!;
+                        final end = _rangeEnd ?? _rangeStart!;
+                        DateTime current = DateTime(
+                          start.year, start.month, start.day,
+                          _selectedTime.hour, _selectedTime.minute,
+                        );
+                        final last = DateTime(
+                          end.year, end.month, end.day,
+                          _selectedTime.hour, _selectedTime.minute,
+                        );
+                        while (!current.isAfter(last)) {
+                          results.add(current);
+                          current = current.add(const Duration(days: 1));
+                        }
+                        Navigator.pop(context, results);
+                      },
+                      child: const Text('Apply Range', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _presetItem(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: GestureDetector(
+        onTap: () => _selectPreset(title),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            color: CmsColors.textSecond,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
 }

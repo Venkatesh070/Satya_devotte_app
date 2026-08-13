@@ -21,14 +21,42 @@ class PoojaStepCodec {
   }
 
   static List<String> _urlsFromMap(Map<dynamic, dynamic> map) {
-    final raw = map['images'] ?? map['imageUrls'];
-    if (raw is List) {
-      return raw
-          .map((e) => e.toString().trim())
+    final listRaw = map['images'] ?? map['imageUrls'] ?? map['urls'];
+    if (listRaw is List) {
+      return listRaw
+          .map((e) {
+            if (e is Map) {
+              return (e['url'] ?? e['imageUrl'] ?? e['src'] ?? '').toString().trim();
+            }
+            return e.toString().trim();
+          })
           .where((e) => e.isNotEmpty)
           .toList();
     }
-    final single = map['imageUrl']?.toString().trim();
+    final mediaRaw = map['media'];
+    if (mediaRaw is List) {
+      return mediaRaw
+          .map((e) {
+            if (e is Map) {
+              return (e['url'] ?? e['imageUrl'] ?? e['src'] ?? '').toString().trim();
+            }
+            return e.toString().trim();
+          })
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    if (mediaRaw is Map) {
+      final innerImages = mediaRaw['images'] ?? mediaRaw['imageUrls'] ?? mediaRaw['urls'];
+      if (innerImages is List) {
+        return innerImages
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+      final singleMedia = (mediaRaw['imageUrl'] ?? mediaRaw['url'] ?? mediaRaw['image'])?.toString().trim();
+      if (singleMedia != null && singleMedia.isNotEmpty) return [singleMedia];
+    }
+    final single = (map['imageUrl'] ?? map['image'] ?? map['url'])?.toString().trim();
     if (single != null && single.isNotEmpty) return [single];
     return const [];
   }
@@ -163,6 +191,48 @@ class PoojaModel {
   final String? createdBy;
   final String? createdAt;
   final String? updatedAt;
+
+  static String? _extractImageUrl(Map<String, dynamic> json) {
+    String? check(dynamic v) {
+      if (v == null) return null;
+      if (v is String) {
+        final t = v.trim();
+        return t.isNotEmpty ? t : null;
+      }
+      if (v is List && v.isNotEmpty) {
+        for (final item in v) {
+          final res = check(item);
+          if (res != null) return res;
+        }
+      }
+      if (v is Map) {
+        for (final k in ['imageUrl', 'image', 'url', 'path', 'src']) {
+          final res = check(v[k]);
+          if (res != null) return res;
+        }
+        for (final k in ['images', 'media', 'urls']) {
+          final res = check(v[k]);
+          if (res != null) return res;
+        }
+      }
+      return null;
+    }
+
+    for (final k in ['imageUrl', 'image', 'images']) {
+      final res = check(json[k]);
+      if (res != null) return res;
+    }
+    final mediaRes = check(json['media']);
+    if (mediaRes != null) return mediaRes;
+
+    final compRes = check((json['completion'] as Map?)?['media']);
+    if (compRes != null) return compRes;
+
+    final deityRes = check((json['deitySummary'] as Map?)?['media']);
+    if (deityRes != null) return deityRes;
+
+    return null;
+  }
 
   // ── Try multiple field names ──────────────────────────────────
   static List<String> _extractDeityIds(Map<String, dynamic> json) {
@@ -397,16 +467,6 @@ class PoojaModel {
       return raw.toString().trim();
     }
 
-    // Now get deity value from possible keys
-    String deity = '';
-    for (final k in ['deity', 'deityName', 'deity_name']) {
-      final v = json[k];
-      final d = getDeityValue(v);
-      if (d.isNotEmpty) {
-        deity = d;
-        break;
-      }
-    }
 
     return PoojaModel(
       id: _str(json, ['_id', 'id']),
@@ -425,14 +485,7 @@ class PoojaModel {
       schedules: _extractSchedules(json),
       daily: json['daily'] == true,
       idealTime: _listOfStrings(json['ideal_time'] ?? json['idealTime']),
-      imageUrl:
-          json['imageUrl'] as String? ??
-          json['image'] as String? ??
-          (json['media'] is Map
-              ? ((json['media']['images'] as List?)?.isNotEmpty == true
-                    ? json['media']['images'][0]?.toString()
-                    : null)
-              : null),
+      imageUrl: _extractImageUrl(json),
       audioUrl:
           json['audioUrl'] as String? ??
           json['audio'] as String? ??
@@ -505,10 +558,22 @@ class PoojaModel {
       completionBenefits: _listOfStrings(
         (json['completion'] as Map?)?['benefits'],
       ),
-      blessings:
-          _listOfStrings((json['completion'] as Map?)?['blessings']).isNotEmpty
-          ? _listOfStrings((json['completion'] as Map?)?['blessings'])
-          : _listOfStrings(json['blessings']),
+      blessings: () {
+        final compBlessings = _listOfStrings(
+          (json['completion'] as Map?)?['blessings'],
+        );
+        if (compBlessings.isNotEmpty) return compBlessings;
+
+        final topBlessings = _listOfStrings(json['blessings']);
+        if (topBlessings.isNotEmpty) return topBlessings;
+
+        final sathyaBlessings = _listOfStrings(json['sathyaBlessings']);
+        if (sathyaBlessings.isNotEmpty) return sathyaBlessings;
+
+        return _listOfStrings(
+          (json['deitySummary'] as Map?)?['blessings'],
+        );
+      }(),
       festivalIds:
           (json['festivalIds'] as List?)
               ?.map((e) => _extractId(e) ?? '')
@@ -545,9 +610,22 @@ class PoojaModel {
     'daily': daily,
     'schedules': normalizedSchedules,
     'ideal_time': idealTime,
-    if (imageUrl != null) 'imageUrl': imageUrl,
+    'blessings': blessings,
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) 'imageUrl': imageUrl,
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) 'image': imageUrl,
     if (audioUrl != null) 'audioUrl': audioUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
+    'media': {
+      'images': imageUrl != null && imageUrl!.trim().isNotEmpty
+          ? [imageUrl]
+          : [],
+      'audio': audioUrl != null && audioUrl!.trim().isNotEmpty
+          ? [audioUrl]
+          : [],
+      'videos': videoUrl != null && videoUrl!.trim().isNotEmpty
+          ? [videoUrl]
+          : [],
+    },
     'purpose': {'why': purposeWhy ?? '', 'benefits': purposeBenefits},
     'deitySummary': {
       'about': deitySummaryAbout ?? '',

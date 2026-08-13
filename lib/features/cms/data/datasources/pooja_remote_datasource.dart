@@ -94,6 +94,27 @@ class PoojaRemoteDataSource {
         .toList();
   }
 
+  /// Fetch all created poojas across all pages for dropdowns/selectors
+  Future<List<PoojaModel>> getAllPoojasForSelector({required bool superAdmin}) async {
+    final firstPage = await getPoojasPage(
+      superAdmin: superAdmin,
+      page: 1,
+      limit: 10,
+    );
+    final allItems = List<PoojaModel>.from(firstPage.items);
+    if (firstPage.totalPages > 1) {
+      for (int p = 2; p <= firstPage.totalPages; p++) {
+        final pageResult = await getPoojasPage(
+          superAdmin: superAdmin,
+          page: p,
+          limit: 10,
+        );
+        allItems.addAll(pageResult.items);
+      }
+    }
+    return allItems;
+  }
+
   // ── GET single pooja ─────────────────────────────────────────
   Future<PoojaModel> getPoojaById(String id) async {
     final response = await _apiClient.dio.get(ApiEndpoints.pooja(id));
@@ -215,9 +236,13 @@ class PoojaRemoteDataSource {
         ApiEndpoints.updatePooja(id),
         data: payload,
       );
-      return PoojaModel.fromJson(
+      final result = PoojaModel.fromJson(
         _extractSingle(response.data as Map<String, dynamic>),
       );
+      if (image == null && result.imageUrl == null && pooja.imageUrl != null) {
+        return result.copyWith(imageUrl: pooja.imageUrl);
+      }
+      return result;
     }
 
     final payload = Map<String, dynamic>.from(pooja.toJson());
@@ -239,9 +264,13 @@ class PoojaRemoteDataSource {
         ApiEndpoints.updatePooja(id),
         data: formData,
       );
-      return PoojaModel.fromJson(
+      final result = PoojaModel.fromJson(
         _extractSingle(response.data as Map<String, dynamic>),
       );
+      if (image == null && result.imageUrl == null && pooja.imageUrl != null) {
+        return result.copyWith(imageUrl: pooja.imageUrl);
+      }
+      return result;
     } on DioException catch (e) {
       debugPrint('DioException in updatePooja:');
       debugPrint('Status: ${e.response?.statusCode}');
@@ -330,6 +359,7 @@ class PoojaRemoteDataSource {
   }) {
     if (image != null) {
       payload['imageUrl'] = '';
+      payload['image'] = '';
       _mediaMap(payload)['images'] = <String>[];
     }
     if (audio != null) {
@@ -350,7 +380,12 @@ class PoojaRemoteDataSource {
   ) {
     if (p.imageUrl == null) {
       payload['imageUrl'] = '';
+      payload['image'] = '';
       _mediaMap(payload)['images'] = <String>[];
+    } else {
+      payload['imageUrl'] = p.imageUrl;
+      payload['image'] = p.imageUrl;
+      _mediaMap(payload)['images'] = [p.imageUrl!];
     }
     if (p.audioUrl == null) {
       payload['audioUrl'] = '';

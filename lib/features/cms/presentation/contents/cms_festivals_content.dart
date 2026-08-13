@@ -5,6 +5,7 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
+import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
@@ -834,16 +835,32 @@ class _FestivalCard extends StatelessWidget {
                     color: CmsColors.textPrimary,
                   ),
                 ),
-                // if (festival.locationDisplay.isNotEmpty) ...[
-                //   const SizedBox(height: 3),
-                //   Text(
-                //     festival.locationDisplay,
-                //     style: const TextStyle(
-                //       fontSize: 12,
-                //       color: CmsColors.textSecond,
-                //     ),
-                //   ),
-                // ],
+                if (festival.rituals != null &&
+                    festival.rituals!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.self_improvement,
+                        size: 13,
+                        color: CmsColors.orange,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Pujas: ${festival.rituals}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -1614,100 +1631,174 @@ class _PoojaPickerField extends StatelessWidget {
 
   void _showPoojaSelector(BuildContext context) {
     final poojaCtrl = Get.find<PoojaController>();
-    final poojas = poojaCtrl.poojas
-        .where((p) => !selectedIds.contains(p.id))
-        .toList();
-
-    if (poojas.isEmpty) {
-      Get.snackbar(
-        'No Pujas',
-        'No more pujas to add',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: CmsColors.orange,
-        colorText: Color(0xFFFCF7EF),
-        margin: const EdgeInsets.all(12),
-      );
-      return;
-    }
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: CmsColors.border,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Select Puja',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: CmsColors.textPrimary,
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: poojas.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (_, i) {
-                final p = poojas[i];
-                return ListTile(
-                  leading: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: CmsColors.orange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.self_improvement,
-                      color: CmsColors.orange,
-                      size: 18,
-                    ),
+      builder: (ctx) {
+        String searchQuery = '';
+        return FutureBuilder<List<PoojaModel>>(
+          future: poojaCtrl.fetchAllPoojasForSelector(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                height: 250,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(color: CmsColors.orange),
+              );
+            }
+
+            final allPoojas = snapshot.data ?? [];
+
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+                final available = allPoojas.where((p) {
+                  final alreadySelected = selectedIds.contains(p.id) ||
+                      selectedNames.contains(p.title);
+                  if (alreadySelected) return false;
+                  if (searchQuery.isNotEmpty) {
+                    final q = searchQuery.toLowerCase();
+                    return p.title.toLowerCase().contains(q) ||
+                        p.deity.toLowerCase().contains(q) ||
+                        p.category.toLowerCase().contains(q);
+                  }
+                  return true;
+                }).toList();
+
+                return Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.75,
                   ),
-                  title: Text(
-                    p.title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: CmsColors.border,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Select Associated Puja',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: CmsColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '${allPoojas.length} Created Pujas',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: CmsColors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (v) => setModalState(() => searchQuery = v.trim()),
+                        decoration: InputDecoration(
+                          hintText: 'Search created pujas...',
+                          hintStyle: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+                          prefixIcon: const Icon(Icons.search, size: 18, color: CmsColors.textSecond),
+                          filled: true,
+                          fillColor: CmsColors.bg,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: CmsColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: CmsColors.border),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(height: 1),
+                      if (available.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            searchQuery.isNotEmpty
+                                ? 'No matching pujas found'
+                                : 'All created pujas have been selected',
+                            style: const TextStyle(fontSize: 13, color: CmsColors.textSecond),
+                          ),
+                        )
+                      else
+                        Flexible(
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: available.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (_, i) {
+                              final p = available[i];
+                              return ListTile(
+                                leading: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: CmsColors.orange.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.self_improvement,
+                                    color: CmsColors.orange,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(
+                                  p.title,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: CmsColors.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${p.category} • ${p.deity.isNotEmpty ? p.deity : 'All Deities'}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: CmsColors.textSecond,
+                                  ),
+                                ),
+                                trailing: const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 20,
+                                  color: CmsColors.orange,
+                                ),
+                                onTap: () {
+                                  selectedIds.add(p.id);
+                                  selectedNames.add(p.title);
+                                  onChanged();
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   ),
-                  subtitle: Text(
-                    p.deity,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: CmsColors.textSecond,
-                    ),
-                  ),
-                  onTap: () {
-                    selectedIds.add(p.id);
-                    selectedNames.add(p.title);
-                    onChanged();
-                    Navigator.pop(ctx);
-                  },
                 );
               },
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }

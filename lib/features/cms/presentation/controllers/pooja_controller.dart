@@ -129,6 +129,18 @@ class PoojaController extends GetxController {
     }
   }
 
+  /// Fetch all created poojas across all pages for dropdowns/selectors
+  Future<List<PoojaModel>> fetchAllPoojasForSelector() async {
+    try {
+      final auth = Get.find<AuthController>();
+      return await _dataSource.getAllPoojasForSelector(
+        superAdmin: auth.isSuperAdmin,
+      );
+    } catch (_) {
+      return _poojas.toList();
+    }
+  }
+
   /// Load ALL poojas across all statuses — used by super admin Approvals tab.
   /// Uses GET /poojas/all which requires super admin role.
   Future<void> loadAllPoojas() async {
