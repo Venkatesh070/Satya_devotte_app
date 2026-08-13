@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/cart_restriction_popup.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -35,9 +36,32 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Future<void> _addToCartAndOpenCart() async {
-    await _cartCtrl.addToCart(_product.id, quantity: 1);
-    if (!mounted) return;
-    Get.toNamed(AppRoutes.poojaKitCart);
+    if (_cartCtrl.cart == null) {
+      await _cartCtrl.fetchCart();
+    }
+    if (_cartCtrl.isCategoryRestricted(_product)) {
+      if (mounted) {
+        showCartRestrictionPopup(context);
+      }
+      return;
+    }
+    final success = await _cartCtrl.addToCart(
+      _product.id,
+      quantity: 1,
+      onError: (err) {
+        if (mounted) {
+          showCartRestrictionPopup(
+            context,
+            message: err.isNotEmpty
+                ? err
+                : 'You cannot add Ayurvedic products along with Sathya Books and Puja Kits.',
+          );
+        }
+      },
+    );
+    if (success && mounted) {
+      Get.toNamed(AppRoutes.poojaKitCart);
+    }
   }
 
   @override

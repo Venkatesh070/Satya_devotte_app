@@ -17,6 +17,14 @@ class PoojaKitController extends GetxController {
   final _totalPages = 1.obs;
   final _searchQuery = ''.obs;
 
+  static const List<String> categories = [
+    'Puja Kits',
+    'Sathya Books',
+    'Ayurvedic Products',
+  ];
+
+  final _selectedCategory = 'Puja Kits'.obs;
+
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading.value;
   String? get error => _error.value;
@@ -24,6 +32,32 @@ class PoojaKitController extends GetxController {
   int get page => _page.value;
   int get totalPages => _totalPages.value;
   String get searchQuery => _searchQuery.value;
+  String get selectedCategory => _selectedCategory.value;
+
+  void setSelectedCategory(String category) {
+    if (_selectedCategory.value == category) return;
+    _selectedCategory.value = category;
+  }
+
+  List<ProductModel> get filteredProducts {
+    final cat = _selectedCategory.value.toLowerCase();
+    return _products.where((p) {
+      final pCat = p.category.toLowerCase().trim();
+      final pTitle = p.title.toLowerCase().trim();
+
+      if (cat.contains('puja') || cat.contains('kit')) {
+        return pCat.contains('puja') ||
+            pCat.contains('kit') ||
+            pCat.isEmpty ||
+            pCat == 'pujakit';
+      } else if (cat.contains('book')) {
+        return pCat.contains('book') || pTitle.contains('book');
+      } else if (cat.contains('ayurvedic')) {
+        return pCat.contains('ayurved') || pTitle.contains('ayurved');
+      }
+      return true;
+    }).toList();
+  }
 
   @override
   void onInit() {

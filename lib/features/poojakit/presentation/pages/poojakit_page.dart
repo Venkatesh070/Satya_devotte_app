@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/cart_restriction_popup.dart';
 
 class PoojaKitPage extends GetView<PoojaKitController> {
   const PoojaKitPage({super.key, this.onBack});
@@ -49,6 +50,30 @@ class PoojaKitPage extends GetView<PoojaKitController> {
             );
           }
 
+          final filtered = controller.filteredProducts;
+
+          if (filtered.isEmpty) {
+            return _ShopScaffold(
+              cartController: cartCtrl,
+              onBack: onBack,
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: () => controller.fetchProducts(refresh: true),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height * 0.5,
+                    alignment: Alignment.center,
+                    child: _StateMessage(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No products in ${controller.selectedCategory}',
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
           return _ShopScaffold(
             cartController: cartCtrl,
             onBack: onBack,
@@ -56,34 +81,57 @@ class PoojaKitPage extends GetView<PoojaKitController> {
               color: AppColors.primary,
               onRefresh: () => controller.fetchProducts(refresh: true),
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 118),
                 itemCount:
-                    controller.products.length + (controller.isLoading ? 1 : 0),
+                    filtered.length + (controller.isLoading ? 1 : 0),
                 separatorBuilder: (_, _) => const Divider(
                   height: 22,
                   thickness: 0.7,
                   color: Color(0x1A6B4A2B),
                 ),
                 itemBuilder: (context, index) {
-                  if (index >= controller.products.length) {
+                  if (index >= filtered.length) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 18),
                       child: Center(child: _GradientSpinner(size: 24)),
                     );
                   }
 
-                  if (index == controller.products.length - 1) {
+                  if (index == filtered.length - 1) {
                     controller.loadNextPage();
                   }
 
-                  final product = controller.products[index];
+                  final product = filtered[index];
                   return _ProductListTile(
                     product: product,
                     onTap: () => Get.toNamed(
                       AppRoutes.poojaKitDetails,
                       arguments: product,
                     ),
-                    onAddToCartTap: () => cartCtrl.addToCart(product.id),
+                    onAddToCartTap: () async {
+                      if (cartCtrl.cart == null) {
+                        await cartCtrl.fetchCart();
+                      }
+                      if (cartCtrl.isCategoryRestricted(product)) {
+                        if (context.mounted) {
+                          showCartRestrictionPopup(context);
+                        }
+                        return;
+                      }
+                      cartCtrl.addToCart(
+                        product.id,
+                        onError: (err) {
+                          if (context.mounted) {
+                            showCartRestrictionPopup(
+                              context,
+                              message: err.isNotEmpty
+                                  ? err
+                                  : 'You cannot add Ayurvedic products along with Sathya Books and Puja Kits.',
+                            );
+                          }
+                        },
+                      );
+                    },
                   );
                 },
               ),
@@ -140,8 +188,59 @@ class _ShopScaffold extends StatelessWidget {
             ),
           ),
         ),
+        const _CategoryTabBar(),
         Expanded(child: child),
       ],
+    );
+  }
+}
+
+class _CategoryTabBar extends GetView<PoojaKitController> {
+  const _CategoryTabBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Obx(() {
+        final current = controller.selectedCategory;
+        return Row(
+          children: PoojaKitController.categories.map((category) {
+            final isSelected = current == category;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => controller.setSelectedCategory(category),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF183EA4)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    category,
+                    style: AppTypography.inter(
+                      fontSize: 12,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF6B4A2B),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      }),
     );
   }
 }
