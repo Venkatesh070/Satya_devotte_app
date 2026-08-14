@@ -352,73 +352,6 @@ class _FestivalListState extends State<_FestivalList> {
           ),
         ),
 
-        // ── Month picker — hidden for superadmin ─────────────────
-        if (!Get.find<AuthController>().isSuperAdmin)
-          Container(
-            color: CmsColors.white,
-            padding: EdgeInsets.only(
-              left: isWeb ? 24 : 16,
-              right: 16,
-              bottom: 14,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select Month',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Obx(
-                    () => Row(
-                      children: List.generate(12, (i) {
-                        final isSel = ctrl.selectedMonth == i + 1;
-                        return _cmsClickable(
-                          onTap: () => ctrl.setMonth(i + 1),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSel ? CmsColors.orange : CmsColors.bg,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSel
-                                    ? CmsColors.orange
-                                    : CmsColors.border,
-                              ),
-                            ),
-                            child: Text(
-                              _months[i],
-                              style: TextStyle(
-                                color: isSel
-                                    ? Color(0xFFFCF7EF)
-                                    : CmsColors.textSecond,
-                                fontSize: 12,
-                                fontWeight: isSel
-                                    ? FontWeight.w700
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
         const Divider(height: 1, color: CmsColors.border),
 
         // ── Content ───────────────────────────────────────────────
@@ -486,12 +419,10 @@ class _FestivalListState extends State<_FestivalList> {
               final isSearch = ctrl.search.isNotEmpty;
               return CmsEmptyState(
                 icon: Icons.celebration_outlined,
-                title: isSearch
-                    ? 'No matching festivals'
-                    : 'No Festivals in ${_months[ctrl.selectedMonth - 1]}',
+                title: isSearch ? 'No matching festivals' : 'No Festivals found',
                 subtitle: isSearch
                     ? 'Try a different search term'
-                    : 'Add a festival or select a different month',
+                    : 'Add a festival to get started',
                 actionLabel: isSearch ? null : 'Add Festival',
                 onAction: isSearch ? null : onAdd,
               );

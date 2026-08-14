@@ -15,7 +15,6 @@ class FestivalController extends GetxController {
   final _isSubmitting = false.obs;
   final _error = RxnString();
   final _filter = 'All'.obs;
-  final _selectedMonth = DateTime.now().month.obs;
   final _page = 1.obs;
   final _limit = 10.obs;
   final _total = 0.obs;
@@ -27,7 +26,7 @@ class FestivalController extends GetxController {
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
   String get filter => _filter.value;
-  int get selectedMonth => _selectedMonth.value;
+  int? get selectedMonth => null;
   int get page => _page.value;
   int get limit => _limit.value;
   int get total => _total.value;
@@ -36,16 +35,7 @@ class FestivalController extends GetxController {
 
   List<FestivalModel> get filteredFestivals => _festivals.toList();
 
-  List<FestivalModel> get festivalsByMonth {
-    if (_search.value.isNotEmpty) return filteredFestivals;
-    final auth = Get.find<AuthController>();
-    // SuperAdmin sees ALL months always — month picker is for admin only
-    if (auth.isSuperAdmin) return filteredFestivals;
-    // Admin — filter by selected month
-    return filteredFestivals
-        .where((f) => f.monthNumber == _selectedMonth.value)
-        .toList();
-  }
+  List<FestivalModel> get festivalsByMonth => filteredFestivals;
 
   int get pendingCount => _festivals.where((f) => f.status == 'Pending').length;
   int get queuedCount => _festivals.where((f) => f.status == 'Queued').length;
@@ -62,7 +52,7 @@ class FestivalController extends GetxController {
     loadFestivals(page: 1);
   }
 
-  void setMonth(int m) => _selectedMonth.value = m;
+  void setMonth(int? m) {}
 
   Future<void> goToPage(int target) async {
     final p = target.clamp(1, _totalPages.value);

@@ -44,8 +44,7 @@ class RitualRemoteDataSource {
     String? status,
     String? search,
   }) async {
-    final endpoint =
-        superAdmin ? ApiEndpoints.allRituals : ApiEndpoints.myRituals;
+    final endpoint = ApiEndpoints.allRituals;
     final response = await _apiClient.dio.get(
       endpoint,
       queryParameters: {

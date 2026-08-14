@@ -44,7 +44,7 @@ class PoojaRemoteDataSource {
     String? status,
     String? search,
   }) async {
-    final endpoint = superAdmin ? ApiEndpoints.allPoojas : ApiEndpoints.myPoojas;
+    final endpoint = ApiEndpoints.allPoojas;
     final response = await _apiClient.dio.get(
       endpoint,
       queryParameters: {

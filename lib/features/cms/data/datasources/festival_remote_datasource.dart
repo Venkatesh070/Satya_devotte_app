@@ -51,7 +51,7 @@ class FestivalRemoteDataSource {
     String? status,
     String? search,
   }) async {
-    final endpoint = superAdmin ? '/api/v1/festivals/all' : '/api/v1/festivals/my';
+    final endpoint = '/api/v1/festivals/all';
     final res = await _apiClient.dio.get(
       endpoint,
       queryParameters: {

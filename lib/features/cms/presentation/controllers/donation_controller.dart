@@ -45,10 +45,7 @@ class DonationController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final auth = Get.find<AuthController>();
-      final result = auth.isSuperAdmin
-          ? await _dataSource.getAllDonations()
-          : await _dataSource.getMyDonations();
+      final result = await _dataSource.getAllDonations();
       _donations.assignAll(result);
     } catch (e) {
       _error.value = _parseError(e);
