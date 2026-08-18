@@ -588,9 +588,9 @@ class _CatalogCard extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return const ColoredBox(
-      color: Color(0xFFFAECD2),
-      child: Icon(Icons.auto_awesome, color: Color(0xFFE35600), size: 28),
+    return Image.asset(
+      'assets/images/default_img.png',
+      fit: BoxFit.cover,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -6,7 +7,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
-import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_detail_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 
 class ProfilePoojaHistoryPage extends StatefulWidget {
   const ProfilePoojaHistoryPage({super.key});
@@ -141,7 +142,7 @@ class _HistoryList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, i) {
+      itemBuilder: (context, i) {
         final session = items[i];
         final pooja = session['pooja'] ?? {};
         final title = pooja['title'] ?? 'Puja';
@@ -187,187 +188,157 @@ class _HistoryList extends StatelessWidget {
         }
 
         final isFinished = _isFinished(session);
-        final statusColor = isFinished
-            ? const Color(0xFF10B981)
-            : const Color(0xFFF59E0B);
+        final statusText = isFinished ? 'Finished' : 'In Progress';
 
-        final deity = pooja['deity'] is Map ? pooja['deity'] as Map : {};
+        // Extract Puja Image URL first (with fallback to Deity image)
+        final imageUrl = _extractPujaImage(pooja);
+        final description = (pooja['description'] ?? pooja['purpose'] ?? '').toString();
 
-        // Extract Image URL from the nested media structure in your JSON
-        String? imageUrl;
-        final deityMedia = deity['media'];
-        if (deityMedia is Map &&
-            deityMedia['images'] is List &&
-            (deityMedia['images'] as List).isNotEmpty) {
-          imageUrl = deityMedia['images'][0].toString();
-        }
+        return Material(
+          color: const Color(0xFFFCF7EF),
+          borderRadius: BorderRadius.circular(16),
+          elevation: 0,
+          child: InkWell(
+            onTap: () {
+              final poojaData = session['pooja'];
+              if (poojaData is! Map) return;
+              final poojaMap = Map<String, dynamic>.from(poojaData);
+              final sessionId = (session['_id'] ?? session['id'])?.toString();
+              final poojaId = (poojaMap['_id'] ?? poojaMap['id'] ?? '').toString();
 
-        // Fallback to pooja hero image if deity image is missing
-        imageUrl ??= pooja['heroImage'];
-
-        final description = pooja['description'] ?? pooja['purpose'] ?? '';
-
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Material(
-              color: Color(0XFFFCF7EF),
-              borderRadius: BorderRadius.circular(16),
-              elevation: 0,
-              child: InkWell(
-                onTap: () {
-                  final poojaData = session['pooja'];
-                  if (poojaData is! Map) return;
-                  final poojaMap = Map<String, dynamic>.from(poojaData);
-                  final sessionId = (session['_id'] ?? session['id'])
-                      ?.toString();
-
-                  if (_isInProgress(session)) {
-                    Get.to(
-                      () => PoojaStepWizard(
-                        pooja: PoojaView(poojaMap),
-                        initialStep: currentStepIndex,
-                        sessionId: sessionId,
-                      ),
-                    );
-                  } else {
-                    Get.to(() => const RitualDetailPage(), arguments: poojaMap);
-                  }
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: DonationUi.cardBorder),
+              if (_isInProgress(session)) {
+                Get.to(
+                  () => PoojaStepWizard(
+                    pooja: PoojaView(poojaMap),
+                    initialStep: currentStepIndex,
+                    sessionId: sessionId,
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Deity Image (Circular like Figma)
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFF5F5F5),
-                          border: Border.all(
-                            color: const Color(0xFFE5E5E5),
-                            width: 1,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child:
-                              imageUrl != null && imageUrl.toString().isNotEmpty
-                              ? Image.network(
-                                  imageUrl.toString(),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.temple_hindu,
-                                    color: Color(0xFFD1D5DB),
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.temple_hindu,
-                                  color: Color(0xFFD1D5DB),
-                                ),
-                        ),
+                );
+              } else {
+                openPujaPreview(context, id: poojaId, initialData: poojaMap);
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: DonationUi.cardBorder),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Puja Image
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAECD2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFFAECD2),
+                        width: 2,
                       ),
-                      const SizedBox(width: 14),
-                      // Text Content
-                      Expanded(
-                        child: Column(
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: imageUrl != null && imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => Image.asset(
+                                'assets/images/default_img.png',
+                                fit: BoxFit.cover,
+                              ),
+                              placeholder: (_, __) => Image.asset(
+                                'assets/images/default_img.png',
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : Image.asset(
+                              'assets/images/default_img.png',
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Text Content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 2),
-                            Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1C1917),
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1C1917),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.inter(
-                                fontSize: 12,
-                                color: const Color(0xFF78716C),
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.access_time,
-                                  size: 12,
-                                  color: Color(0xFFA8A29E),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  when,
-                                  style: AppTypography.inter(
-                                    fontSize: 11,
-                                    color: const Color(0xFFA8A29E),
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (stepLabel.isNotEmpty)
-                                  Text(
-                                    stepLabel,
-                                    style: AppTypography.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFFF59E0B),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            const SizedBox(width: 6),
+                            PujaSessionStatusBadge(label: statusText),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Status Badge at top right
-            Positioned(
-              top: -6,
-              right: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF78716C),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 12,
+                              color: Color(0xFFA8A29E),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                when,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.inter(
+                                  fontSize: 11,
+                                  color: const Color(0xFFA8A29E),
+                                ),
+                              ),
+                            ),
+                            if (stepLabel.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                stepLabel,
+                                style: AppTypography.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFE35600),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Text(
-                  session['status'].toString(),
-                  style: AppTypography.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFFFCF7EF),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
+          ),
         );
       },
     );
@@ -390,5 +361,70 @@ class _HistoryList extends StatelessWidget {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String? _extractPujaImage(Map pooja) {
+    String extract(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v.trim();
+      if (v is List && v.isNotEmpty) return extract(v.first);
+      if (v is Map) {
+        return extract(
+          v['url'] ?? v['imageUrl'] ?? v['image'] ?? v['src'] ?? v['path'],
+        );
+      }
+      return v.toString().trim();
+    }
+
+    for (final key in [
+      'imageUrl',
+      'image',
+      'heroImage',
+      'bannerImage',
+      'thumbnailUrl',
+      'thumbnail',
+      'poojaImage',
+      'pooja_image'
+    ]) {
+      final val = extract(pooja[key]);
+      if (val.isNotEmpty && val.startsWith('http')) return val;
+    }
+
+    final media = pooja['media'];
+    if (media is Map) {
+      for (final key in ['images', 'heroImage', 'bannerImage', 'image']) {
+        final val = extract(media[key]);
+        if (val.isNotEmpty && val.startsWith('http')) return val;
+      }
+    } else if (media is List && media.isNotEmpty) {
+      final val = extract(media.first);
+      if (val.isNotEmpty && val.startsWith('http')) return val;
+    }
+
+    final deity = pooja['deity'];
+    if (deity is Map) {
+      for (final key in ['imageUrl', 'image', 'heroImage']) {
+        final val = extract(deity[key]);
+        if (val.isNotEmpty && val.startsWith('http')) return val;
+      }
+      final dMedia = deity['media'];
+      if (dMedia is Map) {
+        final val = extract(dMedia['images']);
+        if (val.isNotEmpty && val.startsWith('http')) return val;
+      }
+    }
+
+    for (final key in [
+      'imageUrl',
+      'image',
+      'heroImage',
+      'poojaImage',
+      'pooja_image'
+    ]) {
+      final val = extract(pooja[key]);
+      if (val.isNotEmpty) return val;
+    }
+
+    return null;
   }
 }

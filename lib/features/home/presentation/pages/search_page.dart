@@ -754,11 +754,9 @@ class _SearchResultImage extends StatelessWidget {
     final imageUrl = result.imageUrl?.trim() ?? '';
     final hasImage = imageUrl.isNotEmpty;
 
-    final placeholder = Container(
-      color: const Color(0xFFF3E2C3),
-      child: Center(
-        child: Icon(result.icon, size: 22, color: const Color(0xFF8E5C25)),
-      ),
+    final placeholder = Image.asset(
+      'assets/images/default_img.png',
+      fit: BoxFit.cover,
     );
 
     return Container(
