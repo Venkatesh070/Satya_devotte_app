@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
@@ -822,4 +825,51 @@ class PujaSessionStatusBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> openPujaPreview(
+  BuildContext context, {
+  required String id,
+  Map<String, dynamic>? initialData,
+}) async {
+  Map<String, dynamic> poojaMap = Map<String, dynamic>.from(
+    initialData ?? <String, dynamic>{'_id': id, 'id': id},
+  );
+
+  final existingSteps = poojaMap['steps'];
+  final needsFetch = existingSteps == null ||
+      (existingSteps is List && existingSteps.isEmpty);
+
+  if (needsFetch && id.isNotEmpty) {
+    try {
+      final offlineService = Get.find<OfflineService>();
+      final cacheKey = 'pooja_detail_$id';
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.pooja(id),
+        );
+        final payload = res.data;
+        if (payload is Map) {
+          final data = payload['data'];
+          if (data is Map) {
+            final inner = data['pooja'];
+            poojaMap = inner is Map
+                ? Map<String, dynamic>.from(inner)
+                : Map<String, dynamic>.from(data);
+          } else {
+            poojaMap = Map<String, dynamic>.from(payload);
+          }
+          await offlineService.cacheData(cacheKey, poojaMap);
+        }
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        if (cached is Map) poojaMap = Map<String, dynamic>.from(cached);
+      }
+    } catch (e) {
+      debugPrint('Error fetching pooja detail for preview: $e');
+    }
+  }
+
+  if (!context.mounted) return;
+  showPujaPreviewModal(context, PoojaView(poojaMap));
 }

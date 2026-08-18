@@ -26,6 +26,7 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/prof
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
@@ -362,7 +363,7 @@ class _HomePageState extends State<HomePage> {
       await _openPoojasTabFromViewMore();
       return;
     }
-    await Get.toNamed<dynamic>(AppRoutes.ritualDetail, arguments: args);
+    await openPujaPreview(context, id: id, initialData: args);
   }
 
   Future<void> _onFestivalItemTap(HomeCircleItem item) async {

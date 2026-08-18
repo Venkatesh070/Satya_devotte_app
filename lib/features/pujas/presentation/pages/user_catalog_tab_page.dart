@@ -3,15 +3,11 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/core/network/api_client.dart';
-import 'package:satya_devotte_app/core/network/api_endpoints.dart';
-import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
-import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
@@ -233,52 +229,11 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
 
   Future<void> _openItem(_CatalogRow item) async {
     if (_isPujas) {
-      Map<String, dynamic> poojaMap = Map<String, dynamic>.from(
-        item.rawPooja ?? <String, dynamic>{
-          '_id': item.id,
-          'id': item.id,
-          'title': item.title,
-          'description': item.subtitle,
-          if (item.imageUrl != null) 'imageUrl': item.imageUrl,
-        },
+      await openPujaPreview(
+        context,
+        id: item.id,
+        initialData: item.rawPooja,
       );
-
-      final existingSteps = poojaMap['steps'];
-      final needsFetch = existingSteps == null ||
-          (existingSteps is List && existingSteps.isEmpty);
-
-      if (needsFetch) {
-        try {
-          final offlineService = Get.find<OfflineService>();
-          final cacheKey = 'pooja_detail_${item.id}';
-          if (offlineService.isOnline.value) {
-            final res = await Get.find<ApiClient>().dio.get<dynamic>(
-                  ApiEndpoints.pooja(item.id),
-                );
-            final payload = res.data;
-            if (payload is Map) {
-              final data = payload['data'];
-              if (data is Map) {
-                final inner = data['pooja'];
-                poojaMap = inner is Map
-                    ? Map<String, dynamic>.from(inner)
-                    : Map<String, dynamic>.from(data);
-              } else {
-                poojaMap = Map<String, dynamic>.from(payload);
-              }
-              await offlineService.cacheData(cacheKey, poojaMap);
-            }
-          } else {
-            final cached = offlineService.getCachedData(cacheKey);
-            if (cached is Map) poojaMap = Map<String, dynamic>.from(cached);
-          }
-        } catch (e) {
-          debugPrint('Error fetching pooja detail for preview modal: $e');
-        }
-      }
-
-      if (!mounted) return;
-      showPujaPreviewModal(context, PoojaView(poojaMap));
       return;
     }
     Get.to<void>(() => UserRitualDetailPage(ritualId: item.id));

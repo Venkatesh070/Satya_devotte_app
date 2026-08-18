@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
@@ -73,44 +74,54 @@ class GlobalSearchResult {
 
   String get typeLabel {
     if (type.isEmpty) return 'result';
-    if (type == 'pooja') return 'Puja';
+    final t = type.toLowerCase();
+    if (t == 'pooja' ||
+        t == 'puja' ||
+        t == 'pujas' ||
+        t == 'poojas' ||
+        t == 'ritual' ||
+        t == 'rituals') {
+      return 'Puja';
+    }
     return type[0].toUpperCase() + type.substring(1);
   }
 
   IconData get icon {
-    switch (type) {
-      case 'donation':
-        return Icons.volunteer_activism_outlined;
+    switch (type.toLowerCase()) {
       case 'festival':
         return Icons.event_available_outlined;
       case 'ritual':
+      case 'rituals':
         return Icons.local_fire_department_outlined;
       case 'deity':
         return Icons.temple_hindu_outlined;
       case 'pooja':
+      case 'puja':
+      case 'pujas':
+      case 'poojas':
       default:
         return Icons.spa_outlined;
     }
   }
 
   Map<String, dynamic> toDetailArgs() => {
-    ...raw,
-    '_id': id,
-    'id': id,
-    'title': title,
-    'description': description,
-    if (imageUrl != null) 'imageUrl': imageUrl,
-  };
+        ...raw,
+        '_id': id,
+        'id': id,
+        'title': title,
+        'description': description,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+      };
 
   Map<String, dynamic> toDeityArgs() => {
-    'type': 'deity',
-    ...toDetailArgs(),
-    'name': title,
-    if (imageUrl != null)
-      'media': {
-        'images': [imageUrl],
-      },
-  };
+        'type': 'deity',
+        ...toDetailArgs(),
+        'name': title,
+        if (imageUrl != null)
+          'media': {
+            'images': [imageUrl],
+          },
+      };
 }
 
 class SearchPage extends StatefulWidget {
@@ -123,24 +134,30 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
+
   bool _isSearching = false;
   String? _searchError;
   List<GlobalSearchResult> _searchResults = const [];
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
-    _searchFocus.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
     final q = value.trim();
     if (q.isEmpty) {
       setState(() {
@@ -148,12 +165,20 @@ class _SearchPageState extends State<SearchPage> {
         _searchError = null;
         _searchResults = const [];
       });
-    } else {
-      setState(() {});
+      return;
     }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      if (mounted && _searchController.text.trim() == q) {
+        _search(q);
+      }
+    });
   }
 
-  Future<void> _search(String q) async {
+  Future<void> _search(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return;
+
     setState(() {
       _isSearching = true;
       _searchError = null;
@@ -241,16 +266,47 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _openSearchResult(GlobalSearchResult result) async {
     FocusScope.of(context).unfocus();
-    switch (result.type) {
-      case 'pooja':
-        if (result.id.isEmpty) return;
-        await Get.toNamed<dynamic>(
-          AppRoutes.ritualDetail,
-          arguments: result.toDetailArgs(),
-        );
-        return;
+    final type = result.type.toLowerCase().trim();
+    final raw = result.raw;
+
+    final isExplicitPoojaType = type == 'pooja' ||
+        type == 'puja' ||
+        type == 'pujas' ||
+        type == 'poojas' ||
+        type == 'ritual' ||
+        type == 'rituals';
+
+    final hasPoojaFields = raw.containsKey('steps') ||
+        raw.containsKey('schedules') ||
+        raw.containsKey('daily') ||
+        raw.containsKey('duration') ||
+        raw.containsKey('pooja_status');
+
+    if (isExplicitPoojaType || hasPoojaFields) {
+      if (result.id.isEmpty) return;
+      await openPujaPreview(
+        context,
+        id: result.id,
+        initialData: result.toDetailArgs(),
+      );
+      return;
+    }
+
+    switch (type) {
       case 'deity':
         if (result.id.isEmpty) return;
+        final hasDeityInfo = raw.containsKey('about') ||
+            raw.containsKey('stories') ||
+            raw.containsKey('media') ||
+            raw.containsKey('rituals');
+        if (!hasDeityInfo) {
+          await openPujaPreview(
+            context,
+            id: result.id,
+            initialData: result.toDetailArgs(),
+          );
+          return;
+        }
         await Get.toNamed<dynamic>(
           AppRoutes.ritualDetail,
           arguments: result.toDeityArgs(),
@@ -322,7 +378,15 @@ class _SearchPageState extends State<SearchPage> {
         }
         return;
       default:
-        Get.back();
+        if (result.id.isNotEmpty) {
+          await openPujaPreview(
+            context,
+            id: result.id,
+            initialData: result.toDetailArgs(),
+          );
+        } else {
+          Get.back();
+        }
     }
   }
 
