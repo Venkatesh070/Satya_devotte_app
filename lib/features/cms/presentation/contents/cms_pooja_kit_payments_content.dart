@@ -395,7 +395,7 @@ class _PaymentsTable extends StatelessWidget {
                   SizedBox(width: 200, child: _Hdr(label: 'Customer')),
                   SizedBox(width: 110, child: _Hdr(label: 'Total')),
                   SizedBox(width: 92, child: _Hdr(label: 'Status')),
-                  Expanded(child: _Hdr(label: 'Payment reference')),
+                  Expanded(child: _Hdr(label: 'PayFast ref / txn ID')),
                   SizedBox(width: 152, child: _Hdr(label: 'Date')),
                   SizedBox(width: 130, child: _Hdr(label: '')),
                 ],
@@ -515,16 +515,30 @@ class _PaymentRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: SelectableText(
-                (order.payfastPaymentId ?? '').trim().isEmpty
-                    ? '—'
-                    : order.payfastPaymentId!,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: CmsColors.textPrimary,
-                ),
-                maxLines: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    order.paymentReference.isEmpty ? '—' : order.paymentReference,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontFamily: 'monospace',
+                      color: CmsColors.textPrimary,
+                    ),
+                    maxLines: 2,
+                  ),
+                  if (order.resolvedPayfastPaymentId.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      'Txn ${order.resolvedPayfastPaymentId}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontFamily: 'monospace',
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -602,13 +616,24 @@ class _PaymentsCards extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               SelectableText(
-                'Ref: ${(o.payfastPaymentId ?? '').trim().isEmpty ? '—' : o.payfastPaymentId!}',
+                'Ref: ${o.paymentReference.isEmpty ? '—' : o.paymentReference}',
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
                   color: CmsColors.textPrimary,
                 ),
               ),
+              if (o.resolvedPayfastPaymentId.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                SelectableText(
+                  'Txn: ${o.resolvedPayfastPaymentId}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: CmsColors.textSecond,
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

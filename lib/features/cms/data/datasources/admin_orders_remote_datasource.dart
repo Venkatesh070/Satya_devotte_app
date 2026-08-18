@@ -14,6 +14,7 @@
 //   • POST   /admin/replacements/:id/approve
 //   • POST   /admin/replacements/:id/reject
 //   • GET    /payments/verify/:reference   (re-used from donations flow)
+import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
@@ -161,25 +162,120 @@ class AdminOrdersRemoteDataSource {
     return AdminOrder.fromJson(_unwrapOrder(res.data));
   }
 
-  /// `POST /orders/:id/dispatch` — set tracking AND mark `SHIPPED`.
+  /// `POST /orders/:id/dispatch` — book TCG (empty body / bookCourier) OR
+  /// set manual tracking AND mark `SHIPPED`.
   Future<AdminOrder> dispatchOrder(
     String id, {
-    required String courier,
-    required String trackingNumber,
+    String? courier,
+    String? trackingNumber,
     String? trackingUrl,
     String? note,
+    bool bookCourier = false,
   }) async {
+    final hasManual = (courier ?? '').trim().isNotEmpty &&
+        (trackingNumber ?? '').trim().isNotEmpty;
     final res = await _apiClient.dio.post(
       ApiEndpoints.orderDispatch(id),
+      data: hasManual
+          ? {
+              'courier': courier!.trim(),
+              'trackingNumber': trackingNumber!.trim(),
+              if (trackingUrl != null && trackingUrl.isNotEmpty)
+                'trackingUrl': trackingUrl,
+              if (note != null && note.isNotEmpty) 'note': note,
+              'bookCourier': false,
+            }
+          : {
+              if (note != null && note.isNotEmpty) 'note': note,
+              'bookCourier': bookCourier,
+            },
+    );
+    return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
+  /// `POST /orders/:id/ready-for-pickup` — pickup only → READY_FOR_PICKUP.
+  Future<AdminOrder> readyForPickup(String id, {String? note}) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.orderReadyForPickup(id),
       data: {
-        'courier': courier,
-        'trackingNumber': trackingNumber,
-        if (trackingUrl != null && trackingUrl.isNotEmpty)
-          'trackingUrl': trackingUrl,
         if (note != null && note.isNotEmpty) 'note': note,
       },
     );
     return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
+  /// `POST /orders/:id/packed` — pickup only → PACKED.
+  Future<AdminOrder> markPacked(String id, {String? note}) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.orderPacked(id),
+      data: {
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
+  /// `POST /orders/:id/verify-pickup` — admin enters customer PIN → FULFILLED.
+  Future<AdminOrder> verifyPickup(String id, {required String pin}) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.orderVerifyPickup(id),
+      data: {'pin': pin.trim()},
+    );
+    return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
+  /// `POST /orders/:id/sync-delivery-pod` — refresh Courier Guy POD status.
+  Future<AdminOrder> syncDeliveryPod(String id) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.orderSyncDeliveryPod(id),
+    );
+    return AdminOrder.fromJson(_unwrapOrder(res.data));
+  }
+
+  /// `GET /orders/:id/shipping-label` — PDF bytes proxied from ShipLogic.
+  Future<List<int>> downloadShippingLabelPdf(String id) async {
+    final res = await _apiClient.dio.get<List<int>>(
+      ApiEndpoints.orderShippingLabel(id),
+      options: Options(
+        responseType: ResponseType.bytes,
+        followRedirects: false,
+        validateStatus: (status) => status != null && status >= 200 && status < 300,
+      ),
+    );
+    final bytes = res.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        message: 'Shipping label PDF was empty',
+      );
+    }
+    final contentType = (res.headers.value('content-type') ?? '').toLowerCase();
+    if (contentType.contains('json') || contentType.contains('text/html')) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        message: 'Shipping label endpoint did not return a PDF',
+      );
+    }
+    return bytes;
+  }
+
+  /// `GET /orders/:id/shipping-label-url` — signed Courier Guy label PDF URL.
+  Future<String> fetchShippingLabelUrl(String id) async {
+    final res = await _apiClient.dio.get(
+      ApiEndpoints.orderShippingLabelUrl(id),
+    );
+    final root = res.data;
+    final data = root is Map<String, dynamic>
+        ? (root['data'] as Map<String, dynamic>? ?? root)
+        : <String, dynamic>{};
+    final url = (data['url'] ?? '').toString().trim();
+    if (url.isEmpty) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        message: 'Shipping label URL was not returned',
+      );
+    }
+    return url;
   }
 
   /// `POST /orders/:id/cancel-paid` — terminal admin cancel.
@@ -245,6 +341,81 @@ class AdminOrdersRemoteDataSource {
       limit: pagination.limit,
       total: pagination.total,
       totalPages: pagination.totalPages,
+    );
+  }
+
+  /// `GET /orders/requests/:id`
+  Future<OrderRequest> getOrderRequest(String id) async {
+    final res = await _apiClient.dio.get(ApiEndpoints.orderRequestById(id));
+    return OrderRequest.fromJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /orders/requests/:id/approve`
+  Future<ApproveOrderRequestResult> approveOrderRequest(
+    String id, {
+    String? adminNote,
+  }) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.approveOrderRequest(id),
+      data: {
+        if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
+      },
+    );
+    final body = _asMap(res.data);
+    final message = body['message']?.toString();
+    return ApproveOrderRequestResult(
+      request: OrderRequest.fromJson(_unwrapRequest(res.data)),
+      message: message != null && message.isNotEmpty ? message : null,
+    );
+  }
+
+  /// `POST /orders/requests/:id/reject`
+  Future<OrderRequest> rejectOrderRequest(
+    String id, {
+    String? adminNote,
+  }) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.rejectOrderRequest(id),
+      data: {
+        if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
+      },
+    );
+    return OrderRequest.fromJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /orders/requests/:id/book-return`
+  Future<OrderRequest> bookOrderRequestReturn(String id) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.bookOrderRequestReturn(id),
+    );
+    return OrderRequest.fromJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /orders/requests/:id/mark-return-received`
+  Future<ApproveOrderRequestResult> markOrderRequestReturnReceived(
+    String id,
+  ) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.markOrderRequestReturnReceived(id),
+    );
+    final body = _asMap(res.data);
+    final message = body['message']?.toString();
+    return ApproveOrderRequestResult(
+      request: OrderRequest.fromJson(_unwrapRequest(res.data)),
+      message: message != null && message.isNotEmpty ? message : null,
+    );
+  }
+
+  /// `POST /orders/requests/:id/sync-return` — refresh TCG return tracking.
+  Future<ApproveOrderRequestResult> syncOrderRequestReturn(String id) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.syncOrderRequestReturn(id),
+    );
+    final body = _asMap(res.data);
+    final message = body['message']?.toString();
+    return ApproveOrderRequestResult(
+      request: OrderRequest.fromJson(_unwrapRequest(res.data)),
+      message: message != null && message.isNotEmpty ? message : null,
     );
   }
 
@@ -315,6 +486,22 @@ class AdminOrdersRemoteDataSource {
       data: {
         if (adminNote != null && adminNote.isNotEmpty) 'adminNote': adminNote,
       },
+    );
+    return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /admin/replacements/:id/book-return`
+  Future<OrderRequest> bookReplacementReturn(String id) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.bookReplacementReturn(id),
+    );
+    return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
+  }
+
+  /// `POST /admin/replacements/:id/mark-return-received`
+  Future<OrderRequest> markReplacementReturnReceived(String id) async {
+    final res = await _apiClient.dio.post(
+      ApiEndpoints.markReplacementReturnReceived(id),
     );
     return OrderRequest.fromReplacementJson(_unwrapRequest(res.data));
   }

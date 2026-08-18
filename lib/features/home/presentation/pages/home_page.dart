@@ -29,9 +29,20 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pa
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/user_catalog_tab_page.dart';
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+
+class _HomeTabs {
+  static const home = 0;
+  static const pujas = 1;
+  static const rituals = 2;
+  static const deities = 3;
+  static const calendar = 4;
+  static const profile = 5;
+  static const last = profile;
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -325,7 +336,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openPoojasTabFromViewMore() async {
-    await Get.toNamed(AppRoutes.rituals);
+    await _onTabSelected(_HomeTabs.pujas);
   }
 
   Future<void> _openFestivalsCalendarTab() async {
@@ -333,7 +344,7 @@ class _HomePageState extends State<HomePage> {
         ? Get.find<CalendarController>()
         : Get.put(CalendarController());
     controller.setActiveTab(CalendarFilterTab.festivals);
-    await _onTabSelected(2);
+    await _onTabSelected(_HomeTabs.calendar);
   }
 
   Future<void> _onPujaItemTap(HomeCircleItem item) async {
@@ -367,7 +378,7 @@ class _HomePageState extends State<HomePage> {
       controller.focusedDate.value = DateTime(date.year, date.month);
     }
 
-    await _onTabSelected(2);
+    await _onTabSelected(_HomeTabs.calendar);
   }
 
   DateTime? _parseHomeItemDate(HomeCircleItem item) {
@@ -708,6 +719,8 @@ class _HomePageState extends State<HomePage> {
             onPujaTap: _onPujaItemTap,
             onFestivalTap: _onFestivalItemTap,
           ),
+          const UserPujasTabPage(),
+          const UserRitualsTabPage(),
           const RitualListPage(),
           const CalendarPage(),
           const ProfilePage(),
@@ -1087,7 +1100,7 @@ class _BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final PageController pageController;
   final Future<void> Function(int) onTap;
-  static const int lastTabIndex = 3;
+  static const int lastTabIndex = _HomeTabs.last;
 
   @override
   State<_BottomNavBar> createState() => _BottomNavBarState();
@@ -1183,8 +1196,10 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                   pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
                   slotWidth;
               final homeLeft = centeredSlotLeft - horizontalShift;
-              final poojasLeft = homeLeft + slotWidth;
-              final calendarLeft = poojasLeft + slotWidth;
+              final pujasLeft = homeLeft + slotWidth;
+              final ritualsLeft = pujasLeft + slotWidth;
+              final deitiesLeft = ritualsLeft + slotWidth;
+              final calendarLeft = deitiesLeft + slotWidth;
               final profileLeft = calendarLeft + slotWidth;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -1219,22 +1234,50 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.home_outlined,
                         label: 'Home',
-                        selected: widget.currentIndex == 0,
-                        onTap: () => _settleToIndex(0),
+                        selected: widget.currentIndex == _HomeTabs.home,
+                        onTap: () => _settleToIndex(_HomeTabs.home),
                       ),
                     ),
                     Positioned(
                       top: _tabTopOffset(
-                        centerX: poojasLeft + (slotWidth / 2),
+                        centerX: pujasLeft + (slotWidth / 2),
                         totalWidth: constraints.maxWidth,
                       ),
-                      left: poojasLeft,
+                      left: pujasLeft,
                       width: slotWidth,
                       child: _BottomItem(
                         icon: Icons.local_fire_department_outlined,
+                        label: 'Pujas',
+                        selected: widget.currentIndex == _HomeTabs.pujas,
+                        onTap: () => _settleToIndex(_HomeTabs.pujas),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: ritualsLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: ritualsLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.self_improvement_outlined,
+                        label: 'Rituals',
+                        selected: widget.currentIndex == _HomeTabs.rituals,
+                        onTap: () => _settleToIndex(_HomeTabs.rituals),
+                      ),
+                    ),
+                    Positioned(
+                      top: _tabTopOffset(
+                        centerX: deitiesLeft + (slotWidth / 2),
+                        totalWidth: constraints.maxWidth,
+                      ),
+                      left: deitiesLeft,
+                      width: slotWidth,
+                      child: _BottomItem(
+                        icon: Icons.temple_hindu_outlined,
                         label: 'Deities',
-                        selected: widget.currentIndex == 1,
-                        onTap: () => _settleToIndex(1),
+                        selected: widget.currentIndex == _HomeTabs.deities,
+                        onTap: () => _settleToIndex(_HomeTabs.deities),
                       ),
                     ),
                     Positioned(
@@ -1247,8 +1290,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.calendar_today_outlined,
                         label: 'Calendar',
-                        selected: widget.currentIndex == 2,
-                        onTap: () => _settleToIndex(2),
+                        selected: widget.currentIndex == _HomeTabs.calendar,
+                        onTap: () => _settleToIndex(_HomeTabs.calendar),
                       ),
                     ),
                     Positioned(
@@ -1261,8 +1304,8 @@ class _BottomNavBarState extends State<_BottomNavBar> {
                       child: _BottomItem(
                         icon: Icons.person_outline,
                         label: 'Profile',
-                        selected: widget.currentIndex == 3,
-                        onTap: () => _settleToIndex(3),
+                        selected: widget.currentIndex == _HomeTabs.profile,
+                        onTap: () => _settleToIndex(_HomeTabs.profile),
                       ),
                     ),
                   ],
@@ -2386,7 +2429,10 @@ class _FeaturedProductsSection extends StatelessWidget {
                     AppRoutes.poojaKitDetails,
                     arguments: product,
                   ),
-                  onAddToCartTap: () => cartCtrl.addToCart(product.id),
+                  onAddToCartTap: () => cartCtrl.addToCart(
+                    product.id,
+                    productCategory: product.category,
+                  ),
                 ),
               );
             },

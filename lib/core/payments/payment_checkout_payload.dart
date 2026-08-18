@@ -49,23 +49,10 @@ class PaymentGatewayUrls {
   static PaymentCheckoutPayload parseCheckout(Map<String, dynamic> raw) {
     final root = _unwrapData(raw);
 
-    final redirect = _redirectFromMaps(_candidateMaps(root));
-    if (redirect.isNotEmpty) {
-      return PaymentCheckoutPayload(redirectUrl: redirect);
-    }
-
+    // PayFast requires POST — prefer signed formFields over authorization_url GET.
     for (final candidate in _candidateMaps(root)) {
-      final action = _actionUrlFromMap(candidate);
-      final form = candidate['formData'] ??
-          candidate['form_data'] ??
-          candidate['form'] ??
-          candidate['fields'];
-      if (action.isNotEmpty && form is Map) {
-        return PaymentCheckoutPayload(
-          postHtml: buildAutoSubmitFormHtml(action, form),
-          postBaseUrl: action,
-        );
-      }
+      final post = _postFormFromMap(candidate);
+      if (post != null) return post;
     }
 
     for (final candidate in _candidateMaps(root)) {
@@ -86,7 +73,29 @@ class PaymentGatewayUrls {
       }
     }
 
+    final redirect = _redirectFromMaps(_candidateMaps(root));
+    if (redirect.isNotEmpty) {
+      return PaymentCheckoutPayload(redirectUrl: redirect);
+    }
+
     return const PaymentCheckoutPayload();
+  }
+
+  static PaymentCheckoutPayload? _postFormFromMap(Map<String, dynamic> candidate) {
+    final action = _actionUrlFromMap(candidate);
+    final form = candidate['formFields'] ??
+        candidate['form_fields'] ??
+        candidate['formData'] ??
+        candidate['form_data'] ??
+        candidate['form'] ??
+        candidate['fields'];
+    if (action.isNotEmpty && form is Map) {
+      return PaymentCheckoutPayload(
+        postHtml: buildAutoSubmitFormHtml(action, form),
+        postBaseUrl: action,
+      );
+    }
+    return null;
   }
 
   static Map<String, dynamic> _unwrapData(Map<String, dynamic> raw) {
@@ -109,7 +118,9 @@ class PaymentGatewayUrls {
     for (final candidate in maps) {
       for (final key in _urlKeys) {
         final value = str(candidate[key]);
-        if (value.isNotEmpty && !_looksLikeProcessEndpointOnly(value)) {
+        if (value.isNotEmpty &&
+            !_looksLikeProcessEndpointOnly(value) &&
+            !_isPayFastProcessUrl(value)) {
           return value;
         }
       }
@@ -128,11 +139,26 @@ class PaymentGatewayUrls {
 
     for (final key in _urlKeys) {
       final value = str(candidate[key]);
-      if (value.isNotEmpty && _looksLikeProcessEndpointOnly(value)) {
+      if (value.isEmpty) continue;
+      if (_isPayFastProcessUrl(value)) {
+        final uri = Uri.parse(value);
+        return '${uri.scheme}://${uri.host}${uri.path}';
+      }
+      if (_looksLikeProcessEndpointOnly(value)) {
         return value;
       }
     }
     return '';
+  }
+
+  /// PayFast hosted checkout — always POST a form, never GET (even with query).
+  static bool _isPayFastProcessUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return false;
+    final host = uri.host.toLowerCase();
+    if (!host.contains('payfast')) return false;
+    final path = uri.path.toLowerCase();
+    return path.endsWith('/eng/process') || path.endsWith('/process');
   }
 
   /// PayFast process URLs without query params need a POST form, not a GET.

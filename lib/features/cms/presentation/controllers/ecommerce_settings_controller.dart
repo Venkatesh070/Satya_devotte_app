@@ -13,19 +13,20 @@ class EcommerceSettingsController extends GetxController {
 
   final _isLoading = false.obs;
   final _isSaving = false.obs;
-  final _isTogglingEnabled = false.obs;
   final _error = RxnString();
   final _settings = Rxn<EcommerceSettings>();
 
   bool get isLoading => _isLoading.value;
   bool get isSaving => _isSaving.value;
-  bool get isTogglingEnabled => _isTogglingEnabled.value;
   String? get error => _error.value;
   EcommerceSettings? get settings => _settings.value;
   Rxn<EcommerceSettings> get settingsRx => _settings;
-  String get currency => _settings.value?.currency ?? defaultCurrency;
-  double get deliveryFee => _settings.value?.deliveryFee ?? 0;
-  bool get isDeliveryEnabled => _settings.value?.isEnabled ?? true;
+
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
 
   Future<void> load({bool force = false}) async {
     if (_isLoading.value) return;
@@ -43,81 +44,32 @@ class EcommerceSettingsController extends GetxController {
     }
   }
 
-  Future<bool> updateDeliveryEnabled({
-    required bool isEnabled,
-    required double deliveryFee,
-  }) async {
-    if (_isTogglingEnabled.value || _isSaving.value) return false;
-    if (deliveryFee < 0) {
-      showCmsSnackbar(
-        title: 'Invalid amount',
-        message: 'Delivery fee cannot be negative.',
-        isError: true,
-      );
-      return false;
-    }
-
-    _isTogglingEnabled.value = true;
-    try {
-      final current = _settings.value;
-      final payload = (current ?? const EcommerceSettings(deliveryFee: 0))
-          .copyWith(
-            deliveryFee: deliveryFee,
-            currency: defaultCurrency,
-            isEnabled: isEnabled,
-          );
-      _settings.value = await _ds.updateSettings(payload);
-      showCmsSnackbar(
-        title: isEnabled ? 'Enabled' : 'Disabled',
-        message: isEnabled
-            ? 'Delivery charges are now enabled.'
-            : 'Delivery charges are now disabled.',
-      );
-      return true;
-    } on DioException catch (e) {
-      showCmsSnackbar(
-        title: 'Update failed',
-        message: _msg(e),
-        isError: true,
-      );
-      return false;
-    } catch (_) {
-      showCmsSnackbar(
-        title: 'Update failed',
-        message: 'Could not update delivery charge status. Please try again.',
-        isError: true,
-      );
-      return false;
-    } finally {
-      _isTogglingEnabled.value = false;
-    }
-  }
-
   Future<bool> saveSettings({
-    required double deliveryFee,
+    required String vatNumber,
+    required double vatPercent,
   }) async {
-    if (_isSaving.value || _isTogglingEnabled.value) return false;
-    if (deliveryFee < 0) {
+    if (_isSaving.value) return false;
+    if (vatPercent < 0 || vatPercent > 100) {
       showCmsSnackbar(
-        title: 'Invalid amount',
-        message: 'Delivery fee cannot be negative.',
+        title: 'Invalid VAT %',
+        message: 'VAT percentage must be between 0 and 100.',
         isError: true,
       );
       return false;
     }
+
     _isSaving.value = true;
     try {
-      final current = _settings.value;
-      final payload = (current ?? const EcommerceSettings(deliveryFee: 0))
-          .copyWith(
-            deliveryFee: deliveryFee,
-            currency: defaultCurrency,
-            isEnabled: current?.isEnabled ?? true,
-          );
+      final current = _settings.value ?? const EcommerceSettings();
+      final payload = current.copyWith(
+        vatNumber: vatNumber.trim(),
+        vatPercent: vatPercent,
+        currency: defaultCurrency,
+      );
       _settings.value = await _ds.updateSettings(payload);
       showCmsSnackbar(
         title: 'Saved',
-        message: 'Delivery fee updated successfully.',
+        message: 'VAT settings updated successfully.',
       );
       return true;
     } on DioException catch (e) {
@@ -130,7 +82,7 @@ class EcommerceSettingsController extends GetxController {
     } catch (_) {
       showCmsSnackbar(
         title: 'Save failed',
-        message: 'Could not update delivery fee. Please try again.',
+        message: 'Could not update VAT settings. Please try again.',
         isError: true,
       );
       return false;

@@ -1,5 +1,6 @@
-// Replacement-requests inbox + detail controller.
-// Backs the "Replace Requests" tab (`GET /admin/replacements`).
+// Replacement + return (refund) requests inbox for the CMS.
+// Replacements: `GET /admin/replacements`
+// Returns:      `GET /orders/requests?type=REFUND`
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
@@ -7,19 +8,31 @@ import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_rem
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
+enum AdminRequestInboxType { replacement, returnRequest }
+
 class AdminOrderRequestsController extends GetxController {
   AdminOrderRequestsController(this._ds);
   final AdminOrdersRemoteDataSource _ds;
 
-  static const statusFilters = <String>[
+  static const replacementStatusFilters = <String>[
     'ALL',
     'REQUESTED',
+    'AWAITING_RETURN',
+    'RETURN_RECEIVED',
     'APPROVED',
     'REJECTED',
     'PROCESSING',
     'SHIPPED',
     'DELIVERED',
     'CANCELLED',
+  ];
+
+  static const returnStatusFilters = <String>[
+    'ALL',
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+    'COMPLETED',
   ];
 
   final _items = <OrderRequest>[].obs;
@@ -31,6 +44,7 @@ class AdminOrderRequestsController extends GetxController {
   final _totalPages = 1.obs;
   final _status = 'ALL'.obs;
   final _search = ''.obs;
+  final _inboxType = AdminRequestInboxType.replacement.obs;
 
   final _selectedId = RxnString();
   final _detail = Rxn<OrderRequest>();
@@ -47,6 +61,12 @@ class AdminOrderRequestsController extends GetxController {
   int get totalPages => _totalPages.value;
   String get status => _status.value;
   String get search => _search.value;
+  AdminRequestInboxType get inboxType => _inboxType.value;
+  bool get isReturnInbox => _inboxType.value == AdminRequestInboxType.returnRequest;
+  bool get supportsSearch => !isReturnInbox;
+  List<String> get statusFilters =>
+      isReturnInbox ? returnStatusFilters : replacementStatusFilters;
+
   bool get isEmpty =>
       !_isLoading.value && _error.value == null && _items.isEmpty;
 
@@ -57,6 +77,7 @@ class AdminOrderRequestsController extends GetxController {
   bool get mutating => _mutating.value;
 
   Future<void> refresh() => _load(page: 1);
+
   Future<void> goToPage(int target) async {
     final p = target.clamp(1, _totalPages.value);
     if (p == _page.value && _items.isNotEmpty) return;
@@ -66,6 +87,17 @@ class AdminOrderRequestsController extends GetxController {
   Future<void> nextPage() => goToPage(_page.value + 1);
   Future<void> prevPage() => goToPage(_page.value - 1);
 
+  void setInboxType(AdminRequestInboxType type) {
+    if (_inboxType.value == type) return;
+    _inboxType.value = type;
+    _status.value = 'ALL';
+    _search.value = '';
+    _selectedId.value = null;
+    _detail.value = null;
+    _detailError.value = null;
+    _load(page: 1);
+  }
+
   void setStatusFilter(String v) {
     final u = v.toUpperCase();
     if (!statusFilters.contains(u) || _status.value == u) return;
@@ -74,7 +106,7 @@ class AdminOrderRequestsController extends GetxController {
   }
 
   void setSearch(String v) {
-    if (_search.value == v) return;
+    if (!supportsSearch || _search.value == v) return;
     _search.value = v;
     _load(page: 1);
   }
@@ -88,6 +120,18 @@ class AdminOrderRequestsController extends GetxController {
     await _load(page: 1);
   }
 
+  /// Deep link from admin notification into the correct inbox.
+  Future<void> openFromNotificationType(String notificationType) async {
+    final t = notificationType.trim().toUpperCase();
+    if (t == 'REFUND_REQUEST') {
+      setInboxType(AdminRequestInboxType.returnRequest);
+    } else if (t == 'REPLACEMENT_REQUEST') {
+      setInboxType(AdminRequestInboxType.replacement);
+    } else {
+      await refresh();
+    }
+  }
+
   void setLimit(int v) {
     if (v <= 0 || v == _limit.value) return;
     _limit.value = v;
@@ -98,12 +142,22 @@ class AdminOrderRequestsController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
-      final res = await _ds.getReplacements(
-        page: page,
-        limit: _limit.value,
-        status: _status.value == 'ALL' ? null : _status.value,
-        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
-      );
+      final OrderRequestsPage res;
+      if (isReturnInbox) {
+        res = await _ds.getOrderRequests(
+          page: page,
+          limit: _limit.value,
+          status: _status.value == 'ALL' ? null : _status.value,
+          type: 'REFUND',
+        );
+      } else {
+        res = await _ds.getReplacements(
+          page: page,
+          limit: _limit.value,
+          status: _status.value == 'ALL' ? null : _status.value,
+          search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+        );
+      }
       _items.assignAll(res.items);
       _page.value = res.page;
       _limit.value = res.limit;
@@ -138,7 +192,9 @@ class AdminOrderRequestsController extends GetxController {
     _detailLoading.value = true;
     _detailError.value = null;
     try {
-      final fresh = await _ds.getReplacementRequest(id);
+      final fresh = isReturnInbox
+          ? await _ds.getOrderRequest(id)
+          : await _ds.getReplacementRequest(id);
       final current = _detail.value;
       final freshIsUsable =
           fresh.id.isNotEmpty || fresh.requestNumber.isNotEmpty;
@@ -160,10 +216,76 @@ class AdminOrderRequestsController extends GetxController {
     final id = _selectedId.value;
     if (id == null) return false;
     return _mutate(() async {
-      final updated =
-          await _ds.approveReplacementRequest(id, adminNote: adminNote);
-      _replaceDetail(updated);
-      _ok('Request approved', 'Replacement order created and linked.');
+      if (isReturnInbox) {
+        final result =
+            await _ds.approveOrderRequest(id, adminNote: adminNote);
+        _replaceDetail(result.request);
+        _ok(
+          'Return approved',
+          result.message ??
+              'Await the item return, then mark received to start the refund.',
+        );
+      } else {
+        final updated =
+            await _ds.approveReplacementRequest(id, adminNote: adminNote);
+        _replaceDetail(updated);
+        _ok(
+          'Request approved',
+          'Replacement order created. Await return of the damaged item.',
+        );
+      }
+      return true;
+    });
+  }
+
+  Future<bool> bookReturnCollection() async {
+    final id = _selectedId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      if (isReturnInbox) {
+        final updated = await _ds.bookOrderRequestReturn(id);
+        _replaceDetail(updated);
+        _ok('Return booked', 'Courier Guy will collect the returned item.');
+      } else {
+        final updated = await _ds.bookReplacementReturn(id);
+        _replaceDetail(updated);
+        _ok('Return booked', 'Courier Guy will collect the damaged item.');
+      }
+      return true;
+    });
+  }
+
+  Future<bool> markReturnReceived() async {
+    final id = _selectedId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      if (isReturnInbox) {
+        final result = await _ds.markOrderRequestReturnReceived(id);
+        _replaceDetail(result.request);
+        _ok(
+          'Return received',
+          result.message ??
+              'Refund has been submitted to PayFast.',
+        );
+      } else {
+        final updated = await _ds.markReplacementReturnReceived(id);
+        _replaceDetail(updated);
+        _ok('Return received', 'You can now fulfil the replacement order.');
+      }
+      return true;
+    });
+  }
+
+  Future<bool> syncReturnTracking() async {
+    final id = _selectedId.value;
+    if (id == null || !isReturnInbox) return false;
+    return _mutate(() async {
+      final result = await _ds.syncOrderRequestReturn(id);
+      _replaceDetail(result.request);
+      _ok(
+        'Return tracking refreshed',
+        result.message ?? 'Courier status updated.',
+      );
       return true;
     });
   }
@@ -172,8 +294,9 @@ class AdminOrderRequestsController extends GetxController {
     final id = _selectedId.value;
     if (id == null) return false;
     return _mutate(() async {
-      final updated =
-          await _ds.rejectReplacementRequest(id, adminNote: adminNote);
+      final updated = isReturnInbox
+          ? await _ds.rejectOrderRequest(id, adminNote: adminNote)
+          : await _ds.rejectReplacementRequest(id, adminNote: adminNote);
       _replaceDetail(updated);
       _ok('Request rejected', 'The devotee will be notified by email.');
       return true;

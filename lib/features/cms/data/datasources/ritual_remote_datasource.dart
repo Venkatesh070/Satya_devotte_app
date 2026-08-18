@@ -37,6 +37,40 @@ class RitualRemoteDataSource {
         .toList();
   }
 
+  /// GET `/rituals` — approved rituals for logged-in users, with pagination.
+  Future<CmsPagedResult<RitualModel>> getApprovedRitualsPage({
+    int page = 1,
+    int limit = 10,
+    String? search,
+  }) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.rituals,
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    final body = response.data;
+    final list = _extractList(body is Map<String, dynamic> ? body : const {});
+    final items = list
+        .map((e) => RitualModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final pagination = CmsPaginationParser.fromBody(
+      body,
+      requestedPage: page,
+      requestedLimit: limit,
+      itemCount: items.length,
+    );
+    return CmsPagedResult<RitualModel>(
+      items: items,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
+  }
+
   Future<CmsPagedResult<RitualModel>> getRitualsPage({
     required bool superAdmin,
     int page = 1,

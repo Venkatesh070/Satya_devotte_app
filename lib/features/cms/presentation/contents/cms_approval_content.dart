@@ -864,7 +864,10 @@ class _PoojaApprovalCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${pooja.deity}  •  ${pooja.difficulty}',
+                      [
+                        if (pooja.deity.isNotEmpty) pooja.deity,
+                        pooja.difficulty,
+                      ].join('  •  '),
                       style: const TextStyle(
                         fontSize: 12,
                         color: CmsColors.textSecond,

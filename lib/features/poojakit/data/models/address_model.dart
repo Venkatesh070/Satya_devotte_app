@@ -11,6 +11,11 @@ class AddressModel {
     required this.postalCode,
     this.pincode,
     required this.country,
+    this.lat,
+    this.lng,
+    this.suburb,
+    this.localArea,
+    this.enteredAddress,
   });
 
   final String fullName;
@@ -22,28 +27,50 @@ class AddressModel {
   final String postalCode;
   final String? pincode;
   final String country;
+  final double? lat;
+  final double? lng;
+  final String? suburb;
+  final String? localArea;
+  final String? enteredAddress;
 
   Map<String, dynamic> toJson() => {
-    'fullName': fullName,
-    'phone': phone,
-    'addressLine1': addressLine1,
-    if (line1 != null) 'line1': line1,
-    'city': city,
-    'state': state,
-    'postalCode': postalCode,
-    if (pincode != null) 'pincode': pincode,
-    'country': country,
-  };
+        'fullName': fullName,
+        'phone': phone,
+        'addressLine1': addressLine1,
+        if (line1 != null) 'line1': line1,
+        'city': city,
+        'state': state,
+        'postalCode': postalCode,
+        if (pincode != null) 'pincode': pincode,
+        'country': country,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+        if (suburb != null && suburb!.isNotEmpty) 'suburb': suburb,
+        if (localArea != null && localArea!.isNotEmpty) 'localArea': localArea,
+        if (enteredAddress != null && enteredAddress!.isNotEmpty)
+          'enteredAddress': enteredAddress,
+      };
 
   factory AddressModel.fromJson(Map<String, dynamic> json) => AddressModel(
-    fullName: json['fullName']?.toString() ?? '',
-    phone: json['phone']?.toString() ?? '',
-    addressLine1: json['addressLine1']?.toString() ?? '',
-    line1: json['line1']?.toString(),
-    city: json['city']?.toString() ?? '',
-    state: json['state']?.toString() ?? '',
-    postalCode: json['postalCode']?.toString() ?? '',
-    pincode: json['pincode']?.toString(),
-    country: json['country']?.toString() ?? '',
-  );
+        fullName: json['fullName']?.toString() ?? '',
+        phone: json['phone']?.toString() ?? '',
+        addressLine1: json['addressLine1']?.toString() ?? '',
+        line1: json['line1']?.toString(),
+        city: json['city']?.toString() ?? '',
+        state: json['state']?.toString() ?? '',
+        postalCode: json['postalCode']?.toString() ?? '',
+        pincode: json['pincode']?.toString(),
+        country: json['country']?.toString() ?? '',
+        lat: _toDouble(json['lat']),
+        lng: _toDouble(json['lng']),
+        suburb: json['suburb']?.toString(),
+        localArea: json['localArea']?.toString(),
+        enteredAddress: json['enteredAddress']?.toString(),
+      );
+
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
 }

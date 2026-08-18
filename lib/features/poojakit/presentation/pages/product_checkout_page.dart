@@ -14,6 +14,7 @@ import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
@@ -41,7 +42,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   late final PoojaKitCheckoutController _checkoutCtrl;
   Timer? _searchDebounce;
   int _suggestionRequestId = 0;
-  bool _showMapPicker = true;
+  /// `method` → (pickup: contact | delivery: map → address → rates)
+  String _step = 'method';
   bool _isLocating = false;
   bool _isSearching = false;
   bool _isLoadingSuggestions = false;
@@ -60,6 +62,30 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     return picked.address;
   }
 
+  bool get _isPickup =>
+      _checkoutCtrl.fulfillmentMethod == FulfillmentMethod.pickup;
+
+  bool get _isCartCheckout => _product == null;
+
+  List<Map<String, dynamic>>? _cartQuoteItems() {
+    try {
+      if (!Get.isRegistered<CartController>()) return null;
+      final items = Get.find<CartController>().cart?.items;
+      if (items == null || items.isEmpty) return null;
+      return items
+          .where((i) => i.product.id.trim().isNotEmpty)
+          .map(
+            (i) => <String, dynamic>{
+              'productId': i.product.id,
+              'quantity': i.quantity,
+            },
+          )
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +97,41 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     _hydrateSavedAddress();
     unawaited(_hydrateReceiverFromProfile());
     _searchCtrl.addListener(_onSearchChanged);
+    // Resume mid-flow when returning from cart with a method already chosen.
+    if (_checkoutCtrl.isPickup) {
+      _step = 'pickup';
+      if (_checkoutCtrl.pickupLocation == null) {
+        unawaited(_fetchPickupWarehouse());
+      }
+    } else if (_isCartCheckout && _checkoutCtrl.isDelivery) {
+      _step = 'map';
+      unawaited(_hydrateMapFromSavedAddress());
+    } else if (_checkoutCtrl.hasShippingAddress) {
+      _step = 'address';
+    } else {
+      _step = 'method';
+    }
+  }
+
+  Future<void> _fetchPickupWarehouse() async {
+    if (_checkoutCtrl.pickupLocation != null) return;
+    if (_product?.id.isNotEmpty == true) {
+      await _checkoutCtrl.fetchPickupForItems([
+        {'productId': _product!.id, 'quantity': _quantity},
+      ]);
+    } else {
+      await _checkoutCtrl.fetchPickupLocation();
+    }
+  }
+
+  Future<void> _retryPickupLocation() async {
+    if (_product?.id.isNotEmpty == true) {
+      await _checkoutCtrl.fetchPickupForItems([
+        {'productId': _product!.id, 'quantity': _quantity},
+      ]);
+    } else {
+      await _checkoutCtrl.fetchPickupLocation();
+    }
   }
 
   @override
@@ -188,6 +249,32 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     );
     _isEditingReceiver =
         address.fullName.trim().isEmpty || address.phone.trim().isEmpty;
+  }
+
+  Future<void> _hydrateMapFromSavedAddress() async {
+    final address = _checkoutCtrl.shippingAddress;
+    if (address == null) return;
+
+    final lat = address.lat;
+    final lng = address.lng;
+    if (lat != null && lng != null) {
+      if (!mounted) return;
+      await _setPickedFromCoordinates(lat, lng);
+      _pinAlignment = const Alignment(0.08, 0.05);
+      return;
+    }
+
+    final query = _addressPreview(address);
+    if (query.trim().isEmpty) return;
+    try {
+      final matches = await locationFromAddress(query);
+      if (!mounted || matches.isEmpty) return;
+      final first = matches.first;
+      await _setPickedFromCoordinates(first.latitude, first.longitude);
+      _pinAlignment = const Alignment(0.08, 0.05);
+    } catch (_) {
+      // Keep default map center; user can search or move the pin.
+    }
   }
 
   Future<void> _hydrateReceiverFromProfile() async {
@@ -391,13 +478,122 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       );
       return;
     }
-    setState(() => _showMapPicker = false);
+    setState(() => _step = 'address');
   }
 
-  Future<void> _saveAddress() async {
+  Future<void> _onMethodSelected(FulfillmentMethod method) async {
+    final pickupItems = _product?.id.isNotEmpty == true
+        ? [
+            {'productId': _product!.id, 'quantity': _quantity},
+          ]
+        : null;
+    _checkoutCtrl.setFulfillmentMethod(method, pickupItems: pickupItems);
+    if (method == FulfillmentMethod.pickup) {
+      setState(() => _step = 'pickup');
+      if (_checkoutCtrl.pickupLocation == null) {
+        await _fetchPickupWarehouse();
+      }
+      return;
+    }
+    setState(() => _step = 'map');
+  }
+
+  Future<void> _continueFromAddress() async {
     final address = _buildAddress();
     if (address == null) return;
     _checkoutCtrl.saveShippingAddress(address);
+
+    if (_isCartCheckout) {
+      final ok = await _checkoutCtrl.fetchShippingQuote(
+        address,
+        items: _cartQuoteItems(),
+      );
+      if (!ok && mounted) {
+        ToastUtil.showError(
+          _checkoutCtrl.lastError ?? 'Could not fetch courier rates',
+        );
+      }
+      if (mounted) Get.back();
+      return;
+    }
+
+    setState(() => _step = 'rates');
+    final ok = await _checkoutCtrl.fetchShippingQuote(
+      address,
+      declaredValue: _product?.effectivePrice.toDouble(),
+      items: _product == null
+          ? null
+          : [
+              {'productId': _product!.id, 'quantity': _quantity},
+            ],
+    );
+    if (!ok && mounted) {
+      ToastUtil.showError(
+        _checkoutCtrl.lastError ?? 'Could not fetch courier rates',
+      );
+    }
+  }
+
+  Future<void> _saveAddress() async {
+    if (_isPickup) {
+      await _payPickup();
+      return;
+    }
+
+    if (_step == 'address') {
+      await _continueFromAddress();
+      return;
+    }
+
+    if (_step == 'rates') {
+      await _payDelivery();
+    }
+  }
+
+  Future<void> _payPickup() async {
+    final name = _fullNameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
+    if (name.isEmpty || phone.isEmpty) {
+      ToastUtil.showInfo('Please enter your name and phone for pickup.');
+      return;
+    }
+
+    final contact = AddressModel(
+      fullName: name,
+      phone: phone,
+      addressLine1: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'South Africa',
+    );
+    _checkoutCtrl.saveShippingAddress(contact);
+
+    if (_product == null) {
+      Get.back();
+      return;
+    }
+
+    final init = await _checkoutCtrl.initiate(
+      productId: _product!.id,
+      quantity: _quantity,
+      contactFullName: name,
+      contactPhone: phone,
+    );
+    if (init != null) {
+      Get.toNamed(AppRoutes.poojaKitPayment, arguments: init);
+      return;
+    }
+    ToastUtil.showError(_checkoutCtrl.lastError ?? 'Failed to initiate order');
+  }
+
+  Future<void> _payDelivery() async {
+    final address = _checkoutCtrl.shippingAddress ?? _buildAddress();
+    if (address == null) return;
+    if (_checkoutCtrl.selectedRate == null) {
+      ToastUtil.showInfo('Please select a Courier Guy service level.');
+      return;
+    }
 
     if (_product == null) {
       Get.back();
@@ -429,19 +625,27 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       return null;
     }
 
+    final lat = _pickedLocation?.latitude;
+    final lng = _pickedLocation?.longitude;
+    final line1 = [
+      _houseCtrl.text.trim(),
+      _streetCtrl.text.trim(),
+    ].where((e) => e.isNotEmpty).join(', ');
+
     return AddressModel(
       fullName: _fullNameCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
-      addressLine1: [
-        _houseCtrl.text.trim(),
-        _streetCtrl.text.trim(),
-      ].where((e) => e.isNotEmpty).join(', '),
+      addressLine1: line1,
       city: _cityCtrl.text.trim(),
       state: _provinceCtrl.text.trim(),
       postalCode: _postalCodeCtrl.text.trim(),
       country: _countryCtrl.text.trim().isEmpty
           ? 'South Africa'
           : _countryCtrl.text.trim(),
+      lat: lat,
+      lng: lng,
+      localArea: _cityCtrl.text.trim().isEmpty ? null : _cityCtrl.text.trim(),
+      enteredAddress: _pickedLocation?.address,
     );
   }
 
@@ -460,7 +664,62 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showMapPicker) {
+    if (_step == 'method') {
+      return Scaffold(
+        backgroundColor: AppColors.appBgColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _TopBar(onBack: () => Get.back()),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'How would you like to receive your order?',
+                        style: AppTypography.lora(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF4A1C00),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Choose pickup at our warehouse or door-to-door delivery with The Courier Guy.',
+                        style: AppTypography.inter(
+                          fontSize: 11,
+                          color: const Color(0xFF6C5B46),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _CheckoutMethodCard(
+                        title: 'Pickup',
+                        subtitle: 'Collect in store · R0 delivery',
+                        icon: Icons.storefront_outlined,
+                        onTap: () =>
+                            _onMethodSelected(FulfillmentMethod.pickup),
+                      ),
+                      const SizedBox(height: 12),
+                      _CheckoutMethodCard(
+                        title: 'Delivery',
+                        subtitle: 'The Courier Guy door-to-door',
+                        icon: Icons.local_shipping_outlined,
+                        onTap: () =>
+                            _onMethodSelected(FulfillmentMethod.delivery),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_step == 'map') {
       return _LocationPickerView(
         searchCtrl: _searchCtrl,
         locationText: _locationPreview,
@@ -473,7 +732,13 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         isLoadingSuggestions: _isLoadingSuggestions,
         isResolvingPin: _isResolvingPin,
         suggestions: _suggestions,
-        onBack: () => Get.back(),
+        onBack: () {
+          if (_isCartCheckout) {
+            Get.back();
+            return;
+          }
+          setState(() => _step = 'method');
+        },
         onSearch: _searchLocation,
         onSuggestionTap: _selectSuggestion,
         onCurrentLocationTap: _fetchCurrentLocation,
@@ -483,14 +748,20 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       );
     }
 
-    final singleProduct = _product != null;
+    if (_step == 'pickup') {
+      return _buildPickupContactView();
+    }
+
+    if (_step == 'rates') {
+      return _buildRatesView();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
       body: SafeArea(
         child: Column(
           children: [
-            _TopBar(onBack: () => setState(() => _showMapPicker = true)),
+            _TopBar(onBack: () => setState(() => _step = 'map')),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
@@ -583,16 +854,417 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
               ),
             ),
             Obx(() {
+              final loading =
+                  _checkoutCtrl.isInitiating || _checkoutCtrl.isQuoting;
+              return _GradientCtaBar(
+                enabled: !loading,
+                label: loading
+                    ? 'Please wait...'
+                    : (_isCartCheckout
+                        ? 'Save delivery address'
+                        : 'Continue to shipping rates'),
+                onTap: loading ? null : _saveAddress,
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickupContactView() {
+    final singleProduct = _product != null;
+    return Scaffold(
+      backgroundColor: AppColors.appBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _TopBar(
+              onBack: () {
+                if (_product == null) {
+                  Get.back();
+                  return;
+                }
+                setState(() => _step = 'method');
+              },
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pickup details',
+                      style: AppTypography.lora(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF4A1C00),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Collect at our warehouse · delivery charge R0',
+                      style: AppTypography.inter(
+                        fontSize: 10,
+                        color: const Color(0xFF6C5B46),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Obx(() {
+                      final loc = _checkoutCtrl.pickupLocation;
+                      final loading = _checkoutCtrl.isLoadingPickup;
+                      if (loading && loc == null) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFDC5B0A),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        );
+                      }
+                      if (loc == null) {
+                        return TextButton(
+                          onPressed: _retryPickupLocation,
+                          child: const Text('Retry loading location'),
+                        );
+                      }
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFCF7EF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE8E0D6)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              loc.company.isEmpty ? 'Pickup warehouse' : loc.company,
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF4A1C00),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              loc.singleLine,
+                              style: AppTypography.inter(
+                                fontSize: 11,
+                                height: 1.35,
+                                color: const Color(0xFF6C5B46),
+                              ),
+                            ),
+                            if (loc.hours.trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Hours: ${loc.hours}',
+                                style: AppTypography.inter(
+                                  fontSize: 10,
+                                  color: const Color(0xFF8B765D),
+                                ),
+                              ),
+                            ],
+                            if (loc.instructions.trim().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                loc.instructions,
+                                style: AppTypography.inter(
+                                  fontSize: 10,
+                                  color: const Color(0xFF8B765D),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 14),
+                    _ReceiverCard(
+                      fullNameCtrl: _fullNameCtrl,
+                      phoneCtrl: _phoneCtrl,
+                      isEditing: _isEditingReceiver,
+                      onEditPhone: () =>
+                          setState(() => _isEditingReceiver = true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Obx(() {
               final loading = _checkoutCtrl.isInitiating;
               return _GradientCtaBar(
                 enabled: !loading,
                 label: loading
                     ? 'Please wait...'
-                    : (singleProduct ? 'Proceed to Payment' : 'Save address'),
+                    : (singleProduct ? 'Proceed to Payment' : 'Save contact'),
                 onTap: loading ? null : _saveAddress,
               );
             }),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatesView() {
+    final singleProduct = _product != null;
+    return Scaffold(
+      backgroundColor: AppColors.appBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _TopBar(onBack: () => setState(() => _step = 'address')),
+            Expanded(
+              child: Obx(() {
+                final rates = _checkoutCtrl.quoteRates;
+                final selected = _checkoutCtrl.selectedRate;
+                final loading = _checkoutCtrl.isQuoting;
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'The Courier Guy',
+                        style: AppTypography.lora(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF4A1C00),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Select a door-to-door service level before payment',
+                        style: AppTypography.inter(
+                          fontSize: 10,
+                          color: const Color(0xFF6C5B46),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      if (loading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFDC5B0A),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        )
+                      else if (rates.isEmpty)
+                        Column(
+                          children: [
+                            Text(
+                              _checkoutCtrl.lastError ??
+                                  'No rates available for this address.',
+                              style: AppTypography.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF6C5B46),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                final addr = _checkoutCtrl.shippingAddress;
+                                if (addr != null) {
+                                  _checkoutCtrl.fetchShippingQuote(
+                                    addr,
+                                    declaredValue:
+                                        _product?.effectivePrice.toDouble(),
+                                    items: _product == null
+                                        ? null
+                                        : [
+                                            {
+                                              'productId': _product!.id,
+                                              'quantity': _quantity,
+                                            },
+                                          ],
+                                  );
+                                }
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        )
+                      else
+                        ...rates.map((rate) {
+                          final isSelected =
+                              selected?.serviceLevelCode ==
+                              rate.serviceLevelCode;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Material(
+                              color: isSelected
+                                  ? const Color(0xFFFFF0E4)
+                                  : const Color(0xFFFCF7EF),
+                              borderRadius: BorderRadius.circular(14),
+                              child: InkWell(
+                                onTap: () => _checkoutCtrl.selectRate(rate),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFFE95700)
+                                          : const Color(0xFFE8E0D6),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSelected
+                                            ? Icons.radio_button_checked
+                                            : Icons.radio_button_off,
+                                        size: 20,
+                                        color: isSelected
+                                            ? const Color(0xFFE95700)
+                                            : const Color(0xFF9B958E),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              rate.serviceLevelName.isEmpty
+                                                  ? rate.serviceLevelCode
+                                                  : rate.serviceLevelName,
+                                              style: AppTypography.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                color: const Color(0xFF4A1C00),
+                                              ),
+                                            ),
+                                            if (rate.description
+                                                .trim()
+                                                .isNotEmpty) ...[
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                rate.description,
+                                                style: AppTypography.inter(
+                                                  fontSize: 10,
+                                                  color:
+                                                      const Color(0xFF6C5B46),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${_checkoutCtrl.quoteCurrency} ${rate.rate.toStringAsFixed(2)}',
+                                        style: AppTypography.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFDC5B0A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                );
+              }),
+            ),
+            Obx(() {
+              final loading = _checkoutCtrl.isInitiating;
+              final hasRate = _checkoutCtrl.selectedRate != null;
+              return _GradientCtaBar(
+                enabled: !loading && hasRate,
+                label: loading
+                    ? 'Please wait...'
+                    : (singleProduct
+                          ? 'Proceed to Payment'
+                          : 'Save & continue'),
+                onTap: loading || !hasRate ? null : _saveAddress,
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutMethodCard extends StatelessWidget {
+  const _CheckoutMethodCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFCF7EF),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE8E0D6)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7E8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: const Color(0xFFE95700)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF4A1C00),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF6C5B46),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Color(0xFF9B958E)),
+            ],
+          ),
         ),
       ),
     );

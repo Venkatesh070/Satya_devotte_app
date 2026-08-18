@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/features/admin_notifications/data/models/admin_notification_item.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/widgets/admin_notification_detail_sheet.dart';
@@ -156,12 +157,13 @@ class _CmsAdminNotificationsContentState
   }
 
   Widget _buildFilterChips() {
-    const chips = <(ActivityInboxFilter, String)>[
+    final chips = <(ActivityInboxFilter, String)>[
       (ActivityInboxFilter.all, 'All'),
       (ActivityInboxFilter.unread, 'Unread'),
       (ActivityInboxFilter.orders, 'Orders'),
       (ActivityInboxFilter.donations, 'Donations'),
-      (ActivityInboxFilter.refunds, 'Refunds'),
+      if (kOrderReturnReplaceEnabled)
+        (ActivityInboxFilter.refunds, 'Refunds'),
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),

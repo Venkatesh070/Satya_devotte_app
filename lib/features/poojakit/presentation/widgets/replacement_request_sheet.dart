@@ -7,25 +7,24 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_line_item_picker.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/pickup_warehouse_return_card.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 
 class ReplacementRequestSheet extends StatefulWidget {
   const ReplacementRequestSheet({
     super.key,
-    required this.orderId,
-    required this.orderNumber,
+    required this.order,
     this.onSubmitted,
   });
 
-  final String orderId;
-  final String orderNumber;
+  final AdminOrder order;
   final VoidCallback? onSubmitted;
 
   static Future<void> show(
     BuildContext context, {
-    required String orderId,
-    required String orderNumber,
+    required AdminOrder order,
     VoidCallback? onSubmitted,
   }) {
     return showModalBottomSheet<void>(
@@ -38,8 +37,7 @@ class ReplacementRequestSheet extends StatefulWidget {
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: ReplacementRequestSheet(
-          orderId: orderId,
-          orderNumber: orderNumber,
+          order: order,
           onSubmitted: onSubmitted,
         ),
       ),
@@ -54,6 +52,7 @@ class ReplacementRequestSheet extends StatefulWidget {
 class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
   final _reasonCtrl = TextEditingController();
   final _images = <PickedFile>[];
+  OrderLineSelectionMap _selection = {};
   bool _submitting = false;
 
   @override
@@ -126,6 +125,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
 
   Future<void> _submit() async {
     final reason = _reasonCtrl.text.trim();
+    if (_selection.isEmpty) {
+      ToastUtil.showInfo('Please select at least one item to replace.');
+      return;
+    }
     if (reason.length < 10) {
       ToastUtil.showInfo('Please describe the issue (at least 10 characters).');
       return;
@@ -138,9 +141,10 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
     setState(() => _submitting = true);
     final c = Get.find<UserOrdersController>();
     final ok = await c.requestReplacement(
-      orderId: widget.orderId,
+      orderId: widget.order.id,
       reason: reason,
       images: _images,
+      affectedItems: orderLineSelectionToPayload(_selection),
     );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -175,7 +179,7 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Raise Replacement Request',
+              'Request a replacement',
               style: AppTypography.lora(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -184,9 +188,26 @@ class _ReplacementRequestSheetState extends State<ReplacementRequestSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Order #${widget.orderNumber}',
+              'Order #${widget.order.orderNumber}',
               style: AppTypography.inter(fontSize: 14, color: Colors.white70),
             ),
+            const SizedBox(height: 20),
+            OrderLineItemPicker(
+              order: widget.order,
+              selection: _selection,
+              title: 'Items to replace',
+              forDarkBackground: true,
+              subtitle: widget.order.isPickup
+                  ? 'Select damaged product(s). After approval, return them to the warehouse.'
+                  : widget.order.items.length > 1
+                  ? 'Select the damaged product(s) you need replaced.'
+                  : null,
+              onChanged: (next) => setState(() => _selection = next),
+            ),
+            if (widget.order.isPickup) ...[
+              const SizedBox(height: 12),
+              PickupWarehouseReturnCard(order: widget.order),
+            ],
             const SizedBox(height: 20),
             Text(
               'What went wrong?',

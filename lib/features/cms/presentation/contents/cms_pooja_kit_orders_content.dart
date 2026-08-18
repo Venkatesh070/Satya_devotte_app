@@ -14,15 +14,19 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/admin_verify_pickup_dialog.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_order_tracking_progress.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 
 
@@ -644,7 +648,14 @@ class _OrderRow extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: OrderStatusBadge(status: order.orderStatus),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OrderStatusBadge(status: order.orderStatus),
+                    const SizedBox(height: 4),
+                    _FulfillmentMethodBadge(method: order.fulfillmentMethod),
+                  ],
+                ),
               ),
             ),
           ),
@@ -715,6 +726,7 @@ class _OrdersCardList extends StatelessWidget {
                         runSpacing: 6,
                         alignment: WrapAlignment.end,
                         children: [
+                          _FulfillmentMethodBadge(method: o.fulfillmentMethod),
                           PaymentStatusBadge(status: o.paymentStatus),
                           OrderStatusBadge(status: o.orderStatus),
                         ],
@@ -734,6 +746,28 @@ class _OrdersCardList extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _OrderPriceBreakdownLines(order: o),
+                if (o.isPickup && o.hasPickupCollectionCode) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Collection code: ${o.pickupCollection!.code}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0E7490),
+                    ),
+                  ),
+                ],
+                if (o.isDelivery && o.delivery?.hasPodStatus == true) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'POD: ${o.delivery!.pod!.displayLabel}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF088B56),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
@@ -1040,40 +1074,63 @@ class _DetailHeader extends StatelessWidget {
       color: CmsColors.white,
       padding: EdgeInsets.symmetric(
         horizontal: isWeb ? 24 : 16,
-        vertical: 12,
+        vertical: 14,
       ),
       child: Row(
         children: [
-          IconButton(
-            style: IconButton.styleFrom().copyWith(
-              mouseCursor: _cmsButtonClickCursor,
+          _cmsClickableInk(
+            onTap: controller.closeDetail,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.arrow_back_rounded, size: 18, color: CmsColors.textPrimary),
+                SizedBox(width: 6),
+                Text(
+                  'Back to Orders',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
-            tooltip: 'Back to orders',
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: controller.closeDetail,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: CmsColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: CmsColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (order != null &&
+                        order!.paymentStatus == PaymentStatus.paid) ...[
+                      const SizedBox(width: 10),
+                      PaymentStatusBadge(status: order!.paymentStatus),
+                    ],
+                  ],
                 ),
-                if (order != null)
+                if (order != null) ...[
+                  const SizedBox(height: 2),
                   Text(
                     order!.formattedDateTime,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.5,
                       color: CmsColors.textSecond,
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -1098,30 +1155,73 @@ class _OrderDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SummaryCard(order: order),
-          const SizedBox(height: 14),
-          _LineItemsCard(order: order),
-          const SizedBox(height: 14),
-          _OrderTotalsCard(order: order),
-          const SizedBox(height: 14),
-          _ShippingCard(order: order),
-          const SizedBox(height: 14),
-          if (order.isPaymentPaid) ...[
-            _TrackingCard(controller: controller, order: order),
-            const SizedBox(height: 14),
-          ],
-          _InvoiceCard(order: order),
-          const SizedBox(height: 14),
-          _FulfillmentCard(order: order),
-          const SizedBox(height: 20),
-          _ActionBar(controller: controller, order: order),
-          const SizedBox(height: 24),
-        ],
+    return ColoredBox(
+      color: const Color(0xFFF8F9FB),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 960;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SummaryCard(order: order),
+                const SizedBox(height: 14),
+                if (wide) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _LineItemsCard(order: order)),
+                      const SizedBox(width: 14),
+                      Expanded(child: _OrderTotalsCard(order: order)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (order.isDelivery && order.isPaymentPaid)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _ShippingCard(
+                            controller: controller,
+                            order: order,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: _TrackingCard(
+                            controller: controller,
+                            order: order,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    _ShippingCard(controller: controller, order: order),
+                ] else ...[
+                  _LineItemsCard(order: order),
+                  const SizedBox(height: 14),
+                  _OrderTotalsCard(order: order),
+                  const SizedBox(height: 14),
+                  _ShippingCard(controller: controller, order: order),
+                  if (order.isPaymentPaid && order.isDelivery) ...[
+                    const SizedBox(height: 14),
+                    _TrackingCard(controller: controller, order: order),
+                  ],
+                ],
+                const SizedBox(height: 14),
+                _InvoiceCard(order: order),
+                if (order.hasCustomerFulfillmentFeedback) ...[
+                  const SizedBox(height: 14),
+                  _FulfillmentCard(order: order),
+                ],
+                const SizedBox(height: 20),
+                _ActionBar(controller: controller, order: order),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1133,65 +1233,243 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CmsFormCard(
-      title: 'Summary',
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _MetaPair(
-                label: 'Order #',
-                value: order.orderNumber.isEmpty ? '—' : order.orderNumber,
+    return _DetailSectionCard(
+      icon: Icons.shopping_bag_outlined,
+      title: 'Order Summary',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _MetaPair(
+                      label: 'Order ID',
+                      value: order.orderNumber.isEmpty ? '—' : order.orderNumber,
+                    ),
+                    const SizedBox(height: 12),
+                    _MetaPair(
+                      label: 'PayFast ref',
+                      value: order.paymentReference.isEmpty
+                          ? '—'
+                          : order.paymentReference,
+                    ),
+                    if (order.resolvedPayfastPaymentId.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _MetaPair(
+                        label: 'PayFast txn ID',
+                        value: order.resolvedPayfastPaymentId,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _MetaPair(label: 'Currency', value: order.currency),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _MetaPair(
-                label: 'Method',
-                value: order.paymentMethod.isEmpty ? '—' : order.paymentMethod,
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Customer',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textSecond,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.userName.isEmpty ? '—' : order.userName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    if (order.userEmail.isNotEmpty)
+                      Text(
+                        order.userEmail,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _MetaPair(
-                label: 'Payment',
-                value: order.paymentStatus.label,
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryMetric(
+                        icon: Icons.payments_outlined,
+                        label: 'Currency',
+                        value: order.currency,
+                        iconBg: const Color(0xFFFFF1E6),
+                        iconColor: CmsColors.orangeDark,
+                      ),
+                    ),
+                    Expanded(
+                      child: _SummaryMetric(
+                        icon: Icons.credit_card_rounded,
+                        label: 'Method',
+                        value: order.paymentMethod.isEmpty
+                            ? '—'
+                            : order.paymentMethod.toUpperCase(),
+                        iconBg: const Color(0xFFF3E8FF),
+                        iconColor: const Color(0xFF7C3AED),
+                      ),
+                    ),
+                    Expanded(
+                      child: _SummaryMetric(
+                        icon: Icons.check_circle_outline_rounded,
+                        label: 'Payment',
+                        value: order.paymentStatus.label,
+                        valueColor: order.paymentStatus == PaymentStatus.paid
+                            ? CmsColors.green
+                            : null,
+                        iconBg: const Color(0xFFE8F8EF),
+                        iconColor: CmsColors.green,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _MetaPair(
-          label: 'Reference',
-          value: (order.payfastPaymentId ?? '').trim().isEmpty
-              ? '—'
-              : order.payfastPaymentId!,
-        ),
-        const SizedBox(height: 12),
-        _MetaPair(
-          label: 'Customer',
-          value: order.userName.isEmpty
-              ? (order.userEmail.isEmpty ? '—' : order.userEmail)
-              : '${order.userName}\n${order.userEmail}',
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            OrderStatusBadge(status: order.orderStatus),
-            const SizedBox(width: 8),
-            PaymentStatusBadge(status: order.paymentStatus),
-            if (order.inventoryReserved) ...[
-              const SizedBox(width: 8),
-              const _MutedPill(text: 'Inventory reserved'),
             ],
-          ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OrderStatusBadge(status: order.orderStatus),
+              PaymentStatusBadge(status: order.paymentStatus),
+              _FulfillmentMethodBadge(method: order.fulfillmentMethod),
+              if (order.inventoryReserved)
+                const _MutedPill(text: 'Inventory reserved'),
+              if (order.isPickup && order.hasPickupCollectionCode)
+                _MutedPill(text: 'Code ${order.pickupCollection!.code}'),
+              if (order.isDelivery && order.delivery?.hasPodStatus == true)
+                _MutedPill(text: order.delivery!.pod!.displayLabel),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.iconBg = const Color(0xFFFFF1E6),
+    this.iconColor = CmsColors.orangeDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final Color iconBg;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: iconColor),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textSecond,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: valueColor ?? CmsColors.textPrimary,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _DetailSectionCard extends StatelessWidget {
+  const _DetailSectionCard({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFECECEC)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: CmsColors.orangeDark),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -1203,21 +1481,23 @@ class _LineItemsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = order.items;
-    return CmsFormCard(
+    return _DetailSectionCard(
+      icon: Icons.inventory_2_outlined,
       title: 'Items (${items.length})',
-      children: [
-        if (items.isEmpty)
-          const Text(
-            'No items on this order.',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-          )
-        else
-          for (var i = 0; i < items.length; i++) ...[
-            _LineItemRow(item: items[i], currency: order.currency),
-            if (i != items.length - 1)
-              const Divider(height: 16, color: CmsColors.border),
-          ],
-      ],
+      child: items.isEmpty
+          ? const Text(
+              'No items on this order.',
+              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            )
+          : Column(
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  _LineItemRow(item: items[i], currency: order.currency),
+                  if (i != items.length - 1)
+                    const Divider(height: 20, color: CmsColors.border),
+                ],
+              ],
+            ),
     );
   }
 }
@@ -1228,25 +1508,41 @@ class _OrderTotalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CmsFormCard(
+    return _DetailSectionCard(
+      icon: Icons.calculate_outlined,
       title: 'Amounts',
-      children: [
-        _OrderAmountRow(label: 'Subtotal', value: order.formattedSubtotal),
-        const SizedBox(height: 8),
-        _OrderAmountRow(
-          label: 'Delivery charges',
-          value: order.formattedShipping,
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: Divider(height: 1, color: CmsColors.border),
-        ),
-        _OrderAmountRow(
-          label: 'Total',
-          value: order.formattedTotal,
-          bold: true,
-        ),
-      ],
+      child: Column(
+        children: [
+          _OrderAmountRow(label: 'Subtotal', value: order.formattedSubtotal),
+          if (order.taxAmount > 0) ...[
+            const SizedBox(height: 10),
+            _OrderAmountRow(label: 'VAT', value: order.formattedTax),
+          ],
+          const SizedBox(height: 10),
+          _OrderAmountRow(
+            label: order.isPickup ? 'Pickup charge' : 'Delivery charges',
+            value: order.isPickup
+                ? order.formattedShipping
+                : order.formattedCustomerDeliveryCharge,
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1E6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: _OrderAmountRow(
+              label: 'Total',
+              value: order.formattedTotal,
+              bold: true,
+              valueColor: CmsColors.orangeDark,
+              labelColor: CmsColors.orangeDark,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1267,8 +1563,10 @@ class _OrderPriceBreakdownLines extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         _OrderAmountRow(
-          label: 'Delivery',
-          value: order.formattedShipping,
+          label: order.isPickup ? 'Pickup' : 'Delivery',
+          value: order.isPickup
+              ? order.formattedShipping
+              : order.formattedCustomerDeliveryCharge,
           compact: true,
         ),
         const SizedBox(height: 4),
@@ -1307,11 +1605,15 @@ class _OrderAmountRow extends StatelessWidget {
     required this.value,
     this.bold = false,
     this.compact = false,
+    this.valueColor,
+    this.labelColor,
   });
   final String label;
   final String value;
   final bool bold;
   final bool compact;
+  final Color? valueColor;
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1322,17 +1624,18 @@ class _OrderAmountRow extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
-              fontWeight: FontWeight.w500,
-              color: CmsColors.textSecond,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+              color: labelColor ??
+                  (bold ? CmsColors.textPrimary : CmsColors.textSecond),
             ),
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: compact ? 12 : 13,
+            fontSize: compact ? 12 : (bold ? 14.5 : 13),
             fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-            color: CmsColors.textPrimary,
+            color: valueColor ?? CmsColors.textPrimary,
           ),
         ),
       ],
@@ -1377,7 +1680,7 @@ class _LineItemRow extends StatelessWidget {
                 ),
               ),
               Text(
-                'Qty ${item.qty}  ·  Unit ${_money(item.unitPrice, currency)}',
+                'Qty: ${item.qty} • Unit: ${_money(item.unitPrice, currency)}',
                 style: const TextStyle(
                   fontSize: 11.5,
                   color: CmsColors.textSecond,
@@ -1420,38 +1723,329 @@ class _ItemPlaceholder extends StatelessWidget {
 }
 
 class _ShippingCard extends StatelessWidget {
-  const _ShippingCard({required this.order});
+  const _ShippingCard({
+    required this.controller,
+    required this.order,
+  });
+  final AdminOrdersController controller;
   final AdminOrder order;
+
+  Future<void> _completePickup(BuildContext context) async {
+    final pin = await AdminVerifyPickupDialog.show(context);
+    if (pin == null || pin.isEmpty) return;
+    await controller.verifyPickup(pin);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isPickup = order.isPickup;
     final addr = order.shippingAddress;
-    return CmsFormCard(
-      title: 'Shipping',
+    final pickup = order.pickupLocation;
+    return _DetailSectionCard(
+      icon: isPickup ? Icons.storefront_outlined : Icons.local_shipping_outlined,
+      title: isPickup ? 'Pickup' : 'Shipping',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isPickup) ...[
+            _MetaPair(
+              label: 'Method',
+              value: order.fulfillmentMethod.label,
+            ),
+            const SizedBox(height: 12),
+            if (pickup == null)
+              const Text(
+                'No warehouse location on this order.',
+                style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              )
+            else
+              _WarehouseHighlightBox(location: pickup, title: 'Pickup warehouse'),
+            if (order.hasPickupCollectionCode) ...[
+              const SizedBox(height: 12),
+              _MetaPair(
+                label: 'Collection PIN',
+                value: order.pickupCollection!.code,
+              ),
+            ],
+            if (order.canAdminCompletePickup) ...[
+              const SizedBox(height: 14),
+              Obx(
+                () => SizedBox(
+                  width: double.infinity,
+                  child: CmsPrimaryButton(
+                    label: 'Mark picked up (verify PIN)',
+                    icon: Icons.check_circle_outline_rounded,
+                    isLoading: controller.mutating,
+                    onTap: () {
+                      if (controller.mutating) return;
+                      _completePickup(context);
+                    },
+                  ),
+                ),
+              ),
+            ],
+            if (addr != null && addr.name.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _AddrLine(text: 'Collector: ${addr.name}', bold: true),
+              if (addr.phone.isNotEmpty)
+                _AddrLine(text: 'Phone: ${addr.phone}', muted: true),
+            ],
+          ] else ...[
+            _DeliveryShippingBody(order: order, addr: addr, pickup: pickup),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryShippingBody extends StatelessWidget {
+  const _DeliveryShippingBody({
+    required this.order,
+    required this.addr,
+    required this.pickup,
+  });
+
+  final AdminOrder order;
+  final ShippingAddress? addr;
+  final OrderPickupLocation? pickup;
+
+  @override
+  Widget build(BuildContext context) {
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _MetaPair(
+          label: 'Method',
+          value: order.fulfillmentMethod.label,
+          boldValue: true,
+        ),
+        if (order.shippingQuote != null &&
+            order.selectedCourierServiceLabel.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _MetaPair(
+            label: 'Courier service',
+            value: order.selectedCourierServiceLabel,
+            boldValue: true,
+          ),
+        ],
+        if (pickup != null && pickup!.company.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _MetaPair(
+            label: 'Warehouse',
+            value: pickup!.company.trim(),
+            boldValue: true,
+          ),
+        ] else if (pickup != null && pickup!.singleLine.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _MetaPair(
+            label: 'Warehouse',
+            value: pickup!.singleLine.trim(),
+            boldValue: true,
+          ),
+        ],
+        const SizedBox(height: 22),
         if (addr == null)
           const Text(
-            'No shipping address attached.',
+            'No customer delivery address on this order.',
             style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
           )
         else ...[
-          if (addr.name.isNotEmpty) _AddrLine(text: addr.name, bold: true),
-          if (addr.line1.isNotEmpty) _AddrLine(text: addr.line1),
-          if (addr.line2.isNotEmpty) _AddrLine(text: addr.line2),
+          const Text(
+            'Customer delivery address',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textSecond,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (addr!.name.isNotEmpty) _AddrLine(text: addr!.name, bold: true),
+          if (addr!.line1.isNotEmpty) _AddrLine(text: addr!.line1),
+          if (addr!.line2.isNotEmpty) _AddrLine(text: addr!.line2),
           _AddrLine(
             text: [
-              if (addr.city.isNotEmpty) addr.city,
-              if (addr.region.isNotEmpty) addr.region,
-              if (addr.postalCode.isNotEmpty) addr.postalCode,
+              if (addr!.city.isNotEmpty) addr!.city,
+              if (addr!.region.isNotEmpty) addr!.region,
+              if (addr!.postalCode.isNotEmpty) addr!.postalCode,
             ].join(', '),
           ),
-          if (addr.country.isNotEmpty) _AddrLine(text: addr.country),
-          if (addr.phone.isNotEmpty)
-            _AddrLine(text: 'Phone: ${addr.phone}', muted: true),
-          if (addr.email.isNotEmpty)
-            _AddrLine(text: 'Email: ${addr.email}', muted: true),
+          if (addr!.country.isNotEmpty) _AddrLine(text: addr!.country),
+          if (addr!.phone.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Text(
+                  'Phone: ',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  addr!.phone,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2563EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.phone,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ],
+    );
+
+    final hasWarehouse =
+        pickup != null && pickup!.singleLine.trim().isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!hasWarehouse || constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              leftColumn,
+              if (hasWarehouse) ...[
+                const SizedBox(height: 16),
+                _WarehouseHighlightBox(location: pickup!, title: ''),
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 5, child: leftColumn),
+            const SizedBox(width: 20),
+            Expanded(
+              flex: 5,
+              child: _WarehouseHighlightBox(location: pickup!, title: ''),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _WarehouseHighlightBox extends StatelessWidget {
+  const _WarehouseHighlightBox({
+    required this.location,
+    required this.title,
+  });
+  final OrderPickupLocation location;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final company = location.company.trim();
+    // Prefer address without repeating the company name when singleLine starts with it.
+    var address = location.singleLine.trim();
+    if (company.isNotEmpty &&
+        address.toLowerCase().startsWith(company.toLowerCase())) {
+      address = address.substring(company.length).replaceFirst(RegExp(r'^,\s*'), '');
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.location_on,
+              size: 20,
+              color: CmsColors.orangeDark,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title.trim().isNotEmpty) ...[
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                if (company.isNotEmpty)
+                  Text(
+                    company,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: CmsColors.textPrimary,
+                      height: 1.3,
+                    ),
+                  ),
+                if (address.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    address,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: CmsColors.textPrimary,
+                    ),
+                  ),
+                ],
+                if (location.hours.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Hours: ${location.hours.trim()}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                ],
+                if (location.instructions.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    location.instructions.trim(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1464,12 +2058,14 @@ class _AddrLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (text.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         text,
         style: TextStyle(
           fontSize: 12.5,
+          height: 1.4,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
           color: muted ? CmsColors.textSecond : CmsColors.textPrimary,
         ),
@@ -1479,69 +2075,328 @@ class _AddrLine extends StatelessWidget {
 }
 
 class _TrackingCard extends StatelessWidget {
-  const _TrackingCard({required this.controller, required this.order});
+  const _TrackingCard({
+    required this.controller,
+    required this.order,
+  });
   final AdminOrdersController controller;
   final AdminOrder order;
+
+  bool get _canBookCourier {
+    if (!order.isDelivery || !order.isPaymentPaid) return false;
+    if (order.hasCourierTracking) return false;
+    final s = order.orderStatus;
+    return s == OrderStatus.placed ||
+        s == OrderStatus.processing ||
+        s == OrderStatus.shipped;
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = order.tracking;
-    return CmsFormCard(
-      title: 'Tracking',
+    final d = order.delivery;
+    final courierBooked = order.hasCourierTracking;
+
+    return _DetailSectionCard(
+      icon: Icons.location_on_outlined,
+      title: 'Tracking / Courier Guy',
+      child: courierBooked
+          ? _TrackingBookedBody(
+              controller: controller,
+              order: order,
+              tracking: t,
+              delivery: d,
+            )
+          : _TrackingEmptyState(
+              controller: controller,
+              canBook: _canBookCourier,
+            ),
+    );
+  }
+}
+
+class _TrackingEmptyState extends StatelessWidget {
+  const _TrackingEmptyState({
+    required this.controller,
+    required this.canBook,
+  });
+  final AdminOrdersController controller;
+  final bool canBook;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        if (t == null || !t.hasTrackingNumber) ...[
-          const Text(
-            'No tracking number set. Add tracking before you mark the order '
-            'as Shipped, or use Dispatch to do both in one step.',
-            style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        const SizedBox(height: 8),
+        Container(
+          width: 88,
+          height: 88,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4EB),
+            borderRadius: BorderRadius.circular(24),
           ),
-        ] else ...[
-          _MetaPair(label: 'Courier', value: t.courier.isEmpty ? '—' : t.courier),
-          const SizedBox(height: 4),
-          _MetaPair(label: 'Tracking #', value: t.trackingNumber),
-          if (t.trackingUrl.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            _cmsClickableInk(
-              onTap: () => _openUrl(t.trackingUrl),
-              child: Text(
-                t.trackingUrl,
+          child: const Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(Icons.inventory_2_outlined, size: 36, color: CmsColors.orangeDark),
+              Positioned(
+                right: 14,
+                top: 16,
+                child: Icon(Icons.location_on, size: 22, color: CmsColors.orange),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Tracking not available yet',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Use Book Courier Guy & Dispatch to create a waybill.\nTracking appears here for admin and the customer after booking.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12.5,
+            height: 1.45,
+            color: CmsColors.textSecond,
+          ),
+        ),
+        if (canBook) ...[
+          const SizedBox(height: 18),
+          Obx(
+            () => SizedBox(
+              width: double.infinity,
+              child: CmsPrimaryButton(
+                label: 'Book Courier Guy & Dispatch',
+                icon: Icons.local_shipping_rounded,
+                isLoading: controller.mutating,
+                onTap: () => controller.dispatch(bookCourier: true),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TrackingBookedBody extends StatelessWidget {
+  const _TrackingBookedBody({
+    required this.controller,
+    required this.order,
+    required this.tracking,
+    required this.delivery,
+  });
+
+  final AdminOrdersController controller;
+  final AdminOrder order;
+  final Tracking? tracking;
+  final OrderDeliveryInfo? delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = tracking;
+    final d = delivery;
+    final meta = <Widget>[];
+
+    if (t != null && t.hasTrackingNumber) {
+      meta.addAll([
+        _MetaPair(
+          label: 'Courier',
+          value: t.courier.isEmpty ? '—' : t.courier,
+          boldValue: true,
+        ),
+        const SizedBox(height: 14),
+        _TrackingIdBlock(
+          trackingNumber: t.trackingNumber,
+          trackingUrl: t.trackingUrl,
+        ),
+      ]);
+    }
+
+    if (d != null && (d.hasWaybill || d.hasLabel || d.status.isNotEmpty)) {
+      if (meta.isNotEmpty) meta.add(const SizedBox(height: 14));
+      if (d.waybill.isNotEmpty) {
+        meta.add(_MetaPair(label: 'Waybill', value: d.waybill, boldValue: true));
+      }
+      if (d.shipmentId.isNotEmpty) {
+        meta.add(const SizedBox(height: 14));
+        meta.add(
+          _MetaPair(label: 'Shipment ID', value: d.shipmentId, boldValue: true),
+        );
+      }
+      if (d.status.isNotEmpty) {
+        meta.add(const SizedBox(height: 14));
+        meta.add(_MetaPair(label: 'TCG status', value: d.status, boldValue: true));
+      }
+      if (d.hasPodStatus) {
+        meta.add(const SizedBox(height: 14));
+        meta.add(
+          _MetaPair(
+            label: 'POD status',
+            value: d.pod!.displayLabel,
+            boldValue: true,
+          ),
+        );
+      }
+    }
+
+    final actions = <Widget>[];
+    if (d?.hasLabel == true) {
+      actions.add(
+        _OutlinedAction(
+          label: 'Open label',
+          icon: Icons.description_outlined,
+          color: CmsColors.orangeDark,
+          onTap: () => controller.openShippingLabel(),
+        ),
+      );
+    }
+    if (d?.hasWaybill == true || t?.hasTrackingNumber == true) {
+      actions.add(
+        _OutlinedAction(
+          label: 'Refresh POD status',
+          icon: Icons.refresh_rounded,
+          color: CmsColors.orangeDark,
+          onTap: () => controller.syncDeliveryPod(),
+        ),
+      );
+    }
+
+    final detailsColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...meta,
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < actions.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  actions[i],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final timeline = CmsOrderTrackingProgress(order: order);
+        if (constraints.maxWidth < 380 || meta.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              timeline,
+              if (meta.isNotEmpty || actions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                detailsColumn,
+              ],
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: timeline),
+            Container(
+              width: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: const Color(0xFFE8E8E8),
+              // Approximate timeline height so the divider shows.
+              height: 280,
+            ),
+            Expanded(child: detailsColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TrackingIdBlock extends StatelessWidget {
+  const _TrackingIdBlock({
+    required this.trackingNumber,
+    required this.trackingUrl,
+  });
+  final String trackingNumber;
+  final String trackingUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tracking ID',
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textSecond,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            Flexible(
+              child: SelectableText(
+                trackingNumber,
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: CmsColors.orange,
-                  decoration: TextDecoration.underline,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: CmsColors.textPrimary,
                 ),
               ),
             ),
-          ],
-          if (order.dispatchedAt != null) ...[
-            const SizedBox(height: 6),
-            _MetaPair(
-              label: 'Dispatched',
-              value: order.dispatchedAt.toString(),
-            ),
-          ],
-          if (order.sharedWithUserAt != null) ...[
-            const SizedBox(height: 4),
-            _MetaPair(
-              label: 'Shared with user',
-              value: order.sharedWithUserAt.toString(),
-            ),
-          ],
-        ],
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            CmsPrimaryButton(
-              label: t == null || !t.hasTrackingNumber
-                  ? 'Add tracking'
-                  : 'Edit tracking',
-              icon: Icons.local_shipping_outlined,
-              onTap: () => _showTrackingDialog(context, controller, t),
+            const SizedBox(width: 6),
+            _cmsClickableInk(
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: trackingNumber));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tracking number copied'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: const Icon(
+                Icons.copy_rounded,
+                size: 15,
+                color: CmsColors.orangeDark,
+              ),
             ),
           ],
         ),
+        if (trackingUrl.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          _cmsClickableInk(
+            onTap: () => _openUrl(trackingUrl),
+            child: Text(
+              trackingUrl,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF2563EB),
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF2563EB),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1557,42 +2412,43 @@ class _InvoiceCard extends StatelessWidget {
     if (inv == null || inv.url.isEmpty) {
       return const SizedBox.shrink();
     }
-    return CmsFormCard(
+    return _DetailSectionCard(
+      icon: Icons.receipt_long_outlined,
       title: 'Invoice',
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (inv.number.isNotEmpty)
-                    Text(
-                      'Invoice #${inv.number}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: CmsColors.textPrimary,
-                      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (inv.number.isNotEmpty)
+                  Text(
+                    'Invoice #${inv.number}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: CmsColors.textPrimary,
                     ),
-                  if (inv.generatedAt != null)
-                    Text(
-                      inv.generatedAt!.toLocal().toString(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: CmsColors.textSecond,
-                      ),
+                  ),
+                if (inv.generatedAt != null)
+                  Text(
+                    inv.generatedAt!.toLocal().toString(),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: CmsColors.textSecond,
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-            CmsPrimaryButton(
-              label: 'Open invoice',
-              icon: Icons.open_in_new_rounded,
-              onTap: () => _openUrl(inv.url),
-            ),
-          ],
-        ),
-      ],
+          ),
+          _OutlinedAction(
+            label: 'Open Invoice',
+            icon: Icons.open_in_new_rounded,
+            color: CmsColors.orangeDark,
+            onTap: () => _openUrl(inv.url),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1604,25 +2460,33 @@ class _FulfillmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = order.fulfillment;
-    if (f == null) return const SizedBox.shrink();
+    if (f == null || !order.hasCustomerFulfillmentFeedback) {
+      return const SizedBox.shrink();
+    }
     return CmsFormCard(
-      title: 'Fulfilment',
+      title: 'Customer feedback',
       children: [
         if (f.satisfied != null)
           _MetaPair(
             label: 'Satisfied',
             value: f.satisfied! ? 'Yes' : 'No',
           ),
-        if (f.ratedAt != null)
+        if (f.ratedAt != null) ...[
+          const SizedBox(height: 4),
           _MetaPair(
             label: 'Rated at',
             value: f.ratedAt!.toLocal().toString(),
           ),
+        ],
         if (f.feedback.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
-            'Feedback: ${f.feedback}',
-            style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary),
+            f.feedback,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: CmsColors.textPrimary,
+            ),
           ),
         ],
       ],
@@ -1640,6 +2504,7 @@ class _ActionBar extends StatelessWidget {
     final nextStates = OrderStatusMachine.nextAllowed(
       order.orderStatus,
       hasTrackingNumber: order.hasTracking,
+      fulfillmentMethod: order.fulfillmentMethod,
     );
     final canCancel = OrderStatusMachine.canAdminCancel(order.orderStatus);
     final canFulfil = order.isPaymentPaid;
@@ -1647,6 +2512,22 @@ class _ActionBar extends StatelessWidget {
       () {
         final busy = controller.mutating;
         final children = <Widget>[];
+
+        if (order.canAdminCompletePickup) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Mark picked up (verify PIN)',
+              icon: Icons.check_circle_outline_rounded,
+              isLoading: busy,
+              onTap: () async {
+                final pin = await AdminVerifyPickupDialog.show(context);
+                if (pin == null || pin.isEmpty) return;
+                await controller.verifyPickup(pin);
+              },
+            ),
+          );
+        }
+
         if (canFulfil && nextStates.contains(OrderStatus.processing)) {
           children.add(
             CmsPrimaryButton(
@@ -1658,14 +2539,65 @@ class _ActionBar extends StatelessWidget {
           );
         }
         if (canFulfil &&
-            (nextStates.contains(OrderStatus.shipped) ||
-                order.orderStatus == OrderStatus.processing)) {
+            order.isPickup &&
+            nextStates.contains(OrderStatus.packed)) {
           children.add(
             CmsPrimaryButton(
-              label: 'Dispatch',
+              label: 'Mark packed',
+              icon: Icons.inventory_2_outlined,
+              isLoading: busy,
+              onTap: () => controller.markPacked(),
+            ),
+          );
+        }
+        if (canFulfil &&
+            order.isPickup &&
+            (nextStates.contains(OrderStatus.readyForPickup) ||
+                order.orderStatus == OrderStatus.processing ||
+                order.orderStatus == OrderStatus.packed)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Ready for pickup',
+              icon: Icons.storefront_outlined,
+              isLoading: busy,
+              onTap: () => controller.markReadyForPickup(),
+            ),
+          );
+        }
+        if (canFulfil &&
+            order.isDelivery &&
+            !order.hasCourierTracking &&
+            (nextStates.contains(OrderStatus.shipped) ||
+                order.orderStatus == OrderStatus.processing ||
+                order.orderStatus == OrderStatus.placed)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Book Courier Guy & Dispatch',
               icon: Icons.local_shipping_rounded,
               isLoading: busy,
-              onTap: () => _showDispatchDialog(context, controller, order.tracking),
+              onTap: () => controller.dispatch(bookCourier: true),
+            ),
+          );
+        }
+        if (canFulfil &&
+            order.isDelivery &&
+            (order.delivery?.hasWaybill == true || order.hasTracking)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Refresh POD status',
+              icon: Icons.verified_user_outlined,
+              isLoading: busy,
+              onTap: () => controller.syncDeliveryPod(),
+            ),
+          );
+        }
+        if (canFulfil && nextStates.contains(OrderStatus.outForDelivery)) {
+          children.add(
+            CmsPrimaryButton(
+              label: 'Mark out for delivery',
+              icon: Icons.delivery_dining_rounded,
+              isLoading: busy,
+              onTap: () => controller.markStatus(OrderStatus.outForDelivery),
             ),
           );
         }
@@ -1689,7 +2621,7 @@ class _ActionBar extends StatelessWidget {
             ),
           );
         }
-        if (order.canInitiateRefund) {
+        if (order.canInitiateRefund && kOrderReturnReplaceEnabled) {
           children.add(
             _OutlinedAction(
               label: 'Initiate Refund',
@@ -1705,7 +2637,7 @@ class _ActionBar extends StatelessWidget {
           children.add(
             _OutlinedAction(
               label: 'Verify payment',
-              icon: Icons.refresh_rounded,
+              icon: Icons.check_rounded,
               color: CmsColors.orangeDark,
               onTap:
                   busy ? null : () => controller.verifyPayment(order.paymentReference),
@@ -1741,11 +2673,13 @@ class _OutlinedAction extends StatelessWidget {
     return _cmsClickableOptional(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: onTap == null ? color.withOpacity(0.05) : color.withOpacity(0.08),
+          color: onTap == null
+              ? color.withValues(alpha: 0.05)
+              : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.35)),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1757,7 +2691,7 @@ class _OutlinedAction extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 12.5,
               ),
             ),
           ],
@@ -1768,227 +2702,6 @@ class _OutlinedAction extends StatelessWidget {
 }
 
 // ── dialogs ────────────────────────────────────────────────────────
-Future<void> _showTrackingDialog(
-  BuildContext context,
-  AdminOrdersController controller,
-  Tracking? current,
-) async {
-  final courier = TextEditingController(text: current?.courier ?? '');
-  final number = TextEditingController(text: current?.trackingNumber ?? '');
-  final url = TextEditingController(text: current?.trackingUrl ?? '');
-  final markShipped = ValueNotifier<bool>(false);
-
-  await showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (innerContext, setState) {
-          return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            title: const Text(
-              'Save tracking',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: CmsColors.textPrimary,
-              ),
-            ),
-            content: SizedBox(
-              width: 380,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CmsFormField(
-                    label: 'Courier',
-                    hint: 'e.g. DHL, Aramex, Postnet',
-                    controller: courier,
-                  ),
-                  const SizedBox(height: 8),
-                  CmsFormField(
-                    label: 'Tracking number',
-                    hint: 'e.g. AB123456789ZA',
-                    controller: number,
-                  ),
-                  const SizedBox(height: 8),
-                  CmsFormField(
-                    label: 'Tracking URL (optional)',
-                    hint: 'https://…',
-                    controller: url,
-                  ),
-                  const SizedBox(height: 8),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: markShipped,
-                    builder: (_, v, __) => Row(
-                      children: [
-                        Checkbox(
-                          value: v,
-                          activeColor: CmsColors.orange,
-                          onChanged: (val) =>
-                              markShipped.value = val ?? false,
-                        ),
-                        const Expanded(
-                          child: Text(
-                            'Also mark as SHIPPED (dispatch)',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: CmsColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: CmsColors.textSecond),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CmsColors.orange,
-                  foregroundColor: Color(0xFFFCF7EF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ).copyWith(mouseCursor: _cmsButtonClickCursor),
-                onPressed: () async {
-                  final c = courier.text.trim();
-                  final n = number.text.trim();
-                  if (c.isEmpty || n.isEmpty) return;
-                  Navigator.pop(dialogContext);
-                  if (markShipped.value) {
-                    await controller.dispatch(
-                      courier: c,
-                      trackingNumber: n,
-                      trackingUrl: url.text.trim().isEmpty
-                          ? null
-                          : url.text.trim(),
-                    );
-                  } else {
-                    await controller.saveTracking(
-                      courier: c,
-                      trackingNumber: n,
-                      trackingUrl: url.text.trim().isEmpty
-                          ? null
-                          : url.text.trim(),
-                    );
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
-Future<void> _showDispatchDialog(
-  BuildContext context,
-  AdminOrdersController controller,
-  Tracking? current,
-) async {
-  final courier = TextEditingController(text: current?.courier ?? '');
-  final number = TextEditingController(text: current?.trackingNumber ?? '');
-  final url = TextEditingController(text: current?.trackingUrl ?? '');
-  final note = TextEditingController();
-
-  await showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text(
-          'Dispatch order',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: CmsColors.textPrimary,
-          ),
-        ),
-        content: SizedBox(
-          width: 380,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Saves tracking and marks the order SHIPPED. The customer '
-                  'will receive a shipping notification email.',
-                  style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-                ),
-                const SizedBox(height: 10),
-                CmsFormField(
-                  label: 'Courier',
-                  hint: 'e.g. DHL, Aramex, Postnet',
-                  controller: courier,
-                ),
-                const SizedBox(height: 8),
-                CmsFormField(
-                  label: 'Tracking number',
-                  hint: 'e.g. AB123456789ZA',
-                  controller: number,
-                ),
-                const SizedBox(height: 8),
-                CmsFormField(
-                  label: 'Tracking URL (optional)',
-                  hint: 'https://…',
-                  controller: url,
-                ),
-                const SizedBox(height: 8),
-                CmsFormField(
-                  label: 'Note (optional)',
-                  hint: 'Internal dispatch note',
-                  controller: note,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: CmsColors.textSecond),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: CmsColors.orange,
-              foregroundColor: Color(0xFFFCF7EF),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ).copyWith(mouseCursor: _cmsButtonClickCursor),
-            onPressed: () async {
-              final c = courier.text.trim();
-              final n = number.text.trim();
-              if (c.isEmpty || n.isEmpty) return;
-              Navigator.pop(dialogContext);
-              await controller.dispatch(
-                courier: c,
-                trackingNumber: n,
-                trackingUrl: url.text.trim().isEmpty ? null : url.text.trim(),
-                note: note.text.trim().isEmpty ? null : note.text.trim(),
-              );
-            },
-            child: const Text('Dispatch'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
 Future<void> _showInitiateRefundDialog(
   BuildContext context,
   AdminOrdersController controller,
@@ -2206,9 +2919,14 @@ class _ColSpec {
 }
 
 class _MetaPair extends StatelessWidget {
-  const _MetaPair({required this.label, required this.value});
+  const _MetaPair({
+    required this.label,
+    required this.value,
+    this.boldValue = false,
+  });
   final String label;
   final String value;
+  final bool boldValue;
 
   @override
   Widget build(BuildContext context) {
@@ -2219,18 +2937,19 @@ class _MetaPair extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w500,
             color: CmsColors.textSecond,
-            letterSpacing: 0.2,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         SelectableText(
           value,
-          style: const TextStyle(
-            fontSize: 12.5,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: boldValue ? FontWeight.w700 : FontWeight.w500,
             color: CmsColors.textPrimary,
+            height: 1.25,
           ),
         ),
       ],
@@ -2300,6 +3019,35 @@ class _ErrorBox extends StatelessWidget {
 }
 
 // ── Status badges ──────────────────────────────────────────────────
+class _FulfillmentMethodBadge extends StatelessWidget {
+  const _FulfillmentMethodBadge({required this.method});
+  final FulfillmentMethod method;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPickup = method.isPickup;
+    final c = isPickup ? const Color(0xFF0E7490) : const Color(0xFFC2410C);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withOpacity(0.35)),
+      ),
+      child: Text(
+        method.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: c,
+        ),
+      ),
+    );
+  }
+}
+
 class OrderStatusBadge extends StatelessWidget {
   const OrderStatusBadge({super.key, required this.status});
   final OrderStatus status;
@@ -2333,8 +3081,16 @@ class OrderStatusBadge extends StatelessWidget {
         return const Color(0xFF1976D2);
       case OrderStatus.processing:
         return CmsColors.orangeDark;
+      case OrderStatus.packed:
+        return const Color(0xFF1565C0);
+      case OrderStatus.readyForPickup:
+        return const Color(0xFF0E7490);
+      case OrderStatus.collected:
+        return const Color(0xFF00695C);
       case OrderStatus.shipped:
         return const Color(0xFF6A1B9A);
+      case OrderStatus.outForDelivery:
+        return const Color(0xFF4527A0);
       case OrderStatus.delivered:
         return CmsColors.green;
       case OrderStatus.fulfilled:

@@ -103,6 +103,7 @@ class PoojaModel {
     required this.id,
     required this.title,
     required this.deities,
+    this.deityNames = const [],
     required this.category,
     required this.difficulty,
     required this.duration,
@@ -148,8 +149,25 @@ class PoojaModel {
   final String id;
   final String title;
   final List<String> deities;
-  /// First deity id, or comma-joined ids — for legacy display.
-  String get deity => deities.join(', ');
+  final List<String> deityNames;
+
+  static final _objectIdPattern = RegExp(r'^[a-fA-F0-9]{24}$');
+
+  static bool _isObjectId(String value) =>
+      _objectIdPattern.hasMatch(value.trim());
+
+  /// Human-readable deity names for CMS lists. Never shows raw ObjectIds.
+  String get deity {
+    final names = deityNames
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && !_isObjectId(e))
+        .toList();
+    if (names.isNotEmpty) return names.join(', ');
+    return deities
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && !_isObjectId(e))
+        .join(', ');
+  }
   final String category;
   final String difficulty;
   final String duration;
@@ -255,6 +273,32 @@ class PoojaModel {
     final single = _str(json, ['deity', 'deityName', 'deity_name']);
     if (single.isNotEmpty) return [single];
     return const [];
+  }
+
+  static List<String> _extractDeityNames(Map<String, dynamic> json) {
+    String nameOf(dynamic value) {
+      if (value is Map) {
+        return (value['name'] ??
+                value['title'] ??
+                value['deity_name'] ??
+                value['deityName'] ??
+                '')
+            .toString()
+            .trim();
+      }
+      if (value is String) {
+        final text = value.trim();
+        return _isObjectId(text) ? '' : text;
+      }
+      return '';
+    }
+
+    final raw = json['deity'] ?? json['deities'];
+    if (raw is List) {
+      return raw.map(nameOf).where((s) => s.isNotEmpty).toList();
+    }
+    final name = nameOf(raw);
+    return name.isEmpty ? const [] : [name];
   }
 
   static String _str(
@@ -472,6 +516,7 @@ class PoojaModel {
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'pooja_name', 'poojaName', 'name']),
       deities: _extractDeityIds(json),
+      deityNames: _extractDeityNames(json),
       category: _str(json, ['category']),
       difficulty: _str(json, [
         'difficulty',
@@ -688,6 +733,7 @@ class PoojaModel {
   PoojaModel copyWith({
     String? title,
     List<String>? deities,
+    List<String>? deityNames,
     String? category,
     String? difficulty,
     String? duration,
@@ -730,6 +776,7 @@ class PoojaModel {
       id: id,
       title: title ?? this.title,
       deities: deities ?? this.deities,
+      deityNames: deityNames ?? this.deityNames,
       category: category ?? this.category,
       difficulty: difficulty ?? this.difficulty,
       duration: duration ?? this.duration,

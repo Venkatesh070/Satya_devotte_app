@@ -692,6 +692,19 @@ class _PoojaCard extends StatelessWidget {
 
   bool get canEdit => true;
 
+  String get _deityLabel {
+    if (pooja.deity.isNotEmpty) return pooja.deity;
+    if (!Get.isRegistered<PoojaController>()) return '';
+    final lookup = <String, String>{
+      for (final d in Get.find<PoojaController>().deities)
+        (d['id'] ?? '').trim(): (d['name'] ?? '').trim(),
+    };
+    return pooja.deities
+        .map((id) => lookup[id.trim()] ?? '')
+        .where((name) => name.isNotEmpty)
+        .join(', ');
+  }
+
   String _formatDate(String s) {
     try {
       // Handle DD-MM-YYYY
@@ -756,22 +769,24 @@ class _PoojaCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Flexible(
-                        child: Text(
-                          pooja.deity,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: CmsColors.textSecond,
+                      if (_deityLabel.isNotEmpty)
+                        Flexible(
+                          child: Text(
+                            _deityLabel,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: CmsColors.textSecond,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
                         ),
-                      ),
-                      if (pooja.duration.isNotEmpty) ...[
+                      if (_deityLabel.isNotEmpty && pooja.duration.isNotEmpty)
                         const Text(
                           ' • ',
                           style: TextStyle(color: CmsColors.textSecond),
                         ),
+                      if (pooja.duration.isNotEmpty)
                         Text(
                           pooja.duration,
                           style: const TextStyle(
@@ -779,7 +794,6 @@ class _PoojaCard extends StatelessWidget {
                             color: CmsColors.textSecond,
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),

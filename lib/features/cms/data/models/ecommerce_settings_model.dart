@@ -1,79 +1,47 @@
 class EcommerceSettings {
   const EcommerceSettings({
-    required this.deliveryFee,
+    this.vatNumber = '',
+    this.vatPercent = 0,
     this.currency = 'ZAR',
-    this.isEnabled = true,
-    this.freeDeliveryMinimum,
   });
 
-  final double deliveryFee;
+  final String vatNumber;
+  final double vatPercent;
   final String currency;
-  final bool isEnabled;
-  final double? freeDeliveryMinimum;
 
   factory EcommerceSettings.fromJson(Map<String, dynamic> json) {
-    final charges = json['delivery_charges'] ?? json['deliveryCharges'];
-    final map = charges is Map<String, dynamic> ? charges : json;
+    final vat = json['vat'] ?? json['settings']?['vat'] ?? json;
+    final map = vat is Map<String, dynamic> ? vat : json;
 
-    final raw = map['delivery_charge'] ??
-        map['deliveryCharge'] ??
-        map['deliveryFee'] ??
-        map['deliveryCharges'] ??
-        map['shippingFee'] ??
-        0;
-    final fee = raw is num ? raw.toDouble() : double.tryParse('$raw') ?? 0;
-
+    final number = (map['vat_number'] ?? map['vatNumber'] ?? '').toString().trim();
+    final rawPct = map['vat_percent'] ?? map['vatPercent'] ?? 0;
+    final pct = rawPct is num ? rawPct.toDouble() : double.tryParse('$rawPct') ?? 0;
     final currency = (map['currency'] ?? 'ZAR').toString().trim();
 
-    final enabledRaw = map['is_enabled'] ?? map['isEnabled'];
-    final isEnabled = enabledRaw is bool
-        ? enabledRaw
-        : enabledRaw == null
-            ? true
-            : '$enabledRaw'.toLowerCase() != 'false';
-
-    final freeMinRaw = map['free_delivery_minimum'] ?? map['freeDeliveryMinimum'];
-    double? freeDeliveryMinimum;
-    if (freeMinRaw != null && '$freeMinRaw'.trim().isNotEmpty) {
-      freeDeliveryMinimum = freeMinRaw is num
-          ? freeMinRaw.toDouble()
-          : double.tryParse('$freeMinRaw');
-    }
-
     return EcommerceSettings(
-      deliveryFee: fee < 0 ? 0 : fee,
+      vatNumber: number,
+      vatPercent: pct.clamp(0, 100).toDouble(),
       currency: currency.isEmpty ? 'ZAR' : currency.toUpperCase(),
-      isEnabled: isEnabled,
-      freeDeliveryMinimum: freeDeliveryMinimum != null && freeDeliveryMinimum < 0
-          ? null
-          : freeDeliveryMinimum,
     );
   }
 
   Map<String, dynamic> toUpdateJson() => {
-        'delivery_charges': {
-          'delivery_charge': deliveryFee,
+        'vat': {
+          'vat_number': vatNumber.trim(),
+          'vat_percent': vatPercent,
           'currency': currency,
-          'is_enabled': isEnabled,
-          if (freeDeliveryMinimum != null)
-            'free_delivery_minimum': freeDeliveryMinimum,
         },
       };
 
   EcommerceSettings copyWith({
-    double? deliveryFee,
+    String? vatNumber,
+    double? vatPercent,
     String? currency,
-    bool? isEnabled,
-    double? freeDeliveryMinimum,
-    bool clearFreeDeliveryMinimum = false,
   }) {
     return EcommerceSettings(
-      deliveryFee: deliveryFee ?? this.deliveryFee,
+      vatNumber: vatNumber ?? this.vatNumber,
+      vatPercent: vatPercent ?? this.vatPercent,
       currency: currency ?? this.currency,
-      isEnabled: isEnabled ?? this.isEnabled,
-      freeDeliveryMinimum: clearFreeDeliveryMinimum
-          ? null
-          : (freeDeliveryMinimum ?? this.freeDeliveryMinimum),
     );
   }
 }

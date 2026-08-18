@@ -1,6 +1,7 @@
 // lib/features/poojakit/presentation/pages/product_payment_webview_screen.dart
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -119,6 +120,17 @@ class _ProductPaymentWebViewScreenState
 
   Future<void> _launchWebPopup() async {
     final checkout = _init!.checkout;
+    if (checkout.postHtml.isNotEmpty) {
+      final dataUri = Uri.dataFromString(
+        checkout.postHtml,
+        mimeType: 'text/html',
+        encoding: utf8,
+      );
+      try {
+        await launchUrl(dataUri);
+      } catch (_) {}
+      return;
+    }
     final url = checkout.redirectUrl;
     if (url.isEmpty) return;
     try {

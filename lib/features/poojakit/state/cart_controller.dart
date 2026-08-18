@@ -2,9 +2,10 @@
 
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
-import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
+import 'package:satya_devotte_app/features/poojakit/domain/warehouse_cart_rules.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/mixed_warehouse_cart_dialog.dart';
 
 class CartController extends GetxController {
   CartController(this._repo);
@@ -19,45 +20,6 @@ class CartController extends GetxController {
   bool get isLoading => _isLoading.value;
   String? get error => _error.value;
   bool isBusy(String productId) => _busyProductIds.contains(productId);
-
-  /// Checks if adding [targetProduct] violates category restriction rule:
-  /// Cannot mix Ayurvedic products with Puja Kits & Sathya Books.
-  bool isCategoryRestricted(ProductModel targetProduct) {
-    final cartItems = _cart.value?.items ?? [];
-    if (cartItems.isEmpty) return false;
-
-    final targetCat = targetProduct.category.toLowerCase().trim();
-    final targetTitle = targetProduct.title.toLowerCase().trim();
-    final isTargetAyurvedic = targetCat.contains('ayurved') ||
-        targetCat.contains('herbal') ||
-        targetTitle.contains('ayurved');
-
-    bool hasAyurvedicInCart = false;
-    bool hasPujaKitOrBookInCart = false;
-
-    for (final item in cartItems) {
-      final itemCat = item.product.category.toLowerCase().trim();
-      final itemTitle = item.product.title.toLowerCase().trim();
-
-      if (itemCat.contains('ayurved') ||
-          itemCat.contains('herbal') ||
-          itemTitle.contains('ayurved')) {
-        hasAyurvedicInCart = true;
-      } else {
-        hasPujaKitOrBookInCart = true;
-      }
-    }
-
-    if (isTargetAyurvedic && hasPujaKitOrBookInCart) {
-      return true;
-    }
-    if (!isTargetAyurvedic && hasAyurvedicInCart) {
-      return true;
-    }
-
-    return false;
-  }
-
   int get itemCount {
     if (_cart.value == null) return 0;
     // Use server-provided itemCount if available, otherwise sum quantities
@@ -88,17 +50,36 @@ class CartController extends GetxController {
   Future<bool> addToCart(
     String productId, {
     int quantity = 1,
-    Function(String err)? onError,
+    String? productCategory,
   }) async {
     if (_busyProductIds.contains(productId)) return false;
+
+    if (productCategory != null && productCategory.trim().isNotEmpty) {
+      final cartGroup = cartWarehouseGroup(_cart.value?.items ?? []);
+      final conflict = mixedWarehouseCartMessage(
+        cartGroup: cartGroup,
+        addingCategory: productCategory,
+      );
+      if (conflict != null) {
+        await MixedWarehouseCartDialog.show(
+          message: conflict,
+          cartGroup: cartGroup,
+        );
+        return false;
+      }
+    }
+
     _busyProductIds.add(productId);
     try {
       _cart.value = await _repo.addToCart(productId, quantity);
       return true;
     } catch (e) {
-      final msg = e.toString().replaceAll('Exception: ', '');
-      if (onError != null) {
-        onError(msg);
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (isMixedWarehouseCartError(msg)) {
+        await MixedWarehouseCartDialog.show(
+          message: msg,
+          cartGroup: cartWarehouseGroup(_cart.value?.items ?? []),
+        );
       } else {
         ToastUtil.showError(msg);
       }

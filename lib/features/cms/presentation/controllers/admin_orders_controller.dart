@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
+import 'package:satya_devotte_app/core/utils/open_pdf_bytes.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/admin_orders_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -27,7 +28,11 @@ class AdminOrdersController extends GetxController {
     'ALL',
     'PLACED',
     'PROCESSING',
+    'PACKED',
+    'READY_FOR_PICKUP',
+    'COLLECTED',
     'SHIPPED',
+    'OUT_FOR_DELIVERY',
     'DELIVERED',
     'FULFILLED',
     'CANCELLED',
@@ -51,7 +56,7 @@ class AdminOrdersController extends GetxController {
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _orderStatus = 'ALL'.obs;
-  final _paymentStatus = 'ALL'.obs;
+  final _paymentStatus = 'PAID'.obs;
   final _search = ''.obs;
 
   // ── detail state ──────────────────────────────────────────────────
@@ -251,10 +256,11 @@ class AdminOrdersController extends GetxController {
   }
 
   Future<bool> dispatch({
-    required String courier,
-    required String trackingNumber,
+    String? courier,
+    String? trackingNumber,
     String? trackingUrl,
     String? note,
+    bool bookCourier = false,
   }) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
@@ -265,9 +271,82 @@ class AdminOrdersController extends GetxController {
         trackingNumber: trackingNumber,
         trackingUrl: trackingUrl,
         note: note,
+        bookCourier: bookCourier,
       );
       _replaceDetail(updated);
-      _ok('Order shipped', 'Tracking saved and shipping email sent.');
+      _ok(
+        'Order shipped',
+        bookCourier
+            ? 'The Courier Guy booked and shipping email sent.'
+            : 'Tracking saved and shipping email sent.',
+      );
+      return true;
+    });
+  }
+
+  /// `POST /orders/:id/ready-for-pickup` — pickup orders only.
+  Future<bool> markReadyForPickup({String? note}) async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final updated = await _ds.readyForPickup(id, note: note);
+      _replaceDetail(updated);
+      _ok('Ready for pickup', 'Customer has been notified to collect.');
+      return true;
+    });
+  }
+
+  /// `POST /orders/:id/packed` — pickup orders only.
+  Future<bool> markPacked({String? note}) async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final updated = await _ds.markPacked(id, note: note);
+      _replaceDetail(updated);
+      _ok('Order packed', 'Order is packed and ready for the pickup counter.');
+      return true;
+    });
+  }
+
+  /// `POST /orders/:id/verify-pickup` — admin verifies customer PIN.
+  Future<bool> verifyPickup(String pin) async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final updated = await _ds.verifyPickup(id, pin: pin);
+      _replaceDetail(updated);
+      _ok('Order picked up', 'Customer can now confirm satisfaction in the app.');
+      return true;
+    });
+  }
+
+  /// `POST /orders/:id/sync-delivery-pod` — refresh Courier Guy POD status.
+  Future<bool> syncDeliveryPod() async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final updated = await _ds.syncDeliveryPod(id);
+      _replaceDetail(updated);
+      final podLabel = updated.delivery?.pod?.displayLabel ?? 'Updated';
+      _ok('POD refreshed', podLabel);
+      return true;
+    });
+  }
+
+  /// `GET /orders/:id/shipping-label` — download and open label PDF.
+  Future<bool> openShippingLabel() async {
+    final id = _selectedOrderId.value;
+    if (id == null) return false;
+    return _mutate(() async {
+      final bytes = await _ds.downloadShippingLabelPdf(id);
+      final opened = await openPdfBytes(
+        bytes,
+        filename: 'shipping-label-$id.pdf',
+      );
+      if (!opened) {
+        _err('Label unavailable', 'Could not open the shipping label PDF.');
+        return false;
+      }
       return true;
     });
   }

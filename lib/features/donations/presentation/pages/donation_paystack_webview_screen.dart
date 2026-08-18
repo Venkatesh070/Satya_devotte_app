@@ -24,6 +24,7 @@
 // confirm" panel and use the existing `url_launcher` (no new dependency).
 // Verify still drives all decisions.
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -146,6 +147,17 @@ class _DonationPaystackWebViewScreenState
   // ── Web fallback (popup + poll) ─────────────────────────────
   Future<void> _launchWebPopup() async {
     final checkout = _init!.checkout;
+    if (checkout.postHtml.isNotEmpty) {
+      final dataUri = Uri.dataFromString(
+        checkout.postHtml,
+        mimeType: 'text/html',
+        encoding: utf8,
+      );
+      try {
+        await launchUrl(dataUri, mode: LaunchMode.platformDefault);
+      } catch (_) {}
+      return;
+    }
     final url = checkout.redirectUrl;
     if (url.isEmpty) return;
     try {

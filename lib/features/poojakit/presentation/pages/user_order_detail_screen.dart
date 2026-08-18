@@ -1,17 +1,26 @@
 // lib/features/poojakit/presentation/pages/user_order_detail_screen.dart
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
-import 'package:satya_devotte_app/features/poojakit/presentation/widgets/replacement_request_sheet.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/fulfillment_method_chip.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_fulfillment_feedback_sheet.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_line_item_picker.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/pickup_warehouse_return_card.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/return_instructions_sheet.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/return_or_replace_sheet.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/user_order_status_chips.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/user_refund_status.dart';
 import 'package:satya_devotte_app/features/poojakit/state/user_orders_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
+import 'package:satya_devotte_app/shared/widgets/order_tracking_progress.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
@@ -27,20 +36,39 @@ class UserOrderDetailScreen extends StatefulWidget {
 class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
   late AdminOrder _order;
   final _c = Get.find<UserOrdersController>();
+  OrderRequest? _replacementRequest;
+  OrderRequest? _refundRequest;
 
   @override
   void initState() {
     super.initState();
     _order = Get.arguments as AdminOrder;
-    debugPrint('UserOrderDetailScreen: order.id=${_order.id}, payfastPaymentId=${_order.payfastPaymentId}, paymentReference=${_order.paymentReference}');
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
   Future<void> _refresh() async {
     final updated = await _c.refreshOrderDetail(_order.id);
     if (updated != null && mounted) {
-      debugPrint('UserOrderDetailScreen (refreshed): order.id=${updated.id}, payfastPaymentId=${updated.payfastPaymentId}, paymentReference=${updated.paymentReference}');
       setState(() => _order = updated);
+    }
+    if (!kOrderReturnReplaceEnabled) {
+      if (mounted) {
+        setState(() {
+          _replacementRequest = null;
+          _refundRequest = null;
+        });
+      }
+      return;
+    }
+    final replacement = await _c.fetchReplacementRequestForOrder(
+      updated ?? _order,
+    );
+    final refund = await _c.fetchRefundRequestForOrder(updated ?? _order);
+    if (mounted) {
+      setState(() {
+        _replacementRequest = replacement;
+        _refundRequest = refund ?? _c.refundRequestFor(_order.id);
+      });
     }
   }
 
@@ -68,22 +96,92 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                     color: const Color(0xFF4A1C00),
                   ),
                 ),
+                const SizedBox(height: 8),
+                FulfillmentMethodChip(method: _order.fulfillmentMethod),
+                const SizedBox(height: 10),
+                UserOrderStatusChips(
+                  order: _order,
+                  request: _replacementRequest,
+                  refundRequest: _refundRequest,
+                ),
                 const SizedBox(height: 16),
-                _OrderItemCard(order: _order),
+                _OrderItemCard(
+                  order: _order,
+                  replacementRequest: _replacementRequest,
+                  refundRequest: _refundRequest,
+                ),
                 const SizedBox(height: 16),
                 _DeliveryCard(order: _order),
-                if (_order.hasTracking) ...[
+                if (_order.isPickup &&
+                    _order.hasPickupCollectionCode &&
+                    _order.orderStatus != OrderStatus.fulfilled &&
+                    _order.orderStatus != OrderStatus.cancelled) ...[
+                  const SizedBox(height: 12),
+                  _PickupCollectionCard(order: _order),
+                ],
+                if (_order.isDelivery && _order.hasCourierTracking) ...[
                   const SizedBox(height: 12),
                   _TrackingCard(order: _order),
+                ],
+                if (_order.isDelivery &&
+                    (_order.delivery?.showCourierSection == true)) ...[
+                  const SizedBox(height: 12),
+                  _CourierDeliveryCard(order: _order),
+                ],
+                if (kOrderReturnReplaceEnabled &&
+                    (_replacementRequest != null ||
+                        _order.replacementStatusLabel != null)) ...[
+                  const SizedBox(height: 12),
+                  _ReplacementReturnBanner(
+                    order: _order,
+                    request: _replacementRequest,
+                    onOpenTracking: (url) async {
+                      final uri = Uri.tryParse(url);
+                      if (uri == null) return;
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                  ),
+                ],
+                if (kOrderReturnReplaceEnabled &&
+                    orderHasRefundActivity(_order, request: _refundRequest)) ...[
+                  const SizedBox(height: 12),
+                  UserRefundStatusBanner(
+                    order: _order,
+                    request: _refundRequest,
+                  ),
                 ],
                 const SizedBox(height: 12),
                 _BillSummaryCard(order: _order),
                 const SizedBox(height: 12),
                 _TransactionCard(order: _order),
+                if (_order.canUserConfirmFulfillment) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6EE7B7)),
+                    ),
+                    child: Text(
+                      _order.isPickup
+                          ? 'Your order was picked up. Share your feedback below.'
+                          : 'Your order was delivered. Share your feedback below.',
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: const Color(0xFF065F46),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 _ActionSection(
                   order: _order,
                   controller: _c,
+                  replacementRequest: _replacementRequest,
+                  refundRequest: _refundRequest,
                   onRefresh: _refresh,
                 ),
               ],
@@ -96,96 +194,65 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
 }
 
 class _OrderItemCard extends StatelessWidget {
-  const _OrderItemCard({required this.order});
+  const _OrderItemCard({
+    required this.order,
+    this.replacementRequest,
+    this.refundRequest,
+  });
   final AdminOrder order;
+  final OrderRequest? replacementRequest;
+  final OrderRequest? refundRequest;
 
   @override
   Widget build(BuildContext context) {
-    final item = order.items.isNotEmpty ? order.items.first : null;
-    final title = item?.title.trim().isNotEmpty == true
-        ? item!.title
-        : 'Lakshmi Puja Kit';
     final itemCount = order.items.length;
-    final qty = item?.qty ?? 0;
+    final headline = order.orderNumber.isNotEmpty
+        ? 'Order #${order.orderNumber}'
+        : (itemCount > 1 ? '$itemCount products' : 'Order');
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _OrderThumb(image: item?.image ?? ''),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          // maxLines: 1,
-                          // overflow: TextOverflow.ellipsis,
-                          style: AppTypography.lora(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF2B1A0C),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  _OrderStatusPill(order: order),
-
-                  const SizedBox(height: 7),
-
-                  _Bullet(
-                    text: itemCount > 1
-                        ? '$itemCount products in this order.'
-                        : qty == 0
-                        ? 'Puja kit essentials included.'
-                        : 'Quantity: $qty',
-                  ),
-                  const _Bullet(text: 'Sufficient for 2 members.'),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 22,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Color(0xFFFCF7EF),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Text(
-                      itemCount > 1
-                          ? 'No of products : $itemCount'
-                          : 'No of items : ${qty == 0 ? 1 : qty}',
-                      style: AppTypography.inter(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF8B765D),
-                      ),
-                    ),
-                  ),
-                ],
+        Text(
+          headline,
+          style: AppTypography.lora(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF2B1A0C),
+          ),
+        ),
+        const SizedBox(height: 8),
+        UserOrderStatusChips(
+          order: order,
+          request: replacementRequest,
+          refundRequest: refundRequest,
+          compact: true,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Items in this order ($itemCount)',
+          style: AppTypography.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF6C5B46),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...order.items.map(
+          (lineItem) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _CompactOrderLine(
+              item: lineItem,
+              statusTag: resolvedItemLineStatus(
+                order: order,
+                productId: lineItem.productId,
+                replacementRequest: replacementRequest,
+                refundRequest: refundRequest,
               ),
             ),
-          ],
+          ),
         ),
-
-        if (order.items.length > 1) ...[
-          const SizedBox(height: 10),
-          ...order.items
-              .skip(1)
-              .map(
-                (lineItem) => Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _CompactOrderLine(item: lineItem),
-                ),
-              ),
-        ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -221,34 +288,163 @@ class _DeliveryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final address = order.shippingAddress?.singleLine ?? '';
+    final isPickup = order.isPickup;
+    final address = isPickup
+        ? (order.pickupLocation?.singleLine ?? '')
+        : (order.shippingAddress?.singleLine ?? '');
     return _SummaryCard(
-      title: 'Delivery Location',
-      child: Row(
+      title: isPickup ? 'Pickup Address' : 'Delivery Address',
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-            ).createShader(bounds),
-            child: const Icon(
-              Icons.location_on,
-              size: 16,
-              color: Color(0xFFFCF7EF),
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                ).createShader(bounds),
+                child: Icon(
+                  isPickup ? Icons.storefront_outlined : Icons.location_on,
+                  size: 16,
+                  color: const Color(0xFFFCF7EF),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  address.isEmpty
+                      ? (isPickup
+                            ? 'Pickup location not available'
+                            : 'Address not available')
+                      : address,
+                  style: AppTypography.lora(
+                    fontSize: 14,
+                    height: 1.3,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF1C1917),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              address.isEmpty ? 'Address not available' : address,
-              style: AppTypography.lora(
-                fontSize: 14,
-                height: 1.3,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF1C1917),
+          if (isPickup &&
+              (order.pickupLocation?.hours.trim().isNotEmpty ?? false)) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Hours: ${order.pickupLocation!.hours}',
+              style: AppTypography.inter(
+                fontSize: 11,
+                color: const Color(0xFF6C5B46),
               ),
             ),
+          ],
+          if (isPickup &&
+              order.hasPickupCollectionCode &&
+              !order.orderStatus.isShippedOrBeyond) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Show this collection PIN at the warehouse. Staff will verify it to hand over your order.',
+              style: AppTypography.inter(
+                fontSize: 11,
+                height: 1.4,
+                color: const Color(0xFF6C5B46),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupCollectionCard extends StatelessWidget {
+  const _PickupCollectionCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final code = order.pickupCollection!.code;
+    return _SummaryCard(
+      title: 'Collection code',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            code,
+            style: AppTypography.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF78350F),
+            ).copyWith(letterSpacing: 6),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Give this PIN to warehouse staff when you collect your order.',
+            style: AppTypography.inter(
+              fontSize: 11,
+              height: 1.4,
+              color: const Color(0xFF6C5B46),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CourierDeliveryCard extends StatelessWidget {
+  const _CourierDeliveryCard({required this.order});
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = order.delivery!;
+    return _SummaryCard(
+      title: 'Courier',
+      child: Column(
+        children: [
+          if (d.waybill.trim().isNotEmpty)
+            _RowLine(label: 'Waybill', value: d.waybill),
+          if (d.status.trim().isNotEmpty)
+            _RowLine(label: 'Status', value: d.status),
+          if (d.hasPodPin && !d.hasPodStatus) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Delivery PIN verification is enabled. The Courier Guy will SMS a PIN to your phone when the driver arrives — share it to receive your order.',
+              style: AppTypography.inter(
+                fontSize: 11,
+                height: 1.4,
+                color: const Color(0xFF6C5B46),
+              ),
+            ),
+          ],
+          if (d.hasPodStatus) ...[
+            const SizedBox(height: 8),
+            _RowLine(label: 'POD status', value: d.pod!.displayLabel),
+            if (d.pod!.verifiedAt != null)
+              _RowLine(
+                label: 'Verified at',
+                value: DateFormat('d MMM yyyy, h:mm a')
+                    .format(d.pod!.verifiedAt!.toLocal()),
+              ),
+          ],
+          if (d.labelUrl.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: OutlinedButton.icon(
+                onPressed: () => launchUrl(Uri.parse(d.labelUrl)),
+                icon: const Icon(Icons.download_rounded, size: 16),
+                label: const Text('Open label'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFE95700),
+                  side: const BorderSide(color: Color(0xFFE95700)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -261,27 +457,31 @@ class _TrackingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tracking = order.tracking!;
+    final courier = order.courierLabel.isEmpty ? 'Courier' : order.courierLabel;
+    final trackingNo = order.courierTrackingNumber;
+    final trackingUrl = order.courierTrackingUrl;
     return _SummaryCard(
-      title: 'Tracking',
+      title: order.orderNumber.isNotEmpty
+          ? 'Order ID #${order.orderNumber}'
+          : 'Tracking',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RowLine(label: 'Courier', value: tracking.courier),
-          GestureDetector(
-            onTap: () => launchUrl(Uri.parse('tel:${tracking.trackingNumber}')),
-            child: _RowLine(
+          OrderTrackingProgress(order: order),
+          const SizedBox(height: 16),
+          if (courier.isNotEmpty) _RowLine(label: 'Courier', value: courier),
+          if (trackingNo.isNotEmpty)
+            _RowLine(
               label: 'Tracking No.',
-              value: tracking.trackingNumber,
-              icon: Icons.phone,
+              value: trackingNo,
             ),
-          ),
-          if (tracking.trackingUrl.trim().isNotEmpty) ...[
+          if (trackingUrl.isNotEmpty) ...[
             const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,
               height: 36,
               child: OutlinedButton.icon(
-                onPressed: () => launchUrl(Uri.parse(tracking.trackingUrl)),
+                onPressed: () => launchUrl(Uri.parse(trackingUrl)),
                 icon: const Icon(Icons.open_in_new, size: 16),
                 label: const Text('Track Order'),
                 style: OutlinedButton.styleFrom(
@@ -312,7 +512,10 @@ class _BillSummaryCard extends StatelessWidget {
             label: '${_firstItemTitle(order)} x${_itemCount(order)}',
             value: _formatOrderCurrency(itemAmount, order.currency),
           ),
-          _RowLine(label: 'Delivery Charge', value: order.formattedShipping),
+          _RowLine(
+            label: order.isPickup ? 'Pickup charge' : 'Delivery Charge',
+            value: order.formattedShipping,
+          ),
           _RowLine(label: 'Tax', value: order.formattedTax),
           const Divider(height: 18, color: Color(0x1A6B4A2B)),
           _RowLine(
@@ -333,26 +536,30 @@ class _TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('_TransactionCard build: payfastPaymentId=${order.payfastPaymentId}');
     return _SummaryCard(
       title: 'Transaction Summary',
       child: Column(
         children: [
           _RowLine(label: 'Transaction Date', value: order.formattedDate),
-          _RowLine(
-            label: 'Transaction ID',
-            value: (order.payfastPaymentId ?? '').trim().isEmpty
-                ? '—'
-                : order.payfastPaymentId!,
-          ),
+          if (order.paymentReference.isNotEmpty)
+            _RowLine(
+              label: 'PayFast ref',
+              value: order.paymentReference,
+            ),
+          if (order.resolvedPayfastPaymentId.isNotEmpty)
+            _RowLine(
+              label: 'PayFast txn ID',
+              value: order.resolvedPayfastPaymentId,
+            ),
           _RowLine(
             label: 'Order Status',
-            value:
-                order.orderStatus == OrderStatus.cancelled &&
-                    order.paymentStatus == PaymentStatus.refundInitiated
-                ? 'Cancelled - refund initiated'
-                : order.orderStatus.label,
+            value: order.orderStatus.label,
           ),
+          if (order.paymentStatus != PaymentStatus.paid)
+            _RowLine(
+              label: 'Payment Status',
+              value: order.paymentStatus.label,
+            ),
           if (order.invoice?.url.isNotEmpty == true) ...[
             const SizedBox(height: 8),
             SizedBox(
@@ -375,16 +582,221 @@ class _TransactionCard extends StatelessWidget {
   }
 }
 
+class _ReplacementReturnBanner extends StatelessWidget {
+  const _ReplacementReturnBanner({
+    required this.order,
+    required this.request,
+    required this.onOpenTracking,
+  });
+
+  final AdminOrder order;
+  final OrderRequest? request;
+  final Future<void> Function(String url) onOpenTracking;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = request?.status;
+    final returnInfo = request?.returnInfo;
+    final statusLabel = resolvedReplacementStatusLabel(
+      order: order,
+      request: request,
+    );
+    final statusTone = resolvedReplacementStatusTone(
+      order: order,
+      request: request,
+    );
+    final title = statusLabel ?? _title(status, returnInfo);
+    final body = _body(status, returnInfo);
+    final trackingUrl = returnInfo?.trackingUrl.trim() ?? '';
+    final waybill = returnInfo?.waybill.trim() ?? '';
+    final toneColor = replacementStatusToneColor(statusTone);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: toneColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: toneColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.sync_problem_outlined,
+                size: 18,
+                color: toneColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: toneColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (request?.requestNumber.isNotEmpty == true) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Request ${request!.requestNumber}',
+              style: AppTypography.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: toneColor.withValues(alpha: 0.85),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: AppTypography.inter(
+              fontSize: 12,
+              height: 1.45,
+              color: const Color(0xFF7C2D12),
+            ),
+          ),
+          if (request?.affectedItems.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Items: ${formatAffectedItemsSummary(request!.affectedItems, currency: order.currency)}',
+              style: AppTypography.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: toneColor,
+              ),
+            ),
+          ],
+          if (order.isPickup &&
+              (status == OrderRequestStatus.awaitingReturn ||
+                  status == OrderRequestStatus.approved ||
+                  order.needsUserReturn)) ...[
+            const SizedBox(height: 10),
+            PickupWarehouseReturnCard(order: order, compact: true),
+          ],
+          if (waybill.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Return waybill: $waybill',
+              style: AppTypography.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: toneColor,
+              ),
+            ),
+          ],
+          if (trackingUrl.isNotEmpty && !order.isPickup) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => onOpenTracking(trackingUrl),
+              child: Text(
+                'Track return collection',
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: toneColor,
+                ).copyWith(decoration: TextDecoration.underline),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _title(OrderRequestStatus? status, ReplacementReturnInfo? info) {
+    if (status == OrderRequestStatus.requested) {
+      return 'Replacement request submitted';
+    }
+    if (info?.isReturnReceived == true ||
+        status == OrderRequestStatus.returnReceived) {
+      return 'Return received';
+    }
+    if ((info?.waybill.isNotEmpty ?? false) ||
+        info?.status.toUpperCase() == 'RETURN_BOOKED') {
+      return 'Return collection booked';
+    }
+    if (status == OrderRequestStatus.awaitingReturn ||
+        status == OrderRequestStatus.approved ||
+        order.hasOpenReplacement) {
+      return order.isPickup
+          ? 'Please return the damaged item'
+          : 'Return of damaged item required';
+    }
+    return 'Replacement in progress';
+  }
+
+  String _body(OrderRequestStatus? status, ReplacementReturnInfo? info) {
+    final rs = order.replacementState.toUpperCase().trim();
+    if (rs == 'COMPLETED') {
+      return 'Thanks — we have received the damaged item. Your replacement is being prepared.';
+    }
+    if (rs == 'REQUESTED') {
+      return 'We are reviewing your replacement request. You will be notified once it is approved.';
+    }
+    if (rs == 'IN_PROGRESS' && !order.isPickup) {
+      return 'A courier will collect the damaged item from your delivery address. Please keep the parcel ready.';
+    }
+    if (status == OrderRequestStatus.requested) {
+      return 'We are reviewing your request${request?.requestNumber.isNotEmpty == true ? ' (${request!.requestNumber})' : ''}. '
+          'You will be notified once it is approved.';
+    }
+    if (info?.isReturnReceived == true ||
+        status == OrderRequestStatus.returnReceived) {
+      return 'Thanks — we have received the damaged item. Your replacement is being prepared.';
+    }
+    final instructions = info?.instructions.trim() ?? '';
+    if (instructions.isNotEmpty) return instructions;
+    if (order.isPickup) {
+      final loc = order.pickupLocation;
+      final name = loc?.company.trim().isNotEmpty == true
+          ? loc!.company
+          : 'the warehouse';
+      final addr = [
+        if (loc?.enteredAddress.trim().isNotEmpty == true)
+          loc!.enteredAddress
+        else ...[
+          loc?.streetAddress,
+          loc?.localArea,
+          loc?.city,
+          loc?.postalCode,
+        ],
+      ].whereType<String>().where((s) => s.trim().isNotEmpty).join(', ');
+      return [
+        'Bring the damaged item to $name to complete your replacement.',
+        if (addr.isNotEmpty) 'Address: $addr',
+        if (loc?.hours.trim().isNotEmpty == true) 'Hours: ${loc!.hours}',
+        'Bring your order number and a valid ID.',
+      ].join(' ');
+    }
+    if ((info?.waybill.isNotEmpty ?? false)) {
+      return 'A courier will collect the damaged item from your delivery address. Please keep the parcel ready.';
+    }
+    return 'Once approved, please return the damaged item so we can send your replacement. '
+        'For delivery orders a courier collection will be arranged; for pickup, return it to the warehouse.';
+  }
+}
+
 class _ActionSection extends StatelessWidget {
   const _ActionSection({
     required this.order,
     required this.controller,
     required this.onRefresh,
+    this.replacementRequest,
+    this.refundRequest,
   });
 
   final AdminOrder order;
   final UserOrdersController controller;
   final VoidCallback onRefresh;
+  final OrderRequest? replacementRequest;
+  final OrderRequest? refundRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -392,10 +804,15 @@ class _ActionSection extends StatelessWidget {
         order.orderStatus.canUserCancel ||
         (order.orderStatus == OrderStatus.unknown &&
             !order.orderStatus.isShippedOrBeyond);
-    final canConfirm = order.orderStatus == OrderStatus.shipped;
-    final canReplace = order.orderStatus == OrderStatus.delivered;
+    final canConfirm = order.canUserConfirmFulfillment;
+    final canReturn =
+        kOrderReturnReplaceEnabled && order.needsUserReturn;
+    final canReplace = canUserRequestReturnOrReplace(
+      order,
+      refundRequest: refundRequest,
+    );
 
-    if (!canCancel && !canConfirm && !canReplace) {
+    if (!canCancel && !canConfirm && !canReplace && !canReturn) {
       return const SizedBox.shrink();
     }
 
@@ -403,29 +820,47 @@ class _ActionSection extends StatelessWidget {
       final loading = controller.isMutating;
       return Column(
         children: [
+          if (canReturn)
+            _ActionButton(
+              label: 'How to return',
+              icon: Icons.inventory_2_outlined,
+              loading: loading,
+              onTap: () {
+                ReturnInstructionsSheet.show(
+                  context,
+                  order: order,
+                  request: replacementRequest,
+                );
+              },
+            ),
           if (canConfirm)
             _ActionButton(
-              label: 'Confirm Delivery',
-              icon: Icons.check_circle_outline,
+              label: 'Feedback',
+              icon: Icons.rate_review_outlined,
               loading: loading,
               onTap: () async {
+                final result = await OrderFulfillmentFeedbackSheet.show(
+                  context,
+                  isPickup: order.isPickup,
+                );
+                if (result == null) return;
                 final ok = await controller.confirmDelivery(
                   order.id,
-                  satisfied: true,
+                  satisfied: result.satisfied,
+                  feedback: result.feedback,
                 );
                 if (ok) onRefresh();
               },
             ),
           if (canReplace)
             _ActionButton(
-              label: 'Raise Replacement Request',
-              icon: Icons.sync_problem_outlined,
+              label: 'Return or replace',
+              icon: Icons.undo_rounded,
               loading: loading,
               onTap: () {
-                ReplacementRequestSheet.show(
+                ReturnOrReplaceSheet.show(
                   context,
-                  orderId: order.id,
-                  orderNumber: order.orderNumber,
+                  order: order,
                   onSubmitted: onRefresh,
                 );
               },
@@ -783,63 +1218,32 @@ class _RowLine extends StatelessWidget {
   }
 }
 
-class _OrderStatusPill extends StatelessWidget {
-  const _OrderStatusPill({required this.order});
-
-  final AdminOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusText =
-        order.orderStatus == OrderStatus.cancelled &&
-            order.paymentStatus == PaymentStatus.refundInitiated
-        ? 'Cancelled - refund initiated'
-        : order.orderStatus == OrderStatus.cancelled &&
-              order.paymentStatus == PaymentStatus.refunded
-        ? 'Cancelled - refunded'
-        : order.orderStatus.label;
-    final color = _statusColor(order.orderStatus);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: .28)),
-      ),
-      child: Text(
-        statusText,
-        style: AppTypography.inter(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
 class _CompactOrderLine extends StatelessWidget {
-  const _CompactOrderLine({required this.item});
+  const _CompactOrderLine({
+    required this.item,
+    this.statusTag,
+  });
 
   final OrderLineItem item;
+  final ({String label, Color color})? statusTag;
 
   @override
   Widget build(BuildContext context) {
     final title = item.title.trim().isEmpty ? 'Puja Kit' : item.title.trim();
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: Color(0xFFFCF7EF).withValues(alpha: 0.55),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE7D5BC)),
       ),
       child: Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: SizedBox(
-              width: 42,
-              height: 42,
+              width: 48,
+              height: 48,
               child: item.image.trim().isNotEmpty
                   ? Image.network(
                       item.image,
@@ -849,70 +1253,46 @@ class _CompactOrderLine extends StatelessWidget {
                   : const _ThumbFallback(),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.lora(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF1C1917),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Qty: ${item.qty}',
-            style: AppTypography.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF6C5B46),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.lora(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF1C1917),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Qty: ${item.qty}',
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF6C5B46),
+                      ),
+                    ),
+                    if (statusTag != null)
+                      ItemLineStatusChip(
+                        label: statusTag!.label,
+                        color: statusTag!.color,
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-Color _statusColor(OrderStatus status) {
-  switch (status) {
-    case OrderStatus.cancelled:
-      return const Color(0xFFD14343);
-    case OrderStatus.delivered:
-    case OrderStatus.fulfilled:
-      return const Color(0xFF088B56);
-    case OrderStatus.shipped:
-      return const Color(0xFF253FA8);
-    case OrderStatus.processing:
-      return const Color(0xFFC06A2D);
-    case OrderStatus.placed:
-      return const Color(0xFFE95700);
-    case OrderStatus.unknown:
-      return const Color(0xFF78716C);
-  }
-}
-
-class _OrderThumb extends StatelessWidget {
-  const _OrderThumb({required this.image});
-  final String image;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 100,
-        height: 100,
-        child: image.trim().isNotEmpty
-            ? Image.network(
-                image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const _ThumbFallback(),
-              )
-            : const _ThumbFallback(),
       ),
     );
   }
@@ -926,45 +1306,6 @@ class _ThumbFallback extends StatelessWidget {
     return ColoredBox(
       color: Color(0xFFFFF7E8),
       child: Image.asset('assets/images/default_img.png', fit: BoxFit.cover),
-    );
-  }
-}
-
-class _Bullet extends StatelessWidget {
-  const _Bullet({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '. ',
-            style: AppTypography.inter(
-              fontSize: 12,
-              height: 1.25,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF78716C),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.inter(
-                fontSize: 10,
-                height: 1.25,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF78716C),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

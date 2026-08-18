@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/routing/hash_route_sync.dart';
 import 'package:satya_devotte_app/features/admin_notifications/data/models/admin_notification_item.dart';
@@ -32,7 +33,6 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_settings_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
-import 'package:satya_devotte_app/features/cms/presentation/controllers/ecommerce_settings_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
@@ -146,6 +146,7 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
       unawaited(Get.find<AdminOrdersController>().resetSearchOnTabFocus());
     }
     if (index == _NavIds.poojaKitRefunds &&
+        kOrderReturnReplaceEnabled &&
         Get.isRegistered<AdminOrderRequestsController>()) {
       unawaited(
         Get.find<AdminOrderRequestsController>().resetSearchOnTabFocus(),
@@ -154,10 +155,6 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     if (index == _NavIds.poojaKitPayments &&
         Get.isRegistered<AdminPaymentsController>()) {
       unawaited(Get.find<AdminPaymentsController>().resetSearchOnTabFocus());
-    }
-    if (index == _NavIds.poojaKitSettings &&
-        Get.isRegistered<EcommerceSettingsController>()) {
-      unawaited(Get.find<EcommerceSettingsController>().load());
     }
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
@@ -1178,12 +1175,13 @@ List<_NavEntry> _navItems(bool isSuperAdmin) => [
         activeIcon: Icons.receipt_long,
         index: _NavIds.poojaKitOrders,
       ),
-      _NavEntry(
-        label: 'Replace Requests',
-        icon: Icons.assignment_return_outlined,
-        activeIcon: Icons.assignment_return,
-        index: _NavIds.poojaKitRefunds,
-      ),
+      if (kOrderReturnReplaceEnabled)
+        _NavEntry(
+          label: 'Returns & Replacements',
+          icon: Icons.assignment_return_outlined,
+          activeIcon: Icons.assignment_return,
+          index: _NavIds.poojaKitRefunds,
+        ),
       _NavEntry(
         label: 'Payments',
         icon: Icons.payments_outlined,
@@ -1294,7 +1292,7 @@ String _pageTitle(int i) {
     case _NavIds.poojaKitOrders:
       return 'Orders';
     case _NavIds.poojaKitRefunds:
-      return 'Replace Requests';
+      return 'Returns & Replacements';
     case _NavIds.poojaKitPayments:
       return 'Puja Kit Payments';
     case _NavIds.poojaKitSettings:
@@ -1339,7 +1337,9 @@ Widget _buildContent(int i) {
     case _NavIds.poojaKitOrders:
       return const CmsPoojaKitOrdersContent();
     case _NavIds.poojaKitRefunds:
-      return const CmsPoojaKitRefundsContent();
+      return kOrderReturnReplaceEnabled
+          ? const CmsPoojaKitRefundsContent()
+          : const CmsPoojaKitOrdersContent();
     case _NavIds.poojaKitPayments:
       return const CmsPoojaKitPaymentsContent();
     case _NavIds.poojaKitSettings:
@@ -1382,7 +1382,9 @@ String? _routeFromIndex(int index) {
     case _NavIds.manageRituals:
       return AppRoutes.cmsManageRituals;
     case _NavIds.poojaKitRefunds:
-      return AppRoutes.cmsPoojaKitRefunds;
+      return kOrderReturnReplaceEnabled
+          ? AppRoutes.cmsPoojaKitRefunds
+          : AppRoutes.cmsPoojaKitOrders;
     case _NavIds.poojaKitPayments:
       return AppRoutes.cmsPoojaKitPayments;
     case _NavIds.poojaKitSettings:
@@ -1425,7 +1427,9 @@ int _indexFromRoute(String route, bool isSuperAdmin) {
     case AppRoutes.cmsPoojaKitOrders:
       return _NavIds.poojaKitOrders;
     case AppRoutes.cmsPoojaKitRefunds:
-      return _NavIds.poojaKitRefunds;
+      return kOrderReturnReplaceEnabled
+          ? _NavIds.poojaKitRefunds
+          : _NavIds.poojaKitOrders;
     case AppRoutes.cmsPoojaKitPayments:
       return _NavIds.poojaKitPayments;
     case AppRoutes.cmsPoojaKitSettings:
@@ -1531,12 +1535,14 @@ class CmsShellNavigation {
         break;
       case 'REFUND_REQUEST':
       case 'REPLACEMENT_REQUEST':
+        if (!kOrderReturnReplaceEnabled) break;
         shell.navigateToTab(_NavIds.poojaKitRefunds);
         if (kIsWeb) {
           updateCmsHashRoute(AppRoutes.cmsPoojaKitRefunds);
         }
         if (Get.isRegistered<AdminOrderRequestsController>()) {
-          Get.find<AdminOrderRequestsController>().refresh();
+          Get.find<AdminOrderRequestsController>()
+              .openFromNotificationType(n.type);
         }
         break;
       default:

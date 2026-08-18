@@ -53,6 +53,8 @@ class CartModel {
     required this.currency,
     this.subtotal,
     this.deliveryCharge,
+    this.taxAmount,
+    this.vatPercent,
     this.serverItemCount,
   });
 
@@ -61,6 +63,8 @@ class CartModel {
   final String currency;
   final num? subtotal;
   final num? deliveryCharge;
+  final num? taxAmount;
+  final num? vatPercent;
   final int? serverItemCount;
 
   CartModel copyWith({
@@ -69,6 +73,8 @@ class CartModel {
     String? currency,
     num? subtotal,
     num? deliveryCharge,
+    num? taxAmount,
+    num? vatPercent,
     int? serverItemCount,
   }) {
     return CartModel(
@@ -77,6 +83,8 @@ class CartModel {
       currency: currency ?? this.currency,
       subtotal: subtotal ?? this.subtotal,
       deliveryCharge: deliveryCharge ?? this.deliveryCharge,
+      taxAmount: taxAmount ?? this.taxAmount,
+      vatPercent: vatPercent ?? this.vatPercent,
       serverItemCount: serverItemCount,
     );
   }
@@ -90,7 +98,10 @@ class CartModel {
       totalAmount: (json['totalAmount'] ?? 0) as num,
       currency: (json['currency'] ?? 'ZAR').toString(),
       subtotal: (json['subtotal'] as num?) ?? (json['subtotalAmount'] as num?),
-      deliveryCharge: (json['deliveryCharge'] as num?) ?? (json['shippingAmount'] as num?),
+      deliveryCharge:
+          (json['deliveryCharge'] as num?) ?? (json['shippingAmount'] as num?),
+      taxAmount: (json['taxAmount'] as num?) ?? (json['vatAmount'] as num?),
+      vatPercent: (json['vatPercent'] as num?) ?? (json['vat_percent'] as num?),
       serverItemCount: json['itemCount'] as int?,
     );
   }

@@ -141,6 +141,12 @@ class ApiEndpoints {
   /// Body: `{ type, reason, attachments? }`.
   static String orderRequest(String id) => '/api/v1/orders/$id/requests';
 
+  /// GET — devotee's own order requests. Query: page, limit, status, type.
+  static const String myOrderRequests = '/api/v1/orders/requests/my';
+
+  /// GET — single order request owned by the devotee (or admin).
+  static String myOrderRequest(String id) => '/api/v1/orders/requests/$id';
+
   /// POST — customer confirms delivery.
   /// Body: `{ satisfied: boolean, feedback?: string }`.
   static String confirmDelivery(String id) =>
@@ -148,6 +154,13 @@ class ApiEndpoints {
 
   /// POST — devotee replacement request (multipart: orderId, reason, images[]).
   static const String requestReplacement = '/api/v1/replacements/request';
+
+  /// GET — devotee's own replacement requests. Query: page, limit, status.
+  static const String myReplacementRequests = '/api/v1/replacements/my-requests';
+
+  /// GET — single replacement request owned by the devotee.
+  static String myReplacementRequest(String id) =>
+      '/api/v1/replacements/$id';
 
   // ── Pooja Kit Orders (admin / super-admin) ────────────────────
   /// GET — paginated list of every order. Query: `page`, `limit`,
@@ -167,8 +180,42 @@ class ApiEndpoints {
   static String orderTracking(String id) => '/api/v1/orders/$id/tracking';
 
   /// POST — set tracking + mark `SHIPPED`. Triggers tracking email.
-  /// Body: `{ courier, trackingNumber, trackingUrl?, note? }`.
+  /// Body: `{ courier, trackingNumber, trackingUrl?, note? }` for manual, or
+  /// empty / `{ bookCourier: true }` to book The Courier Guy automatically.
   static String orderDispatch(String id) => '/api/v1/orders/$id/dispatch';
+
+  /// POST — admin marks a pickup order ready for collection.
+  /// Body: `{ note? }`.
+  static String orderReadyForPickup(String id) =>
+      '/api/v1/orders/$id/ready-for-pickup';
+
+  /// POST — admin refreshes Courier Guy POD / tracking status.
+  static String orderSyncDeliveryPod(String id) =>
+      '/api/v1/orders/$id/sync-delivery-pod';
+
+  /// POST — live The Courier Guy (ShipLogic) door-to-door rates.
+  /// Body: `{ shippingAddress, declaredValue? }`.
+  static const String shippingQuote = '/api/v1/shipping/quote';
+
+  /// GET — warehouse / pickup location for come-and-collect orders.
+  static const String shippingPickupLocation =
+      '/api/v1/shipping/pickup-location';
+
+  /// POST — resolve pickup warehouse for cart items (category-auto routing).
+  static const String warehousesForCart = '/api/v1/warehouses/for-cart';
+
+  /// POST — admin marks pickup order packed.
+  static String orderPacked(String id) => '/api/v1/orders/$id/packed';
+
+  /// POST — admin verifies pickup PIN and completes order.
+  static String orderVerifyPickup(String id) => '/api/v1/orders/$id/verify-pickup';
+
+  /// GET — download shipping label PDF (streams via backend + TCG API key).
+  static String orderShippingLabel(String id) => '/api/v1/orders/$id/shipping-label';
+
+  /// GET — signed ShipLogic label URL (legacy; prefer [orderShippingLabel]).
+  static String orderShippingLabelUrl(String id) =>
+      '/api/v1/orders/$id/shipping-label-url';
 
   /// POST — admin terminal cancel for paid / pre-ship orders.
   /// Body: `{ reason? }`. Not allowed once SHIPPED / DELIVERED / FULFILLED.
@@ -194,6 +241,14 @@ class ApiEndpoints {
   static String rejectReplacementRequest(String id) =>
       '/api/v1/admin/replacements/$id/reject';
 
+  /// POST — book Courier Guy return collection (delivery replacements).
+  static String bookReplacementReturn(String id) =>
+      '/api/v1/admin/replacements/$id/book-return';
+
+  /// POST — mark damaged item received at warehouse.
+  static String markReplacementReturnReceived(String id) =>
+      '/api/v1/admin/replacements/$id/mark-return-received';
+
   // ── Admin system notifications (operational inbox) ─────────────
   /// GET — paginated inbox. Query: `page`, `limit`, `unreadOnly`, `type`.
   static const String adminNotifications = '/api/v1/admin/notifications';
@@ -210,8 +265,31 @@ class ApiEndpoints {
   static String adminNotificationRead(String id) =>
       '/api/v1/admin/notifications/$id/read';
 
-  /// Legacy combined requests inbox (cancel / refund / replacement).
+  /// Admin order requests inbox (cancel / refund).
   static const String orderRequests = '/api/v1/orders/requests';
+
+  /// GET — single order request (refund / cancellation).
+  static String orderRequestById(String id) => '/api/v1/orders/requests/$id';
+
+  /// POST — approve order request. Body: `{ adminNote? }`.
+  static String approveOrderRequest(String id) =>
+      '/api/v1/orders/requests/$id/approve';
+
+  /// POST — book Courier Guy return for a refund request (delivery).
+  static String bookOrderRequestReturn(String id) =>
+      '/api/v1/orders/requests/$id/book-return';
+
+  /// POST — mark refund return received and initiate PayFast refund.
+  static String markOrderRequestReturnReceived(String id) =>
+      '/api/v1/orders/requests/$id/mark-return-received';
+
+  /// POST — refresh Courier Guy status for a refund return shipment.
+  static String syncOrderRequestReturn(String id) =>
+      '/api/v1/orders/requests/$id/sync-return';
+
+  /// POST — reject order request. Body: `{ adminNote? }`.
+  static String rejectOrderRequest(String id) =>
+      '/api/v1/orders/requests/$id/reject';
   // ── Orders (user flow) ────────────────────────────────────────
   /// POST — place an order (from explicit items or cart).
   /// Body: `{ items: [{ productId, quantity }], shippingAddress, notes? }`.
@@ -282,7 +360,7 @@ class ApiEndpoints {
       '/api/v1/payments/verify/$reference';
 
   // ── Ecommerce settings (admin) ────────────────────────────────
-  /// GET/PUT — store settings (`delivery_charges` block).
+  /// GET/PUT — legacy flat delivery settings (retired; delivery from TCG at checkout).
   static const String ecommerceSettings = '/api/v1/admin/ecommerce/settings';
 
   /// GET — paginated history of the signed-in user's contributions.

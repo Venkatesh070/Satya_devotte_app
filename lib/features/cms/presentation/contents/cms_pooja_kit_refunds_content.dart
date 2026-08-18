@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
+import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_line_item_picker.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_orders_content.dart'
     show CmsKitOrderDateCell, OrderStatusBadge, PaymentStatusBadge;
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
@@ -96,20 +97,24 @@ class _RequestsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        CmsPoojaKitSectionHeader(
-          title: 'Replace Requests',
-          subtitle:
-              'Review replacement requests from devotees. Approve to create a '
-              'linked replacement order, or reject with a note.',
-        ),
-        const Divider(height: 1, color: CmsColors.border),
-        _FiltersBar(controller: controller),
-        const Divider(height: 1, color: CmsColors.border),
-        Expanded(child: _RequestsBody(controller: controller)),
-        _PaginationBar(controller: controller),
-      ],
+    return Obx(
+      () => Column(
+        children: [
+          CmsPoojaKitSectionHeader(
+            title: 'Returns & Replacements',
+            subtitle: controller.isReturnInbox
+                ? 'Review return requests from devotees. Approve to start the '
+                    'return; refund starts after the item is received.'
+                : 'Review replacement requests from devotees. Approve to create a '
+                    'linked replacement order, or reject with a note.',
+          ),
+          const Divider(height: 1, color: CmsColors.border),
+          _FiltersBar(controller: controller),
+          const Divider(height: 1, color: CmsColors.border),
+          Expanded(child: _RequestsBody(controller: controller)),
+          _PaginationBar(controller: controller),
+        ],
+      ),
     );
   }
 }
@@ -145,84 +150,133 @@ class _FiltersBarState extends State<_FiltersBar> {
   @override
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.of(context).size.width >= 900;
-    return Container(
-      color: CmsColors.white,
-      padding: EdgeInsets.symmetric(
-        horizontal: isWeb ? 24 : 16,
-        vertical: 12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Obx(
-            () => _Pills(
+    return Obx(
+      () => Container(
+        color: CmsColors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: isWeb ? 24 : 16,
+          vertical: 12,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Pills(
+              label: 'Inbox',
+              options: const ['REPLACE', 'RETURN'],
+              selected: widget.controller.isReturnInbox ? 'RETURN' : 'REPLACE',
+              labelFor: (opt) =>
+                  opt == 'RETURN' ? 'Return requests' : 'Replace requests',
+              onSelect: (opt) {
+                widget.controller.setInboxType(
+                  opt == 'RETURN'
+                      ? AdminRequestInboxType.returnRequest
+                      : AdminRequestInboxType.replacement,
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _Pills(
               label: 'Status',
-              options: AdminOrderRequestsController.statusFilters,
+              options: widget.controller.statusFilters,
               selected: widget.controller.status,
+              labelFor: (opt) => widget.controller.isReturnInbox
+                  ? orderRequestStatusFilterLabel(opt)
+                  : replacementRequestStatusFilterLabel(opt),
               onSelect: widget.controller.setStatusFilter,
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: TextField(
-                    controller: _search,
-                    onSubmitted: _searchScheduler.searchNow,
-                    style: const TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search by order number…',
-                      hintStyle: const TextStyle(
-                        color: Color(0xFFAAAAAA),
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: Color(0xFFAAAAAA),
-                      ),
-                      suffixIcon: _search.text.isEmpty
-                          ? null
-                          : IconButton(
-                              style: IconButton.styleFrom().copyWith(
-                                mouseCursor: _cmsButtonClickCursor,
-                              ),
-                              icon: const Icon(Icons.close, size: 16),
-                              onPressed: () {
-                                _search.clear();
-                                _searchScheduler.searchNow('');
-                                setState(() {});
-                              },
-                            ),
-                      filled: true,
-                      fillColor: CmsColors.bg,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.orange),
+            if (widget.controller.supportsSearch) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 38,
+                      child: TextField(
+                        controller: _search,
+                        onSubmitted: _searchScheduler.searchNow,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Search by order number…',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFAAAAAA),
+                            fontSize: 13,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                            color: Color(0xFFAAAAAA),
+                          ),
+                          suffixIcon: _search.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  style: IconButton.styleFrom().copyWith(
+                                    mouseCursor: _cmsButtonClickCursor,
+                                  ),
+                                  icon: const Icon(Icons.close, size: 16),
+                                  onPressed: () {
+                                    _search.clear();
+                                    _searchScheduler.searchNow('');
+                                    setState(() {});
+                                  },
+                                ),
+                          filled: true,
+                          fillColor: CmsColors.bg,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: CmsColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: CmsColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: CmsColors.orange),
+                          ),
+                        ),
+                        onChanged: (v) {
+                          setState(() {});
+                          _searchScheduler.onQueryChanged(v);
+                        },
                       ),
                     ),
-                    onChanged: (v) {
-                      setState(() {});
-                      _searchScheduler.onQueryChanged(v);
-                    },
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Reload',
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                    onPressed: widget.controller.isLoading
+                        ? null
+                        : widget.controller.refresh,
+                    icon: widget.controller.isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: CmsColors.orange,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.refresh,
+                            size: 20,
+                            color: CmsColors.textSecond,
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Obx(
-                () => IconButton(
+            ] else ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
                   tooltip: 'Reload',
                   style: IconButton.styleFrom().copyWith(
                     mouseCursor: _cmsButtonClickCursor,
@@ -247,8 +301,8 @@ class _FiltersBarState extends State<_FiltersBar> {
                 ),
               ),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -260,11 +314,13 @@ class _Pills extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onSelect,
+    this.labelFor,
   });
   final String label;
   final List<String> options;
   final String selected;
   final ValueChanged<String> onSelect;
+  final String Function(String opt)? labelFor;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +344,7 @@ class _Pills extends StatelessWidget {
               children: [
                 for (final opt in options) ...[
                   _Pill(
-                    label: replacementRequestStatusFilterLabel(opt),
+                    label: labelFor?.call(opt) ?? opt,
                     selected: opt == selected,
                     onTap: () => onSelect(opt),
                   ),
@@ -360,12 +416,16 @@ class _RequestsBody extends StatelessWidget {
         );
       }
       if (!controller.isLoading && controller.isEmpty) {
-        return const CmsEmptyState(
+        return CmsEmptyState(
           icon: Icons.assignment_return_outlined,
-          title: 'No replacement requests',
-          subtitle:
-              'When a devotee submits a replacement request it will appear '
-              'here for review.',
+          title: controller.isReturnInbox
+              ? 'No return requests'
+              : 'No replacement requests',
+          subtitle: controller.isReturnInbox
+              ? 'When a devotee submits a return request it will appear '
+                  'here for review.'
+              : 'When a devotee submits a replacement request it will appear '
+                  'here for review.',
         );
       }
       return _ReplacementsTable(
@@ -756,6 +816,10 @@ class _DetailBody extends StatelessWidget {
         children: [
           _SummaryCard(request: request),
           const SizedBox(height: 14),
+          if (request.affectedItems.isNotEmpty) ...[
+            _AffectedItemsCard(request: request),
+            const SizedBox(height: 14),
+          ],
           if (request.attachments.isNotEmpty) ...[
             _AttachmentsCard(
               attachments: request.attachments,
@@ -773,6 +837,15 @@ class _DetailBody extends StatelessWidget {
             _LinkedOrderCard(
               title: 'Replacement order',
               order: request.replacementOrder!,
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (request.returnInfo.instructions.isNotEmpty ||
+              request.returnInfo.waybill.isNotEmpty ||
+              request.returnInfo.shipmentId.isNotEmpty) ...[
+            _ReturnInstructionsCard(
+              request: request,
+              controller: controller,
             ),
             const SizedBox(height: 14),
           ],
@@ -855,6 +928,75 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
         ],
+        if (request.refundAmount != null && request.refundAmount! > 0) ...[
+          const SizedBox(height: 10),
+          _MetaPair(
+            label: 'Est. refund',
+            value:
+                '${request.order?.currency ?? 'ZAR'} ${request.refundAmount!.toStringAsFixed(2)}',
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AffectedItemsCard extends StatelessWidget {
+  const _AffectedItemsCard({required this.request});
+  final OrderRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = request.order?.currency ?? 'ZAR';
+    return CmsFormCard(
+      title: 'Selected items (${request.affectedItems.length})',
+      children: [
+        for (var i = 0; i < request.affectedItems.length; i++) ...[
+          if (i > 0) const Divider(height: 16, color: CmsColors.border),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  request.affectedItems[i].title.isEmpty
+                      ? 'Item'
+                      : request.affectedItems[i].title,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                '×${request.affectedItems[i].quantity}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: CmsColors.textSecond,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$currency ${request.affectedItems[i].lineTotal.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          formatAffectedItemsSummary(
+            request.affectedItems,
+            currency: currency,
+          ),
+          style: const TextStyle(
+            fontSize: 11,
+            color: CmsColors.textSecond,
+          ),
+        ),
       ],
     );
   }
@@ -960,6 +1102,211 @@ class _LinkedOrderCard extends StatelessWidget {
   }
 }
 
+class _ReturnInstructionsCard extends StatelessWidget {
+  const _ReturnInstructionsCard({
+    required this.request,
+    required this.controller,
+  });
+  final OrderRequest request;
+  final AdminOrderRequestsController controller;
+
+  ReturnAddressSnapshot get _collection {
+    final fromRequest = request.returnInfo.collectionAddress;
+    if (!fromRequest.isEmpty) return fromRequest;
+    final ship = request.order?.shippingAddress;
+    if (ship == null || ship.singleLine.trim().isEmpty) {
+      return fromRequest;
+    }
+    return ReturnAddressSnapshot(
+      label: ship.singleLine,
+      contactName: ship.name,
+      contactPhone: ship.phone,
+      contactEmail: ship.email,
+    );
+  }
+
+  ReturnAddressSnapshot get _delivery {
+    final fromRequest = request.returnInfo.deliveryAddress;
+    if (!fromRequest.isEmpty) return fromRequest;
+    final pickup = request.order?.pickupLocation;
+    if (pickup == null || pickup.singleLine.trim().isEmpty) {
+      return fromRequest;
+    }
+    return ReturnAddressSnapshot(
+      label: pickup.singleLine,
+      contactName: pickup.contactName,
+      contactPhone: pickup.contactPhone,
+      contactEmail: pickup.contactEmail,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = request.returnInfo;
+    final methodLabel = info.isPickupDropOff
+        ? 'Warehouse drop-off'
+        : info.isCourierCollection
+            ? 'Courier collection'
+            : 'Return';
+    final collection = _collection;
+    final delivery = _delivery;
+    return CmsFormCard(
+      title: 'Return — $methodLabel',
+      children: [
+        if (info.status.isNotEmpty)
+          Text(
+            'Status: ${replacementRequestStatusFilterLabel(info.status)}',
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+        if (info.courierStatus.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Courier status: ${info.courierStatus}',
+            style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+          ),
+        ],
+        if (info.instructions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            info.instructions,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: CmsColors.textSecond,
+              height: 1.45,
+            ),
+          ),
+        ],
+        if (!collection.isEmpty) ...[
+          const SizedBox(height: 12),
+          _ReturnAddressBlock(
+            title: info.isCourierCollection
+                ? 'TCG collection address (from customer)'
+                : 'Collection',
+            address: collection,
+          ),
+        ],
+        if (!delivery.isEmpty) ...[
+          const SizedBox(height: 12),
+          _ReturnAddressBlock(
+            title: info.isCourierCollection
+                ? 'TCG delivery address (to warehouse)'
+                : 'Warehouse drop-off address',
+            address: delivery,
+          ),
+        ],
+        if (info.waybill.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Return waybill: ${info.waybill}',
+            style: const TextStyle(fontSize: 12, color: CmsColors.textPrimary),
+          ),
+        ],
+        if (info.trackingUrl.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          SelectableText(
+            info.trackingUrl,
+            style: const TextStyle(fontSize: 11.5, color: Color(0xFF1976D2)),
+          ),
+        ],
+        if (request.canSyncReturnTracking) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Refresh pulls the latest Courier Guy status. In mock mode each '
+            'refresh advances toward delivered; when delivered, the refund starts.',
+            style: TextStyle(fontSize: 12, color: CmsColors.textSecond, height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          Obx(() {
+            final busy = controller.mutating;
+            return CmsPrimaryButton(
+              label: 'Refresh return tracking',
+              icon: Icons.sync_rounded,
+              isLoading: busy,
+              onTap: controller.syncReturnTracking,
+            );
+          }),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReturnAddressBlock extends StatelessWidget {
+  const _ReturnAddressBlock({
+    required this.title,
+    required this.address,
+  });
+
+  final String title;
+  final ReturnAddressSnapshot address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: CmsColors.textSecond,
+            ),
+          ),
+          if (address.contactName.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              address.contactName,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textPrimary,
+              ),
+            ),
+          ],
+          if (address.label.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              address.label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: CmsColors.textPrimary,
+                height: 1.4,
+              ),
+            ),
+          ],
+          if (address.contactPhone.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              address.contactPhone,
+              style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
+          ],
+          if (address.contactEmail.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              address.contactEmail,
+              style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _DecisionBar extends StatelessWidget {
   const _DecisionBar({required this.controller, required this.request});
   final AdminOrderRequestsController controller;
@@ -970,7 +1317,7 @@ class _DecisionBar extends StatelessWidget {
     return Obx(
       () {
         final busy = controller.mutating;
-        if (!request.isPending) {
+        if (!request.hasAdminActions) {
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -985,8 +1332,12 @@ class _DecisionBar extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'This request is ${request.status.label.toLowerCase()}. '
-                    'No further admin action is required.',
+                    request.status == OrderRequestStatus.delivered
+                        ? (request.type == OrderRequestType.refund
+                            ? 'Return completed.'
+                            : 'Replacement completed.')
+                        : 'This request is ${request.status.label.toLowerCase()}. '
+                            'No further admin action is required.',
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: CmsColors.textPrimary,
@@ -1000,37 +1351,81 @@ class _DecisionBar extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ApproveHelpText(type: request.type),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                CmsPrimaryButton(
-                  label: 'Approve',
-                  icon: Icons.check_rounded,
-                  isLoading: busy,
-                  onTap: () => _showDecisionDialog(
-                    context,
-                    isApprove: true,
-                    onSubmit: (note) => controller.approve(adminNote: note),
+            if (request.canApproveOrReject) ...[
+              _ApproveHelpText(type: request.type),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  CmsPrimaryButton(
+                    label: 'Approve',
+                    icon: Icons.check_rounded,
+                    isLoading: busy,
+                    onTap: () => _showDecisionDialog(
+                      context,
+                      isApprove: true,
+                      onSubmit: (note) => controller.approve(adminNote: note),
+                    ),
                   ),
-                ),
-                _OutlinedAction(
-                  label: 'Reject',
-                  icon: Icons.close_rounded,
-                  color: CmsColors.red,
-                  onTap: busy
-                      ? null
-                      : () => _showDecisionDialog(
-                            context,
-                            isApprove: false,
-                            onSubmit: (note) =>
-                                controller.reject(adminNote: note),
-                          ),
-                ),
-              ],
-            ),
+                  _OutlinedAction(
+                    label: 'Reject',
+                    icon: Icons.close_rounded,
+                    color: CmsColors.red,
+                    onTap: busy
+                        ? null
+                        : () => _showDecisionDialog(
+                              context,
+                              isApprove: false,
+                              onSubmit: (note) =>
+                                  controller.reject(adminNote: note),
+                            ),
+                  ),
+                ],
+              ),
+            ],
+            if (request.canBookReturnCollection) ...[
+              if (request.canApproveOrReject) const SizedBox(height: 14),
+              Text(
+                request.type == OrderRequestType.refund
+                    ? 'Book (or retry) Courier Guy collection of the returned '
+                        'item from the customer. Refund starts after the '
+                        'warehouse receives it.'
+                    : 'After approval, book a courier to collect the damaged item '
+                        'from the customer before dispatching the replacement.',
+                style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              ),
+              const SizedBox(height: 10),
+              CmsPrimaryButton(
+                label: 'Book return collection',
+                icon: Icons.local_shipping_outlined,
+                isLoading: busy,
+                onTap: controller.bookReturnCollection,
+              ),
+            ],
+            if (request.canMarkReturnReceived) ...[
+              if (request.canApproveOrReject || request.canBookReturnCollection)
+                const SizedBox(height: 14),
+              Text(
+                request.type == OrderRequestType.refund
+                    ? (request.isPickup
+                        ? 'Confirm the item is back at the warehouse. This '
+                            'starts the PayFast refund for the selected lines.'
+                        : 'Confirm the returned parcel is at the warehouse '
+                            '(fallback if courier sync has not completed). '
+                            'This starts the PayFast refund.')
+                    : 'Confirm the damaged item is back at the warehouse before '
+                        'packing or dispatching the replacement order.',
+                style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+              ),
+              const SizedBox(height: 10),
+              CmsPrimaryButton(
+                label: 'Mark return received',
+                icon: Icons.inventory_2_outlined,
+                isLoading: busy,
+                onTap: controller.markReturnReceived,
+              ),
+            ],
           ],
         );
       },
@@ -1049,11 +1444,16 @@ class _ApproveHelpText extends StatelessWidget {
         'Cancels the order and restocks inventory. Not allowed if the order '
             'has already shipped.',
       OrderRequestType.refund =>
-        'Marks the order as REFUNDED in Satya. v1 does NOT call PayFast — '
-            'process the actual refund in the PayFast dashboard.',
+        'Approves the return only — refund is not paid yet. '
+            'Pickup: customer drops the item at the warehouse, then tap '
+            '“Mark return received” to start PayFast. '
+            'Delivery: Courier Guy collection is booked on approve (retry with '
+            '“Book return collection” if needed); refund starts when the '
+            'warehouse receives the parcel (or when you mark return received).',
       OrderRequestType.replacement =>
-        'Creates a new paid replacement order linked to this request. '
-            'Returns an error if stock is insufficient.',
+        'Creates a linked replacement order (pickup or delivery, same as the '
+            'original). The customer must return the damaged item before you '
+            'dispatch or release the replacement.',
       OrderRequestType.unknown => 'Approve this request.',
     };
     return Container(
@@ -1227,6 +1627,10 @@ class RequestStatusBadge extends StatelessWidget {
         return CmsColors.orange;
       case OrderRequestStatus.approved:
         return CmsColors.green;
+      case OrderRequestStatus.awaitingReturn:
+        return CmsColors.orange;
+      case OrderRequestStatus.returnReceived:
+        return const Color(0xFF1976D2);
       case OrderRequestStatus.rejected:
         return CmsColors.red;
       case OrderRequestStatus.processing:

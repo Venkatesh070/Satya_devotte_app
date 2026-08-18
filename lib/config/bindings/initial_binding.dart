@@ -240,7 +240,7 @@ class InitialBinding extends Bindings {
       () => AdminPaymentsController(Get.find<AdminOrdersRemoteDataSource>()),
       fenix: true,
     );
-    Get.put<EcommerceSettingsRemoteDataSource>(
+    Get.put(
       EcommerceSettingsRemoteDataSource(Get.find<ApiClient>()),
       permanent: true,
     );

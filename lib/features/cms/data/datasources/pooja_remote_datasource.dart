@@ -36,6 +36,40 @@ class PoojaRemoteDataSource {
         .toList();
   }
 
+  /// GET `/poojas` — approved pujas for logged-in users, with pagination.
+  Future<CmsPagedResult<PoojaModel>> getApprovedPoojasPage({
+    int page = 1,
+    int limit = 10,
+    String? search,
+  }) async {
+    final response = await _apiClient.dio.get(
+      ApiEndpoints.poojas,
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    final body = response.data;
+    final list = _extractList(body is Map<String, dynamic> ? body : const {});
+    final items = list
+        .map((e) => PoojaModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final pagination = CmsPaginationParser.fromBody(
+      body,
+      requestedPage: page,
+      requestedLimit: limit,
+      itemCount: items.length,
+    );
+    return CmsPagedResult<PoojaModel>(
+      items: items,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+    );
+  }
+
   // ── GET /poojas/all or /poojas/my — paginated CMS list ───────
   Future<CmsPagedResult<PoojaModel>> getPoojasPage({
     required bool superAdmin,
