@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class SectionCard extends StatelessWidget {
@@ -495,6 +500,324 @@ class DeitySectionCard extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
+  final steps = pooja.steps;
+  const gradientColors = [
+    Color(0xFF2B55B1), // Blue
+    Color(0xFFE35600), // Orange/Saffron
+  ];
+
+  final screenHeight = MediaQuery.sizeOf(context).height;
+  final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+  Get.bottomSheet(
+    Container(
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFCF7EF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            pooja.title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F1F1F),
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _previewChip(
+                Icons.timer_outlined,
+                pooja.duration.isEmpty ? '2 hours' : pooja.duration,
+              ),
+              _previewChip(
+                Icons.format_list_bulleted_rounded,
+                '${steps.length} Steps',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Steps',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1F1F1F),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Flexible(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  for (final step in steps)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: gradientColors,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${step.number}',
+                                style: const TextStyle(
+                                  color: Color(0xFFFCF7EF),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                step.title,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF333333),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: CustomButton(
+              label: 'Begin Puja',
+              borderRadius: 24,
+              onTap: () {
+                Get.back();
+                final rawPooja = pooja.raw;
+                dynamic scheduleId =
+                    pooja.selectedScheduleId ??
+                    rawPooja['scheduleId'] ??
+                    rawPooja['selectedScheduleId'];
+                if (scheduleId == null && pooja.schedules.isNotEmpty) {
+                  final firstSched = pooja.schedules.first;
+                  scheduleId = firstSched['_id'] ?? firstSched['id'];
+                }
+                Get.toNamed(
+                  AppRoutes.poojaWizard,
+                  arguments: {
+                    'pooja': pooja,
+                    if (scheduleId != null) 'scheduleId': scheduleId.toString(),
+                  },
+                );
+              },
+              textColor: AppColors.white,
+              gradientColors: gradientColors,
+            ),
+          ),
+        ],
+      ),
+    ),
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+  );
+}
+
+Widget _previewChip(IconData icon, String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF1E0),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFFB5651D)),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFFB5651D),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String? statusForPooja(
+  Map<String, dynamic> pooja, {
+  List<dynamic>? pendingSessions,
+  List<dynamic>? finishedSessions,
+}) {
+  List<dynamic> pending = pendingSessions ?? const [];
+  List<dynamic> finished = finishedSessions ?? const [];
+
+  if (pendingSessions == null &&
+      finishedSessions == null &&
+      Get.isRegistered<PoojaHistoryController>()) {
+    final history = Get.find<PoojaHistoryController>();
+    pending = history.pendingPoojas;
+    finished = history.finishedPoojas;
+  }
+
+  final isPending = pending.whereType<Map>().any(
+    (session) => sessionMatchesPooja(session, pooja),
+  );
+  if (isPending) return 'In Progress';
+
+  final isFinished = finished.whereType<Map>().any(
+    (session) => sessionMatchesPooja(session, pooja),
+  );
+  if (isFinished) return 'Finished';
+
+  return null;
+}
+
+bool sessionMatchesPooja(Map session, Map<String, dynamic> pooja) {
+  final sessionPooja = session['pooja'];
+  if (sessionPooja is! Map) return false;
+
+  final sessionPoojaId = (sessionPooja['_id'] ?? sessionPooja['id'] ?? '')
+      .toString()
+      .trim();
+  final poojaId = (pooja['_id'] ?? pooja['id'] ?? '').toString().trim();
+
+  bool basicMatch = false;
+  if (sessionPoojaId.isNotEmpty && poojaId.isNotEmpty) {
+    basicMatch = sessionPoojaId == poojaId;
+  } else {
+    final sessionTitle = (sessionPooja['title'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final title = (pooja['title'] ?? '').toString().trim().toLowerCase();
+    basicMatch = sessionTitle.isNotEmpty && sessionTitle == title;
+  }
+  if (!basicMatch) return false;
+
+  final isDaily = pooja['daily'] == true || pooja['isDaily'] == true;
+  final rawSchedules = pooja['schedules'];
+  final hasSchedules = rawSchedules is List && rawSchedules.isNotEmpty;
+
+  if (isDaily || hasSchedules) {
+    final pScheduleId = pooja['scheduleId'] ?? pooja['selectedScheduleId'];
+    final sScheduleId =
+        session['scheduleId'] ??
+        session['schedule'] ??
+        session['pooja']?['scheduleId'];
+    if (pScheduleId != null &&
+        sScheduleId != null &&
+        pScheduleId.toString().isNotEmpty &&
+        sScheduleId.toString().isNotEmpty) {
+      return pScheduleId.toString() == sScheduleId.toString();
+    }
+
+    final pDate =
+        pooja['customDate'] ?? pooja['date'] ?? pooja['scheduledDate'];
+    final sDate =
+        session['scheduleDate'] ?? session['date'] ?? session['scheduledDate'];
+    if (pDate != null &&
+        sDate != null &&
+        pDate.toString().isNotEmpty &&
+        sDate.toString().isNotEmpty) {
+      return pDate.toString() == sDate.toString();
+    }
+  }
+
+  return true;
+}
+
+class PujaSessionStatusBadge extends StatelessWidget {
+  const PujaSessionStatusBadge({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFinished = label.toLowerCase() == 'finished';
+    final color = isFinished
+        ? const Color(0xFF0F8F5F)
+        : const Color(0xFFC06A00);
+    final bg = isFinished ? const Color(0xFFE7F7EF) : const Color(0xFFFFF3D8);
+    final border = isFinished
+        ? const Color(0xFF86D7AE)
+        : const Color(0xFFE8A13A);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isFinished ? Icons.check_circle_outline : Icons.play_circle_outline,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

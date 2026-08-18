@@ -10,6 +10,8 @@ import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
@@ -58,13 +60,36 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   Future<void> _loadFullPooja() async {
     setState(() => _isLoadingFullPooja = true);
     try {
-      final ritualRepo = Get.find<RitualRepository>();
-      final fullRitual = await ritualRepo.getRitualDetail(_currentPooja.id);
-      if (fullRitual != null) {
-        // Assume ritualRepo.getRitualDetail returns a PoojaEntity that can be mapped
-        // For now, let's update _currentPooja if the structure allows
-        // If your RitualEntity has a toModel/toMap method:
-        // _currentPooja = PoojaView(fullRitual.toMap());
+      final offlineService = Get.find<OfflineService>();
+      final cacheKey = 'pooja_detail_${_currentPooja.id}';
+      Map<String, dynamic>? detail;
+
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.pooja(_currentPooja.id),
+        );
+        final payload = res.data;
+        if (payload is Map) {
+          final data = payload['data'];
+          if (data is Map) {
+            final inner = data['pooja'];
+            detail = inner is Map
+                ? Map<String, dynamic>.from(inner)
+                : Map<String, dynamic>.from(data);
+          } else {
+            detail = Map<String, dynamic>.from(payload);
+          }
+          await offlineService.cacheData(cacheKey, detail);
+        }
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        if (cached is Map) detail = Map<String, dynamic>.from(cached);
+      }
+
+      if (detail != null && mounted) {
+        setState(() {
+          _currentPooja = PoojaView(detail!);
+        });
       }
     } catch (e) {
       debugPrint('Error loading full pooja: $e');
