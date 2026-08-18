@@ -451,9 +451,25 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final apiClient = Get.find<ApiClient>();
-      // Fetch home and products in parallel
+      final deviceTimeZone = await _deviceTimeZone();
+      final localDateStr =
+          "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
+
+      // Fetch home and products in parallel with device IANA timezone
       final responses = await Future.wait([
-        apiClient.dio.get<dynamic>(ApiEndpoints.home),
+        apiClient.dio.get<dynamic>(
+          ApiEndpoints.home,
+          queryParameters: {
+            'timezone': deviceTimeZone,
+            'date': localDateStr,
+          },
+          options: dio.Options(
+            headers: {
+              'X-Timezone': deviceTimeZone,
+              'timezone': deviceTimeZone,
+            },
+          ),
+        ),
         ProductRemoteDataSource(apiClient).getFeaturedProducts(limit: 10),
       ]);
 
