@@ -10,6 +10,7 @@ class ApiClient {
     Future<String?> Function()? tokenProvider,
   }) : dio = Dio(_baseOptions()) {
     dio.interceptors.add(ApiLoadingInterceptor(loadingService));
+    dio.interceptors.add(TimezoneInterceptor());
     if (tokenProvider != null) {
       dio.interceptors.add(AuthTokenInterceptor(tokenProvider));
     }

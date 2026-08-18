@@ -4,13 +4,13 @@ import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/device_timezone.dart';
 import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -133,13 +133,7 @@ class _HomePageState extends State<HomePage> {
     _isAnimatingToTab = false;
   }
 
-  Future<String> _deviceTimeZone() async {
-    try {
-      return await FlutterTimezone.getLocalTimezone();
-    } catch (_) {
-      return DateTime.now().timeZoneName;
-    }
-  }
+  Future<String> _deviceTimeZone() => deviceIanaTimeZone();
 
   Future<void> _fetchAchievementsData({required bool recordStreak}) async {
     await Future.wait([
@@ -452,22 +446,13 @@ class _HomePageState extends State<HomePage> {
     try {
       final apiClient = Get.find<ApiClient>();
       final deviceTimeZone = await _deviceTimeZone();
-      final localDateStr =
-          "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
-
-      // Fetch home and products in parallel with device IANA timezone
+      // Fetch home and products in parallel
       final responses = await Future.wait([
         apiClient.dio.get<dynamic>(
           ApiEndpoints.home,
-          queryParameters: {
-            'timezone': deviceTimeZone,
-            'date': localDateStr,
-          },
+          queryParameters: {'timezone': deviceTimeZone},
           options: dio.Options(
-            headers: {
-              'X-Timezone': deviceTimeZone,
-              'timezone': deviceTimeZone,
-            },
+            headers: {'X-Timezone': deviceTimeZone},
           ),
         ),
         ProductRemoteDataSource(apiClient).getFeaturedProducts(limit: 10),

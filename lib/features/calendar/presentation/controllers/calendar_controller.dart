@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -386,7 +385,6 @@ class CalendarController extends GetxController {
         final response = await _apiClient.dio.get(
           ApiEndpoints.calendar,
           queryParameters: queryParams,
-          options: Options(headers: {'timezone': DateTime.now().timeZoneName}),
         );
         payload = response.data;
         await offlineService.cacheData(cacheKey, payload);

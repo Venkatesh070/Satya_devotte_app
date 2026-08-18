@@ -250,9 +250,6 @@ class OfflineService extends GetxService {
           final calendarResponse = await apiClient.dio.get(
             ApiEndpoints.calendar,
             queryParameters: {'month': month.month, 'year': month.year},
-            options: Options(
-              headers: {'timezone': DateTime.now().timeZoneName},
-            ),
           );
           await cacheData(cacheKey, calendarResponse.data);
         }
@@ -266,7 +263,6 @@ class OfflineService extends GetxService {
         final streakResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.userStreak,
           options: Options(
-            headers: {'X-Timezone': DateTime.now().timeZoneName},
             extra: {kSkipApiLoaderKey: true},
           ),
         );

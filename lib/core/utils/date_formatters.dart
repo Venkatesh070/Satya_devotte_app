@@ -18,6 +18,10 @@ class DateFormatters {
     if (rawDate == null || rawDate.trim().isEmpty) return null;
 
     DateTime? parsed = DateTime.tryParse(rawDate);
+    final isIsoInstant = rawDate.contains('T') || rawDate.endsWith('Z');
+    if (parsed != null && isIsoInstant) {
+      parsed = parsed.toUtc();
+    }
 
     // Try DD-MM-YYYY if ISO fails
     if (parsed == null) {

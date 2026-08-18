@@ -1,11 +1,28 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
+import 'package:satya_devotte_app/core/network/device_timezone.dart';
 import 'package:satya_devotte_app/core/services/api_loading_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 /// Set on [RequestOptions.extra] to skip the global chakra loader for a call.
 const String kSkipApiLoaderKey = 'skipApiLoader';
+
+class TimezoneInterceptor extends Interceptor {
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final timezone = await deviceIanaTimeZone();
+    options.headers['X-Timezone'] = timezone;
+    if (options.path.contains('user-home')) {
+      options.queryParameters['timezone'] = timezone;
+    }
+
+    handler.next(options);
+  }
+}
 
 class ApiLoadingInterceptor extends Interceptor {
   ApiLoadingInterceptor(this._loadingService);
