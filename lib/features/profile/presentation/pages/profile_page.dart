@@ -7,12 +7,12 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/core/utils/app_review_util.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_about_page.dart';
-import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
@@ -153,6 +153,11 @@ class ProfilePage extends StatelessWidget {
                           // ),
                           const SizedBox(height: 22),
                           const ProfileSectionHeading('Settings'),
+                          ProfileLinkTile(
+                            icon: Icons.rate_review_outlined,
+                            label: 'App Review',
+                            onTap: () => AppReviewUtil.requestInAppReview(),
+                          ),
                           ProfileLinkTile(
                             icon: Icons.privacy_tip_outlined,
                             label: 'Privacy Policy',

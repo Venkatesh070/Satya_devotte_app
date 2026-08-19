@@ -1,69 +1,70 @@
 {
   "project_info": {
-    "project_number": "1053803605697",
-    "project_id": "satya-devotte-app",
-    "storage_bucket": "satya-devotte-app.firebasestorage.app"
+    "project_number": "460042314237",
+    "firebase_url": "https://sathyatest-4b2b1-default-rtdb.firebaseio.com",
+    "project_id": "sathyatest-4b2b1",
+    "storage_bucket": "sathyatest-4b2b1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1053803605697:android:9e53b9236398a6472a6e40",
+        "mobilesdk_app_id": "1:460042314237:android:5523275a078e9136847994",
         "android_client_info": {
-          "package_name": "com.developer.sathya"
+          "package_name": "com.satya_devotte_app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1053803605697-0egmismnl4bjgk8h605q30p428fsnoff.apps.googleusercontent.com",
+          "client_id": "460042314237-69jmnt4fbqsjg3ovo4b1krcpvfgn0i19.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.developer.sathya",
-            "certificate_hash": "adfc0f2cadfd129085ffdd75b1e2febc2cf06190"
-          }
-        },
-        {
-          "client_id": "1053803605697-1j6dmcmtvj5ckgr7cbkfp758i809s37m.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.developer.sathya",
-            "certificate_hash": "4d447abb21398544357beaae50def9455dc779d4"
-          }
-        },
-        {
-          "client_id": "1053803605697-gq5i6qtp245ncjlk9gtsoh7b8s5uh670.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.developer.sathya",
-            "certificate_hash": "c8c5eda4f79a7920103c7b4d5e4b04d52064f93c"
-          }
-        },
-        {
-          "client_id": "1053803605697-qbt3a8c39tsuo6rhtft5jrlgns8gbj8f.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.developer.sathya",
+            "package_name": "com.satya_devotte_app",
             "certificate_hash": "0ebb22dd03384a58897eb61eb86d3ea8d7b5c34e"
           }
         },
         {
-          "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+          "client_id": "460042314237-gdoein88oj05skibv4b4hr0mn6rl0e74.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "4d447abb21398544357beaae50def9455dc779d4"
+          }
+        },
+        {
+          "client_id": "460042314237-l7d5lthgo0nfgmgloegq2ika3kf998hd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "c8c5eda4f79a7920103c7b4d5e4b04d52064f93c"
+          }
+        },
+        {
+          "client_id": "460042314237-m0vepiap48u7vad0meu9tds3faqrt92n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.satya_devotte_app",
+            "certificate_hash": "adfc0f2cadfd129085ffdd75b1e2febc2cf06190"
+          }
+        },
+        {
+          "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCNHVrp9X3h6g4qFoOuNFWnyWvnOdcZu6U"
+          "current_key": "AIzaSyBKd3xfIGpsxSUhsoNwPf5O3D4HQEc0QCs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1053803605697-a4fp6shgdolcbrmag6iteadjaf1du6ug.apps.googleusercontent.com",
+              "client_id": "460042314237-bofm6ss9p4jur0vko6mqfujupdrrl6aa.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj.apps.googleusercontent.com",
+              "client_id": "460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.sathyaApp"
