@@ -316,7 +316,7 @@ class LabeledField extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTypography.inter(
+            style: AppTypography.lora(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF8A6B4A),
@@ -371,7 +371,7 @@ class LabeledChipsField extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTypography.inter(
+            style: AppTypography.lora(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF8A6B4A),
@@ -837,8 +837,8 @@ Future<void> openPujaPreview(
   );
 
   final existingSteps = poojaMap['steps'];
-  final needsFetch = existingSteps == null ||
-      (existingSteps is List && existingSteps.isEmpty);
+  final needsFetch =
+      existingSteps == null || (existingSteps is List && existingSteps.isEmpty);
 
   if (needsFetch && id.isNotEmpty) {
     try {
