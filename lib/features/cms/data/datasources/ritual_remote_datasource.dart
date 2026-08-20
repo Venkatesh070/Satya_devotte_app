@@ -22,20 +22,48 @@ class RitualRemoteDataSource {
     int page = 1,
     int limit = 50,
   }) async {
-    final response = await _apiClient.dio.get(
-      ApiEndpoints.rituals,
-      queryParameters: {
-        if (status != null && status.isNotEmpty) 'status': status,
-        if (deity != null && deity.isNotEmpty) 'deity': deity,
-        'page': page,
-        'limit': limit,
-      },
-    );
+    final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
+    dynamic body;
+    if (offlineService != null && offlineService.isOnline.value) {
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.rituals,
+          queryParameters: {
+            if (status != null && status.isNotEmpty) 'status': status,
+            if (deity != null && deity.isNotEmpty) 'deity': deity,
+            'page': page,
+            'limit': limit,
+          },
+        );
+        body = response.data;
+      } catch (_) {
+        body = offlineService.getCachedData('all_rituals');
+      }
+    } else if (offlineService != null) {
+      body = offlineService.getCachedData('all_rituals');
+    }
 
-    final body = response.data as Map<String, dynamic>;
-    final list = _extractList(body);
+    if (body == null) {
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.rituals,
+          queryParameters: {
+            if (status != null && status.isNotEmpty) 'status': status,
+            if (deity != null && deity.isNotEmpty) 'deity': deity,
+            'page': page,
+            'limit': limit,
+          },
+        );
+        body = response.data;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final list = _extractList(body is Map ? Map<String, dynamic>.from(body) : const {});
     return list
-        .map((e) => RitualModel.fromJson(e as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((e) => RitualModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -72,19 +100,25 @@ class RitualRemoteDataSource {
     }
 
     if (body == null) {
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.rituals,
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-          if (search != null && search.isNotEmpty) 'search': search,
-        },
-      );
-      body = response.data;
-      isFromOnlineApi = true;
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.rituals,
+          queryParameters: {
+            'page': page,
+            'limit': limit,
+            if (search != null && search.isNotEmpty) 'search': search,
+          },
+        );
+        body = response.data;
+        isFromOnlineApi = true;
+      } catch (_) {
+        if (offlineService != null) {
+          body = offlineService.getCachedData('all_rituals');
+        }
+      }
     }
 
-    final list = _extractList(body is Map<String, dynamic> ? body : const {});
+    final list = _extractList(body is Map ? Map<String, dynamic>.from(body) : const {});
     var items = list
         .whereType<Map>()
         .map((e) => RitualModel.fromJson(Map<String, dynamic>.from(e)))
@@ -353,9 +387,12 @@ class RitualRemoteDataSource {
     final d = body['data'];
     if (d is List) return d;
     if (d is Map) {
-      for (final k in ['rituals', 'data', 'items', 'results']) {
+      for (final k in ['rituals', 'poojas', 'data', 'items', 'results']) {
         if (d[k] is List) return d[k] as List;
       }
+    }
+    for (final k in ['rituals', 'poojas', 'data', 'items', 'results']) {
+      if (body[k] is List) return body[k] as List;
     }
     return const [];
   }

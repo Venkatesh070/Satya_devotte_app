@@ -91,23 +91,27 @@ class CalendarController extends GetxController {
 
   Future<void> _fetchDeityColors() async {
     final offlineService = Get.find<OfflineService>();
-    final cacheKey = 'deity_colors';
+    const cacheKey = 'deity_colors';
     try {
       dynamic payload;
       if (offlineService.isOnline.value) {
-        final response = await _apiClient.dio.get(ApiEndpoints.deities);
-        payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
+        try {
+          final response = await _apiClient.dio.get(ApiEndpoints.deities);
+          payload = response.data;
+          await offlineService.cacheData(cacheKey, payload);
+        } catch (_) {
+          payload = offlineService.getCachedData(cacheKey);
+        }
       } else {
         payload = offlineService.getCachedData(cacheKey);
       }
 
-      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+      final data = payload is Map ? payload['data'] : null;
 
       List<dynamic> list = [];
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         list = data['deities'] ?? [];
-      } else if (payload is Map<String, dynamic>) {
+      } else if (payload is Map) {
         list = payload['deities'] ?? [];
       }
 
@@ -392,12 +396,17 @@ class CalendarController extends GetxController {
           'year': focusedDate.value.year,
         };
 
-        final response = await _apiClient.dio.get(
-          ApiEndpoints.calendar,
-          queryParameters: queryParams,
-        );
-        payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
+        try {
+          final response = await _apiClient.dio.get(
+            ApiEndpoints.calendar,
+            queryParameters: queryParams,
+          );
+          payload = response.data;
+          await offlineService.cacheData(cacheKey, payload);
+        } catch (e) {
+          debugPrint('CalendarController: API call failed, falling back to cache: $e');
+          payload = offlineService.getCachedData(cacheKey);
+        }
       } else {
         payload = offlineService.getCachedData(cacheKey);
       }
@@ -411,7 +420,10 @@ class CalendarController extends GetxController {
 
           // Use assignAll to ensure we ONLY show what the calendar API returns
           festivals.assignAll(
-            rawFestivals.map((e) => FestivalModel.fromJson(e)).toList(),
+            rawFestivals
+                .whereType<Map>()
+                .map((e) => FestivalModel.fromJson(Map<String, dynamic>.from(e)))
+                .toList(),
           );
           
           final explodedPoojas = <PoojaView>[];
@@ -478,7 +490,10 @@ class CalendarController extends GetxController {
           poojas.assignAll(explodedPoojas);
 
           moonPhases.assignAll(
-            rawMoonPhases.map((e) => MoonPhaseModel.fromJson(e)).toList(),
+            rawMoonPhases
+                .whereType<Map>()
+                .map((e) => MoonPhaseModel.fromJson(Map<String, dynamic>.from(e)))
+                .toList(),
           );
 
           debugPrint(

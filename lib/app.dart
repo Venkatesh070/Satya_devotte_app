@@ -110,16 +110,23 @@ class SathyaApp extends StatelessWidget {
         return Stack(
           children: [
             ApiLoadingOverlay(
-              child: Stack(
-                fit: StackFit.expand,
+              child: Column(
                 children: [
-                  child,
-                  Obx(() {
-                    // Hide FAB if there's an active dialog/picker
-                    if (_dialogObserver.hasActiveDialog.value)
-                      return const SizedBox.shrink();
-                    return const AppMusicFloatingButton();
-                  }),
+                  const ConnectivityStatusBanner(),
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        child,
+                        Obx(() {
+                          // Hide FAB if there's an active dialog/picker
+                          if (_dialogObserver.hasActiveDialog.value)
+                            return const SizedBox.shrink();
+                          return const AppMusicFloatingButton();
+                        }),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -147,12 +154,6 @@ class SathyaApp extends StatelessWidget {
               }
               return const SizedBox.shrink();
             }),
-            const Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ConnectivityStatusBanner(),
-            ),
           ],
         );
       },

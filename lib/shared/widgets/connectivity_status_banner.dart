@@ -118,12 +118,15 @@ class _ConnectivityStatusBannerState extends State<ConnectivityStatusBanner>
               children: [
                 Icon(iconData, color: Colors.white, size: 15),
                 const SizedBox(width: 8),
-                Text(
-                  message,
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    message,
+                    style: AppTypography.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -137,15 +140,10 @@ class _ConnectivityStatusBannerState extends State<ConnectivityStatusBanner>
       return bannerWidget;
     }
 
-    return Stack(
+    return Column(
       children: [
-        widget.child!,
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: bannerWidget,
-        ),
+        bannerWidget,
+        Expanded(child: widget.child!),
       ],
     );
   }

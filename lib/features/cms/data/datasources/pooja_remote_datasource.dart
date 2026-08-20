@@ -21,20 +21,48 @@ class PoojaRemoteDataSource {
     int page = 1,
     int limit = 50,
   }) async {
-    final response = await _apiClient.dio.get(
-      ApiEndpoints.poojas,
-      queryParameters: {
-        if (status != null && status.isNotEmpty) 'status': status,
-        if (deity != null && deity.isNotEmpty) 'deity': deity,
-        'page': page,
-        'limit': limit,
-      },
-    );
+    final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
+    dynamic body;
+    if (offlineService != null && offlineService.isOnline.value) {
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.poojas,
+          queryParameters: {
+            if (status != null && status.isNotEmpty) 'status': status,
+            if (deity != null && deity.isNotEmpty) 'deity': deity,
+            'page': page,
+            'limit': limit,
+          },
+        );
+        body = response.data;
+      } catch (_) {
+        body = offlineService.getCachedData('all_poojas');
+      }
+    } else if (offlineService != null) {
+      body = offlineService.getCachedData('all_poojas');
+    }
 
-    final body = response.data as Map<String, dynamic>;
-    final list = _extractList(body);
+    if (body == null) {
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.poojas,
+          queryParameters: {
+            if (status != null && status.isNotEmpty) 'status': status,
+            if (deity != null && deity.isNotEmpty) 'deity': deity,
+            'page': page,
+            'limit': limit,
+          },
+        );
+        body = response.data;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final list = _extractList(body is Map ? Map<String, dynamic>.from(body) : const {});
     return list
-        .map((e) => PoojaModel.fromJson(e as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((e) => PoojaModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -71,19 +99,25 @@ class PoojaRemoteDataSource {
     }
 
     if (body == null) {
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.poojas,
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-          if (search != null && search.isNotEmpty) 'search': search,
-        },
-      );
-      body = response.data;
-      isFromOnlineApi = true;
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.poojas,
+          queryParameters: {
+            'page': page,
+            'limit': limit,
+            if (search != null && search.isNotEmpty) 'search': search,
+          },
+        );
+        body = response.data;
+        isFromOnlineApi = true;
+      } catch (_) {
+        if (offlineService != null) {
+          body = offlineService.getCachedData('all_poojas');
+        }
+      }
     }
 
-    final list = _extractList(body is Map<String, dynamic> ? body : const {});
+    final list = _extractList(body is Map ? Map<String, dynamic>.from(body) : const {});
     var items = list
         .whereType<Map>()
         .map((e) => PoojaModel.fromJson(Map<String, dynamic>.from(e)))

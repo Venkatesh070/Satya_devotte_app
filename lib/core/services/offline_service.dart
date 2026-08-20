@@ -30,12 +30,15 @@ class OfflineService extends GetxService {
     _cacheBox = Hive.box(AppConstants.cacheBox);
     _syncQueueBox = Hive.box('sync_queue'); // New box for offline actions
 
-    _checkInitialConnectivity();
+    _initConnectivity();
+  }
+
+  Future<void> _initConnectivity() async {
+    await checkConnectivity();
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
       _updateConnectionStatus,
     );
 
-    // Proactively cache all data when app starts and online
     if (isOnline.value) {
       _proactivelyCacheAllData();
     }
@@ -44,10 +47,6 @@ class OfflineService extends GetxService {
   Future<void> checkConnectivity() async {
     final result = await _connectivity.checkConnectivity();
     await _updateConnectionStatus(result);
-  }
-
-  Future<void> _checkInitialConnectivity() async {
-    await checkConnectivity();
   }
 
   Future<bool> _hasRealInternetAccess() async {
@@ -227,6 +226,7 @@ class OfflineService extends GetxService {
       try {
         final homeResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.home,
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('home_data', homeResponse.data);
         debugPrint('OfflineService: Home data cached successfully');
@@ -238,6 +238,7 @@ class OfflineService extends GetxService {
       try {
         final deitiesResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.deities,
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('deities_list', deitiesResponse.data);
         debugPrint('OfflineService: Deities list cached successfully');
@@ -250,6 +251,7 @@ class OfflineService extends GetxService {
         final poojasResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.poojas,
           queryParameters: {'limit': 1000},
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('all_poojas', poojasResponse.data);
         debugPrint('OfflineService: All poojas cached successfully');
@@ -262,6 +264,7 @@ class OfflineService extends GetxService {
         final ritualsResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.rituals,
           queryParameters: {'limit': 1000},
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('all_rituals', ritualsResponse.data);
         debugPrint('OfflineService: All rituals cached successfully');
@@ -276,9 +279,10 @@ class OfflineService extends GetxService {
           final month = DateTime(now.year, now.month + i);
           final cacheKey = 'calendar_${month.year}_${month.month}';
 
-          final calendarResponse = await apiClient.dio.get(
+          final calendarResponse = await apiClient.dio.get<dynamic>(
             ApiEndpoints.calendar,
             queryParameters: {'month': month.month, 'year': month.year},
+            options: Options(extra: {kSkipApiLoaderKey: true}),
           );
           await cacheData(cacheKey, calendarResponse.data);
         }
@@ -345,6 +349,7 @@ class OfflineService extends GetxService {
             try {
               final res = await apiClient.dio.get<dynamic>(
                 ApiEndpoints.deity(deityId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
               );
               final fullDeity = _extractDeity(res.data);
               if (fullDeity != null) {
@@ -394,6 +399,7 @@ class OfflineService extends GetxService {
             try {
               final res = await apiClient.dio.get<dynamic>(
                 ApiEndpoints.pooja(pId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
               );
               final payload = res.data;
               if (payload != null) {
@@ -441,6 +447,7 @@ class OfflineService extends GetxService {
             try {
               final res = await apiClient.dio.get<dynamic>(
                 ApiEndpoints.ritual(rId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
               );
               final payload = res.data;
               if (payload != null) {
@@ -614,6 +621,6 @@ class OfflineService extends GetxService {
     }
     final deity = payload['deity'];
     if (deity is Map) return Map<String, dynamic>.from(deity);
-    return payload is Map ? Map<String, dynamic>.from(payload) : null;
+    return Map<String, dynamic>.from(payload);
   }
 }
