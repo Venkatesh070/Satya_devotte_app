@@ -1,10 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/core/network/api_client.dart';
-import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
@@ -28,30 +27,15 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
     _load();
   }
 
-  Map<String, dynamic> _unwrap(dynamic raw) {
-    if (raw is! Map) return const {};
-    final map = Map<String, dynamic>.from(raw);
-    final data = map['data'];
-    if (data is Map) {
-      final nested = Map<String, dynamic>.from(data);
-      if (nested['ritual'] is Map) {
-        return Map<String, dynamic>.from(nested['ritual'] as Map);
-      }
-      return nested;
-    }
-    return map;
-  }
-
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
     try {
-      final response = await Get.find<ApiClient>().dio.get(
-        ApiEndpoints.ritual(widget.ritualId),
+      final ritual = await Get.find<RitualRemoteDataSource>().getRitualById(
+        widget.ritualId,
       );
-      final ritual = RitualModel.fromJson(_unwrap(response.data));
       if (!mounted) return;
       setState(() {
         _ritual = ritual;

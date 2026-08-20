@@ -77,6 +77,16 @@ class CalendarController extends GetxController {
 
     // Re-fetch data whenever the focused month/year changes
     ever(focusedDate, (_) => fetchData());
+
+    // Automatically re-fetch data when internet connection is restored
+    if (Get.isRegistered<OfflineService>()) {
+      ever(Get.find<OfflineService>().isOnline, (isOnline) {
+        if (isOnline == true) {
+          _fetchDeityColors();
+          fetchData(force: true);
+        }
+      });
+    }
   }
 
   Future<void> _fetchDeityColors() async {
@@ -365,8 +375,8 @@ class CalendarController extends GetxController {
     return null;
   }
 
-  Future<void> fetchData() async {
-    if (isLoading.value) return;
+  Future<void> fetchData({bool force = false}) async {
+    if (isLoading.value && !force) return;
     isLoading.value = true;
 
     final offlineService = Get.find<OfflineService>();

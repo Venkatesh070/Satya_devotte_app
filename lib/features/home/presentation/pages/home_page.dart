@@ -129,6 +129,10 @@ class _HomePageState extends State<HomePage> {
     if (index == 0) {
       _fetchHomeDataIfNeeded();
       _fetchAchievementsData(recordStreak: true);
+    } else if (index == _HomeTabs.calendar) {
+      if (Get.isRegistered<CalendarController>()) {
+        Get.find<CalendarController>().fetchData();
+      }
     }
     _isAnimatingToTab = false;
   }

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:get/get.dart' hide Response, FormData, MultipartFile;
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -42,31 +44,86 @@ class PoojaRemoteDataSource {
     int limit = 10,
     String? search,
   }) async {
-    final response = await _apiClient.dio.get(
-      ApiEndpoints.poojas,
-      queryParameters: {
-        'page': page,
-        'limit': limit,
-        if (search != null && search.isNotEmpty) 'search': search,
-      },
-    );
-    final body = response.data;
+    final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
+    dynamic body;
+    bool isFromOnlineApi = false;
+
+    if (offlineService != null && offlineService.isOnline.value) {
+      try {
+        final response = await _apiClient.dio.get(
+          ApiEndpoints.poojas,
+          queryParameters: {
+            'page': page,
+            'limit': limit,
+            if (search != null && search.isNotEmpty) 'search': search,
+          },
+        );
+        body = response.data;
+        isFromOnlineApi = true;
+        if (page == 1 && (search == null || search.isEmpty)) {
+          await offlineService.cacheData('all_poojas', body);
+        }
+      } catch (_) {
+        body = offlineService.getCachedData('all_poojas');
+      }
+    } else if (offlineService != null) {
+      body = offlineService.getCachedData('all_poojas');
+    }
+
+    if (body == null) {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.poojas,
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      );
+      body = response.data;
+      isFromOnlineApi = true;
+    }
+
     final list = _extractList(body is Map<String, dynamic> ? body : const {});
-    final items = list
-        .map((e) => PoojaModel.fromJson(e as Map<String, dynamic>))
+    var items = list
+        .whereType<Map>()
+        .map((e) => PoojaModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final pagination = CmsPaginationParser.fromBody(
-      body,
-      requestedPage: page,
-      requestedLimit: limit,
-      itemCount: items.length,
-    );
+
+    int total;
+    int totalPages;
+
+    if (isFromOnlineApi) {
+      final pagination = CmsPaginationParser.fromBody(
+        body,
+        requestedPage: page,
+        requestedLimit: limit,
+        itemCount: items.length,
+      );
+      total = pagination.total;
+      totalPages = pagination.totalPages < 1 ? 1 : pagination.totalPages;
+    } else {
+      if (search != null && search.isNotEmpty) {
+        final q = search.toLowerCase();
+        items = items.where((p) => p.title.toLowerCase().contains(q) || p.description.toLowerCase().contains(q)).toList();
+      }
+
+      total = items.length;
+      totalPages = (total / limit).ceil() < 1 ? 1 : (total / limit).ceil();
+      final startIndex = (page - 1) * limit;
+      if (startIndex < items.length) {
+        final endIndex = (startIndex + limit) > items.length ? items.length : startIndex + limit;
+        items = items.sublist(startIndex, endIndex);
+      } else {
+        items = [];
+      }
+    }
+
     return CmsPagedResult<PoojaModel>(
       items: items,
-      page: pagination.page,
-      limit: pagination.limit,
-      total: pagination.total,
-      totalPages: pagination.totalPages,
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: totalPages,
     );
   }
 
@@ -151,6 +208,33 @@ class PoojaRemoteDataSource {
 
   // ── GET single pooja ─────────────────────────────────────────
   Future<PoojaModel> getPoojaById(String id) async {
+    final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
+    if (offlineService != null && offlineService.isOnline.value) {
+      try {
+        final response = await _apiClient.dio.get(ApiEndpoints.pooja(id));
+        final payload = response.data as Map<String, dynamic>;
+        await offlineService.cacheData('pooja_detail_$id', payload);
+        return PoojaModel.fromJson(_extractSingle(payload));
+      } catch (_) {}
+    }
+
+    if (offlineService != null) {
+      final cached = offlineService.getCachedData('pooja_detail_$id');
+      if (cached is Map) {
+        final map = Map<String, dynamic>.from(cached);
+        return PoojaModel.fromJson(_extractSingle(map));
+      }
+      final allCached = offlineService.getCachedData('all_poojas');
+      if (allCached is Map) {
+        final list = _extractList(Map<String, dynamic>.from(allCached));
+        for (final item in list) {
+          if (item is Map && (item['_id'] ?? item['id'])?.toString() == id) {
+            return PoojaModel.fromJson(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+    }
+
     final response = await _apiClient.dio.get(ApiEndpoints.pooja(id));
     return PoojaModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
