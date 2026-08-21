@@ -207,41 +207,34 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                   ...ritual.days.map(
                     (day) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _SectionCard(
-                        title: day.title.trim().isEmpty
-                            ? 'Day ${day.dayNumber}'
-                            : 'Day ${day.dayNumber}: ${day.title}',
-                        body: day.activities.join('\n'),
-                      ),
+                      child: _RitualDayCard(day: day),
                     ),
                   ),
                 ],
-                if (ritual.sections.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sections',
-                    style: AppTypography.lora(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...ritual.sections.map(
-                    (section) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _SectionCard(
-                        title: section.label,
-                        body: section.contents
-                            .map((c) => [c.title, c.description]
-                                .where((s) => s.trim().isNotEmpty)
-                                .join('\n'))
-                            .where((s) => s.trim().isNotEmpty)
-                            .join('\n\n'),
-                      ),
-                    ),
-                  ),
-                ],
+    if (ritual.sections.isNotEmpty) ...[
+      const SizedBox(height: 8),
+      Text(
+        'Sections',
+        style: AppTypography.lora(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF4A1C00),
+        ),
+      ),
+      const SizedBox(height: 8),
+      ...ritual.sections
+          .where(
+            (section) =>
+                section.label.trim().isNotEmpty ||
+                section.description.trim().isNotEmpty,
+          )
+          .map(
+            (section) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RitualSectionCard(section: section),
+            ),
+          ),
+    ],
               ],
             ),
     );
@@ -272,14 +265,167 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.body});
+class _RitualDayHeroImages extends StatelessWidget {
+  const _RitualDayHeroImages({required this.images});
 
-  final String title;
-  final String body;
+  final List<String> images;
 
   @override
   Widget build(BuildContext context) {
+    Widget buildImage(String url) {
+      return CachedNetworkImage(
+        imageUrl: url,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(
+          width: double.infinity,
+          color: const Color(0xFFFAECD2),
+          alignment: Alignment.center,
+          child: const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        errorWidget: (_, __, ___) => Container(
+          width: double.infinity,
+          color: const Color(0xFFFAECD2),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.broken_image_outlined,
+            color: Color(0xFFB07A3A),
+            size: 28,
+          ),
+        ),
+      );
+    }
+
+    if (images.length == 1) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: buildImage(images.first),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: PageView.builder(
+        itemCount: images.length,
+        itemBuilder: (_, index) => buildImage(images[index]),
+      ),
+    );
+  }
+}
+
+class _RitualDayCard extends StatelessWidget {
+  const _RitualDayCard({required this.day});
+
+  final RitualDay day;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = day.title.trim().isEmpty
+        ? 'Day ${day.stepNumber}'
+        : 'Day ${day.stepNumber}: ${day.title.trim()}';
+
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE7D5BC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            child: Text(
+              title,
+              style: AppTypography.lora(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF4A1C00),
+              ),
+            ),
+          ),
+          if (day.images.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _RitualDayHeroImages(images: day.images),
+          ],
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (day.description.trim().isNotEmpty) ...[
+                  RichTextDisplay(
+                    day.description,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: const Color(0xFF5C4634),
+                    ),
+                  ),
+                ],
+                if (day.subSteps.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Steps',
+                    style: AppTypography.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  for (var i = 0; i < day.subSteps.length; i++) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${i + 1}.',
+                          style: AppTypography.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFE35600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: RichTextDisplay(
+                            day.subSteps[i],
+                            style: AppTypography.inter(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: const Color(0xFF5C4634),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (i != day.subSteps.length - 1) const SizedBox(height: 8),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RitualSectionCard extends StatelessWidget {
+  const _RitualSectionCard({required this.section});
+
+  final RitualSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    final description = section.description.trim();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -292,17 +438,17 @@ class _SectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            section.label,
             style: AppTypography.lora(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF4A1C00),
             ),
           ),
-          if (body.trim().isNotEmpty) ...[
+          if (description.isNotEmpty) ...[
             const SizedBox(height: 8),
             RichTextDisplay(
-              body,
+              description,
               style: AppTypography.inter(
                 fontSize: 13,
                 height: 1.4,

@@ -56,6 +56,7 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
     // manually press the reload icon to see the API content.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _ctrl.clearSearch();
       _ctrl.loadFestivals();
       if (Get.currentRoute == AppRoutes.cmsFestivalCreate) {
         _openAddForm();
@@ -123,6 +124,7 @@ class _FestivalList extends StatefulWidget {
 
 class _FestivalListState extends State<_FestivalList> {
   late final CmsSearchScheduler _searchScheduler;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -133,7 +135,14 @@ class _FestivalListState extends State<_FestivalList> {
   @override
   void dispose() {
     _searchScheduler.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onFilterTap(String f) {
+    _searchController.clear();
+    _searchScheduler.cancelPending();
+    ctrl.setFilter(f);
   }
 
   FestivalController get ctrl => widget.ctrl;
@@ -214,6 +223,7 @@ class _FestivalListState extends State<_FestivalList> {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search festivals...',
+                  controller: _searchController,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
@@ -266,7 +276,7 @@ class _FestivalListState extends State<_FestivalList> {
                 children: _filters.map((f) {
                   final isSel = ctrl.filter == f;
                   return _cmsClickable(
-                    onTap: () => ctrl.setFilter(f),
+                    onTap: () => _onFilterTap(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.only(right: 8),
@@ -766,8 +776,7 @@ class _FestivalCard extends StatelessWidget {
                     color: CmsColors.textPrimary,
                   ),
                 ),
-                if (festival.rituals != null &&
-                    festival.rituals!.trim().isNotEmpty) ...[
+                if (festival.ritualDisplayNames.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -779,7 +788,7 @@ class _FestivalCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Pujas: ${festival.rituals}',
+                          'Pujas: ${festival.ritualDisplayNames}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1000,8 +1009,48 @@ class _FestivalFormState extends State<_FestivalForm> {
     _date = _parseDate(f?.date);
     _endDate = _parseDate(f?.endDate);
 
-    if (f?.rituals != null && f!.rituals!.isNotEmpty) {
-      _selectedRitualNames.addAll(f.rituals!.split(', '));
+    if (f != null && f.ritualIds.isNotEmpty) {
+      _selectedRitualIds.addAll(f.ritualIds);
+      for (final id in f.ritualIds) {
+        final title = f.ritualTitles[id];
+        _selectedRitualNames.add(
+          (title != null && title.trim().isNotEmpty) ? title.trim() : id,
+        );
+      }
+      Future.microtask(_resolveSelectedRitualNames);
+    }
+  }
+
+  Future<void> _resolveSelectedRitualNames() async {
+    if (_selectedRitualIds.isEmpty) return;
+    final needsLookup = _selectedRitualIds.asMap().entries.any((e) {
+      final name = e.key < _selectedRitualNames.length
+          ? _selectedRitualNames[e.key]
+          : '';
+      return name.isEmpty || name == _selectedRitualIds[e.key];
+    });
+    if (!needsLookup) return;
+
+    try {
+      final poojaCtrl = Get.find<PoojaController>();
+      final approved = await poojaCtrl.fetchApprovedPoojasForSelector();
+      if (!mounted) return;
+      final byId = {for (final p in approved) p.id: p.title};
+      setState(() {
+        for (var i = 0; i < _selectedRitualIds.length; i++) {
+          final id = _selectedRitualIds[i];
+          final title = byId[id];
+          if (title != null && title.trim().isNotEmpty) {
+            if (i < _selectedRitualNames.length) {
+              _selectedRitualNames[i] = title.trim();
+            } else {
+              _selectedRitualNames.add(title.trim());
+            }
+          }
+        }
+      });
+    } catch (_) {
+      // Keep IDs as fallback labels if lookup fails.
     }
   }
 
@@ -1068,7 +1117,9 @@ class _FestivalFormState extends State<_FestivalForm> {
     };
 
     if (_endDate != null) body['endDate'] = _formatDate(_endDate!);
-    if (_selectedRitualIds.isNotEmpty) body['rituals'] = _selectedRitualIds;
+    if (_selectedRitualIds.isNotEmpty) {
+      body['associate_pujas'] = _selectedRitualIds;
+    }
 
     return body;
   }
@@ -1493,7 +1544,7 @@ class _PoojaPickerField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Associated Pujas (optional)',
+          'Associated Pujas',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -1572,7 +1623,7 @@ class _PoojaPickerField extends StatelessWidget {
       builder: (ctx) {
         String searchQuery = '';
         return FutureBuilder<List<PoojaModel>>(
-          future: poojaCtrl.fetchAllPoojasForSelector(),
+          future: poojaCtrl.fetchApprovedPoojasForSelector(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Container(
@@ -1582,11 +1633,11 @@ class _PoojaPickerField extends StatelessWidget {
               );
             }
 
-            final allPoojas = snapshot.data ?? [];
+            final approvedPoojas = snapshot.data ?? [];
 
             return StatefulBuilder(
               builder: (context, setModalState) {
-                final available = allPoojas.where((p) {
+                final available = approvedPoojas.where((p) {
                   final alreadySelected = selectedIds.contains(p.id) ||
                       selectedNames.contains(p.title);
                   if (alreadySelected) return false;
@@ -1628,7 +1679,7 @@ class _PoojaPickerField extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${allPoojas.length} Created Pujas',
+                            '${approvedPoojas.length} Approved Pujas',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1641,7 +1692,7 @@ class _PoojaPickerField extends StatelessWidget {
                       TextField(
                         onChanged: (v) => setModalState(() => searchQuery = v.trim()),
                         decoration: InputDecoration(
-                          hintText: 'Search created pujas...',
+                          hintText: 'Search approved pujas...',
                           hintStyle: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
                           prefixIcon: const Icon(Icons.search, size: 18, color: CmsColors.textSecond),
                           filled: true,
@@ -1665,7 +1716,7 @@ class _PoojaPickerField extends StatelessWidget {
                           child: Text(
                             searchQuery.isNotEmpty
                                 ? 'No matching pujas found'
-                                : 'All created pujas have been selected',
+                                : 'All approved pujas have been selected',
                             style: const TextStyle(fontSize: 13, color: CmsColors.textSecond),
                           ),
                         )

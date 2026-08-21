@@ -10,11 +10,13 @@ class CmsRichTextField extends StatefulWidget {
     required this.label,
     this.initialValue,
     this.onChanged,
+    this.showReciteButton = false,
   });
 
   final String label;
   final String? initialValue;
   final ValueChanged<String>? onChanged;
+  final bool showReciteButton;
 
   @override
   State<CmsRichTextField> createState() => _CmsRichTextFieldState();
@@ -52,12 +54,16 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final currentSerialized = serializeDocument(_controller.document);
-    final isDifferent = !_areValuesEqual(widget.initialValue, currentSerialized);
-
-    if (isDifferent) {
-      final newDoc = documentFromValue(widget.initialValue);
-      _controller.document = newDoc;
+    // Only reload when the parent intentionally changes the seed value
+    // (e.g. switching which step is being edited). Do NOT sync against the
+    // live controller on every parent rebuild — that resets the cursor and
+    // makes typing / formatting appear not to stick.
+    if (!_areValuesEqual(widget.initialValue, oldWidget.initialValue)) {
+      _controller.document = documentFromValue(widget.initialValue);
+      _controller.updateSelection(
+        const TextSelection.collapsed(offset: 0),
+        ChangeSource.local,
+      );
     }
   }
 
@@ -72,7 +78,33 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void _onControllerChange() {
     final value = serializeDocument(_controller.document);
     widget.onChanged?.call(value);
+    if (mounted) setState(() {});
   }
+
+  void _toggleRecite() {
+    // Avoid applying recite to the caret position (which can make newly typed
+    // text inherit "recite" formatting unexpectedly). Recite should only
+    // be applied when the user has an active selection.
+    final sel = _controller.selection;
+    if (sel.start == sel.end) {
+      return;
+    }
+
+    final hasRecite =
+        _controller.getSelectionStyle().attributes[ReciteAttributes.recite.key]
+            ?.value ==
+        true;
+    _controller.formatSelection(
+      hasRecite
+          ? Attribute.clone(ReciteAttributes.recite, null)
+          : ReciteAttributes.reciteOn,
+    );
+  }
+
+  bool get _selectionIsRecite =>
+      _controller.getSelectionStyle().attributes[ReciteAttributes.recite.key]
+          ?.value ==
+      true;
 
   @override
   Widget build(BuildContext context) {
@@ -153,9 +185,17 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              QuillSimpleToolbar(
-                controller: _controller,
-                config: toolbarConfig,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: QuillSimpleToolbar(
+                      controller: _controller,
+                      config: toolbarConfig,
+                    ),
+                  ),
+                  if (widget.showReciteButton) _buildReciteToolbarButton(),
+                ],
               ),
               const Divider(height: 1, color: CmsColors.border),
               DefaultTextStyle.merge(
@@ -169,7 +209,71 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
             ],
           ),
         ),
+        if (widget.showReciteButton) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Select text, then tap Recite to mark mantra lines.',
+            style: TextStyle(
+              fontSize: 11,
+              color: CmsColors.textSecond.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildReciteToolbarButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, right: 8, left: 4),
+      child: Tooltip(
+        message: 'Mark selected text as Recite / mantra',
+        child: Material(
+          color: _selectionIsRecite
+              ? CmsColors.orange.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            onTap: _toggleRecite,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              height: kDefaultToolbarSize,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _selectionIsRecite
+                      ? CmsColors.orange.withValues(alpha: 0.55)
+                      : CmsColors.border,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.record_voice_over_outlined,
+                    size: 16,
+                    color: _selectionIsRecite
+                        ? CmsColors.orange
+                        : CmsColors.textSecond,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Recite',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _selectionIsRecite
+                          ? CmsColors.orange
+                          : CmsColors.textSecond,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

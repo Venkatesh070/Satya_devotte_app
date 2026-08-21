@@ -170,12 +170,33 @@ class DeityRemoteDataSource {
     PickedFile? video,
   }) async {
     final hasMedia = image != null || audio != null || video != null;
+    final payloadToSend = Map<String, dynamic>.from(payload);
+    if (hasMedia) {
+      if (image != null) {
+        payloadToSend['media'] = {
+          ..._asStringKeyMap(payloadToSend['media']),
+          'images': <String>[],
+        };
+      }
+      if (audio != null) {
+        payloadToSend['media'] = {
+          ..._asStringKeyMap(payloadToSend['media']),
+          'audio': <String>[],
+        };
+      }
+      if (video != null) {
+        payloadToSend['media'] = {
+          ..._asStringKeyMap(payloadToSend['media']),
+          'videos': <String>[],
+        };
+      }
+    }
     if (!hasMedia) {
-      await _apiClient.dio.patch(ApiEndpoints.updateDeity(id), data: payload);
+      await _apiClient.dio.patch(ApiEndpoints.updateDeity(id), data: payloadToSend);
       return;
     }
 
-    final formMap = _toMultipartFields(payload);
+    final formMap = _toMultipartFields(payloadToSend);
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
         image.bytes,
@@ -233,5 +254,11 @@ class DeityRemoteDataSource {
       }
     });
     return out;
+  }
+
+  Map<String, dynamic> _asStringKeyMap(dynamic raw) {
+    if (raw is Map<String, dynamic>) return Map<String, dynamic>.from(raw);
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return <String, dynamic>{'images': <String>[], 'audio': <String>[], 'videos': <String>[]};
   }
 }

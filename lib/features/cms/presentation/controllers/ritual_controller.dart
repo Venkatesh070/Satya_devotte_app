@@ -61,9 +61,21 @@ class RitualController extends GetxController {
   }
 
   void setFilter(String f) {
-    if (_filter.value == f) return;
+    final same = _filter.value == f;
+    final hadSearch = _search.value.isNotEmpty;
+    if (same && !hadSearch) return;
     _filter.value = f;
+    _search.value = '';
     loadRituals(page: 1);
+  }
+
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await loadRituals(page: 1, showErrorSnackbar: false);
   }
 
   Future<void> goToPage(int target) async {
@@ -73,8 +85,9 @@ class RitualController extends GetxController {
   }
 
   Future<void> setPageSize(int size) async {
-    if (size <= 0 || size == _limit.value) return;
-    _limit.value = size;
+    final capped = size.clamp(1, 100);
+    if (capped == _limit.value) return;
+    _limit.value = capped;
     await loadRituals(page: 1);
   }
 
@@ -108,6 +121,19 @@ class RitualController extends GetxController {
       }
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  Future<RitualModel> getRitualById(String id) async {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError('Ritual id is required');
+    }
+    try {
+      return await _dataSource.getRitualById(trimmed);
+    } catch (e) {
+      _error.value = _parseError(e);
+      rethrow;
     }
   }
 
@@ -146,6 +172,7 @@ class RitualController extends GetxController {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByDay = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -175,6 +202,7 @@ class RitualController extends GetxController {
         image: image,
         audio: audio,
         video: video,
+        stepImagesByDay: stepImagesByDay,
       );
       _rituals.insert(0, created);
       showCmsSnackbar(title: 'Success', message: 'Ritual created successfully');
@@ -198,6 +226,7 @@ class RitualController extends GetxController {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByDay = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -208,6 +237,7 @@ class RitualController extends GetxController {
         image: image,
         audio: audio,
         video: video,
+        stepImagesByDay: stepImagesByDay,
       );
       final index = _rituals.indexWhere((r) => r.id == id);
       if (index != -1) {

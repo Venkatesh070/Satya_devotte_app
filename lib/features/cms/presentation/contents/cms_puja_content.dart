@@ -14,6 +14,7 @@ import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
+import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 
 Widget _cmsClickable({
   required VoidCallback onTap,
@@ -141,6 +142,7 @@ class _PoojaList extends StatefulWidget {
 
 class _PoojaListState extends State<_PoojaList> {
   late final CmsSearchScheduler _searchScheduler;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -151,7 +153,14 @@ class _PoojaListState extends State<_PoojaList> {
   @override
   void dispose() {
     _searchScheduler.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onFilterTap(String f) {
+    _searchController.clear();
+    _searchScheduler.cancelPending();
+    controller.setFilter(f);
   }
 
   PoojaController get controller => widget.controller;
@@ -225,6 +234,7 @@ class _PoojaListState extends State<_PoojaList> {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search pujas...',
+                  controller: _searchController,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
@@ -277,7 +287,7 @@ class _PoojaListState extends State<_PoojaList> {
                 children: _filters.map((f) {
                   final isSel = controller.filter == f;
                   return _cmsClickable(
-                    onTap: () => controller.setFilter(f),
+                    onTap: () => _onFilterTap(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.only(right: 8),
@@ -988,7 +998,9 @@ class _PoojaFormState extends State<_PoojaForm> {
   final List<DateTime> _selectedScheduleDates = [];
   bool _dailyRepeat = false;
   final _stepTitleCtrl = TextEditingController();
-  final _stepDescCtrl = TextEditingController();
+  String? _stepDescRich;
+  /// Bumped when clearing / switching the step editor so Quill remounts cleanly.
+  int _stepEditorEpoch = 0;
   final _stepTitleFocus = FocusNode();
   final _itemCtrl = TextEditingController();
   final List<String> _stepImageUrls = [];
@@ -1164,7 +1176,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     _symbolismTitleCtrl.dispose();
     _symbolismDescCtrl.dispose();
     _stepTitleCtrl.dispose();
-    _stepDescCtrl.dispose();
     _stepTitleFocus.dispose();
     _itemCtrl.dispose();
     super.dispose();
@@ -1219,10 +1230,11 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   void _clearStepEditorFields() {
     _stepTitleCtrl.clear();
-    _stepDescCtrl.clear();
+    _stepDescRich = null;
     _stepImageUrls.clear();
     _stepPickedImages.clear();
     _editingStepIndex = null;
+    _stepEditorEpoch++;
   }
 
   void _focusStepTitleField() {
@@ -1257,7 +1269,8 @@ class _PoojaFormState extends State<_PoojaForm> {
       _editingStepIndex = index;
       _showStepEditor = true;
       _stepTitleCtrl.text = step.title;
-      _stepDescCtrl.text = step.description;
+      _stepDescRich = step.description.trim().isEmpty ? null : step.description;
+      _stepEditorEpoch++;
       _stepImageUrls
         ..clear()
         ..addAll(step.imageUrls);
@@ -1294,7 +1307,7 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   void _saveStepEntry() {
     final title = _stepTitleCtrl.text.trim();
-    final description = _stepDescCtrl.text.trim();
+    final description = (_stepDescRich ?? '').trim();
     if (title.isEmpty &&
         description.isEmpty &&
         _stepImageUrls.isEmpty &&
@@ -2565,7 +2578,10 @@ class _PoojaFormState extends State<_PoojaForm> {
             accept: '800 × 800 px, JPG, PNG up to 5MB',
             mediaType: PickMediaType.image,
             initialUrl: _imageUrl,
-            onPicked: (f) => setState(() => _pickedImage = f),
+            onPicked: (f) => setState(() {
+              _pickedImage = f;
+              _imageUrl = null;
+            }),
             onRemoved: () => setState(() {
               if (_pickedImage != null) {
                 _pickedImage = null;
@@ -2762,11 +2778,16 @@ class _PoojaFormState extends State<_PoojaForm> {
               textInputAction: TextInputAction.done,
             ),
             const SizedBox(height: 10),
-            CmsFormField(
+            CmsRichTextField(
+              key: ValueKey(
+                'step-desc-${_editingStepIndex ?? 'new'}-$_stepEditorEpoch',
+              ),
               label: 'Step Description',
-              hint: 'Describe this step...',
-              controller: _stepDescCtrl,
-              maxLines: 3,
+              initialValue: _stepDescRich,
+              showReciteButton: true,
+              // Avoid setState-per-keystroke: that rebuilds the form and can
+              // fight the Quill editor. Persist on Update / Add Step.
+              onChanged: (v) => _stepDescRich = v,
             ),
             const SizedBox(height: 10),
             _StepMultiImagePicker(
@@ -2819,10 +2840,12 @@ class _PoojaFormState extends State<_PoojaForm> {
             const SizedBox(height: 12),
             ..._stepEntries.asMap().entries.map(
               (e) => _StepRow(
+                key: ValueKey(
+                  'step-row-${e.key}-${e.value.title}-${e.value.description}',
+                ),
                 index: e.key + 1,
-                text: e.value.description.trim().isEmpty
-                    ? e.value.title
-                    : '${e.value.title}\n${e.value.description}',
+                title: e.value.title,
+                description: e.value.description,
                 imageUrls: e.value.imageUrls,
                 pickedImages: e.value.pickedImages,
                 isEditing: _editingStepIndex == e.key,
@@ -3557,9 +3580,8 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
         ...widget.entries.asMap().entries.map(
           (e) => _StepRow(
             index: e.key + 1,
-            text: (e.value['description'] ?? '').trim().isEmpty
-                ? (e.value['title'] ?? '')
-                : '${e.value['title'] ?? ''}\n${e.value['description'] ?? ''}',
+            title: (e.value['title'] ?? '').toString(),
+            description: (e.value['description'] ?? '').toString(),
             isEditing: widget.editingIndex == e.key,
             onEdit: widget.onEdit == null ? null : () => widget.onEdit!(e.key),
             onRemove: () => widget.onRemove(e.key),
@@ -3927,8 +3949,10 @@ class _StepImageThumb extends StatelessWidget {
 
 class _StepRow extends StatelessWidget {
   const _StepRow({
+    super.key,
     required this.index,
-    required this.text,
+    required this.title,
+    this.description = '',
     required this.onRemove,
     this.onEdit,
     this.imageUrls = const [],
@@ -3936,7 +3960,8 @@ class _StepRow extends StatelessWidget {
     this.isEditing = false,
   });
   final int index;
-  final String text;
+  final String title;
+  final String description;
   final VoidCallback onRemove;
   final VoidCallback? onEdit;
   final List<String> imageUrls;
@@ -3996,11 +4021,6 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parts = text.split('\n');
-    final title = parts.first.trim();
-    final description = parts.length > 1
-        ? parts.sublist(1).join('\n').trim()
-        : '';
     final hasImages = imageUrls.isNotEmpty || pickedImages.isNotEmpty;
 
     return Padding(
@@ -4042,28 +4062,19 @@ class _StepRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: CmsColors.textPrimary,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              height: 1.35,
-                            ),
-                          ),
-                          if (description.isNotEmpty) ...[
-                            const TextSpan(text: '\n'),
-                            TextSpan(text: description),
-                          ],
-                        ],
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textPrimary,
                       ),
                     ),
+                    if (description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      StepRichTextDisplay.cms(description),
+                    ],
                     if (hasImages) ...[
                       const SizedBox(height: 10),
                       _imageStrip(),

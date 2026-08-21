@@ -13,7 +13,9 @@ import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 
 class PoojaStepWizard extends StatefulWidget {
   const PoojaStepWizard({
@@ -1227,55 +1229,15 @@ class _PujaStepScreen extends StatelessWidget {
   final VoidCallback onBack;
 
   _StepCardType _detectType(String text) {
-    final trimmed = text.trim();
-    final t = trimmed.toLowerCase();
-    if (t.startsWith('recite') ||
-        t.startsWith('chant') ||
-        trimmed.startsWith('"') ||
-        trimmed.startsWith('\u201c') ||
-        trimmed.startsWith('\u2018')) {
-      return _StepCardType.mantra;
-    }
+    final t = text.trim().toLowerCase();
+    // Recite / mantra cards are only shown for rich-text steps that were
+    // explicitly marked with the CMS Recite button. Plain-text heuristics
+    // (Recite:, quotes, following lines after "mantra", etc.) were incorrectly
+    // wrapping normal instructions in Recite cards.
     if (text.trim().contains('•') || t.contains('represents')) {
       return _StepCardType.significance;
     }
     return _StepCardType.instruction;
-  }
-
-  bool _introducesMantra(String text) {
-    final t = text.toLowerCase();
-    return t.contains('prayer') ||
-        t.contains('mantra') ||
-        t.contains('chant') ||
-        t.contains('recite');
-  }
-
-  bool _looksLikeActionInstruction(String text) {
-    final t = text.trim().toLowerCase();
-    const actionStarts = [
-      'light ',
-      'say ',
-      'ring ',
-      'offer ',
-      'place ',
-      'take ',
-      'sprinkle ',
-      'apply ',
-      'hold ',
-      'sit ',
-      'stand ',
-      'bow ',
-      'close ',
-      'open ',
-      'keep ',
-      'prepare ',
-      'clean ',
-      'wash ',
-      'pour ',
-      'wave ',
-      'perform ',
-    ];
-    return actionStarts.any(t.startsWith);
   }
 
   String _formatMantraText(String text) {
@@ -1295,44 +1257,15 @@ class _PujaStepScreen extends StatelessWidget {
         .join('\n');
   }
 
-  /// Groups consecutive mantra lines into a single block,
-  /// keeps instruction/significance lines as individual blocks.
+  /// Splits plain-text step descriptions into instruction / significance cards.
+  /// Does not invent Recite cards from wording alone.
   List<_StepBlock> _parseBlocks(String description) {
-    final lines = description
+    return description
         .split('\n')
-        .where((e) => e.trim().isNotEmpty)
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .map((line) => _StepBlock(text: line, type: _detectType(line)))
         .toList();
-
-    final List<_StepBlock> blocks = [];
-    final List<String> pendingMantraLines = [];
-    var expectingMantra = false;
-
-    void flushMantra() {
-      if (pendingMantraLines.isNotEmpty) {
-        blocks.add(
-          _StepBlock(
-            text: pendingMantraLines.join('\n'),
-            type: _StepCardType.mantra,
-          ),
-        );
-        pendingMantraLines.clear();
-      }
-    }
-
-    for (final line in lines) {
-      final type = _detectType(line);
-      if (type == _StepCardType.mantra ||
-          (expectingMantra && !_looksLikeActionInstruction(line))) {
-        pendingMantraLines.add(line.trim());
-      } else {
-        flushMantra();
-        blocks.add(_StepBlock(text: line.trim(), type: type));
-        expectingMantra = _introducesMantra(line);
-      }
-    }
-    flushMantra(); // flush trailing mantra lines
-
-    return blocks;
   }
 
   Widget _buildStepCard(String text, _StepCardType type) {
@@ -1417,7 +1350,11 @@ class _PujaStepScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blocks = _parseBlocks(step.description);
+    final description = step.description.trim();
+    final usesRichDescription = isDeltaJson(description);
+    final blocks = usesRichDescription
+        ? const <_StepBlock>[]
+        : _parseBlocks(description);
 
     return _BaseWizardScreen(
       audioUrl: audioUrl,
@@ -1456,7 +1393,16 @@ class _PujaStepScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var i = 0; i < blocks.length; i++)
+                    if (usesRichDescription && description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _WizardFadeSlideIn(
+                          delay: const Duration(milliseconds: 180),
+                          child: StepRichTextDisplay.wizard(description),
+                        ),
+                      )
+                    else
+                      for (var i = 0; i < blocks.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: _WizardFadeSlideIn(
@@ -1475,7 +1421,7 @@ class _PujaStepScreen extends StatelessWidget {
                             ),
                             child: _buildStepCard(
                               step.subSteps[i],
-                              _StepCardType.mantra,
+                              _StepCardType.instruction,
                             ),
                           ),
                         ),

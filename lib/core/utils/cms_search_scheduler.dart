@@ -30,6 +30,12 @@ class CmsSearchScheduler {
     onSearch(_pending);
   }
 
+  /// Drop a pending debounce so a tab/filter change is not overwritten.
+  void cancelPending() {
+    _debounceTimer?.cancel();
+    _pending = '';
+  }
+
   void dispose() {
     _debounceTimer?.cancel();
   }

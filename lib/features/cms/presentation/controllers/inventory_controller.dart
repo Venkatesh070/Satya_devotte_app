@@ -136,6 +136,15 @@ class InventoryController extends GetxController {
     _load(page: 1);
   }
 
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await _load(page: 1);
+  }
+
   void setCategoryFilters(List<String> values) {
     final normalized = values
         .map((e) => e.trim())

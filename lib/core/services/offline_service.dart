@@ -228,13 +228,10 @@ class OfflineService extends GetxService {
         debugPrint('OfflineService: Failed to cache deities list: $e');
       }
 
-      // Cache All Poojas (Global)
+      // Cache All Poojas (Global). API caps `limit` at 100.
       try {
-        final poojasResponse = await apiClient.dio.get<dynamic>(
-          ApiEndpoints.poojas,
-          queryParameters: {'limit': 1000},
-        );
-        await cacheData('all_poojas', poojasResponse.data);
+        final cached = await _fetchAllPoojasForCache(apiClient);
+        await cacheData('all_poojas', cached);
         debugPrint('OfflineService: All poojas cached successfully');
       } catch (e) {
         debugPrint('OfflineService: Failed to cache all poojas: $e');
@@ -441,6 +438,64 @@ class OfflineService extends GetxService {
     } catch (e) {
       debugPrint('OfflineService: Error during proactive caching: $e');
     }
+  }
+
+  Future<Map<String, dynamic>> _fetchAllPoojasForCache(ApiClient apiClient) async {
+    const pageLimit = 100;
+    const maxPages = 20;
+    final allPoojas = <dynamic>[];
+    Map<String, dynamic> lastBody = <String, dynamic>{};
+
+    var page = 1;
+    var totalPages = 1;
+    while (page <= totalPages && page <= maxPages) {
+      final response = await apiClient.dio.get<dynamic>(
+        ApiEndpoints.poojas,
+        queryParameters: {'limit': pageLimit, 'page': page},
+      );
+      final raw = response.data;
+      if (raw is Map<String, dynamic>) {
+        lastBody = Map<String, dynamic>.from(raw);
+      } else if (raw is Map) {
+        lastBody = Map<String, dynamic>.from(raw);
+      }
+
+      final data = lastBody['data'];
+      List<dynamic> pageItems = const [];
+      Map<String, dynamic>? pagination;
+      if (data is Map) {
+        if (data['poojas'] is List) {
+          pageItems = List<dynamic>.from(data['poojas'] as List);
+        } else if (data['results'] is List) {
+          pageItems = List<dynamic>.from(data['results'] as List);
+        } else if (data['items'] is List) {
+          pageItems = List<dynamic>.from(data['items'] as List);
+        }
+        if (data['pagination'] is Map) {
+          pagination = Map<String, dynamic>.from(data['pagination'] as Map);
+        }
+      } else if (lastBody['poojas'] is List) {
+        pageItems = List<dynamic>.from(lastBody['poojas'] as List);
+      }
+      allPoojas.addAll(pageItems);
+      totalPages = (pagination?['totalPages'] as num?)?.toInt() ?? 1;
+      if (totalPages < 1) totalPages = 1;
+      page++;
+    }
+
+    final dataMap = lastBody['data'] is Map
+        ? Map<String, dynamic>.from(lastBody['data'] as Map)
+        : <String, dynamic>{};
+    dataMap['poojas'] = allPoojas;
+    if (dataMap['pagination'] is Map) {
+      final pagination = Map<String, dynamic>.from(dataMap['pagination'] as Map);
+      pagination['limit'] = allPoojas.length;
+      pagination['page'] = 1;
+      pagination['totalPages'] = 1;
+      dataMap['pagination'] = pagination;
+    }
+    lastBody['data'] = dataMap;
+    return lastBody;
   }
 
   /// Helper method to collect image URLs from a map (pooja, deity, festival, etc.)

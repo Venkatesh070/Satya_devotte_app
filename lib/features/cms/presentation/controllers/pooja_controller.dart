@@ -64,8 +64,11 @@ class PoojaController extends GetxController {
 
   // ── Set filter — reloads from server page 1 ───────────────────
   void setFilter(String f) {
-    if (_filter.value == f) return;
+    final same = _filter.value == f;
+    final hadSearch = _search.value.isNotEmpty;
+    if (same && !hadSearch) return;
     _filter.value = f;
+    _search.value = '';
     loadPoojas(page: 1);
   }
 
@@ -76,8 +79,9 @@ class PoojaController extends GetxController {
   }
 
   Future<void> setPageSize(int size) async {
-    if (size <= 0 || size == _limit.value) return;
-    _limit.value = size;
+    final capped = size.clamp(1, 100);
+    if (capped == _limit.value) return;
+    _limit.value = capped;
     await loadPoojas(page: 1);
   }
 
@@ -86,7 +90,17 @@ class PoojaController extends GetxController {
   /// so stale loadAllPoojas data is replaced with properly filtered data.
   void resetAndLoad() {
     _filter.value = 'All';
+    _search.value = '';
     loadPoojas(page: 1, showErrorSnackbar: false);
+  }
+
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await loadPoojas(page: 1, showErrorSnackbar: false);
   }
 
   void setSearch(String value) {
@@ -138,6 +152,21 @@ class PoojaController extends GetxController {
       );
     } catch (_) {
       return _poojas.toList();
+    }
+  }
+
+  /// Approved pujas only — used when associating pujas on a deity.
+  Future<List<PoojaModel>> fetchApprovedPoojasForSelector() async {
+    try {
+      final auth = Get.find<AuthController>();
+      return await _dataSource.getAllPoojasForSelector(
+        superAdmin: auth.isSuperAdmin,
+        status: 'APPROVED',
+      );
+    } catch (_) {
+      return _poojas
+          .where((p) => p.status.toUpperCase() == 'APPROVED' || p.status == 'Approved')
+          .toList();
     }
   }
 
@@ -322,7 +351,7 @@ class PoojaController extends GetxController {
           _poojas[index] = result;
         }
       }
-      _snackOk('Pooja updated successfully');
+      _snackOk('Puja updated successfully');
       return true;
     } catch (e) {
       _error.value = _parseError(e);

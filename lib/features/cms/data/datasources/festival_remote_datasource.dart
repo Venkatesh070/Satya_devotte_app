@@ -127,12 +127,33 @@ class FestivalRemoteDataSource {
     return FestivalModel.fromJson(_single(res.data as Map<String, dynamic>));
   }
 
-  // ── PATCH /festivals/{id} ─────────────────────────────────────
+  // ── PATCH /festivals/{id} — multipart when replacing the image ─
   Future<FestivalModel> updateFestival(
     String id,
-    Map<String, dynamic> body,
-  ) async {
-    final res = await _apiClient.dio.patch('/api/v1/festivals/$id', data: body);
+    Map<String, dynamic> body, {
+    PickedFile? image,
+  }) async {
+    final fields = <String, dynamic>{};
+    body.forEach((k, v) {
+      if (v == null) return;
+      if (v is Map || v is List) {
+        fields[k] = jsonEncode(v);
+      } else if (v is bool) {
+        fields[k] = v.toString();
+      } else {
+        fields[k] = v.toString();
+      }
+    });
+    if (image != null) {
+      fields['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+      );
+    }
+    final res = await _apiClient.dio.patch(
+      '/api/v1/festivals/$id',
+      data: image != null ? FormData.fromMap(fields) : body,
+    );
     return FestivalModel.fromJson(_single(res.data as Map<String, dynamic>));
   }
 

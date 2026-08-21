@@ -47,9 +47,21 @@ class FestivalController extends GetxController {
   }
 
   void setFilter(String f) {
-    if (_filter.value == f) return;
+    final same = _filter.value == f;
+    final hadSearch = _search.value.isNotEmpty;
+    if (same && !hadSearch) return;
     _filter.value = f;
+    _search.value = '';
     loadFestivals(page: 1);
+  }
+
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await loadFestivals(page: 1, showErrorSnackbar: false);
   }
 
   void setMonth(int? m) {}
@@ -61,8 +73,9 @@ class FestivalController extends GetxController {
   }
 
   Future<void> setPageSize(int size) async {
-    if (size <= 0 || size == _limit.value) return;
-    _limit.value = size;
+    final capped = size.clamp(1, 100);
+    if (capped == _limit.value) return;
+    _limit.value = capped;
     await loadFestivals(page: 1);
   }
 
@@ -137,7 +150,7 @@ class FestivalController extends GetxController {
     _isSubmitting.value = true;
     _error.value = null;
     try {
-      await _dataSource.updateFestival(id, body);
+      await _dataSource.updateFestival(id, body, image: image);
       await loadFestivals();
       _ok('Festival updated');
       return true;

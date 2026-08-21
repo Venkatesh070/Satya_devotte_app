@@ -2,91 +2,103 @@
 
 class RitualDay {
   const RitualDay({
-    required this.dayNumber,
+    required this.stepNumber,
     required this.title,
-    required this.activities,
-    this.mantra,
-    this.affirmation,
+    this.description = '',
+    this.images = const [],
+    this.subSteps = const [],
   });
 
-  final int dayNumber;
+  /// Matches Pooja stepSchema: stepNumber, title, description, images, subSteps.
+  final int stepNumber;
   final String title;
-  final List<String> activities;
-  final String? mantra;
-  final String? affirmation;
+  final String description;
+  final List<String> images;
+  final List<String> subSteps;
+
+  int get dayNumber => stepNumber;
 
   factory RitualDay.fromJson(Map<String, dynamic> json) {
+    final stepNumber = _parseStepNumber(json);
     return RitualDay(
-      dayNumber: (json['dayNumber'] ?? 0) as int,
+      stepNumber: stepNumber,
       title: (json['title'] ?? '').toString(),
-      activities:
-          (json['activities'] as List?)?.map((e) => e.toString()).toList() ??
-          (json['instructions'] as List?)?.map((e) => e.toString()).toList() ??
-          [],
-      mantra: (json['mantra'] ?? json['chant'])?.toString(),
-      affirmation: (json['affirmation'] ?? json['offering'])?.toString(),
+      description: (json['description'] ?? '').toString(),
+      images: _parseImages(json),
+      subSteps: _parseSubSteps(json),
     );
   }
 
+  static List<String> _parseImages(Map<String, dynamic> json) {
+    final fromList = _parseStringList(json['images']);
+    if (fromList.isNotEmpty) return fromList;
+
+    final fromUrls = _parseStringList(json['imageUrls']);
+    if (fromUrls.isNotEmpty) return fromUrls;
+
+    final single = json['imageUrl'] ?? json['image'];
+    if (single != null) {
+      final cleaned = _cleanImageUrl(single.toString());
+      if (cleaned.isNotEmpty) return [cleaned];
+    }
+    return const [];
+  }
+
+  static String _cleanImageUrl(String url) {
+    return url.replaceAll('`', '').trim();
+  }
+
+  static int _parseStepNumber(Map<String, dynamic> json) {
+    final raw = json['stepNumber'] ?? json['dayNumber'];
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
+  }
+
+  static List<String> _parseStringList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => _cleanImageUrl(e.toString()))
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  static List<String> _parseSubSteps(Map<String, dynamic> json) {
+    final fromSubSteps = _parseStringList(json['subSteps']);
+    if (fromSubSteps.isNotEmpty) return fromSubSteps;
+
+    final fromActivities = _parseStringList(json['activities']);
+    if (fromActivities.isNotEmpty) return fromActivities;
+
+    final legacy = <String>[];
+    final mantra = (json['mantra'] ?? json['chant'])?.toString().trim() ?? '';
+    final affirmation =
+        (json['affirmation'] ?? json['offering'])?.toString().trim() ?? '';
+    if (mantra.isNotEmpty) legacy.add(mantra);
+    if (affirmation.isNotEmpty) legacy.add(affirmation);
+    return legacy;
+  }
+
   Map<String, dynamic> toJson() => {
-    'dayNumber': dayNumber,
+    'stepNumber': stepNumber,
     'title': title,
-    'activities': activities,
-    if (mantra != null && mantra!.isNotEmpty) 'mantra': mantra,
-    if (affirmation != null && affirmation!.isNotEmpty) 'affirmation': affirmation,
+    'description': description,
+    if (images.isNotEmpty) 'images': images,
+    if (subSteps.isNotEmpty) 'subSteps': subSteps,
   };
 
   RitualDay copyWith({
-    int? dayNumber,
-    String? title,
-    List<String>? activities,
-    String? mantra,
-    String? affirmation,
-  }) {
-    return RitualDay(
-      dayNumber: dayNumber ?? this.dayNumber,
-      title: title ?? this.title,
-      activities: activities ?? this.activities,
-      mantra: mantra ?? this.mantra,
-      affirmation: affirmation ?? this.affirmation,
-    );
-  }
-}
-
-class RitualSectionContent {
-  const RitualSectionContent({
-    this.title = '',
-    this.description = '',
-    this.imageUrl = '',
-  });
-
-  final String title;
-  final String description;
-  final String imageUrl;
-
-  factory RitualSectionContent.fromJson(Map<String, dynamic> json) {
-    return RitualSectionContent(
-      title: (json['title'] ?? '').toString(),
-      description: (json['description'] ?? json['content'] ?? '').toString(),
-      imageUrl: (json['imageUrl'] ?? '').toString(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'title': title,
-    'description': description,
-    'imageUrl': imageUrl,
-  };
-
-  RitualSectionContent copyWith({
+    int? stepNumber,
     String? title,
     String? description,
-    String? imageUrl,
+    List<String>? images,
+    List<String>? subSteps,
   }) {
-    return RitualSectionContent(
+    return RitualDay(
+      stepNumber: stepNumber ?? this.stepNumber,
       title: title ?? this.title,
       description: description ?? this.description,
-      imageUrl: imageUrl ?? this.imageUrl,
+      images: images ?? this.images,
+      subSteps: subSteps ?? this.subSteps,
     );
   }
 }
@@ -95,18 +107,17 @@ class RitualSection {
   const RitualSection({
     required this.key,
     required this.label,
-    this.contents = const [],
+    this.description = '',
   });
 
   final String key;
   final String label;
-  final List<RitualSectionContent> contents;
+  final String description;
 
   /// Back-compat for legacy flat section shape.
   String get title => label;
 
-  String get content =>
-      contents.isNotEmpty ? contents.first.description : '';
+  String get content => description;
 
   factory RitualSection.fromJson(Map<String, dynamic> json) {
     final label = (json['label'] ?? json['title'] ?? '').toString();
@@ -115,46 +126,47 @@ class RitualSection {
       key = _slugifyKey(label);
     }
 
-    final contents = <RitualSectionContent>[];
-    if (json['contents'] is List) {
+    var description =
+        (json['description'] ?? json['content'] ?? '').toString();
+
+    // Migrate legacy nested contents[] into a single description.
+    if (description.trim().isEmpty && json['contents'] is List) {
+      final parts = <String>[];
       for (final item in json['contents'] as List) {
-        if (item is Map) {
-          contents.add(
-            RitualSectionContent.fromJson(Map<String, dynamic>.from(item)),
-          );
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        final itemTitle = (map['title'] ?? '').toString().trim();
+        final desc =
+            (map['description'] ?? map['content'] ?? '').toString().trim();
+        if (itemTitle.isNotEmpty && desc.isNotEmpty) {
+          parts.add('$itemTitle\n$desc');
+        } else if (itemTitle.isNotEmpty) {
+          parts.add(itemTitle);
+        } else if (desc.isNotEmpty) {
+          parts.add(desc);
         }
       }
-    }
-    if (contents.isEmpty) {
-      final legacy = (json['content'] ?? json['description'] ?? '').toString();
-      if (legacy.isNotEmpty || label.isNotEmpty) {
-        contents.add(
-          RitualSectionContent(title: label, description: legacy),
-        );
-      }
-    }
-    if (contents.isEmpty) {
-      contents.add(const RitualSectionContent());
+      description = parts.join('\n\n');
     }
 
-    return RitualSection(key: key, label: label, contents: contents);
+    return RitualSection(key: key, label: label, description: description);
   }
 
   Map<String, dynamic> toJson() => {
     'key': key.isNotEmpty ? key : _slugifyKey(label),
     'label': label,
-    'contents': contents.map((e) => e.toJson()).toList(),
+    'description': description,
   };
 
   RitualSection copyWith({
     String? key,
     String? label,
-    List<RitualSectionContent>? contents,
+    String? description,
   }) {
     return RitualSection(
       key: key ?? this.key,
       label: label ?? this.label,
-      contents: contents ?? this.contents,
+      description: description ?? this.description,
     );
   }
 
@@ -277,7 +289,28 @@ class RitualModel {
     return const [];
   }
 
+  static String _parseDocumentId(Map<String, dynamic> json) {
+    final raw = json['_id'] ?? json['id'];
+    if (raw == null) return '';
+    if (raw is String) return raw.trim();
+    if (raw is Map) {
+      final oid = raw[r'$oid'] ?? raw['oid'];
+      if (oid is String) return oid.trim();
+    }
+    final text = raw.toString().trim();
+    if (text.startsWith('ObjectId(') && text.endsWith(')')) {
+      return text.substring(9, text.length - 1).trim();
+    }
+    return text;
+  }
+
   factory RitualModel.fromJson(Map<String, dynamic> json) {
+    if (json['ritual'] is Map) {
+      return RitualModel.fromJson(
+        Map<String, dynamic>.from(json['ritual'] as Map),
+      );
+    }
+
     final daysList = (json['days'] is List)
         ? (json['days'] as List)
               .map((e) => RitualDay.fromJson(e as Map<String, dynamic>))
@@ -294,14 +327,32 @@ class RitualModel {
     ritualDays ??= daysList.isNotEmpty ? daysList.length : null;
 
     RitualMedia media = const RitualMedia();
+    List<String> strings(dynamic v) {
+      if (v is! List) return const [];
+      return v.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    }
+
     if (json['media'] is Map) {
       media = RitualMedia.fromJson(
         Map<String, dynamic>.from(json['media'] as Map),
       );
+    } else {
+      media = RitualMedia(
+        images: strings(json['images']),
+        audio: strings(json['audio']),
+        videos: strings(json['videos']),
+      );
+    }
+    if (media.images.isEmpty && strings(json['images']).isNotEmpty) {
+      media = RitualMedia(
+        images: strings(json['images']),
+        audio: media.audio.isNotEmpty ? media.audio : strings(json['audio']),
+        videos: media.videos.isNotEmpty ? media.videos : strings(json['videos']),
+      );
     }
 
     return RitualModel(
-      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      id: _parseDocumentId(json),
       title: (json['title'] ?? '').toString(),
       slug: json['slug']?.toString(),
       description: json['description']?.toString(),

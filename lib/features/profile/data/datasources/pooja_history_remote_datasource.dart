@@ -9,7 +9,7 @@ class PoojaHistoryRemoteDataSource {
   Future<Map<String, dynamic>> getPoojaHistory({
     String? status,
     int page = 1,
-    int limit = 1000,
+    int limit = 100,
   }) async {
     final queryParams = <String, dynamic>{
       if (status != null) 'status': status,

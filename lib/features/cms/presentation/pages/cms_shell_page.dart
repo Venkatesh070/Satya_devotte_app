@@ -33,7 +33,11 @@ import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_k
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_pooja_kit_settings_content.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_order_requests_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_payments_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 
 // ── Design tokens matching Figma ─────────────────────────────────
 class CmsColors {
@@ -130,7 +134,29 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
   /// Switches CMS tabs without recreating [CmsShellPage] (preserves sidebar scroll).
   void navigateToTab(int index) => _onSelect(index);
 
+  void _clearIncomingTabSearch(int index) {
+    if (index == _NavIds.deities && Get.isRegistered<DeityController>()) {
+      Get.find<DeityController>().clearSearch();
+    }
+    if (index == _NavIds.pujas && Get.isRegistered<PoojaController>()) {
+      Get.find<PoojaController>().clearSearch();
+    }
+    if (index == _NavIds.festivals && Get.isRegistered<FestivalController>()) {
+      Get.find<FestivalController>().clearSearch();
+    }
+    if (index == _NavIds.manageRituals && Get.isRegistered<RitualController>()) {
+      Get.find<RitualController>().clearSearch();
+    }
+    if (index == _NavIds.poojaKitInventory &&
+        Get.isRegistered<InventoryController>()) {
+      Get.find<InventoryController>().clearSearch();
+    }
+  }
+
   void _onSelect(int index) {
+    // Clear persisted GetX search before the tab remounts so list APIs
+    // do not keep sending the previous `search=` query.
+    _clearIncomingTabSearch(index);
     setState(() {
       _selectedIndex = index;
       // Collapse manually opened groups when navigating elsewhere; only
@@ -158,7 +184,7 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     }
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
-      Get.find<InventoryController>().init();
+      unawaited(Get.find<InventoryController>().resetSearchOnTabFocus());
     }
     if (index == _NavIds.activity) {
       _onActivityFocus();

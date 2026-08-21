@@ -1,4 +1,6 @@
 // lib/features/cms/presentation/contents/cms_manage_rituals_content.dart
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
@@ -8,7 +10,9 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_c
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
+import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 
 Widget _cmsClickable({
   required VoidCallback onTap,
@@ -48,6 +52,7 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
     _controller = Get.find<RitualController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _controller.clearSearch();
       _controller.loadRituals(showErrorSnackbar: false);
     });
   }
@@ -76,8 +81,8 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
         _editing = null;
         _showForm = true;
       }),
-      onEdit: (r) => setState(() {
-        _editing = r;
+      onOpenForm: (ritual) => setState(() {
+        _editing = ritual;
         _showForm = true;
       }),
     );
@@ -88,11 +93,11 @@ class _RitualList extends StatefulWidget {
   const _RitualList({
     required this.controller,
     required this.onAdd,
-    required this.onEdit,
+    required this.onOpenForm,
   });
   final RitualController controller;
   final VoidCallback onAdd;
-  final ValueChanged<RitualModel> onEdit;
+  final ValueChanged<RitualModel> onOpenForm;
 
   @override
   State<_RitualList> createState() => _RitualListState();
@@ -100,6 +105,8 @@ class _RitualList extends StatefulWidget {
 
 class _RitualListState extends State<_RitualList> {
   late final CmsSearchScheduler _searchScheduler;
+  final _searchController = TextEditingController();
+  String? _openingEditId;
 
   @override
   void initState() {
@@ -110,12 +117,50 @@ class _RitualListState extends State<_RitualList> {
   @override
   void dispose() {
     _searchScheduler.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onFilterTap(String f) {
+    _searchController.clear();
+    _searchScheduler.cancelPending();
+    controller.setFilter(f);
   }
 
   RitualController get controller => widget.controller;
   VoidCallback get onAdd => widget.onAdd;
-  ValueChanged<RitualModel> get onEdit => widget.onEdit;
+  ValueChanged<RitualModel> get onOpenForm => widget.onOpenForm;
+
+  Future<void> _openEdit(RitualModel summary) async {
+    final id = summary.id.trim();
+    if (id.isEmpty) {
+      showCmsSnackbar(
+        title: 'Cannot edit',
+        message: 'This ritual has no id. Refresh the list and try again.',
+        isError: true,
+      );
+      onOpenForm(summary);
+      return;
+    }
+
+    setState(() => _openingEditId = id);
+    try {
+      final full = await controller.getRitualById(id);
+      if (!mounted) return;
+      onOpenForm(full);
+    } catch (_) {
+      if (!mounted) return;
+      showCmsSnackbar(
+        title: 'Load failed',
+        message:
+            'Could not load full ritual details. Opening summary data instead.',
+        isError: true,
+      );
+      onOpenForm(summary);
+    } finally {
+      if (mounted) setState(() => _openingEditId = null);
+    }
+  }
 
   static const _filters = ['All', 'Approved', 'Pending', 'Draft', 'Rejected'];
 
@@ -147,6 +192,7 @@ class _RitualListState extends State<_RitualList> {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search rituals...',
+                  controller: _searchController,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
@@ -196,7 +242,7 @@ class _RitualListState extends State<_RitualList> {
                 children: _filters.map((f) {
                   final isSel = controller.filter == f;
                   return _cmsClickable(
-                    onTap: () => controller.setFilter(f),
+                    onTap: () => _onFilterTap(f),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.only(right: 8),
@@ -266,7 +312,8 @@ class _RitualListState extends State<_RitualList> {
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (ctx, i) => _RitualCard(
                   ritual: list[i],
-                  onEdit: () => onEdit(list[i]),
+                  isEditLoading: _openingEditId == list[i].id,
+                  onEdit: () => _openEdit(list[i]),
                   onDelete: () async {
                     final ok = await showCmsDeleteDialog(
                       ctx,
@@ -313,12 +360,14 @@ class _RitualCard extends StatelessWidget {
     required this.onDelete,
     required this.onApprove,
     required this.onReject,
+    this.isEditLoading = false,
   });
   final RitualModel ritual;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final bool isEditLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -404,11 +453,23 @@ class _RitualCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CmsActionIcon(
-                    icon: Icons.edit_outlined,
-                    color: Colors.blue,
-                    onTap: onEdit,
-                  ),
+                  isEditLoading
+                      ? const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Padding(
+                            padding: EdgeInsets.all(6),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        )
+                      : CmsActionIcon(
+                          icon: Icons.edit_outlined,
+                          color: Colors.blue,
+                          onTap: onEdit,
+                        ),
                   const SizedBox(width: 6),
                   CmsActionIcon(
                     icon: Icons.delete_outline,
@@ -482,8 +543,23 @@ class _RitualFormState extends State<_RitualForm> {
   String _status = 'PENDING';
   bool _isFeatured = false;
 
-  List<RitualDay> _days = [];
-  List<RitualSection> _sections = [];
+  late List<_DayDraft> _dayEntries;
+  final _dayTitleCtrl = TextEditingController();
+  String? _dayDescRich;
+  int _dayEditorEpoch = 0;
+  final _dayTitleFocus = FocusNode();
+  final List<String> _dayImageUrls = [];
+  final List<PickedFile> _dayPickedImages = [];
+  bool _showDayEditor = false;
+  int? _editingDayIndex;
+
+  late List<_SectionDraft> _sectionEntries;
+  bool _showSectionEditor = false;
+  int? _editingSectionIndex;
+  final _sectionLabelCtrl = TextEditingController();
+  final _sectionLabelFocus = FocusNode();
+  String? _sectionDescRich;
+  int _sectionEditorEpoch = 0;
 
   PickedFile? _pickedImage;
   String? _imageUrl;
@@ -491,30 +567,36 @@ class _RitualFormState extends State<_RitualForm> {
 
   bool get _isEdit => widget.ritual != null;
 
-  static List<RitualSection> _defaultSections() => [
-    const RitualSection(
-      key: 'overview',
-      label: 'Overview',
-      contents: [
-        RitualSectionContent(
-          title: 'What you will need',
-          description: '',
-          imageUrl: '',
-        ),
-      ],
-    ),
-    const RitualSection(
-      key: 'preparation',
-      label: 'Preparation',
-      contents: [
-        RitualSectionContent(
-          title: 'Space setup',
-          description: '',
-          imageUrl: '',
-        ),
-      ],
-    ),
+  static List<_SectionDraft> _defaultSectionEntries() => [
+    const _SectionDraft(label: 'Overview'),
+    const _SectionDraft(label: 'Preparation'),
   ];
+
+  static List<_SectionDraft> _sectionEntriesFromModel(List<RitualSection> sections) =>
+      sections
+          .map(
+            (s) => _SectionDraft(
+              label: s.label,
+              description: s.description,
+            ),
+          )
+          .toList();
+
+  static List<RitualSection> _sectionsToModel(List<_SectionDraft> entries) =>
+      entries
+          .where(
+            (s) =>
+                s.label.trim().isNotEmpty ||
+                s.description.trim().isNotEmpty,
+          )
+          .map(
+            (s) => RitualSection(
+              key: '',
+              label: s.label.trim().isEmpty ? 'Untitled section' : s.label.trim(),
+              description: s.description,
+            ),
+          )
+          .toList();
 
   @override
   void initState() {
@@ -535,13 +617,26 @@ class _RitualFormState extends State<_RitualForm> {
     _difficulty = r?.difficulty ?? 'BEGINNER';
     _status = r?.status ?? 'PENDING';
     _isFeatured = r?.isFeatured ?? false;
-    _days = List.from(r?.days ?? []);
-    _sections = r != null && r.sections.isNotEmpty
-        ? List.from(r.sections)
-        : _defaultSections();
+    _dayEntries = (r?.days ?? [])
+        .map(
+          (d) => _DayDraft(
+            title: d.title,
+            description: d.description,
+            imageUrls: List<String>.from(d.images),
+          ),
+        )
+        .toList();
+    _sectionEntries = r != null && r.sections.isNotEmpty
+        ? _sectionEntriesFromModel(r.sections)
+        : _defaultSectionEntries();
     _imageUrl = r?.imageUrl;
     _titleCtrl.addListener(_syncSlugFromTitle);
     Future.microtask(widget.controller.loadDeities);
+    if (_dayEntries.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openNewDayEditor();
+      });
+    }
   }
 
   @override
@@ -555,7 +650,224 @@ class _RitualFormState extends State<_RitualForm> {
     _startingDayCtrl.dispose();
     _ritualDaysCtrl.dispose();
     _bestTimeCtrl.dispose();
+    _dayTitleCtrl.dispose();
+    _dayTitleFocus.dispose();
+    _sectionLabelCtrl.dispose();
+    _sectionLabelFocus.dispose();
     super.dispose();
+  }
+
+  List<List<PickedFile>> _dayPickedImagesByDay() => _dayEntries
+      .map((day) => List<PickedFile>.from(day.pickedImages))
+      .toList();
+
+  Future<void> _pickDayImages() async {
+    final files = await Get.find<MediaUploadService>().pickImages();
+    if (files.isEmpty) return;
+    setState(() => _dayPickedImages.addAll(files));
+  }
+
+  void _removeDayPickedImage(int index) {
+    setState(() => _dayPickedImages.removeAt(index));
+  }
+
+  void _removeDayImageUrl(int index) {
+    setState(() => _dayImageUrls.removeAt(index));
+  }
+
+  void _clearDayEditorFields() {
+    _dayTitleCtrl.clear();
+    _dayDescRich = null;
+    _dayImageUrls.clear();
+    _dayPickedImages.clear();
+    _editingDayIndex = null;
+    _dayEditorEpoch++;
+  }
+
+  void _focusDayTitleField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _dayTitleFocus.requestFocus();
+        final text = _dayTitleCtrl.text;
+        _dayTitleCtrl.selection = TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
+  void _openNewDayEditor() {
+    setState(() {
+      _clearDayEditorFields();
+      _showDayEditor = true;
+    });
+    _focusDayTitleField();
+  }
+
+  void _closeDayEditor() {
+    setState(() {
+      _clearDayEditorFields();
+      _showDayEditor = false;
+    });
+  }
+
+  void _startEditDay(int index) {
+    final day = _dayEntries[index];
+    setState(() {
+      _editingDayIndex = index;
+      _showDayEditor = true;
+      _dayTitleCtrl.text = day.title;
+      _dayDescRich =
+          day.description.trim().isEmpty ? null : day.description;
+      _dayEditorEpoch++;
+      _dayImageUrls
+        ..clear()
+        ..addAll(day.imageUrls);
+      _dayPickedImages
+        ..clear()
+        ..addAll(day.pickedImages);
+    });
+    _focusDayTitleField();
+  }
+
+  void _cancelDayEdit() => _closeDayEditor();
+
+  void _removeDay(int index) {
+    setState(() {
+      if (_editingDayIndex == index) {
+        _clearDayEditorFields();
+        _showDayEditor = false;
+      } else if (_editingDayIndex != null && index < _editingDayIndex!) {
+        _editingDayIndex = _editingDayIndex! - 1;
+      }
+      final next = List<_DayDraft>.from(_dayEntries);
+      next.removeAt(index);
+      _dayEntries = next;
+      _ritualDaysCtrl.text = _dayEntries.length.toString();
+    });
+  }
+
+  void _saveDayEntry() {
+    final title = _dayTitleCtrl.text.trim();
+    final description = (_dayDescRich ?? '').trim();
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _dayImageUrls.isEmpty &&
+        _dayPickedImages.isEmpty) {
+      return;
+    }
+    final editingIndex = _editingDayIndex;
+    final draft = _DayDraft(
+      title: title.isEmpty ? 'Untitled Day' : title,
+      description: description,
+      imageUrls: List<String>.from(_dayImageUrls),
+      pickedImages: List<PickedFile>.from(_dayPickedImages),
+    );
+    setState(() {
+      if (editingIndex != null) {
+        final next = List<_DayDraft>.from(_dayEntries);
+        next[editingIndex] = draft;
+        _dayEntries = next;
+      } else {
+        _dayEntries = [..._dayEntries, draft];
+      }
+      _ritualDaysCtrl.text = _dayEntries.length.toString();
+      _clearDayEditorFields();
+      _showDayEditor = false;
+    });
+  }
+
+  void _openNewSectionEditor() {
+    setState(() {
+      _clearSectionEditorFields();
+      _showSectionEditor = true;
+    });
+    _focusSectionLabelField();
+  }
+
+  void _closeSectionEditor() {
+    setState(() {
+      _clearSectionEditorFields();
+      _showSectionEditor = false;
+    });
+  }
+
+  void _clearSectionEditorFields() {
+    _sectionLabelCtrl.clear();
+    _sectionDescRich = null;
+    _editingSectionIndex = null;
+    _sectionEditorEpoch++;
+  }
+
+  void _focusSectionLabelField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _sectionLabelFocus.requestFocus();
+        final text = _sectionLabelCtrl.text;
+        _sectionLabelCtrl.selection = TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
+  void _startEditSection(int index) {
+    final section = _sectionEntries[index];
+    setState(() {
+      _editingSectionIndex = index;
+      _showSectionEditor = true;
+      _sectionLabelCtrl.text = section.label;
+      _sectionDescRich =
+          section.description.trim().isEmpty ? null : section.description;
+      _sectionEditorEpoch++;
+    });
+    _focusSectionLabelField();
+  }
+
+  void _cancelSectionEdit() => _closeSectionEditor();
+
+  void _removeSection(int index) {
+    setState(() {
+      if (_editingSectionIndex == index) {
+        _clearSectionEditorFields();
+        _showSectionEditor = false;
+      } else if (_editingSectionIndex != null && index < _editingSectionIndex!) {
+        _editingSectionIndex = _editingSectionIndex! - 1;
+      }
+      final next = List<_SectionDraft>.from(_sectionEntries);
+      next.removeAt(index);
+      _sectionEntries = next;
+    });
+  }
+
+  void _saveSectionEntry() {
+    final label = _sectionLabelCtrl.text.trim();
+    final description = (_sectionDescRich ?? '').trim();
+    if (label.isEmpty && description.isEmpty) return;
+    final editingIndex = _editingSectionIndex;
+    final draft = _SectionDraft(
+      label: label.isEmpty ? 'Untitled section' : label,
+      description: description,
+    );
+    setState(() {
+      if (editingIndex != null) {
+        final next = List<_SectionDraft>.from(_sectionEntries);
+        next[editingIndex] = draft;
+        _sectionEntries = next;
+      } else {
+        _sectionEntries = [..._sectionEntries, draft];
+      }
+      _clearSectionEditorFields();
+      _showSectionEditor = false;
+    });
+  }
+
+  void _flushPendingSectionEntry() {
+    if (!_showSectionEditor) return;
+    final label = _sectionLabelCtrl.text.trim();
+    final description = (_sectionDescRich ?? '').trim();
+    if (label.isEmpty && description.isEmpty) return;
+    _saveSectionEntry();
   }
 
   void _syncSlugFromTitle() {
@@ -570,17 +882,24 @@ class _RitualFormState extends State<_RitualForm> {
     }
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedDeityIds.isEmpty) {
-      showCmsSnackbar(
-        title: 'Validation Error',
-        message: 'Please select at least one deity',
-        isError: true,
-      );
+  void _flushPendingDayEntry() {
+    if (!_showDayEditor) return;
+    final title = _dayTitleCtrl.text.trim();
+    final description = (_dayDescRich ?? '').trim();
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _dayImageUrls.isEmpty &&
+        _dayPickedImages.isEmpty) {
       return;
     }
-    if (_days.isEmpty) {
+    _saveDayEntry();
+  }
+
+  Future<void> _submit() async {
+    _flushPendingDayEntry();
+    _flushPendingSectionEntry();
+    if (!_formKey.currentState!.validate()) return;
+    if (_dayEntries.isEmpty) {
       showCmsSnackbar(
         title: 'Validation Error',
         message: 'Please add at least one ritual day before submitting.',
@@ -590,29 +909,18 @@ class _RitualFormState extends State<_RitualForm> {
     }
 
     final ritualDays = int.tryParse(_ritualDaysCtrl.text.trim());
-    final cleanDays = _days.asMap().entries.map((e) {
+    final cleanDays = _dayEntries.asMap().entries.map((e) {
       final d = e.value;
-      return d.copyWith(
-        dayNumber: e.key + 1,
-        activities: d.activities.where((a) => a.trim().isNotEmpty).toList(),
+      return RitualDay(
+        stepNumber: e.key + 1,
+        title: d.title,
+        description: d.description,
+        images: d.imageUrls,
       );
     }).toList();
+    final stepImagesByDay = _dayPickedImagesByDay();
 
-    final cleanSections = _sections
-        .where((s) => s.label.trim().isNotEmpty)
-        .map(
-          (s) => s.copyWith(
-            contents: s.contents
-                .where(
-                  (c) =>
-                      c.title.trim().isNotEmpty ||
-                      c.description.trim().isNotEmpty,
-                )
-                .toList(),
-          ),
-        )
-        .where((s) => s.contents.isNotEmpty)
-        .toList();
+    final cleanSections = _sectionsToModel(_sectionEntries);
 
     final ritualData = RitualModel(
       id: widget.ritual?.id ?? '',
@@ -658,11 +966,13 @@ class _RitualFormState extends State<_RitualForm> {
             isFeatured: ritualData.isFeatured,
             status: ritualData.status,
             image: _pickedImage,
+            stepImagesByDay: stepImagesByDay,
           )
         : await widget.controller.updateRitual(
             widget.ritual!.id,
             ritualData,
             image: _pickedImage,
+            stepImagesByDay: stepImagesByDay,
           );
 
     if (success) widget.onSaved();
@@ -686,82 +996,100 @@ class _RitualFormState extends State<_RitualForm> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _buildBasicDetailsCard()),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildCoverImageCard()),
+                    Expanded(child: _buildLeftColumn()),
+                    const SizedBox(width: 20),
+                    Expanded(child: _buildRightColumn()),
                   ],
                 )
               else ...[
-                _buildBasicDetailsCard(),
+                _buildLeftColumn(),
                 const SizedBox(height: 16),
-                _buildCoverImageCard(),
+                _buildRightColumn(),
               ],
-              const SizedBox(height: 16),
-              _buildScheduleCard(),
-              const SizedBox(height: 16),
-              _buildAccessCard(),
+              const SizedBox(height: 20),
+              _buildDaysSection(),
               const SizedBox(height: 16),
               _buildSectionsCard(),
-              const SizedBox(height: 16),
-              _buildDaysSection(),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: loading ? null : widget.onCancel,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: CmsColors.border),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ).copyWith(mouseCursor: _cmsButtonClickCursor),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: CmsColors.textSecond),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: loading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: CmsColors.orange,
-                        foregroundColor: Color(0xFFFCF7EF),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ).copyWith(mouseCursor: _cmsButtonClickCursor),
-                      child: loading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFFFCF7EF),
-                              ),
-                            )
-                          : Text(
-                              _isEdit ? 'Save Changes' : 'Create Ritual',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
+              _buildFormActions(loading),
               const SizedBox(height: 24),
             ],
           ),
         ),
       );
     });
+  }
+
+  Widget _buildLeftColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBasicDetailsCard(),
+      ],
+    );
+  }
+
+  Widget _buildRightColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCoverImageCard(),
+        const SizedBox(height: 16),
+        _buildScheduleCard(),
+      ],
+    );
+  }
+
+  Widget _buildFormActions(bool loading) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: loading ? null : widget.onCancel,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: CmsColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: CmsColors.textSecond),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: ElevatedButton(
+            onPressed: loading ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CmsColors.orange,
+              foregroundColor: const Color(0xFFFCF7EF),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
+            child: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFFCF7EF),
+                    ),
+                  )
+                : Text(
+                    _isEdit ? 'Save Changes' : 'Create Ritual',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _formHeader() => Row(
@@ -798,6 +1126,11 @@ class _RitualFormState extends State<_RitualForm> {
     return CmsFormCard(
       title: 'Basic details',
       children: [
+        const Text(
+          'How this ritual appears in the app listing.',
+          style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+        ),
+        const SizedBox(height: 12),
         CmsFormField(
           label: 'Title *',
           hint: 'e.g. 7-Day Lakshmi Abundance Ritual',
@@ -839,6 +1172,11 @@ class _RitualFormState extends State<_RitualForm> {
     return CmsFormCard(
       title: 'Cover image',
       children: [
+        const Text(
+          'Shown on the ritual card in the app. Use a wide landscape photo.',
+          style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+        ),
+        const SizedBox(height: 12),
         CmsUploadBox(
           label: _isEdit ? 'Ritual image' : 'Ritual image *',
           icon: Icons.image_outlined,
@@ -863,6 +1201,11 @@ class _RitualFormState extends State<_RitualForm> {
     return CmsFormCard(
       title: 'Schedule & difficulty',
       children: [
+        const Text(
+          'How long the ritual runs and when devotees should perform it.',
+          style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+        ),
+        const SizedBox(height: 12),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -902,77 +1245,6 @@ class _RitualFormState extends State<_RitualForm> {
     );
   }
 
-  Widget _buildAccessCard() {
-    return CmsFormCard(
-      title: 'Access & publishing',
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Access type',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: CmsColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    initialValue: 'Free',
-                    readOnly: true,
-                    enableInteractiveSelection: false,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: CmsColors.textSecond,
-                    ),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF5F5F5),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.border),
-                      ),
-                      disabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: CmsColors.border),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: CmsDropdownField(
-                label: 'Status',
-                items: const ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'],
-                initialValue: _status,
-                onChanged: (v) {
-                  if (v != null) setState(() => _status = v);
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildFeaturedToggle(),
-      ],
-    );
-  }
-
   Widget _buildDeityDropdown() {
     return Obx(() {
       final deities = widget.controller.deities;
@@ -980,7 +1252,7 @@ class _RitualFormState extends State<_RitualForm> {
       final loaded = widget.controller.deitiesLoaded;
 
       return CmsMultiSelectField(
-        label: 'Deity *',
+        label: 'Deity (optional)',
         hintText: 'Select deities',
         isLoading: isLoading && !loaded,
         loadingText: 'Loading deities...',
@@ -999,71 +1271,98 @@ class _RitualFormState extends State<_RitualForm> {
     });
   }
 
-  Widget _buildFeaturedToggle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: CmsColors.bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: CmsColors.border),
-      ),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Featured',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  'Highlight on home featured rituals.',
-                  style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
-                ),
-              ],
-            ),
+  Widget _buildDayEditorFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CmsFormField(
+          label: 'Title for this day',
+          hint: 'e.g. Day 1 — Light the lamp',
+          controller: _dayTitleCtrl,
+          focusNode: _dayTitleFocus,
+          onFieldSubmitted: (_) => _saveDayEntry(),
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 10),
+        CmsRichTextField(
+          key: ValueKey(
+            'day-desc-${_editingDayIndex ?? 'new'}-$_dayEditorEpoch',
           ),
-          Switch(
-            value: _isFeatured,
-            onChanged: (v) => setState(() => _isFeatured = v),
-            activeThumbColor: CmsColors.orange,
-          ),
-        ],
-      ),
+          label: 'What to do on this day',
+          initialValue: _dayDescRich,
+          onChanged: (v) => _dayDescRich = v,
+        ),
+        const SizedBox(height: 10),
+        _DayMultiImagePicker(
+          imageUrls: _dayImageUrls,
+          pickedImages: _dayPickedImages,
+          onPick: _pickDayImages,
+          onRemoveUrl: _removeDayImageUrl,
+          onRemovePicked: _removeDayPickedImage,
+        ),
+      ],
     );
+  }
+
+  static String _truncateDayPreview(String text) {
+    final plain = documentFromValue(text)
+        .toPlainText()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (plain.isEmpty) return '';
+    if (plain.length <= 48) return plain;
+    return '${plain.substring(0, 48)}…';
   }
 
   Widget _buildDaysSection() {
     return CmsFormCard(
       title: 'Daily program',
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
-              onPressed: _addDay,
-              style: TextButton.styleFrom().copyWith(
-                mouseCursor: _cmsButtonClickCursor,
-              ),
-              icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
-              label: const Text(
-                'Add day',
-                style: TextStyle(
-                  color: CmsColors.orange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+        const _RitualHelpBanner(
+          icon: Icons.event_note_outlined,
+          title: 'What is this?',
+          body:
+              'List each day of the ritual in order. Devotees follow these steps '
+              'one day at a time — for example “Day 1: Invocation”, '
+              '“Day 2: Offerings”.',
         ),
-        if (_days.isEmpty)
+        const SizedBox(height: 14),
+        if (_dayEntries.isNotEmpty) ...[
+          _RitualCountChip(
+            count: _dayEntries.length,
+            label: _dayEntries.length == 1 ? 'day added' : 'days added',
+          ),
+          const SizedBox(height: 12),
+        ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stackVertically = constraints.maxWidth < 560;
+            final leftRail = _buildDaysRail();
+            final workspace = _buildDayWorkspace();
+
+            if (stackVertically) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  leftRail,
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: CmsColors.border),
+                  const SizedBox(height: 14),
+                  workspace,
+                ],
+              );
+            }
+
+            return _RitualSplitLayout(
+              leftWidth: 220,
+              left: leftRail,
+              right: workspace,
+            );
+          },
+        ),
+        if (_dayEntries.isEmpty && !_showDayEditor)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
+            margin: const EdgeInsets.only(top: 12),
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
@@ -1076,212 +1375,307 @@ class _RitualFormState extends State<_RitualForm> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'At least one day is required to create a ritual.',
+                    'At least one day is required before you can save the ritual.',
                     style: TextStyle(fontSize: 12, color: Colors.red),
                   ),
                 ),
               ],
             ),
           ),
-        const SizedBox(height: 8),
-        ..._days.asMap().entries.map(
-          (e) => _DayTile(
-            index: e.key,
-            day: e.value,
-            onRemove: () => setState(() {
-              _days.removeAt(e.key);
-              _ritualDaysCtrl.text = _days.length.toString();
-            }),
-            onUpdate: (updated) => setState(() => _days[e.key] = updated),
+      ],
+    );
+  }
+
+  Widget _buildDaysRail() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _RitualRailHeading(
+          title: 'Days',
+          hint: 'Select a day to edit, or add a new one',
+        ),
+        if (_dayEntries.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _RitualEmptyHint(text: 'No days yet'),
+          )
+        else
+          ..._dayEntries.asMap().entries.map(
+            (e) {
+              final hasImages =
+                  e.value.imageUrls.isNotEmpty || e.value.pickedImages.isNotEmpty;
+              final descPreview = e.value.description.trim().isEmpty
+                  ? ''
+                  : _truncateDayPreview(e.value.description);
+              return _RitualRailTile(
+                key: ValueKey(
+                  'day-rail-${e.key}-${e.value.title}-${e.value.description}',
+                ),
+                index: e.key + 1,
+                title: e.value.title.isEmpty ? 'Untitled Day' : e.value.title,
+                subtitle: descPreview.isNotEmpty
+                    ? descPreview
+                    : (hasImages ? 'Has images' : 'No description'),
+                isSelected: _showDayEditor && _editingDayIndex == e.key,
+                onTap: () => _startEditDay(e.key),
+                onRemove: () => _removeDay(e.key),
+              );
+            },
           ),
+        const SizedBox(height: 8),
+        _RitualPrimaryAddButton(
+          label: _dayEntries.isEmpty ? 'Add first day' : 'Add day',
+          onPressed: _openNewDayEditor,
+          compact: true,
         ),
       ],
     );
   }
 
-  void _addDay() {
-    setState(() {
-      final n = _days.length + 1;
-      _days.add(
-        RitualDay(
-          dayNumber: n,
-          title: 'Day $n — ',
-          activities: [''],
-          mantra: '',
-          affirmation: '',
-        ),
+  Widget _buildDayWorkspace() {
+    final editingDayNumber =
+        _editingDayIndex != null ? _editingDayIndex! + 1 : _dayEntries.length + 1;
+
+    if (!_showDayEditor) {
+      return _RitualWorkspaceHint(
+        icon: Icons.event_note_outlined,
+        text: _dayEntries.isEmpty
+            ? 'Click “Add first day” on the left to start the daily program.'
+            : 'Select a day on the left to edit, or add a new one.',
       );
-      _ritualDaysCtrl.text = n.toString();
-    });
+    }
+
+    return _RitualEditorPanel(
+      title: _editingDayIndex != null
+          ? 'Edit day $editingDayNumber'
+          : 'Add day $editingDayNumber',
+      subtitle: 'Enter the title, instructions, and optional images.',
+      onCancel: _cancelDayEdit,
+      onSave: _saveDayEntry,
+      saveLabel: _editingDayIndex != null ? 'Save day' : 'Add this day',
+      child: _buildDayEditorFields(),
+    );
   }
 
   Widget _buildSectionsCard() {
     return CmsFormCard(
-      title: 'Content sections',
+      title: 'Content sections (optional)',
       children: [
-        const Text(
-          'Structured blocks such as Overview and Preparation. Each section '
-          'has a label and one or more content items.',
-          style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
+        const _RitualHelpBanner(
+          icon: Icons.view_agenda_outlined,
+          title: 'What is this?',
+          body:
+              'Extra information under headings — e.g. “Overview” or '
+              '“Preparation”. Each section has a heading and description.',
         ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
-              onPressed: _addSection,
-              style: TextButton.styleFrom().copyWith(
-                mouseCursor: _cmsButtonClickCursor,
-              ),
-              icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
-              label: const Text(
-                'Add section',
-                style: TextStyle(
-                  color: CmsColors.orange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        ..._sections.asMap().entries.map(
-          (e) => _SectionEditorTile(
-            index: e.key,
-            section: e.value,
-            onRemove: () => setState(() => _sections.removeAt(e.key)),
-            onUpdate: (updated) => setState(() => _sections[e.key] = updated),
+        const SizedBox(height: 14),
+        if (_sectionEntries.isNotEmpty) ...[
+          _RitualCountChip(
+            count: _sectionEntries.length,
+            label: _sectionEntries.length == 1 ? 'section' : 'sections',
           ),
+          const SizedBox(height: 12),
+        ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stackVertically = constraints.maxWidth < 560;
+            final leftRail = _buildSectionsRail();
+            final workspace = _buildSectionWorkspace();
+
+            if (stackVertically) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  leftRail,
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: CmsColors.border),
+                  const SizedBox(height: 14),
+                  workspace,
+                ],
+              );
+            }
+
+            return _RitualSplitLayout(
+              leftWidth: 220,
+              left: leftRail,
+              right: workspace,
+            );
+          },
         ),
       ],
     );
   }
 
-  void _addSection() {
-    setState(() {
-      final n = _sections.length + 1;
-      _sections.add(
-        RitualSection(
-          key: '',
-          label: 'Section $n',
-          contents: const [RitualSectionContent()],
+  Widget _buildSectionsRail() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _RitualRailHeading(
+          title: 'Sections',
+          hint: 'Select a section to edit, or add a new one',
         ),
+        if (_sectionEntries.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: _RitualEmptyHint(text: 'No sections yet'),
+          )
+        else
+          ..._sectionEntries.asMap().entries.map(
+            (e) {
+              final descPreview = e.value.description.trim().isEmpty
+                  ? ''
+                  : _truncateDayPreview(e.value.description);
+              return _RitualRailTile(
+                key: ValueKey('section-rail-${e.key}-${e.value.label}'),
+                index: e.key + 1,
+                title: e.value.label.isEmpty
+                    ? 'Untitled section'
+                    : e.value.label,
+                subtitle: descPreview.isNotEmpty
+                    ? descPreview
+                    : 'No description',
+                isSelected:
+                    _showSectionEditor && _editingSectionIndex == e.key,
+                onTap: () => _startEditSection(e.key),
+                onRemove: () => _removeSection(e.key),
+              );
+            },
+          ),
+        const SizedBox(height: 8),
+        _RitualPrimaryAddButton(
+          label: _sectionEntries.isEmpty ? 'Add first section' : 'Add section',
+          onPressed: _openNewSectionEditor,
+          compact: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionEditorFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CmsFormField(
+          label: 'Section heading',
+          hint: 'e.g. Overview, Preparation, After the ritual',
+          controller: _sectionLabelCtrl,
+          focusNode: _sectionLabelFocus,
+          onFieldSubmitted: (_) => _saveSectionEntry(),
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 10),
+        CmsRichTextField(
+          key: ValueKey(
+            'section-desc-${_editingSectionIndex ?? 'new'}-$_sectionEditorEpoch',
+          ),
+          label: 'Section description',
+          initialValue: _sectionDescRich,
+          onChanged: (v) => _sectionDescRich = v,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionWorkspace() {
+    final editingNumber = _editingSectionIndex != null
+        ? _editingSectionIndex! + 1
+        : _sectionEntries.length + 1;
+
+    if (!_showSectionEditor) {
+      return _RitualWorkspaceHint(
+        icon: Icons.view_agenda_outlined,
+        text: _sectionEntries.isEmpty
+            ? 'Click “Add first section” on the left to add optional content.'
+            : 'Select a section on the left to edit, or add a new one.',
       );
-    });
+    }
+
+    return _RitualEditorPanel(
+      title: _editingSectionIndex != null
+          ? 'Edit section $editingNumber'
+          : 'Add section $editingNumber',
+      subtitle: 'Enter a heading and description for this section.',
+      onCancel: _cancelSectionEdit,
+      onSave: _saveSectionEntry,
+      saveLabel:
+          _editingSectionIndex != null ? 'Save section' : 'Add section',
+      child: _buildSectionEditorFields(),
+    );
   }
 }
 
-class _DayTile extends StatelessWidget {
-  const _DayTile({
-    required this.index,
-    required this.day,
-    required this.onRemove,
-    required this.onUpdate,
+class _SectionDraft {
+  const _SectionDraft({
+    required this.label,
+    this.description = '',
   });
-  final int index;
-  final RitualDay day;
-  final VoidCallback onRemove;
-  final ValueChanged<RitualDay> onUpdate;
+
+  final String label;
+  final String description;
+
+  _SectionDraft copyWith({
+    String? label,
+    String? description,
+  }) {
+    return _SectionDraft(
+      label: label ?? this.label,
+      description: description ?? this.description,
+    );
+  }
+}
+
+class _RitualSplitLayout extends StatelessWidget {
+  const _RitualSplitLayout({
+    required this.leftWidth,
+    required this.left,
+    required this.right,
+  });
+
+  final double leftWidth;
+  final Widget left;
+  final Widget right;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: CmsColors.border),
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: leftWidth, child: left),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          child: VerticalDivider(width: 1, thickness: 1, color: CmsColors.border),
+        ),
+        Expanded(child: right),
+      ],
+    );
+  }
+}
+
+class _RitualRailHeading extends StatelessWidget {
+  const _RitualRailHeading({required this.title, required this.hint});
+
+  final String title;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: CmsColors.orange,
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFFCF7EF)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  initialValue: day.title,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: const InputDecoration(
-                    hintText: 'Day 1 — Invocation',
-                    filled: true,
-                    fillColor: CmsColors.bg,
-                  ),
-                  onChanged: (v) => onUpdate(day.copyWith(title: v)),
-                ),
-              ),
-              IconButton(
-                style: IconButton.styleFrom().copyWith(
-                  mouseCursor: _cmsButtonClickCursor,
-                ),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.red,
-                ),
-                onPressed: onRemove,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Activities (one per line)',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: CmsColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
-          TextFormField(
-            initialValue: day.activities.join('\n'),
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'Light the lamp\nChant opening mantra',
-              filled: true,
-              fillColor: CmsColors.bg,
-            ),
-            onChanged: (v) => onUpdate(
-              day.copyWith(
-                activities: v.split('\n').map((s) => s.trim()).toList(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: day.mantra,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: const InputDecoration(
-                    hintText: 'Mantra (optional)',
-                    filled: true,
-                    fillColor: CmsColors.bg,
-                  ),
-                  onChanged: (v) => onUpdate(day.copyWith(mantra: v)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  initialValue: day.affirmation,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: const InputDecoration(
-                    hintText: 'Affirmation (optional)',
-                    filled: true,
-                    fillColor: CmsColors.bg,
-                  ),
-                  onChanged: (v) => onUpdate(day.copyWith(affirmation: v)),
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            hint,
+            style: const TextStyle(fontSize: 11, color: CmsColors.textSecond),
           ),
         ],
       ),
@@ -1289,196 +1683,552 @@ class _DayTile extends StatelessWidget {
   }
 }
 
-class _SectionEditorTile extends StatelessWidget {
-  const _SectionEditorTile({
+class _RitualRailTile extends StatelessWidget {
+  const _RitualRailTile({
+    super.key,
     required this.index,
-    required this.section,
-    required this.onRemove,
-    required this.onUpdate,
+    required this.title,
+    this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+    this.onRename,
+    this.onRemove,
   });
 
   final int index;
-  final RitualSection section;
-  final VoidCallback onRemove;
-  final ValueChanged<RitualSection> onUpdate;
+  final String title;
+  final String? subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback? onRename;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? CmsColors.orange.withValues(alpha: 0.1)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected
+                    ? CmsColors.orange.withValues(alpha: 0.45)
+                    : CmsColors.border,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.only(top: 1),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? CmsColors.orange
+                        : CmsColors.orange.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$index',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected
+                          ? const Color(0xFFFCF7EF)
+                          : CmsColors.orange,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: CmsColors.textPrimary,
+                        ),
+                      ),
+                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (onRename != null)
+                  IconButton(
+                    onPressed: onRename,
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    color: CmsColors.textSecond,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    tooltip: 'Rename',
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                  ),
+                if (onRemove != null)
+                  IconButton(
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    color: Colors.red.shade400,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    tooltip: 'Remove',
+                    style: IconButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RitualWorkspaceHint extends StatelessWidget {
+  const _RitualWorkspaceHint({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
         color: CmsColors.bg,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: CmsColors.border),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 28, color: CmsColors.textSecond),
+          const SizedBox(height: 10),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RitualHelpBanner extends StatelessWidget {
+  const _RitualHelpBanner({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CmsColors.orange.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: CmsColors.orange.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: CmsColors.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: CmsColors.textSecond,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RitualCountChip extends StatelessWidget {
+  const _RitualCountChip({required this.count, required this.label});
+
+  final int count;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: CmsColors.bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: CmsColors.border),
+      ),
+      child: Text(
+        '$count $label',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: CmsColors.textSecond,
+        ),
+      ),
+    );
+  }
+}
+
+class _RitualEmptyHint extends StatelessWidget {
+  const _RitualEmptyHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
+      ),
+    );
+  }
+}
+
+class _RitualEditorPanel extends StatelessWidget {
+  const _RitualEditorPanel({
+    required this.title,
+    required this.subtitle,
+    required this.onCancel,
+    required this.onSave,
+    required this.saveLabel,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+  final String saveLabel;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: CmsColors.orange.withValues(alpha: 0.45)),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                width: 4,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: CmsColors.orange.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Section ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: CmsColors.orange,
-                  ),
+                  color: CmsColors.orange,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                style: IconButton.styleFrom().copyWith(
-                  mouseCursor: _cmsButtonClickCursor,
-                ),
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                onPressed: onRemove,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _RitualLabeled(
-            label: 'Section label',
-            child: TextFormField(
-              initialValue: section.label,
-              style: const TextStyle(fontSize: 13),
-              decoration: const InputDecoration(
-                hintText: 'Overview',
-                filled: true,
-                fillColor: CmsColors.white,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: CmsColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: CmsColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: CmsColors.orange),
-                ),
-              ),
-              onChanged: (v) => onUpdate(
-                section.copyWith(label: v, key: ''),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...section.contents.asMap().entries.map((e) {
-            final content = e.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Color(0xFFFCF7EF),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: CmsColors.border),
-                ),
+              const SizedBox(width: 10),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _RitualLabeled(
-                      label: 'Content title',
-                      child: TextFormField(
-                        initialValue: content.title,
-                        style: const TextStyle(fontSize: 13),
-                        decoration: const InputDecoration(
-                          hintText: 'What you will need',
-                          filled: true,
-                          fillColor: CmsColors.bg,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.orange),
-                          ),
-                        ),
-                        onChanged: (v) {
-                          final list = List<RitualSectionContent>.from(
-                            section.contents,
-                          );
-                          list[e.key] = content.copyWith(title: v);
-                          onUpdate(section.copyWith(contents: list));
-                        },
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _RitualLabeled(
-                      label: 'Description',
-                      child: TextFormField(
-                        initialValue: content.description,
-                        maxLines: 3,
-                        style: const TextStyle(fontSize: 13),
-                        decoration: const InputDecoration(
-                          hintText: 'Lamp, ghee, flowers, coins, red cloth.',
-                          filled: true,
-                          fillColor: CmsColors.bg,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: CmsColors.orange),
-                          ),
-                        ),
-                        onChanged: (v) {
-                          final list = List<RitualSectionContent>.from(
-                            section.contents,
-                          );
-                          list[e.key] = content.copyWith(description: v);
-                          onUpdate(section.copyWith(contents: list));
-                        },
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CmsColors.textSecond,
                       ),
                     ),
                   ],
                 ),
               ),
-            );
-          }),
-          TextButton.icon(
-            onPressed: () {
-              final list = List<RitualSectionContent>.from(section.contents)
-                ..add(const RitualSectionContent());
-              onUpdate(section.copyWith(contents: list));
-            },
-            style: TextButton.styleFrom().copyWith(
-              mouseCursor: _cmsButtonClickCursor,
-            ),
-            icon: const Icon(Icons.add, size: 16, color: CmsColors.orange),
-            label: const Text(
-              'Add content item',
-              style: TextStyle(color: CmsColors.orange, fontSize: 12),
-            ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              TextButton(
+                onPressed: onCancel,
+                style: TextButton.styleFrom().copyWith(
+                  mouseCursor: _cmsButtonClickCursor,
+                ),
+                child: const Text('Cancel'),
+              ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: onSave,
+                icon: const Icon(Icons.check, size: 16),
+                label: Text(saveLabel),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CmsColors.orange,
+                  foregroundColor: const Color(0xFFFCF7EF),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                ).copyWith(mouseCursor: _cmsButtonClickCursor),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RitualPrimaryAddButton extends StatelessWidget {
+  const _RitualPrimaryAddButton({
+    required this.label,
+    required this.onPressed,
+    this.compact = false,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add, size: 18, color: CmsColors.orange),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: CmsColors.orange,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.symmetric(
+            vertical: compact ? 10 : 14,
+            horizontal: 16,
+          ),
+          side: BorderSide(color: CmsColors.orange.withValues(alpha: 0.45)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ).copyWith(mouseCursor: _cmsButtonClickCursor),
+      ),
+    );
+  }
+}
+
+class _DayDraft {
+  const _DayDraft({
+    required this.title,
+    required this.description,
+    this.imageUrls = const [],
+    this.pickedImages = const [],
+  });
+  final String title;
+  final String description;
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
+}
+
+class _DayMultiImagePicker extends StatelessWidget {
+  const _DayMultiImagePicker({
+    this.imagesLabel = 'Day Images',
+    required this.imageUrls,
+    required this.pickedImages,
+    required this.onPick,
+    required this.onRemoveUrl,
+    required this.onRemovePicked,
+  });
+
+  final String imagesLabel;
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
+  final Future<void> Function() onPick;
+  final ValueChanged<int> onRemoveUrl;
+  final ValueChanged<int> onRemovePicked;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImages = imageUrls.isNotEmpty || pickedImages.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          imagesLabel,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '800 × 800 px recommended',
+          style: TextStyle(fontSize: 11, color: CmsColors.textSecond),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: onPick,
+          icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+          label: const Text('Upload Images'),
+          style: OutlinedButton.styleFrom().copyWith(
+            mouseCursor: _cmsButtonClickCursor,
+          ),
+        ),
+        if (hasImages) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var i = 0; i < imageUrls.length; i++)
+                _DayImageThumb(
+                  child: Image.network(
+                    imageUrls[i],
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _brokenThumb(),
+                  ),
+                  onRemove: () => onRemoveUrl(i),
+                ),
+              for (var i = 0; i < pickedImages.length; i++)
+                _DayImageThumb(
+                  child: Image.memory(
+                    Uint8List.fromList(pickedImages[i].bytes),
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                  ),
+                  onRemove: () => onRemovePicked(i),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _brokenThumb() {
+    return Container(
+      width: 88,
+      height: 88,
+      color: CmsColors.bg,
+      alignment: Alignment.center,
+      child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+    );
+  }
+}
+
+class _DayImageThumb extends StatelessWidget {
+  const _DayImageThumb({required this.child, required this.onRemove});
+
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(borderRadius: BorderRadius.circular(8), child: child),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: _cmsClickable(
+            onTap: onRemove,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Colors.black87,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 12, color: Color(0xFFFCF7EF)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1498,27 +2248,3 @@ Widget _SmBtn(String label, Color color, VoidCallback onTap) => _cmsClickable(
     ),
   ),
 );
-
-class _RitualLabeled extends StatelessWidget {
-  const _RitualLabeled({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: CmsColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          child,
-        ],
-      );
-}

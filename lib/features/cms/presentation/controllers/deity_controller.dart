@@ -40,6 +40,15 @@ class DeityController extends GetxController {
     loadDeities(page: 1, force: true);
   }
 
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await loadDeities(page: 1, force: true, search: '');
+  }
+
   Future<void> goToPage(int target) async {
     final p = target.clamp(1, _totalPages.value);
     if (p == _page.value && _deities.isNotEmpty) return;
@@ -47,14 +56,16 @@ class DeityController extends GetxController {
   }
 
   Future<void> setPageSize(int size) async {
-    if (size <= 0 || size == _limit.value) return;
-    _limit.value = size;
+    final capped = size.clamp(1, 100);
+    if (capped == _limit.value) return;
+    _limit.value = capped;
     await loadDeities(page: 1, force: true);
   }
 
   Future<void> setStatusFilter(String? status) async {
+    _search.value = '';
     _statusFilter.value = status;
-    await loadDeities(page: 1, force: true);
+    await loadDeities(page: 1, force: true, search: '');
   }
 
   Future<void> loadDeities({
@@ -80,13 +91,7 @@ class DeityController extends GetxController {
         status: targetStatus,
         search: targetSearch.trim().isEmpty ? null : targetSearch.trim(),
       );
-      final sortedItems = List<DeityModel>.from(result.items)
-        ..sort((a, b) {
-          final cmp = a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
-          if (cmp != 0) return cmp;
-          return a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
-        });
-      _deities.assignAll(sortedItems);
+      _deities.assignAll(result.items);
       _page.value = result.page;
       _limit.value = result.limit;
       _total.value = result.total;

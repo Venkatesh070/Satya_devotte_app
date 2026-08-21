@@ -128,12 +128,17 @@ class PoojaRemoteDataSource {
         .toList();
   }
 
-  /// Fetch all created poojas across all pages for dropdowns/selectors
-  Future<List<PoojaModel>> getAllPoojasForSelector({required bool superAdmin}) async {
+  /// Fetch poojas across pages for dropdowns/selectors.
+  Future<List<PoojaModel>> getAllPoojasForSelector({
+    required bool superAdmin,
+    String? status,
+    int pageSize = 100,
+  }) async {
     final firstPage = await getPoojasPage(
       superAdmin: superAdmin,
       page: 1,
-      limit: 10,
+      limit: pageSize,
+      status: status,
     );
     final allItems = List<PoojaModel>.from(firstPage.items);
     if (firstPage.totalPages > 1) {
@@ -141,7 +146,8 @@ class PoojaRemoteDataSource {
         final pageResult = await getPoojasPage(
           superAdmin: superAdmin,
           page: p,
-          limit: 10,
+          limit: pageSize,
+          status: status,
         );
         allItems.addAll(pageResult.items);
       }

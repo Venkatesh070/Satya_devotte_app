@@ -780,9 +780,15 @@ class CmsMediaUploadBox extends StatelessWidget {
 
 // ── Search bar ────────────────────────────────────────────────────
 class CmsSearchBar extends StatelessWidget {
-  const CmsSearchBar({super.key, required this.hint, this.onChanged});
+  const CmsSearchBar({
+    super.key,
+    required this.hint,
+    this.onChanged,
+    this.controller,
+  });
   final String hint;
   final ValueChanged<String>? onChanged;
+  final TextEditingController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -794,6 +800,7 @@ class CmsSearchBar extends StatelessWidget {
         border: Border.all(color: CmsColors.border),
       ),
       child: TextField(
+        controller: controller,
         onChanged: onChanged,
         style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
         decoration: InputDecoration(

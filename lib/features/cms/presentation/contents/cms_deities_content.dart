@@ -53,18 +53,26 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   _DeityItem? _editing;
   String _filter = 'All';
   late final CmsSearchScheduler _searchScheduler;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _searchScheduler = CmsSearchScheduler(onSearch: _controller.setSearch);
+    _controller.clearSearch();
     Future.microtask(_loadDeities);
   }
 
   @override
   void dispose() {
     _searchScheduler.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _clearSearchField() {
+    _searchController.clear();
+    _searchScheduler.cancelPending();
   }
 
   Future<void> _loadDeities({bool force = false}) async {
@@ -73,6 +81,31 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
       status: status,
       force: force,
     );
+  }
+
+  String _associatedPujasLabel(DeityModel deity) {
+    if (deity.rituals.isEmpty && deity.ritualTitles.isEmpty) {
+      return 'No associated pujas';
+    }
+    final names = <String>[];
+    if (deity.rituals.isNotEmpty) {
+      for (final id in deity.rituals) {
+        final title = deity.ritualTitles[id]?.trim() ?? '';
+        if (title.isNotEmpty) names.add(title);
+      }
+    }
+    if (names.isEmpty) {
+      names.addAll(
+        deity.ritualTitles.values
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty),
+      );
+    }
+    if (names.isEmpty) {
+      final count = deity.rituals.length;
+      return '$count associated puja${count == 1 ? '' : 's'}';
+    }
+    return names.join(', ');
   }
 
 
@@ -92,6 +125,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   }
 
   Future<void> _openEdit(_DeityItem deity) async {
+    if (Get.isRegistered<PoojaController>()) {
+      Get.find<PoojaController>().fetchApprovedPoojasForSelector();
+    }
     final full = await _controller.getDeityById(deity.id);
     if (!mounted) return;
     setState(() {
@@ -141,6 +177,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 Expanded(
                   child: CmsSearchBar(
                     hint: 'Search deities...',
+                    controller: _searchController,
                     onChanged: _searchScheduler.onQueryChanged,
                   ),
                 ),
@@ -176,10 +213,15 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 CmsPrimaryButton(
                   label: isWeb ? 'Add New Deity' : 'Add',
                   icon: Icons.add,
-                  onTap: () => setState(() {
-                    _editing = null;
-                    _showForm = true;
-                  }),
+                  onTap: () {
+                    if (Get.isRegistered<PoojaController>()) {
+                      Get.find<PoojaController>().fetchApprovedPoojasForSelector();
+                    }
+                    setState(() {
+                      _editing = null;
+                      _showForm = true;
+                    });
+                  },
                 ),
               ],
             ),
@@ -194,6 +236,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                   final sel = _filter == f;
                   return _cmsClickable(
                     onTap: () async {
+                      _clearSearchField();
                       setState(() => _filter = f);
                       await _controller.setStatusFilter(
                         f == 'All' ? null : f.toUpperCase(),
@@ -323,7 +366,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    d.name,
+                                    d.name.trim().isNotEmpty ? d.name : 'Untitled deity',
                                     style: TextStyle(
                                       fontSize: 19,
                                       fontWeight: FontWeight.w600,
@@ -332,7 +375,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    d.id,
+                                    _associatedPujasLabel(d),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: CmsColors.textSecond,
@@ -730,30 +775,31 @@ class _DeityFormState extends State<_DeityForm> {
     return <String>[...values, pending];
   }
 
-  Future<void> _loadRitualOptions() async {
+  Future<List<PoojaModel>> _loadRitualOptions({bool showError = false}) async {
+    if (!Get.isRegistered<PoojaController>()) return List<PoojaModel>.from(_poojaOptions);
+    final poojaController = Get.find<PoojaController>();
+    setState(() => _isLoadingPoojas = true);
     try {
-      final poojaController = Get.find<PoojaController>();
-      if (poojaController.poojas.isNotEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _poojaOptions
-            ..clear()
-            ..addAll(poojaController.poojas);
-        });
-        return;
-      }
-      setState(() => _isLoadingPoojas = true);
-      await poojaController.loadPoojas();
-      if (!mounted) return;
+      final approved = await poojaController.fetchApprovedPoojasForSelector();
+      if (!mounted) return approved;
       setState(() {
         _poojaOptions
           ..clear()
-          ..addAll(poojaController.poojas);
+          ..addAll(approved);
         _isLoadingPoojas = false;
       });
+      return approved;
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) return List<PoojaModel>.from(_poojaOptions);
       setState(() => _isLoadingPoojas = false);
+      if (showError) {
+        showCmsSnackbar(
+          title: 'Error',
+          message: 'Failed to load approved pujas',
+          isError: true,
+        );
+      }
+      return List<PoojaModel>.from(_poojaOptions);
     }
   }
 
@@ -877,6 +923,13 @@ class _DeityFormState extends State<_DeityForm> {
               .map((p) => _MultiSelectOption(value: p.id, label: p.title))
               .toList(),
           selectedValues: _ritualIds,
+          isLoading: _isLoadingPoojas,
+          onOpen: () async {
+            final approved = await _loadRitualOptions(showError: true);
+            return approved
+                .map((p) => _MultiSelectOption(value: p.id, label: p.title))
+                .toList();
+          },
           onChanged: (values) => setState(() {
             _ritualIds
               ..clear()
@@ -1319,7 +1372,10 @@ class _DeityFormState extends State<_DeityForm> {
           accept: '1920 × 1080 px, JPG, PNG up to 5MB',
           mediaType: PickMediaType.image,
           initialUrl: widget.initial?.imageUrl,
-          onPicked: (file) => setState(() => _pickedImage = file),
+          onPicked: (file) => setState(() {
+            _pickedImage = file;
+            _imageUrlsCtrl.clear();
+          }),
           onRemoved: () => setState(() {
             _pickedImage = null;
             _imageUrlsCtrl.clear();
@@ -2031,6 +2087,8 @@ class _MultiSelectPickerField extends StatelessWidget {
     required this.options,
     required this.selectedValues,
     required this.onChanged,
+    this.onOpen,
+    this.isLoading = false,
   });
 
   final String fieldLabel;
@@ -2038,6 +2096,27 @@ class _MultiSelectPickerField extends StatelessWidget {
   final List<_MultiSelectOption> options;
   final List<String> selectedValues;
   final ValueChanged<List<String>> onChanged;
+  final Future<List<_MultiSelectOption>> Function()? onOpen;
+  final bool isLoading;
+
+  Future<void> _openModal(BuildContext context) async {
+    var latestOptions = options;
+    if (onOpen != null) {
+      latestOptions = await onOpen!();
+    }
+    if (!context.mounted) return;
+    final current = List<String>.from(selectedValues);
+    final picked = await showDialog<List<String>>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _AssociatePujaModal(
+        options: latestOptions,
+        selectedValues: current,
+        isLoading: latestOptions.isEmpty && isLoading,
+      ),
+    );
+    if (picked != null) onChanged(picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2057,81 +2136,7 @@ class _MultiSelectPickerField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _cmsClickableInk(
-          onTap: () async {
-            final current = List<String>.from(selectedValues);
-            final picked = await showModalBottomSheet<List<String>>(
-              context: context,
-              isScrollControlled: true,
-              builder: (ctx) {
-                final temp = List<String>.from(current);
-                return StatefulBuilder(
-                  builder: (context, setInnerState) {
-                    return SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Select options',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: CmsColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(temp),
-                                  style: TextButton.styleFrom().copyWith(
-                                    mouseCursor: _cmsButtonClickCursor,
-                                  ),
-                                  child: const Text('Done'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Flexible(
-                              child: ListView(
-                                shrinkWrap: true,
-                                children: options.map((o) {
-                                  final checked = temp.contains(o.value);
-                                  return CheckboxListTile(
-                                    dense: true,
-                                    value: checked,
-                                    title: Text(
-                                      o.label,
-                                      style: const TextStyle(
-                                        color: CmsThemeColors.inputText,
-                                      ),
-                                    ),
-                                    onChanged: (v) {
-                                      setInnerState(() {
-                                        if (v == true) {
-                                          if (!temp.contains(o.value))
-                                            temp.add(o.value);
-                                        } else {
-                                          temp.remove(o.value);
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-            if (picked != null) onChanged(picked);
-          },
+          onTap: isLoading ? null : () => _openModal(context),
           child: Container(
             height: 42,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -2153,15 +2158,225 @@ class _MultiSelectPickerField extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: CmsColors.textSecond,
-                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: CmsColors.orange,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: CmsColors.textSecond,
+                  ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AssociatePujaModal extends StatefulWidget {
+  const _AssociatePujaModal({
+    required this.options,
+    required this.selectedValues,
+    this.isLoading = false,
+  });
+
+  final List<_MultiSelectOption> options;
+  final List<String> selectedValues;
+  final bool isLoading;
+
+  @override
+  State<_AssociatePujaModal> createState() => _AssociatePujaModalState();
+}
+
+class _AssociatePujaModalState extends State<_AssociatePujaModal> {
+  late final List<String> _selected;
+  late final TextEditingController _searchCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<String>.from(widget.selectedValues);
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? widget.options
+        : widget.options
+            .where((o) => o.label.toLowerCase().contains(query))
+            .toList();
+
+    return Dialog(
+      backgroundColor: CmsColors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: SizedBox(
+        width: 520,
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Associate Puja',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  _cmsClickable(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(
+                      Icons.close,
+                      size: 20,
+                      color: CmsColors.textSecond,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${widget.options.length} approved pujas',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.orange,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: CmsThemeColors.inputText,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search pujas...',
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: CmsThemeColors.inputHint,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: CmsColors.textSecond,
+                  ),
+                  filled: true,
+                  fillColor: CmsColors.bg,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: CmsColors.orange),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: widget.isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: CmsColors.orange),
+                      )
+                    : filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          widget.options.isEmpty
+                              ? 'No approved pujas found'
+                              : 'No matching pujas',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: CmsColors.textSecond,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final option = filtered[index];
+                          final checked = _selected.contains(option.value);
+                          return CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: checked,
+                            activeColor: CmsColors.orange,
+                            title: Text(
+                              option.label,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: CmsThemeColors.inputText,
+                              ),
+                            ),
+                            onChanged: (v) {
+                              setState(() {
+                                if (v == true) {
+                                  if (!_selected.contains(option.value)) {
+                                    _selected.add(option.value);
+                                  }
+                                } else {
+                                  _selected.remove(option.value);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  CmsPrimaryButton(
+                    label: 'Done',
+                    onTap: () => Navigator.of(context).pop(_selected),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

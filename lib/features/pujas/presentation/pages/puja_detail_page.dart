@@ -21,6 +21,7 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
@@ -266,6 +267,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         rituals = rituals
             .where((r) => _poojaBelongsToDeity(r, deityId, deity))
             .toList(growable: false);
+        rituals = await _hydrateRitualsWithDetails(rituals);
         await offlineService.cacheData(ritualsCacheKey, rituals);
       } else {
         final cached = offlineService.getCachedData(ritualsCacheKey);
@@ -326,8 +328,19 @@ class _RitualDetailPageState extends State<RitualDetailPage>
             .toList(growable: false);
       }
 
+      final associated = await _loadPoojasFromDeityAssociation(deity);
+      list = _mergePoojaListsById(list, associated);
+
       // If online returned nothing or we are offline, try caches
       if (list.isEmpty) {
+        final associatedIds = _poojaIdsFromDeity(deity).toSet();
+
+        bool matchesDeity(Map<String, dynamic> p) {
+          if (_poojaBelongsToDeity(p, deityId, deity)) return true;
+          final id = _entityId(p);
+          return id.isNotEmpty && associatedIds.contains(id);
+        }
+
         // 1. Try specific deity cache first (most accurate)
         final specificCache = offlineService.getCachedData(poojasCacheKey);
         if (specificCache is List && specificCache.isNotEmpty) {
@@ -341,7 +354,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         if (globalCache != null) {
           final globalList = _extractList(globalCache);
           final filtered = globalList
-              .where((p) => _poojaBelongsToDeity(p, deityId, deity))
+              .where(matchesDeity)
               .toList(growable: false);
           if (filtered.isNotEmpty) return filtered;
         }
@@ -359,8 +372,13 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       final globalCache = offlineService.getCachedData('all_poojas');
       if (globalCache != null) {
         final globalList = _extractList(globalCache);
+        final associatedIds = _poojaIdsFromDeity(deity).toSet();
         return globalList
-            .where((p) => _poojaBelongsToDeity(p, deityId, deity))
+            .where((p) {
+              if (_poojaBelongsToDeity(p, deityId, deity)) return true;
+              final id = _entityId(p);
+              return id.isNotEmpty && associatedIds.contains(id);
+            })
             .toList(growable: false);
       }
       rethrow;
@@ -439,6 +457,47 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     }
   }
 
+  static Map<String, dynamic>? _extractSingleRitual(dynamic payload) {
+    if (payload is! Map) return null;
+    final map = Map<String, dynamic>.from(payload);
+    final data = map['data'];
+    if (data is Map) {
+      final nested = Map<String, dynamic>.from(data);
+      if (nested['ritual'] is Map) {
+        return Map<String, dynamic>.from(nested['ritual'] as Map);
+      }
+      return nested;
+    }
+    if (map['ritual'] is Map) {
+      return Map<String, dynamic>.from(map['ritual'] as Map);
+    }
+    return map;
+  }
+
+  Future<List<Map<String, dynamic>>> _hydrateRitualsWithDetails(
+    List<Map<String, dynamic>> rituals,
+  ) async {
+    if (rituals.isEmpty || !Get.find<OfflineService>().isOnline.value) {
+      return rituals;
+    }
+
+    final api = Get.find<ApiClient>().dio;
+    final hydrated = await Future.wait(
+      rituals.map((ritual) async {
+        final id = _entityId(ritual);
+        if (id.isEmpty) return ritual;
+        try {
+          final res = await api.get<dynamic>(ApiEndpoints.ritual(id));
+          return _extractSingleRitual(res.data) ?? ritual;
+        } catch (e) {
+          debugPrint('Ritual detail fetch failed for $id: $e');
+          return ritual;
+        }
+      }),
+    );
+    return hydrated;
+  }
+
   static List<Map<String, dynamic>> _extractList(dynamic payload) {
     dynamic data = payload;
     if (payload is Map<String, dynamic>) {
@@ -493,6 +552,94 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     final deity = payload['deity'];
     if (deity is Map) return Map<String, dynamic>.from(deity);
     return Map<String, dynamic>.from(payload);
+  }
+
+  static Map<String, dynamic>? _extractPooja(dynamic payload) {
+    if (payload is! Map) return null;
+    final data = payload['data'];
+    if (data is Map) {
+      final inner = data['pooja'];
+      if (inner is Map) return Map<String, dynamic>.from(inner);
+      return Map<String, dynamic>.from(data);
+    }
+    final pooja = payload['pooja'];
+    if (pooja is Map) return Map<String, dynamic>.from(pooja);
+    return Map<String, dynamic>.from(payload);
+  }
+
+  static List<String> _poojaIdsFromDeity(Map<String, dynamic>? deity) {
+    if (deity == null) return const [];
+    final rawPujas = deity['pujas'];
+    if (rawPujas is! List) return const [];
+    final ids = <String>[];
+    for (final item in rawPujas) {
+      if (item is Map) {
+        final id = _entityId(item);
+        if (id.isNotEmpty) ids.add(id);
+      } else {
+        final id = item.toString().trim();
+        if (id.isNotEmpty) ids.add(id);
+      }
+    }
+    return ids;
+  }
+
+  static List<Map<String, dynamic>> _mergePoojaListsById(
+    List<Map<String, dynamic>> primary,
+    List<Map<String, dynamic>> secondary,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final pooja in [...primary, ...secondary]) {
+      final id = _entityId(pooja);
+      if (id.isEmpty) continue;
+      byId[id] = pooja;
+    }
+    return byId.values.toList(growable: false);
+  }
+
+  static bool _isApprovedPooja(Map<String, dynamic> pooja) {
+    final status = (pooja['status'] ?? 'APPROVED').toString().trim();
+    return status.isEmpty || status == 'APPROVED';
+  }
+
+  Future<Map<String, dynamic>?> _fetchPoojaById(String id) async {
+    final offlineService = Get.find<OfflineService>();
+    final cacheKey = 'pooja_detail_$id';
+
+    if (!offlineService.isOnline.value) {
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is Map) return Map<String, dynamic>.from(cached);
+      return null;
+    }
+
+    try {
+      final res = await Get.find<ApiClient>().dio.get<dynamic>(
+        ApiEndpoints.pooja(id),
+      );
+      final pooja = _extractPooja(res.data);
+      if (pooja != null) {
+        await offlineService.cacheData(cacheKey, pooja);
+      }
+      return pooja;
+    } catch (e) {
+      debugPrint('Fetch pooja $id failed: $e');
+      final cached = offlineService.getCachedData(cacheKey);
+      if (cached is Map) return Map<String, dynamic>.from(cached);
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPoojasFromDeityAssociation(
+    Map<String, dynamic>? deity,
+  ) async {
+    final ids = _poojaIdsFromDeity(deity);
+    if (ids.isEmpty) return const [];
+
+    final fetched = await Future.wait(ids.map(_fetchPoojaById));
+    return fetched
+        .whereType<Map<String, dynamic>>()
+        .where(_isApprovedPooja)
+        .toList(growable: false);
   }
 
   static Map<String, dynamic> _mergeDeityIntoPooja(
@@ -693,6 +840,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
           queryParameters: {'deity': id, 'limit': 50},
         );
         rituals = _extractList(ritRes.data);
+        rituals = await _hydrateRitualsWithDetails(rituals);
         await offlineService.cacheData(ritualsCacheKey, rituals);
       } catch (e) {
         debugPrint('Hydration: rituals fetch failed: $e');
@@ -2993,14 +3141,7 @@ class _StepTile extends StatelessWidget {
                 ),
                 if (step.description.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  RichTextDisplay(
-                    step.description,
-                    style: AppTypography.inter(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
+                  StepRichTextDisplay.detail(step.description),
                 ],
                 if (step.subSteps.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -3142,6 +3283,57 @@ class _RitualCard extends StatelessWidget {
     return url.replaceAll('`', '').trim();
   }
 
+  static List<dynamic> _ritualDays(Map<String, dynamic> ritual) {
+    final raw = ritual['days'];
+    if (raw is List) return raw;
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(raw);
+        if (parsed is List) return parsed;
+      } catch (_) {}
+    }
+    return const [];
+  }
+
+  static List<dynamic> _ritualSections(Map<String, dynamic> ritual) {
+    final raw = ritual['sections'];
+    if (raw is List) return raw;
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(raw);
+        if (parsed is List) return parsed;
+      } catch (_) {}
+    }
+    return const [];
+  }
+
+  static String _sectionDescription(Map<dynamic, dynamic> sec) {
+    final direct = (sec['description'] ?? sec['content'] ?? '')
+        .toString()
+        .trim();
+    if (direct.isNotEmpty) return direct;
+
+    final contents = sec['contents'];
+    if (contents is! List) return '';
+
+    final parts = <String>[];
+    for (final raw in contents) {
+      if (raw is! Map) continue;
+      final title = (raw['title'] ?? '').toString().trim();
+      final desc = (raw['description'] ?? raw['content'] ?? '')
+          .toString()
+          .trim();
+      if (title.isNotEmpty && desc.isNotEmpty) {
+        parts.add('$title\n$desc');
+      } else if (title.isNotEmpty) {
+        parts.add(title);
+      } else if (desc.isNotEmpty) {
+        parts.add(desc);
+      }
+    }
+    return parts.join('\n\n');
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = (ritual['title'] ?? '').toString();
@@ -3158,10 +3350,8 @@ class _RitualCard extends StatelessWidget {
       );
     }
 
-    final List<dynamic> days = ritual['days'] is List ? ritual['days'] : [];
-    final List<dynamic> sections = ritual['sections'] is List
-        ? ritual['sections']
-        : [];
+    final days = _ritualDays(ritual);
+    final sections = _ritualSections(ritual);
 
     final List<String> tags = [];
     if (ritual['difficulty'] != null) tags.add(ritual['difficulty'].toString());
@@ -3234,7 +3424,7 @@ class _RitualCard extends StatelessWidget {
                 ),
                 if (description.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(
+                  RichTextDisplay(
                     description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -3265,21 +3455,16 @@ class _RitualCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   ...sections.map((sec) {
-                    final label = (sec['label'] ?? sec['title'] ?? '')
-                        .toString();
-                    final contents = sec['contents'] is List
-                        ? sec['contents'] as List
-                        : [];
-                    final description =
-                        contents.isNotEmpty && contents.first is Map
-                        ? (contents.first['description'] ??
-                                  contents.first['content'] ??
-                                  '')
-                              .toString()
-                        : '';
+                    if (sec is! Map) return const SizedBox.shrink();
+                    final secMap = Map<dynamic, dynamic>.from(sec);
+                    final label = (secMap['label'] ?? secMap['title'] ?? '')
+                        .toString()
+                        .trim();
+                    final sectionDescription = _sectionDescription(secMap);
 
-                    if (label.isEmpty && description.isEmpty)
+                    if (label.isEmpty && sectionDescription.isEmpty) {
                       return const SizedBox.shrink();
+                    }
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
@@ -3301,17 +3486,17 @@ class _RitualCard extends StatelessWidget {
                                 color: const Color(0xFF3B1E08),
                               ),
                             ),
-                          if (description.isNotEmpty) ...[
-                            if (label.isNotEmpty) const SizedBox(height: 6),
-                            Text(
-                              description,
+                          if (label.isNotEmpty && sectionDescription.isNotEmpty)
+                            const SizedBox(height: 8),
+                          if (sectionDescription.isNotEmpty)
+                            RichTextDisplay(
+                              sectionDescription,
                               style: AppTypography.inter(
                                 fontSize: 12.5,
                                 height: 1.45,
                                 color: const Color(0xFF4A1C00),
                               ),
                             ),
-                          ],
                         ],
                       ),
                     );
@@ -3350,177 +3535,246 @@ class _DayItem extends StatefulWidget {
 class _DayItemState extends State<_DayItem> {
   bool _isExpanded = false;
 
-  @override
-  Widget build(BuildContext context) {
-    final day = widget.day;
-    final dayNumber = day['dayNumber'] ?? 0;
-    final title = (day['title'] ?? '').toString();
-    final mantra = (day['mantra'] ?? '').toString();
-    final affirmation = (day['affirmation'] ?? '').toString();
-    final List<dynamic> activities = day['activities'] is List
-        ? day['activities']
-        : [];
+  static String _cleanUrl(String url) {
+    return url.replaceAll('`', '').trim();
+  }
 
-    return GestureDetector(
-      onTap: () => setState(() => _isExpanded = !_isExpanded),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFBF2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3E5D0)),
-          boxShadow: _isExpanded
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+  static List<String> _dayImages(Map<dynamic, dynamic> day) {
+    final urls = <String>[];
+
+    void addRaw(dynamic raw) {
+      if (raw is List) {
+        for (final item in raw) {
+          final cleaned = _cleanUrl(item.toString());
+          if (cleaned.isNotEmpty) urls.add(cleaned);
+        }
+      } else if (raw != null) {
+        final cleaned = _cleanUrl(raw.toString());
+        if (cleaned.isNotEmpty) urls.add(cleaned);
+      }
+    }
+
+    addRaw(day['images']);
+    addRaw(day['imageUrls']);
+    addRaw(day['imageUrl'] ?? day['image']);
+
+    return urls;
+  }
+
+  Widget _buildDayHeroImages(List<String> images) {
+    Widget buildImage(String url) {
+      return CachedNetworkImage(
+        imageUrl: url,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(
+          width: double.infinity,
+          color: const Color(0xFFFAECD2),
+          alignment: Alignment.center,
+          child: const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFB07A3A),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$dayNumber',
-                    style: const TextStyle(
-                      color: Color(0xFFFCF7EF),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: AppTypography.inter(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF3B1E08),
-                    ),
-                  ),
-                ),
-                Icon(
-                  _isExpanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: const Color(0xFF8A6B4A),
-                ),
-              ],
-            ),
-            if (mantra.isNotEmpty || affirmation.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              if (mantra.isNotEmpty)
-                _DaySubInfo(label: 'Mantra', content: mantra, icon: Icons.mic),
-              if (affirmation.isNotEmpty)
-                _DaySubInfo(
-                  label: 'Affirmation',
-                  content: affirmation,
-                  icon: Icons.favorite_border,
-                ),
-            ],
-            if (_isExpanded && activities.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              const Divider(height: 1, color: Color(0xFFF3E5D0)),
-              const SizedBox(height: 12),
-              Text(
-                'Steps / Activities',
-                style: AppTypography.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF7A4621),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...activities.asMap().entries.map((entry) {
-                final idx = entry.key + 1;
-                final activity = entry.value.toString();
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6, left: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$idx.',
-                        style: AppTypography.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFB07A3A),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          activity,
-                          style: AppTypography.inter(
-                            fontSize: 12.5,
-                            height: 1.4,
-                            color: const Color(0xFF4A1C00),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ],
+        errorWidget: (_, __, ___) => Container(
+          width: double.infinity,
+          color: const Color(0xFFFAECD2),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.broken_image_outlined,
+            color: Color(0xFFB07A3A),
+            size: 28,
+          ),
         ),
+      );
+    }
+
+    if (images.length == 1) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: buildImage(images.first),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: PageView.builder(
+        itemCount: images.length,
+        itemBuilder: (_, index) => buildImage(images[index]),
       ),
     );
   }
-}
-
-class _DaySubInfo extends StatelessWidget {
-  const _DaySubInfo({
-    required this.label,
-    required this.content,
-    required this.icon,
-  });
-  final String label;
-  final String content;
-  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFF8A6B4A)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: AppTypography.inter(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: const Color(0xFF6A4423),
+    final day = widget.day;
+    final dayNumber = day['stepNumber'] ?? day['dayNumber'] ?? 0;
+    final title = (day['title'] ?? '').toString();
+    final description = (day['description'] ?? '').toString();
+    final subSteps = <String>[];
+    final rawSubSteps = day['subSteps'];
+    if (rawSubSteps is List) {
+      subSteps.addAll(
+        rawSubSteps.map((e) => e.toString().trim()).where((e) => e.isNotEmpty),
+      );
+    }
+    if (subSteps.isEmpty && day['activities'] is List) {
+      subSteps.addAll(
+        (day['activities'] as List)
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty),
+      );
+    }
+    final images = _dayImages(day);
+    final hasBody = images.isNotEmpty ||
+        description.trim().isNotEmpty ||
+        subSteps.isNotEmpty;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF3E5D0)),
+        boxShadow: _isExpanded
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: content),
-                ],
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: hasBody
+                  ? () => setState(() => _isExpanded = !_isExpanded)
+                  : null,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFB07A3A),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$dayNumber',
+                        style: const TextStyle(
+                          color: Color(0xFFFCF7EF),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        title.trim().isNotEmpty
+                            ? title.trim()
+                            : 'Day $dayNumber',
+                        style: AppTypography.inter(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B1E08),
+                        ),
+                      ),
+                    ),
+                    if (hasBody)
+                      Icon(
+                        _isExpanded ? Icons.expand_less : Icons.expand_more,
+                        size: 20,
+                        color: const Color(0xFF8A6B4A),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
+          if (_isExpanded) ...[
+            if (images.isNotEmpty) _buildDayHeroImages(images),
+            if (description.trim().isNotEmpty ||
+                subSteps.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (description.trim().isNotEmpty) ...[
+                      RichTextDisplay(
+                        description,
+                        style: AppTypography.inter(
+                          fontSize: 12.5,
+                          height: 1.45,
+                          color: const Color(0xFF4A1C00),
+                        ),
+                      ),
+                    ],
+                    if (subSteps.isNotEmpty) ...[
+                      if (description.trim().isNotEmpty)
+                        const SizedBox(height: 14),
+                      const Divider(height: 1, color: Color(0xFFF3E5D0)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Steps',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF7A4621),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...subSteps.asMap().entries.map((entry) {
+                        final idx = entry.key + 1;
+                        final step = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6, left: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$idx.',
+                                style: AppTypography.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFB07A3A),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: RichTextDisplay(
+                                  step,
+                                  style: AppTypography.inter(
+                                    fontSize: 12.5,
+                                    height: 1.4,
+                                    color: const Color(0xFF4A1C00),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
+          ],
         ],
       ),
     );

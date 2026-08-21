@@ -25,6 +25,7 @@ class RichTextDisplay extends StatelessWidget {
     if (v == null || v.trim().isEmpty) return const SizedBox.shrink();
     if (isDeltaJson(v)) {
       return _RichQuillDisplay(
+        key: ValueKey(v),
         value: v,
         style: style,
         textAlign: textAlign,
@@ -44,6 +45,7 @@ class RichTextDisplay extends StatelessWidget {
 
 class _RichQuillDisplay extends StatefulWidget {
   const _RichQuillDisplay({
+    super.key,
     required this.value,
     this.style,
     this.textAlign,
@@ -62,16 +64,30 @@ class _RichQuillDisplay extends StatefulWidget {
 }
 
 class _RichQuillDisplayState extends State<_RichQuillDisplay> {
-  late final QuillController _controller;
+  late QuillController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = QuillController(
-      document: documentFromValue(widget.value),
+    _controller = _buildController(widget.value);
+  }
+
+  QuillController _buildController(String value) {
+    return QuillController(
+      document: documentFromValue(value),
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
     );
+  }
+
+  @override
+  void didUpdateWidget(_RichQuillDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      final old = _controller;
+      _controller = _buildController(widget.value);
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
   }
 
   @override

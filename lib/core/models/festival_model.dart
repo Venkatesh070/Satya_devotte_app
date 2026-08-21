@@ -18,6 +18,8 @@ class FestivalModel {
     this.notifyUsers = false,
     this.notificationDaysBefore = 0,
     this.rituals,
+    this.ritualIds = const [],
+    this.ritualTitles = const {},
     this.imageUrl,
     this.createdBy,
     this.createdAt,
@@ -37,7 +39,17 @@ class FestivalModel {
   final String locationCountry;
   final bool notifyUsers;
   final int notificationDaysBefore;
+
+  /// Display string of associated puja titles (comma-separated). Prefer
+  /// [ritualDisplayNames] / [ritualIds] for structured access.
   final String? rituals;
+
+  /// Associated puja ObjectIds.
+  final List<String> ritualIds;
+
+  /// Optional `id -> title` when the API returns populated ritual objects.
+  final Map<String, String> ritualTitles;
+
   final String? imageUrl;
   final String? createdBy;
   final String? createdAt;
@@ -49,6 +61,20 @@ class FestivalModel {
       locationCountry,
     ].where((s) => s.isNotEmpty).toList();
     return parts.isNotEmpty ? parts.join(', ') : location;
+  }
+
+  /// Human-readable associated puja names for list/chips.
+  String get ritualDisplayNames {
+    if (ritualIds.isEmpty) {
+      return (rituals ?? '').trim();
+    }
+    return ritualIds
+        .map((id) {
+          final title = ritualTitles[id];
+          if (title != null && title.trim().isNotEmpty) return title.trim();
+          return id;
+        })
+        .join(', ');
   }
 
   static String _normaliseStatus(String raw) {
@@ -80,14 +106,59 @@ class FestivalModel {
     return {'city': raw.toString(), 'state': '', 'country': ''};
   }
 
-  static String? _parseRituals(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is List) {
-      if (raw.isEmpty) return null;
-      return raw.map((e) => e.toString()).join(', ');
+  static List<String> _listOfRitualIds(dynamic raw) {
+    if (raw == null) return const [];
+    if (raw is! List) {
+      final s = raw.toString().trim();
+      if (s.isEmpty) return const [];
+      return s
+          .split(RegExp(r'[,\s]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
-    final s = raw.toString().trim();
-    return s.isEmpty ? null : s;
+    return raw
+        .map((e) {
+          if (e == null) return '';
+          if (e is String) return e.trim();
+          if (e is Map) {
+            return (e['_id'] ?? e['id'])?.toString().trim() ?? '';
+          }
+          return e.toString().trim();
+        })
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  static Map<String, String> _idToTitleMap(dynamic raw) {
+    if (raw is! List) return const {};
+    final out = <String, String>{};
+    for (final e in raw) {
+      if (e is! Map) continue;
+      final id = (e['_id'] ?? e['id'])?.toString().trim() ?? '';
+      if (id.isEmpty) continue;
+      final title = (e['title'] ?? e['name'] ?? e['poojaName'] ?? '')
+          .toString()
+          .trim();
+      if (title.isEmpty) continue;
+      out[id] = title;
+    }
+    return out;
+  }
+
+  static String? _displayRituals(
+    List<String> ids,
+    Map<String, String> titles,
+  ) {
+    if (ids.isEmpty) return null;
+    final names = ids
+        .map((id) {
+          final title = titles[id];
+          if (title != null && title.isNotEmpty) return title;
+          return id;
+        })
+        .toList();
+    return names.join(', ');
   }
 
   static String _str(
@@ -118,6 +189,9 @@ class FestivalModel {
   }
 
   factory FestivalModel.fromJson(Map<String, dynamic> json) {
+    final rawAssociatePujas = json['associate_pujas'] ?? json['rituals'];
+    final ritualIds = _listOfRitualIds(rawAssociatePujas);
+    final ritualTitles = _idToTitleMap(rawAssociatePujas);
     return FestivalModel(
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'name']),
@@ -133,7 +207,9 @@ class FestivalModel {
       notifyUsers: json['notifyUsers'] as bool? ?? false,
       notificationDaysBefore:
           (json['notificationDaysBefore'] as num?)?.toInt() ?? 0,
-      rituals: _parseRituals(json['rituals']),
+      ritualIds: ritualIds,
+      ritualTitles: ritualTitles,
+      rituals: _displayRituals(ritualIds, ritualTitles),
       imageUrl: json['image'] as String? ?? json['imageUrl'] as String?,
       createdBy: _extractId(json['createdBy']),
       status: _normaliseStatus(_str(json, ['status'], 'Pending')),
@@ -189,6 +265,8 @@ class FestivalModel {
     bool? notifyUsers,
     int? notificationDaysBefore,
     String? rituals,
+    List<String>? ritualIds,
+    Map<String, String>? ritualTitles,
     String? imageUrl,
     String? status,
     String? createdBy,
@@ -208,6 +286,8 @@ class FestivalModel {
     notificationDaysBefore:
         notificationDaysBefore ?? this.notificationDaysBefore,
     rituals: rituals ?? this.rituals,
+    ritualIds: ritualIds ?? this.ritualIds,
+    ritualTitles: ritualTitles ?? this.ritualTitles,
     imageUrl: imageUrl ?? this.imageUrl,
     status: status ?? this.status,
     createdBy: createdBy ?? this.createdBy,

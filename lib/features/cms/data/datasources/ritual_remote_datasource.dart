@@ -138,7 +138,9 @@ class RitualRemoteDataSource {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByDay = const [],
   }) async {
+    final hasStepImages = stepImagesByDay.any((files) => files.isNotEmpty);
     final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
     final payload = Map<String, dynamic>.from(ritual.toJson());
     if (hasMedia) {
@@ -150,7 +152,7 @@ class RitualRemoteDataSource {
       );
     }
 
-    if (!hasMedia) {
+    if (!hasMedia && !hasStepImages) {
       final response = await _apiClient.dio.post(
         ApiEndpoints.createRitual,
         data: payload,
@@ -161,31 +163,17 @@ class RitualRemoteDataSource {
     }
 
     final formMap = _toMultipartFields(payload);
-    if (image != null) {
-      formMap['image'] = MultipartFile.fromBytes(
-        image.bytes,
-        filename: image.filename,
-        contentType: MediaType.parse(image.mimeType),
-      );
-    }
-    if (audio != null) {
-      formMap['audio'] = MultipartFile.fromBytes(
-        audio.bytes,
-        filename: audio.filename,
-        contentType: MediaType.parse(audio.mimeType),
-      );
-    }
-    if (video != null) {
-      formMap['video'] = MultipartFile.fromBytes(
-        video.bytes,
-        filename: video.filename,
-        contentType: MediaType.parse(video.mimeType),
-      );
-    }
+    final formData = _buildFormData(
+      formMap,
+      image: image,
+      audio: audio,
+      video: video,
+      stepImagesByDay: stepImagesByDay,
+    );
 
     final response = await _apiClient.dio.post(
       ApiEndpoints.createRitual,
-      data: FormData.fromMap(formMap),
+      data: formData,
     );
     return RitualModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
@@ -198,9 +186,11 @@ class RitualRemoteDataSource {
     PickedFile? image,
     PickedFile? audio,
     PickedFile? video,
+    List<List<PickedFile>> stepImagesByDay = const [],
   }) async {
+    final hasStepImages = stepImagesByDay.any((files) => files.isNotEmpty);
     final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
-    if (!hasMedia) {
+    if (!hasMedia && !hasStepImages) {
       final payload = Map<String, dynamic>.from(ritual.toJson());
       _applyExplicitMediaClearsForPatch(payload, ritual);
       final response = await _apiClient.dio.patch(
@@ -220,31 +210,17 @@ class RitualRemoteDataSource {
       video: video,
     );
     final formMap = _toMultipartFields(payload);
-    if (image != null) {
-      formMap['image'] = MultipartFile.fromBytes(
-        image.bytes,
-        filename: image.filename,
-        contentType: MediaType.parse(image.mimeType),
-      );
-    }
-    if (audio != null) {
-      formMap['audio'] = MultipartFile.fromBytes(
-        audio.bytes,
-        filename: audio.filename,
-        contentType: MediaType.parse(audio.mimeType),
-      );
-    }
-    if (video != null) {
-      formMap['video'] = MultipartFile.fromBytes(
-        video.bytes,
-        filename: video.filename,
-        contentType: MediaType.parse(video.mimeType),
-      );
-    }
+    final formData = _buildFormData(
+      formMap,
+      image: image,
+      audio: audio,
+      video: video,
+      stepImagesByDay: stepImagesByDay,
+    );
 
     final response = await _apiClient.dio.patch(
       ApiEndpoints.updateRitual(id),
-      data: FormData.fromMap(formMap),
+      data: formData,
     );
     return RitualModel.fromJson(
       _extractSingle(response.data as Map<String, dynamic>),
@@ -278,7 +254,15 @@ class RitualRemoteDataSource {
 
   Map<String, dynamic> _extractSingle(Map<String, dynamic> body) {
     final d = body['data'];
-    if (d is Map<String, dynamic>) return d;
+    if (d is Map<String, dynamic>) {
+      if (d['ritual'] is Map) {
+        return Map<String, dynamic>.from(d['ritual'] as Map);
+      }
+      return d;
+    }
+    if (body['ritual'] is Map) {
+      return Map<String, dynamic>.from(body['ritual'] as Map);
+    }
     return body;
   }
 
@@ -357,5 +341,59 @@ class RitualRemoteDataSource {
     };
     payload['media'] = fresh;
     return fresh;
+  }
+
+  FormData _buildFormData(
+    Map<String, dynamic> formMap, {
+    PickedFile? image,
+    PickedFile? audio,
+    PickedFile? video,
+    List<List<PickedFile>> stepImagesByDay = const [],
+  }) {
+    if (image != null) {
+      formMap['image'] = MultipartFile.fromBytes(
+        image.bytes,
+        filename: image.filename,
+        contentType: MediaType.parse(image.mimeType),
+      );
+    }
+    if (audio != null) {
+      formMap['audio'] = MultipartFile.fromBytes(
+        audio.bytes,
+        filename: audio.filename,
+        contentType: MediaType.parse(audio.mimeType),
+      );
+    }
+    if (video != null) {
+      formMap['video'] = MultipartFile.fromBytes(
+        video.bytes,
+        filename: video.filename,
+        contentType: MediaType.parse(video.mimeType),
+      );
+    }
+
+    final stepImageMeta = <Map<String, int>>[];
+    final stepImageFiles = <MultipartFile>[];
+    for (var dayIdx = 0; dayIdx < stepImagesByDay.length; dayIdx++) {
+      for (final file in stepImagesByDay[dayIdx]) {
+        stepImageMeta.add({'stepNumber': dayIdx + 1});
+        stepImageFiles.add(
+          MultipartFile.fromBytes(
+            file.bytes,
+            filename: file.filename,
+            contentType: MediaType.parse(file.mimeType),
+          ),
+        );
+      }
+    }
+    if (stepImageMeta.isNotEmpty) {
+      formMap['stepImageMeta'] = jsonEncode(stepImageMeta);
+    }
+
+    final formData = FormData.fromMap(formMap);
+    for (final file in stepImageFiles) {
+      formData.files.add(MapEntry('stepImage', file));
+    }
+    return formData;
   }
 }
