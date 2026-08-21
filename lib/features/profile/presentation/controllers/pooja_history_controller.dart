@@ -22,6 +22,14 @@ class PoojaHistoryController extends GetxController {
     super.onInit();
     _loadSessionDates();
     fetchHistory();
+
+    if (Get.isRegistered<OfflineService>()) {
+      ever(Get.find<OfflineService>().isOnline, (isOnline) {
+        if (isOnline == true) {
+          fetchHistory();
+        }
+      });
+    }
   }
 
   Future<void> _saveSessionDates() async {
@@ -51,17 +59,21 @@ class PoojaHistoryController extends GetxController {
 
       dynamic payload;
       if (offlineService.isOnline.value) {
-        final data = await _repository.getPoojaHistory();
-        payload = data['data'] ?? data;
-        await offlineService.cacheData(cacheKey, payload);
+        try {
+          final data = await _repository.getPoojaHistory();
+          payload = data['data'] ?? data;
+          await offlineService.cacheData(cacheKey, payload);
+        } catch (_) {
+          payload = offlineService.getCachedData(cacheKey);
+        }
       } else {
         payload = offlineService.getCachedData(cacheKey);
       }
 
       debugPrint('PoojaHistoryController.fetchHistory(): payload = $payload');
 
-      if (payload is Map<String, dynamic>) {
-        history.value = payload;
+      if (payload is Map) {
+        history.value = Map<String, dynamic>.from(payload);
         final pending = payload['pending'];
         final Set<String> pendingPoojaIds = {};
         debugPrint('PoojaHistoryController.fetchHistory(): pending = $pending');
@@ -216,6 +228,7 @@ class PoojaHistoryController extends GetxController {
         'poojaId': poojaId,
         if (scheduleId != null) 'scheduleId': scheduleId,
       });
+      _markLocalPoojaFinished(poojaId);
       return;
     }
     try {
@@ -232,6 +245,7 @@ class PoojaHistoryController extends GetxController {
       await offlineService.queueAction('finish_pooja', {
         'sessionId': sessionId,
       });
+      _markLocalSessionFinished(sessionId);
       return;
     }
     try {
@@ -240,5 +254,37 @@ class PoojaHistoryController extends GetxController {
     } catch (e) {
       print('Error finishing pooja by session: $e');
     }
+  }
+
+  void _markLocalPoojaFinished(String poojaId) {
+    final session = {
+      '_id': 'offline_finished_${DateTime.now().millisecondsSinceEpoch}',
+      'pooja': {'_id': poojaId, 'id': poojaId},
+      'status': 'FINISHED',
+      'finishedAt': DateTime.now().toIso8601String(),
+    };
+    finishedPoojas.add(session);
+    finishedPoojas.refresh();
+  }
+
+  void _markLocalSessionFinished(String sessionId) {
+    Map? target;
+    pendingPoojas.removeWhere((item) {
+      if (item is Map && (item['_id'] ?? item['id'])?.toString() == sessionId) {
+        target = item;
+        return true;
+      }
+      return false;
+    });
+    if (target != null) {
+      final updated = Map<String, dynamic>.from(target!)
+        ..['status'] = 'FINISHED'
+        ..['finishedAt'] = DateTime.now().toIso8601String();
+      finishedPoojas.add(updated);
+    } else {
+      _markLocalPoojaFinished(sessionId);
+    }
+    pendingPoojas.refresh();
+    finishedPoojas.refresh();
   }
 }

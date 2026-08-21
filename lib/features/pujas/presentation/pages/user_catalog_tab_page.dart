@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
+import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
@@ -70,6 +71,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _searchDebounce;
+  Worker? _onlineWorker;
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -91,10 +93,19 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _load(reset: true);
+
+    if (Get.isRegistered<OfflineService>()) {
+      _onlineWorker = ever(Get.find<OfflineService>().isOnline, (isOnline) {
+        if (isOnline == true && mounted) {
+          _load(reset: true);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _onlineWorker?.dispose();
     _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();

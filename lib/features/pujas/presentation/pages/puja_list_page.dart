@@ -181,8 +181,8 @@ class _RitualListPageState extends State<RitualListPage> {
       final ids = <String>{};
       final docs = <DeityListItem>[];
       for (final m in raw) {
-        if (m is! Map<String, dynamic>) continue;
-        final item = DeityListItem.fromJson(m);
+        if (m is! Map) continue;
+        final item = DeityListItem.fromJson(Map<String, dynamic>.from(m));
         if (item.id.isEmpty) continue;
         ids.add(item.id);
         docs.add(item);
@@ -198,8 +198,8 @@ class _RitualListPageState extends State<RitualListPage> {
         final ids = <String>{};
         final docs = <DeityListItem>[];
         for (final m in cached) {
-          if (m is! Map<String, dynamic>) continue;
-          final item = DeityListItem.fromJson(m);
+          if (m is! Map) continue;
+          final item = DeityListItem.fromJson(Map<String, dynamic>.from(m));
           if (item.id.isEmpty) continue;
           ids.add(item.id);
           docs.add(item);

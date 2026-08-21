@@ -11,6 +11,8 @@ import 'package:satya_devotte_app/core/theme/app_theme.dart';
 import 'package:satya_devotte_app/shared/widgets/app_music_floating_button.dart';
 import 'package:satya_devotte_app/shared/widgets/api_loading_overlay.dart';
 
+import 'package:satya_devotte_app/shared/widgets/connectivity_status_banner.dart';
+
 import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 
@@ -108,16 +110,23 @@ class SathyaApp extends StatelessWidget {
         return Stack(
           children: [
             ApiLoadingOverlay(
-              child: Stack(
-                fit: StackFit.expand,
+              child: Column(
                 children: [
-                  child,
-                  Obx(() {
-                    // Hide FAB if there's an active dialog/picker
-                    if (_dialogObserver.hasActiveDialog.value)
-                      return const SizedBox.shrink();
-                    return const AppMusicFloatingButton();
-                  }),
+                  const ConnectivityStatusBanner(),
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        child,
+                        Obx(() {
+                          // Hide FAB if there's an active dialog/picker
+                          if (_dialogObserver.hasActiveDialog.value)
+                            return const SizedBox.shrink();
+                          return const AppMusicFloatingButton();
+                        }),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -137,9 +146,6 @@ class SathyaApp extends StatelessWidget {
                   AppRoutes.splash, // Usually okay to keep splash
                 ];
 
-                // REQ: We don't want to show the full screen overlay anymore
-                // for these routes, and for other routes we might prefer a dialog.
-                // Keeping it only as a fallback for truly unsupported routes if needed.
                 if (offlineSupportedRoutes.contains(currentRoute)) {
                   return const SizedBox.shrink();
                 }

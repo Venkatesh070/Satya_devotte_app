@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
@@ -28,12 +30,15 @@ class OfflineService extends GetxService {
     _cacheBox = Hive.box(AppConstants.cacheBox);
     _syncQueueBox = Hive.box('sync_queue'); // New box for offline actions
 
-    _checkInitialConnectivity();
+    _initConnectivity();
+  }
+
+  Future<void> _initConnectivity() async {
+    await checkConnectivity();
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
       _updateConnectionStatus,
     );
 
-    // Proactively cache all data when app starts and online
     if (isOnline.value) {
       _proactivelyCacheAllData();
     }
@@ -41,29 +46,40 @@ class OfflineService extends GetxService {
 
   Future<void> checkConnectivity() async {
     final result = await _connectivity.checkConnectivity();
-    _updateConnectionStatus(result);
+    await _updateConnectionStatus(result);
   }
 
-  Future<void> _checkInitialConnectivity() async {
-    await checkConnectivity();
-  }
-
-  void _updateConnectionStatus(List<ConnectivityResult> results) {
-    // connectivity_plus 6.0.0+ returns List<ConnectivityResult>
-    final result = results.first;
-    isOnline.value = result != ConnectivityResult.none;
-    if (isOnline.value) {
-      showNoInternetScreen.value = false;
-      _processSyncQueue();
-      // Also re-cache data when connection is restored
-      _proactivelyCacheAllData();
-    } else {
-      // We no longer show the global screen automatically based on requirement
-      // showNoInternetScreen.value = true;
+  Future<bool> _hasRealInternetAccess() async {
+    if (kIsWeb) return true;
+    try {
+      final lookup = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 3));
+      return lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
     }
-    debugPrint(
-      'OfflineService: Connection status changed to ${isOnline.value ? 'Online' : 'Offline'}',
-    );
+  }
+
+  Future<void> _updateConnectionStatus(List<ConnectivityResult> results) async {
+    final result = results.first;
+    final hasInterface = result != ConnectivityResult.none;
+    bool online = hasInterface;
+    if (hasInterface) {
+      online = await _hasRealInternetAccess();
+    }
+
+    if (isOnline.value != online) {
+      isOnline.value = online;
+      if (online) {
+        showNoInternetScreen.value = false;
+        _processSyncQueue();
+        _proactivelyCacheAllData();
+      }
+      debugPrint(
+        'OfflineService: Connection status changed to ${isOnline.value ? 'Online' : 'Offline'}',
+      );
+    }
   }
 
   /// Shows a modal popup if there's no internet.
@@ -210,6 +226,7 @@ class OfflineService extends GetxService {
       try {
         final homeResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.home,
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('home_data', homeResponse.data);
         debugPrint('OfflineService: Home data cached successfully');
@@ -221,6 +238,7 @@ class OfflineService extends GetxService {
       try {
         final deitiesResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.deities,
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('deities_list', deitiesResponse.data);
         debugPrint('OfflineService: Deities list cached successfully');
@@ -232,9 +250,28 @@ class OfflineService extends GetxService {
       try {
         final cached = await _fetchAllPoojasForCache(apiClient);
         await cacheData('all_poojas', cached);
+        final poojasResponse = await apiClient.dio.get<dynamic>(
+          ApiEndpoints.poojas,
+          queryParameters: {'limit': 1000},
+          options: Options(extra: {kSkipApiLoaderKey: true}),
+        );
+        await cacheData('all_poojas', poojasResponse.data);
         debugPrint('OfflineService: All poojas cached successfully');
       } catch (e) {
         debugPrint('OfflineService: Failed to cache all poojas: $e');
+      }
+
+      // Cache All Rituals (Global)
+      try {
+        final ritualsResponse = await apiClient.dio.get<dynamic>(
+          ApiEndpoints.rituals,
+          queryParameters: {'limit': 1000},
+          options: Options(extra: {kSkipApiLoaderKey: true}),
+        );
+        await cacheData('all_rituals', ritualsResponse.data);
+        debugPrint('OfflineService: All rituals cached successfully');
+      } catch (e) {
+        debugPrint('OfflineService: Failed to cache all rituals: $e');
       }
 
       // Cache Calendar Data for Current and Next 3 Months
@@ -244,9 +281,10 @@ class OfflineService extends GetxService {
           final month = DateTime(now.year, now.month + i);
           final cacheKey = 'calendar_${month.year}_${month.month}';
 
-          final calendarResponse = await apiClient.dio.get(
+          final calendarResponse = await apiClient.dio.get<dynamic>(
             ApiEndpoints.calendar,
             queryParameters: {'month': month.month, 'year': month.year},
+            options: Options(extra: {kSkipApiLoaderKey: true}),
           );
           await cacheData(cacheKey, calendarResponse.data);
         }
@@ -259,9 +297,7 @@ class OfflineService extends GetxService {
       try {
         final streakResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.userStreak,
-          options: Options(
-            extra: {kSkipApiLoaderKey: true},
-          ),
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('user_streak', streakResponse.data);
         debugPrint('OfflineService: User streak cached successfully');
@@ -313,6 +349,7 @@ class OfflineService extends GetxService {
             try {
               final res = await apiClient.dio.get<dynamic>(
                 ApiEndpoints.deity(deityId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
               );
               final fullDeity = _extractDeity(res.data);
               if (fullDeity != null) {
@@ -328,6 +365,102 @@ class OfflineService extends GetxService {
         }
       } catch (e) {
         debugPrint('OfflineService: Error caching deity details: $e');
+      }
+
+      // Proactively cache full details for all poojas!
+      try {
+        final poojasData = getCachedData('all_poojas');
+        List<Map> poojaList = [];
+        if (poojasData is Map) {
+          final data = poojasData['data'] as Map?;
+          if (data != null) {
+            poojaList =
+                (data['poojas'] ?? data['results'] ?? data['items'] ?? [])
+                    .whereType<Map>()
+                    .toList();
+          }
+          if (poojaList.isEmpty) {
+            poojaList =
+                (poojasData['poojas'] ??
+                        poojasData['results'] ??
+                        poojasData['items'] ??
+                        [])
+                    .whereType<Map>()
+                    .toList();
+          }
+        } else if (poojasData is List) {
+          poojaList = poojasData.whereType<Map>().toList();
+        }
+
+        for (final p in poojaList) {
+          final pId = _entityId(p);
+          if (pId.isNotEmpty) {
+            if (getCachedData('pooja_detail_$pId') != null) continue;
+            try {
+              final res = await apiClient.dio.get<dynamic>(
+                ApiEndpoints.pooja(pId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
+              );
+              final payload = res.data;
+              if (payload != null) {
+                await cacheData('pooja_detail_$pId', payload);
+                debugPrint('OfflineService: Cached details for pooja $pId');
+              }
+            } catch (e) {
+              debugPrint('OfflineService: Failed to cache pooja $pId: $e');
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('OfflineService: Error caching pooja details: $e');
+      }
+
+      // Proactively cache full details for all rituals!
+      try {
+        final ritualsData = getCachedData('all_rituals');
+        List<Map> ritualList = [];
+        if (ritualsData is Map) {
+          final data = ritualsData['data'] as Map?;
+          if (data != null) {
+            ritualList =
+                (data['rituals'] ?? data['results'] ?? data['items'] ?? [])
+                    .whereType<Map>()
+                    .toList();
+          }
+          if (ritualList.isEmpty) {
+            ritualList =
+                (ritualsData['rituals'] ??
+                        ritualsData['results'] ??
+                        ritualsData['items'] ??
+                        [])
+                    .whereType<Map>()
+                    .toList();
+          }
+        } else if (ritualsData is List) {
+          ritualList = ritualsData.whereType<Map>().toList();
+        }
+
+        for (final r in ritualList) {
+          final rId = _entityId(r);
+          if (rId.isNotEmpty) {
+            if (getCachedData('ritual_detail_$rId') != null) continue;
+            try {
+              final res = await apiClient.dio.get<dynamic>(
+                ApiEndpoints.ritual(rId),
+                options: Options(extra: {kSkipApiLoaderKey: true}),
+              );
+              final payload = res.data;
+              if (payload != null) {
+                await cacheData('ritual_detail_$rId', payload);
+                debugPrint('OfflineService: Cached details for ritual $rId');
+              }
+            } catch (e) {
+              debugPrint('OfflineService: Failed to cache ritual $rId: $e');
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('OfflineService: Error caching ritual details: $e');
       }
 
       // Pre-cache all images for offline use
@@ -440,7 +573,9 @@ class OfflineService extends GetxService {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchAllPoojasForCache(ApiClient apiClient) async {
+  Future<Map<String, dynamic>> _fetchAllPoojasForCache(
+    ApiClient apiClient,
+  ) async {
     const pageLimit = 100;
     const maxPages = 20;
     final allPoojas = <dynamic>[];
@@ -488,7 +623,9 @@ class OfflineService extends GetxService {
         : <String, dynamic>{};
     dataMap['poojas'] = allPoojas;
     if (dataMap['pagination'] is Map) {
-      final pagination = Map<String, dynamic>.from(dataMap['pagination'] as Map);
+      final pagination = Map<String, dynamic>.from(
+        dataMap['pagination'] as Map,
+      );
       pagination['limit'] = allPoojas.length;
       pagination['page'] = 1;
       pagination['totalPages'] = 1;
@@ -546,6 +683,6 @@ class OfflineService extends GetxService {
     }
     final deity = payload['deity'];
     if (deity is Map) return Map<String, dynamic>.from(deity);
-    return payload is Map ? Map<String, dynamic>.from(payload) : null;
+    return Map<String, dynamic>.from(payload);
   }
 }

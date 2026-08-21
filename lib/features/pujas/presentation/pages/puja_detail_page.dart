@@ -415,7 +415,20 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       } else {
         // Load pooja from cache!
         final cached = offlineService.getCachedData(cacheKey);
-        if (cached is Map) pooja = Map<String, dynamic>.from(cached);
+        if (cached is Map) {
+          pooja = Map<String, dynamic>.from(cached);
+        } else {
+          final allCached = offlineService.getCachedData('all_poojas');
+          if (allCached != null) {
+            final list = _extractList(allCached);
+            for (final item in list) {
+              if ((item['_id'] ?? item['id'])?.toString() == id) {
+                pooja = item;
+                break;
+              }
+            }
+          }
+        }
       }
 
       if (!mounted) return;

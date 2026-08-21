@@ -24,42 +24,47 @@ class CalendarPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: CalendarUi.background,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _CalendarOrangeHeader(controller: controller),
-            Obx(() {
-              final tab = controller.activeTab.value;
-              return Material(
-                color: CalendarUi.background,
-                child: CalendarFilterTabs(
-                  labels: const ['Festivals', 'Lunar cycle', 'Events'],
-                  selectedIndex: tab.index,
-                  onSelected: (i) =>
-                      controller.setActiveTab(CalendarFilterTab.values[i]),
-                ),
-              );
-            }),
-            Obx(() {
-              if (controller.isLoading.value) {
-                return const SizedBox.shrink();
-              }
-              controller.focusedDate.value;
-              controller.festivals.length;
-              controller.poojas.length;
-              controller.moonPhases.length;
-              controller.userEvents.length;
-              final tab = controller.activeTab.value;
-              switch (tab) {
-                case CalendarFilterTab.festivals:
-                  return _FestivalsList(controller: controller);
-                case CalendarFilterTab.lunarCycle:
-                  return _LunarList(controller: controller);
-                case CalendarFilterTab.events:
-                  return _EventsList(controller: controller);
-              }
-            }),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchData(force: true),
+        color: CalendarUi.headerOrange,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _CalendarOrangeHeader(controller: controller),
+              Obx(() {
+                final tab = controller.activeTab.value;
+                return Material(
+                  color: CalendarUi.background,
+                  child: CalendarFilterTabs(
+                    labels: const ['Festivals', 'Lunar cycle', 'Events'],
+                    selectedIndex: tab.index,
+                    onSelected: (i) =>
+                        controller.setActiveTab(CalendarFilterTab.values[i]),
+                  ),
+                );
+              }),
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return const SizedBox.shrink();
+                }
+                controller.focusedDate.value;
+                controller.festivals.length;
+                controller.poojas.length;
+                controller.moonPhases.length;
+                controller.userEvents.length;
+                final tab = controller.activeTab.value;
+                switch (tab) {
+                  case CalendarFilterTab.festivals:
+                    return _FestivalsList(controller: controller);
+                  case CalendarFilterTab.lunarCycle:
+                    return _LunarList(controller: controller);
+                  case CalendarFilterTab.events:
+                    return _EventsList(controller: controller);
+                }
+              }),
+            ],
+          ),
         ),
       ),
     );

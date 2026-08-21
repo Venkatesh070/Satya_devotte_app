@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/notifications/data/user_notifications
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
+import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -305,7 +306,7 @@ class _NotificationTile extends StatelessWidget {
                     ),
                     if (item.body.trim().isNotEmpty) ...[
                       const SizedBox(height: 5),
-                      Text(
+                      RichTextDisplay(
                         item.body,
                         style: const TextStyle(
                           fontSize: 13,
