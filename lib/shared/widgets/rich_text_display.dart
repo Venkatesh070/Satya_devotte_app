@@ -23,22 +23,58 @@ class RichTextDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = value;
     if (v == null || v.trim().isEmpty) return const SizedBox.shrink();
-    if (isDeltaJson(v)) {
-      return _RichQuillDisplay(
-        key: ValueKey(v),
-        value: v,
+
+    final blocks = extractRichTextBlocks(v);
+    if (blocks.isEmpty) return const SizedBox.shrink();
+
+    if (blocks.length == 1) {
+      final block = blocks.first;
+      if (block.isDelta) {
+        return _RichQuillDisplay(
+          key: ValueKey(block.content),
+          value: block.content,
+          style: style,
+          textAlign: textAlign,
+          maxLines: maxLines,
+          overflow: overflow,
+        );
+      }
+      return Text(
+        block.content,
         style: style,
         textAlign: textAlign,
         maxLines: maxLines,
         overflow: overflow,
       );
     }
-    return Text(
-      v,
-      style: style,
-      textAlign: textAlign,
-      maxLines: maxLines,
-      overflow: overflow,
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < blocks.length; i++) ...[
+          if (i > 0) const SizedBox(height: 6),
+          if (blocks[i].isDelta)
+            _RichQuillDisplay(
+              key: ValueKey('${blocks[i].content}_$i'),
+              value: blocks[i].content,
+              style: style,
+              textAlign: textAlign,
+              maxLines: maxLines,
+              overflow: overflow,
+            )
+          else
+            Text(
+              blocks[i].content,
+              style: style?.copyWith(
+                fontWeight: FontWeight.w600,
+              ) ?? const TextStyle(fontWeight: FontWeight.w600),
+              textAlign: textAlign,
+              maxLines: maxLines,
+              overflow: overflow,
+            ),
+        ],
+      ],
     );
   }
 }

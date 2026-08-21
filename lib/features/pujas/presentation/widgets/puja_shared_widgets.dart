@@ -517,17 +517,18 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
   ];
 
   final screenHeight = MediaQuery.sizeOf(context).height;
-  final bottomPadding = MediaQuery.of(context).padding.bottom;
 
   Get.bottomSheet(
-    Container(
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
-      padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
+    SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFCF7EF),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -663,6 +664,7 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
           ),
         ],
       ),
+    ),
     ),
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

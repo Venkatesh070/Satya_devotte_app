@@ -46,6 +46,71 @@ String? plainTextOrDelta(String? value) {
   return value;
 }
 
+class RichTextBlock {
+  const RichTextBlock({required this.content, required this.isDelta});
+
+  final String content;
+  final bool isDelta;
+}
+
+List<RichTextBlock> extractRichTextBlocks(String? value) {
+  if (value == null || value.trim().isEmpty) return const [];
+  final trimmed = value.trim();
+  if (isDeltaJson(trimmed)) {
+    return [RichTextBlock(content: trimmed, isDelta: true)];
+  }
+
+  final blocks = <RichTextBlock>[];
+  var current = trimmed;
+
+  while (current.isNotEmpty) {
+    final startIdx = current.indexOf('[');
+    if (startIdx == -1) {
+      if (current.trim().isNotEmpty) {
+        blocks.add(RichTextBlock(content: current.trim(), isDelta: false));
+      }
+      break;
+    }
+
+    final textBefore = current.substring(0, startIdx).trim();
+
+    int endIdx = current.lastIndexOf(']');
+    bool foundJson = false;
+
+    while (endIdx > startIdx) {
+      final candidate = current.substring(startIdx, endIdx + 1).trim();
+      if (isDeltaJson(candidate)) {
+        if (textBefore.isNotEmpty) {
+          blocks.add(RichTextBlock(content: textBefore, isDelta: false));
+        }
+        blocks.add(RichTextBlock(content: candidate, isDelta: true));
+        current = current.substring(endIdx + 1).trim();
+        foundJson = true;
+        break;
+      }
+      endIdx = current.lastIndexOf(']', endIdx - 1);
+    }
+
+    if (!foundJson) {
+      final nextBracket = current.indexOf('[', startIdx + 1);
+      if (nextBracket != -1) {
+        final textPart = current.substring(0, nextBracket).trim();
+        if (textPart.isNotEmpty) {
+          blocks.add(RichTextBlock(content: textPart, isDelta: false));
+        }
+        current = current.substring(nextBracket).trim();
+      } else {
+        if (current.trim().isNotEmpty) {
+          blocks.add(RichTextBlock(content: current.trim(), isDelta: false));
+        }
+        break;
+      }
+    }
+  }
+
+  return blocks;
+}
+
 /// Inline Quill attribute for puja step mantra / recite text.
 class ReciteAttributes {
   ReciteAttributes._();

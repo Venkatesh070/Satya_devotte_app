@@ -52,9 +52,9 @@ class OfflineService extends GetxService {
   Future<bool> _hasRealInternetAccess() async {
     if (kIsWeb) return true;
     try {
-      final lookup = await InternetAddress.lookup(
-        'google.com',
-      ).timeout(const Duration(seconds: 3));
+      final lookup = await InternetAddress.lookup('google.com').timeout(
+        const Duration(seconds: 3),
+      );
       return lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
     } catch (_) {
       return false;
@@ -250,12 +250,6 @@ class OfflineService extends GetxService {
       try {
         final cached = await _fetchAllPoojasForCache(apiClient);
         await cacheData('all_poojas', cached);
-        final poojasResponse = await apiClient.dio.get<dynamic>(
-          ApiEndpoints.poojas,
-          queryParameters: {'limit': 1000},
-          options: Options(extra: {kSkipApiLoaderKey: true}),
-        );
-        await cacheData('all_poojas', poojasResponse.data);
         debugPrint('OfflineService: All poojas cached successfully');
       } catch (e) {
         debugPrint('OfflineService: Failed to cache all poojas: $e');
@@ -297,7 +291,9 @@ class OfflineService extends GetxService {
       try {
         final streakResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.userStreak,
-          options: Options(extra: {kSkipApiLoaderKey: true}),
+          options: Options(
+            extra: {kSkipApiLoaderKey: true},
+          ),
         );
         await cacheData('user_streak', streakResponse.data);
         debugPrint('OfflineService: User streak cached successfully');
@@ -573,9 +569,7 @@ class OfflineService extends GetxService {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchAllPoojasForCache(
-    ApiClient apiClient,
-  ) async {
+  Future<Map<String, dynamic>> _fetchAllPoojasForCache(ApiClient apiClient) async {
     const pageLimit = 100;
     const maxPages = 20;
     final allPoojas = <dynamic>[];
@@ -623,9 +617,7 @@ class OfflineService extends GetxService {
         : <String, dynamic>{};
     dataMap['poojas'] = allPoojas;
     if (dataMap['pagination'] is Map) {
-      final pagination = Map<String, dynamic>.from(
-        dataMap['pagination'] as Map,
-      );
+      final pagination = Map<String, dynamic>.from(dataMap['pagination'] as Map);
       pagination['limit'] = allPoojas.length;
       pagination['page'] = 1;
       pagination['totalPages'] = 1;
