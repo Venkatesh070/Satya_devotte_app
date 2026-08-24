@@ -19,6 +19,8 @@ class DeityController extends GetxController {
   final _totalPages = 1.obs;
   final _statusFilter = RxnString();
   final _search = ''.obs;
+  final _pendingCount = 0.obs;
+  final _queuedCount = 0.obs;
 
   bool _loadInFlight = false;
 
@@ -32,6 +34,10 @@ class DeityController extends GetxController {
   int get totalPages => _totalPages.value;
   String? get statusFilter => _statusFilter.value;
   String get search => _search.value;
+
+  // Filter-chip totals stay independent of the active status filter.
+  int get pendingCount => _pendingCount.value;
+  int get queuedCount => _queuedCount.value;
 
   void setSearch(String value) {
     final q = value.trim();
@@ -98,6 +104,12 @@ class DeityController extends GetxController {
       _totalPages.value = result.totalPages;
       _statusFilter.value = targetStatus;
       _search.value = targetSearch.trim();
+      if (targetStatus == 'PENDING') {
+        _pendingCount.value = result.total;
+      } else if (targetStatus == 'QUEUED') {
+        _queuedCount.value = result.total;
+      }
+      await _refreshFilterCounts(currentStatus: targetStatus);
     } catch (_) {
       _error.value = 'Failed to load deities';
       showCmsSnackbar(
@@ -109,6 +121,27 @@ class DeityController extends GetxController {
       _isLoading.value = false;
       _loadInFlight = false;
     }
+  }
+
+  Future<void> _refreshFilterCounts({required String? currentStatus}) async {
+    try {
+      final futures = <Future<void>>[];
+      if (currentStatus != 'PENDING') {
+        futures.add(
+          _dataSource
+              .getDeities(page: 1, limit: 1, status: 'PENDING')
+              .then((r) => _pendingCount.value = r.total),
+        );
+      }
+      if (currentStatus != 'QUEUED') {
+        futures.add(
+          _dataSource
+              .getDeities(page: 1, limit: 1, status: 'QUEUED')
+              .then((r) => _queuedCount.value = r.total),
+        );
+      }
+      await Future.wait(futures);
+    } catch (_) {}
   }
 
   Future<bool> createDeity(

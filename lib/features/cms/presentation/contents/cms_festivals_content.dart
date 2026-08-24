@@ -315,16 +315,18 @@ class _FestivalListState extends State<_FestivalList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
+                                    ? Colors.white.withOpacity(0.85)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${ctrl.pendingCount}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFFFCF7EF),
+                                  color: isSel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -338,16 +340,18 @@ class _FestivalListState extends State<_FestivalList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
+                                    ? Colors.white.withOpacity(0.85)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${ctrl.queuedCount}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFFFCF7EF),
+                                  color: isSel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -1072,11 +1076,20 @@ class _FestivalFormState extends State<_FestivalForm> {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.year}';
 
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime get _today => _dateOnly(DateTime.now());
+
   Future<void> _pickDate(bool isEnd) async {
+    final today = _today;
+    final firstDate = isEnd ? (_date != null ? _dateOnly(_date!) : today) : today;
+    var initialDate = (isEnd ? _endDate : _date) ?? firstDate;
+    if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: (isEnd ? _endDate : _date) ?? DateTime.now(),
-      firstDate: DateTime(2020),
+      initialDate: initialDate,
+      firstDate: firstDate,
       lastDate: DateTime(2040),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
@@ -1094,6 +1107,10 @@ class _FestivalFormState extends State<_FestivalForm> {
           _endDate = picked;
         } else {
           _date = picked;
+          if (_endDate != null &&
+              _dateOnly(_endDate!).isBefore(_dateOnly(picked))) {
+            _endDate = picked;
+          }
         }
       });
     }
@@ -1102,6 +1119,13 @@ class _FestivalFormState extends State<_FestivalForm> {
   String? _validate() {
     if (_titleCtrl.text.trim().isEmpty) return 'Festival title is required';
     if (_date == null) return 'Start date is required';
+    final start = _dateOnly(_date!);
+    if (start.isBefore(_today)) {
+      return 'Start date cannot be in the past';
+    }
+    if (_endDate != null && _dateOnly(_endDate!).isBefore(start)) {
+      return 'End date cannot be before start date';
+    }
     return null;
   }
 

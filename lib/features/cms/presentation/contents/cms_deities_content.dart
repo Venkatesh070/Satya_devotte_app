@@ -231,7 +231,8 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
             padding: EdgeInsets.only(left: isWeb ? 24 : 16, bottom: 12),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(
+              child: Obx(
+                () => Row(
                 children: filters.map((f) {
                   final sel = _filter == f;
                   return _cmsClickable(
@@ -256,17 +257,74 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                           color: sel ? CmsColors.orange : CmsColors.border,
                         ),
                       ),
-                      child: Text(
-                        f,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: sel ? Color(0xFFFCF7EF) : CmsColors.textSecond,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            f,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  sel ? const Color(0xFFFCF7EF) : CmsColors.textSecond,
+                            ),
+                          ),
+                          if (f == 'Pending' && _controller.pendingCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? Colors.white.withOpacity(0.85)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${_controller.pendingCount}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: sel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (f == 'Queued' && _controller.queuedCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? Colors.white.withOpacity(0.85)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${_controller.queuedCount}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: sel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   );
                 }).toList(),
+              ),
               ),
             ),
           ),

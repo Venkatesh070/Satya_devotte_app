@@ -27,6 +27,7 @@ class RitualController extends GetxController {
   final _limit = 10.obs;
   final _total = 0.obs;
   final _totalPages = 1.obs;
+  final _pendingCount = 0.obs;
 
   List<RitualModel> get rituals => _rituals;
   bool get isLoading => _isLoading.value;
@@ -41,6 +42,9 @@ class RitualController extends GetxController {
   List<Map<String, String>> get deities => _deities;
   bool get isLoadingDeities => _isLoadingDeities.value;
   bool get deitiesLoaded => _deitiesLoaded.value;
+
+  // Filter-chip totals stay independent of the active status filter.
+  int get pendingCount => _pendingCount.value;
 
   void setSearch(String value) {
     final q = value.trim();
@@ -110,6 +114,11 @@ class RitualController extends GetxController {
       _limit.value = result.limit;
       _total.value = result.total;
       _totalPages.value = result.totalPages;
+      if (_filter.value == 'Pending') {
+        _pendingCount.value = result.total;
+      } else {
+        await _refreshPendingCount(superAdmin: auth.isSuperAdmin);
+      }
     } catch (e) {
       _error.value = _parseError(e);
       if (showErrorSnackbar) {
@@ -122,6 +131,18 @@ class RitualController extends GetxController {
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  Future<void> _refreshPendingCount({required bool superAdmin}) async {
+    try {
+      final result = await _dataSource.getRitualsPage(
+        superAdmin: superAdmin,
+        page: 1,
+        limit: 1,
+        status: 'PENDING',
+      );
+      _pendingCount.value = result.total;
+    } catch (_) {}
   }
 
   Future<RitualModel> getRitualById(String id) async {

@@ -24,6 +24,8 @@ class PoojaController extends GetxController {
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _search = ''.obs;
+  final _pendingCount = 0.obs;
+  final _queuedCount = 0.obs;
 
   List<PoojaModel> get poojas => _poojas;
   bool get isLoading => _isLoading.value;
@@ -48,9 +50,9 @@ class PoojaController extends GetxController {
     return _poojas.toList();
   }
 
-  // Pending poojas count — shown on dashboard (best-effort across current list)
-  int get pendingCount => _poojas.where((p) => p.status == 'Pending').length;
-  int get queuedCount => _poojas.where((p) => p.status == 'Queued').length;
+  // Filter-chip totals stay independent of the active status filter.
+  int get pendingCount => _pendingCount.value;
+  int get queuedCount => _queuedCount.value;
   int get rejectedCount => _poojas.where((p) => p.status == 'Rejected').length;
 
   @override
@@ -129,6 +131,12 @@ class PoojaController extends GetxController {
       _limit.value = result.limit;
       _total.value = result.total;
       _totalPages.value = result.totalPages;
+      if (_filter.value == 'Pending') {
+        _pendingCount.value = result.total;
+      } else if (_filter.value == 'Queued') {
+        _queuedCount.value = result.total;
+      }
+      await _refreshFilterCounts(superAdmin: auth.isSuperAdmin);
     } catch (e) {
       _error.value = _parseError(e);
       if (showErrorSnackbar) {
@@ -141,6 +149,37 @@ class PoojaController extends GetxController {
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  Future<void> _refreshFilterCounts({required bool superAdmin}) async {
+    try {
+      final futures = <Future<void>>[];
+      if (_filter.value != 'Pending') {
+        futures.add(
+          _dataSource
+              .getPoojasPage(
+                superAdmin: superAdmin,
+                page: 1,
+                limit: 1,
+                status: 'PENDING',
+              )
+              .then((r) => _pendingCount.value = r.total),
+        );
+      }
+      if (_filter.value != 'Queued') {
+        futures.add(
+          _dataSource
+              .getPoojasPage(
+                superAdmin: superAdmin,
+                page: 1,
+                limit: 1,
+                status: 'QUEUED',
+              )
+              .then((r) => _queuedCount.value = r.total),
+        );
+      }
+      await Future.wait(futures);
+    } catch (_) {}
   }
 
   /// Fetch all created poojas across all pages for dropdowns/selectors

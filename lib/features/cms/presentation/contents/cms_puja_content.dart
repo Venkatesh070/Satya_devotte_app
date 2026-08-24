@@ -327,16 +327,18 @@ class _PoojaListState extends State<_PoojaList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
+                                    ? Colors.white.withOpacity(0.85)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${controller.pendingCount}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFFCF7EF),
+                                  color: isSel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),
@@ -350,16 +352,18 @@ class _PoojaListState extends State<_PoojaList> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSel
-                                    ? Color(0xFFFCF7EF).withOpacity(0.3)
+                                    ? Colors.white.withOpacity(0.85)
                                     : CmsColors.orange,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${controller.queuedCount}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFFCF7EF),
+                                  color: isSel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
                                 ),
                               ),
                             ),

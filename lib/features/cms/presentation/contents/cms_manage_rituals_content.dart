@@ -257,15 +257,47 @@ class _RitualListState extends State<_RitualList> {
                           color: isSel ? CmsColors.orange : CmsColors.border,
                         ),
                       ),
-                      child: Text(
-                        f,
-                        style: TextStyle(
-                          color: isSel ? Color(0xFFFCF7EF) : CmsColors.textSecond,
-                          fontSize: 12,
-                          fontWeight: isSel
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            f,
+                            style: TextStyle(
+                              color: isSel
+                                  ? const Color(0xFFFCF7EF)
+                                  : CmsColors.textSecond,
+                              fontSize: 12,
+                              fontWeight: isSel
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          if (f == 'Pending' && controller.pendingCount > 0) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSel
+                                    ? Colors.white.withOpacity(0.85)
+                                    : CmsColors.orange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${controller.pendingCount}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSel
+                                      ? CmsColors.orange
+                                      : const Color(0xFFFCF7EF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   );
