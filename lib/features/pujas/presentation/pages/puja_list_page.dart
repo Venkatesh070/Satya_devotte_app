@@ -96,15 +96,16 @@ class _RitualListPageState extends State<RitualListPage> {
             payload['deities'] ?? payload['results'] ?? payload['items'] ?? [];
       }
 
-      final mapped = list
-          .whereType<Map>()
-          .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-          .toList()
-        ..sort((a, b) {
-          final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          if (cmp != 0) return cmp;
-          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-        });
+      final mapped =
+          list
+              .whereType<Map>()
+              .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+            ..sort((a, b) {
+              final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+              if (cmp != 0) return cmp;
+              return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+            });
       if (!mounted) return;
       setState(() => _items = mapped);
     } on DioException catch (e) {
@@ -124,15 +125,20 @@ class _RitualListPageState extends State<RitualListPage> {
           list =
               cached['deities'] ?? cached['results'] ?? cached['items'] ?? [];
         }
-        final mapped = list
-            .whereType<Map>()
-            .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList()
-          ..sort((a, b) {
-            final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-            if (cmp != 0) return cmp;
-            return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-          });
+        final mapped =
+            list
+                .whereType<Map>()
+                .map(
+                  (e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList()
+              ..sort((a, b) {
+                final cmp = a.name.toLowerCase().compareTo(
+                  b.name.toLowerCase(),
+                );
+                if (cmp != 0) return cmp;
+                return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+              });
         setState(() => _items = mapped);
       } else {
         setState(() => _error = e.message ?? 'Failed to load deities.');
@@ -327,30 +333,34 @@ class _RitualListPageState extends State<RitualListPage> {
 
     // Sort alphabetically by name, then title (trimmed, case-insensitive)
     list.sort((a, b) {
-      final cmp = a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
+      final cmp = a.name.trim().toLowerCase().compareTo(
+        b.name.trim().toLowerCase(),
+      );
       if (cmp != 0) return cmp;
-      return a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
+      return a.title.trim().toLowerCase().compareTo(
+        b.title.trim().toLowerCase(),
+      );
     });
     return list;
   }
 
-  List<String> get _categoryTabs {
-    final tabs = <String>['All Deities'];
-    final seen = <String>{};
-    final uniqueLabels = <String>[];
-    for (final item in _items) {
-      final label = item.name.trim();
-      if (label.isEmpty) continue;
-      if (seen.add(label.toLowerCase())) {
-        uniqueLabels.add(label);
-      }
-    }
-    // Sort unique labels alphabetically
-    uniqueLabels.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    // Take the first 7 unique labels
-    tabs.addAll(uniqueLabels.take(7));
-    return tabs;
-  }
+  // List<String> get _categoryTabs {
+  //   final tabs = <String>['All Deities'];
+  //   final seen = <String>{};
+  //   final uniqueLabels = <String>[];
+  //   for (final item in _items) {
+  //     final label = item.name.trim();
+  //     if (label.isEmpty) continue;
+  //     if (seen.add(label.toLowerCase())) {
+  //       uniqueLabels.add(label);
+  //     }
+  //   }
+  //   // Sort unique labels alphabetically
+  //   uniqueLabels.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  //   // Take the first 7 unique labels
+  //   tabs.addAll(uniqueLabels.take(7));
+  //   return tabs;
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -374,8 +384,8 @@ class _RitualListPageState extends State<RitualListPage> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _FixedHeaderDelegate(
-                  minExtentHeight: MediaQuery.paddingOf(context).top + 280,
-                  maxExtentHeight: MediaQuery.paddingOf(context).top + 280,
+                  minExtentHeight: MediaQuery.paddingOf(context).top + 168,
+                  maxExtentHeight: MediaQuery.paddingOf(context).top + 168,
                   child: _buildHeader(),
                 ),
               ),
@@ -393,11 +403,11 @@ class _RitualListPageState extends State<RitualListPage> {
     );
   }
 
-  // ─── Header (gradient + search + chips) ──────────────────
+  // ─── Header (gradient + search) ──────────────────
   Widget _buildHeader() {
     final topInset = MediaQuery.paddingOf(context).top;
     return SizedBox(
-      height: topInset + 362,
+      height: topInset + 168,
       child: Stack(
         children: [
           Positioned.fill(
@@ -405,7 +415,7 @@ class _RitualListPageState extends State<RitualListPage> {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width,
-                height: 372,
+                height: topInset + 180,
                 child: Image.asset(
                   'assets/images/pooja/pujaHeaderImg.png',
                   fit: BoxFit.fill,
@@ -438,24 +448,25 @@ class _RitualListPageState extends State<RitualListPage> {
                 ),
                 const SizedBox(height: 20),
                 _buildSearchField(),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 92,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categoryTabs.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (context, index) {
-                      final tab = _categoryTabs[index];
-                      final isSelected = tab == _selectedCategory;
-                      return _CategoryTabChip(
-                        label: tab,
-                        selected: isSelected,
-                        onTap: () => setState(() => _selectedCategory = tab),
-                      );
-                    },
-                  ),
-                ),
+                // Code related to boxes of all deities, adi parashakti, etc. commented out:
+                // const SizedBox(height: 12),
+                // SizedBox(
+                //   height: 92,
+                //   child: ListView.separated(
+                //     scrollDirection: Axis.horizontal,
+                //     itemCount: _categoryTabs.length,
+                //     separatorBuilder: (_, __) => const SizedBox(width: 10),
+                //     itemBuilder: (context, index) {
+                //       final tab = _categoryTabs[index];
+                //       final isSelected = tab == _selectedCategory;
+                //       return _CategoryTabChip(
+                //         label: tab,
+                //         selected: isSelected,
+                //         onTap: () => setState(() => _selectedCategory = tab),
+                //       );
+                //     },
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -793,8 +804,18 @@ String? _formatListItemDate(String? raw) {
   DateTime? parsed = DateTime.tryParse(trimmed);
   if (parsed == null) return trimmed;
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   final day = parsed.day.toString().padLeft(2, '0');
   return '$day ${months[parsed.month - 1]} ${parsed.year}';
@@ -902,7 +923,11 @@ class _DeityCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.calendar_month_outlined, size: 14, color: const Color(0xFF8C775F)),
+                        Icon(
+                          Icons.calendar_month_outlined,
+                          size: 14,
+                          color: const Color(0xFF8C775F),
+                        ),
                         const SizedBox(width: 5),
                         Text(
                           scheduledDate,

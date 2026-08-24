@@ -297,7 +297,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         Get.find<PoojaHistoryController>().updateProgress(_sessionId!, prevIdx);
       }
     } else {
-      Get.offAllNamed(AppRoutes.home);
+      Get.back();
     }
   }
 
@@ -589,7 +589,7 @@ class _IntroScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
-                  onTap: () => Get.to(() => _PoojaKnowMoreScreen(pooja: pooja)),
+                  onTap: () => Get.to(() => PoojaKnowMoreScreen(pooja: pooja)),
                   behavior: HitTestBehavior.opaque,
                   child: Text(
                     'Know more about the puja →',
@@ -620,8 +620,8 @@ class _IntroScreen extends StatelessWidget {
   }
 }
 
-class _PoojaKnowMoreScreen extends StatelessWidget {
-  const _PoojaKnowMoreScreen({required this.pooja});
+class PoojaKnowMoreScreen extends StatelessWidget {
+  const PoojaKnowMoreScreen({super.key, required this.pooja});
 
   final PoojaView pooja;
 
@@ -654,8 +654,176 @@ class _PoojaKnowMoreScreen extends StatelessWidget {
     return pooja.blessings;
   }
 
+  List<String> get _mantraBullets {
+    final m = pooja.mantra;
+    final bullets = <String>[];
+
+    final primary = (m['primary'] ?? m['mantra'] ?? m['text'] ?? '').toString().trim();
+    final repetitions = (m['repetitions'] ?? m['counts'] ?? '').toString().trim();
+    final meaning = (m['meaning'] ?? m['translation'] ?? '').toString().trim();
+    final additional = _poojaStringList(m['additional'] ?? m['other'] ?? m['list']);
+
+    if (primary.isNotEmpty) {
+      if (repetitions.isNotEmpty) {
+        bullets.add('$primary\n(Repetitions: $repetitions)');
+      } else {
+        bullets.add(primary);
+      }
+    }
+    if (meaning.isNotEmpty) {
+      bullets.add('Meaning: $meaning');
+    }
+    for (final add in additional) {
+      if (add.isNotEmpty && add != primary) {
+        bullets.add(add);
+      }
+    }
+
+    if (bullets.isEmpty && pooja.deityDoc != null) {
+      final chanting = pooja.deityDoc!['chanting'];
+      if (chanting is Map) {
+        final chantMantra = (chanting['mantra'] ?? '').toString().trim();
+        final chantReps = (chanting['repetitions'] ?? '').toString().trim();
+        final chantBenefits = _poojaStringList(chanting['benefits']);
+
+        if (chantMantra.isNotEmpty) {
+          if (chantReps.isNotEmpty) {
+            bullets.add('$chantMantra\n(Repetitions: $chantReps)');
+          } else {
+            bullets.add(chantMantra);
+          }
+        }
+        for (final b in chantBenefits) {
+          bullets.add('Benefit: $b');
+        }
+      }
+    }
+
+    return bullets;
+  }
+
+  List<String> get _spiritualSignificanceBullets {
+    final sm = pooja.spiritualMeaning;
+    final bullets = <String>[];
+
+    void processSection(dynamic raw, String defaultCategory) {
+      if (raw == null) return;
+      if (raw is List) {
+        for (final item in raw) {
+          if (item is Map) {
+            final title = (item['title'] ?? item['name'] ?? item['action'] ?? item['offering'] ?? item['key'] ?? '').toString().trim();
+            final desc = (item['description'] ?? item['meaning'] ?? item['content'] ?? item['value'] ?? '').toString().trim();
+            if (title.isNotEmpty && desc.isNotEmpty) {
+              bullets.add('$title: $desc');
+            } else if (title.isNotEmpty) {
+              bullets.add(title);
+            } else if (desc.isNotEmpty) {
+              bullets.add(desc);
+            }
+          } else if (item != null) {
+            final str = item.toString().trim();
+            if (str.isNotEmpty) bullets.add(str);
+          }
+        }
+      } else if (raw is Map) {
+        raw.forEach((k, v) {
+          final title = k.toString().trim();
+          final desc = (v is Map ? (v['description'] ?? v['meaning'] ?? v['value'] ?? '') : v).toString().trim();
+          if (title.isNotEmpty && desc.isNotEmpty) {
+            bullets.add('$title: $desc');
+          } else if (title.isNotEmpty) {
+            bullets.add(title);
+          } else if (desc.isNotEmpty) {
+            bullets.add(desc);
+          }
+        });
+      } else if (raw is String && raw.trim().isNotEmpty) {
+        bullets.add(raw.trim());
+      }
+    }
+
+    processSection(sm['actionsMeaning'] ?? sm['actions'], 'Actions');
+    processSection(sm['offeringsMeaning'] ?? sm['offerings'], 'Offerings');
+    processSection(sm['otherSymbolism'] ?? sm['symbolism'], 'Symbolism');
+
+    if (bullets.isEmpty && pooja.raw['spiritualMeaning'] != null) {
+      processSection(pooja.raw['spiritualMeaning'], '');
+    }
+
+    return bullets;
+  }
+
+  List<String> get _devotionalGuidanceBullets {
+    final g = pooja.guidance;
+    final bullets = <String>[];
+
+    final mindset = _poojaStringList(g['mindset'] ?? g['attitude'] ?? g['guidance'] ?? g['devotional']);
+    final avoid = _poojaStringList(g['avoid'] ?? g['donts'] ?? g['restrictions'] ?? g['precautions']);
+    final prepPersonal = _poojaStringList(pooja.preparation['personal']);
+    final prepSpace = _poojaStringList(pooja.preparation['space']);
+
+    for (final m in mindset) {
+      bullets.add(m);
+    }
+    for (final p in prepPersonal) {
+      if (!bullets.contains(p)) bullets.add('Personal Prep: $p');
+    }
+    for (final s in prepSpace) {
+      if (!bullets.contains(s)) bullets.add('Space Prep: $s');
+    }
+    for (final a in avoid) {
+      bullets.add('What to Avoid: $a');
+    }
+
+    if (bullets.isEmpty && pooja.deityDoc != null) {
+      final conn = pooja.deityDoc!['connecting'];
+      if (conn is Map) {
+        final pray = (conn['how_to_pray'] ?? '').toString().trim();
+        final pleases = _poojaStringList(conn['what_pleases']);
+        final displeases = _poojaStringList(conn['displeases']);
+        if (pray.isNotEmpty) bullets.add(pray);
+        for (final pl in pleases) bullets.add('What Pleases Deity: $pl');
+        for (final dp in displeases) bullets.add('What Displeases: $dp');
+      }
+    }
+
+    return bullets;
+  }
+
+  List<String> get _completionBullets {
+    final c = pooja.completion;
+    final bullets = <String>[];
+
+    final closure = _poojaStringList(c['closure'] ?? c['closing'] ?? c['conclusion'] ?? c['finalSteps']);
+    final integration = _poojaStringList(c['integration'] ?? c['dailyIntegration'] ?? c['postPuja'] ?? c['dailyPractice']);
+    final benefits = _poojaStringList(c['benefits'] ?? c['longTermBenefits']);
+
+    for (final cl in closure) {
+      bullets.add(cl);
+    }
+    for (final i in integration) {
+      bullets.add('Integration: $i');
+    }
+    for (final b in benefits) {
+      if (!bullets.contains(b)) bullets.add(b);
+    }
+
+    return bullets;
+  }
+
   @override
   Widget build(BuildContext context) {
+    debugPrint('=== [PoojaKnowMoreScreen] Debugging API Payload ===');
+    debugPrint('Pooja Title: ${pooja.title}');
+    debugPrint('raw keys: ${pooja.raw.keys.toList()}');
+    debugPrint('mantra: ${pooja.mantra}');
+    debugPrint('spiritualMeaning: ${pooja.spiritualMeaning}');
+    debugPrint('guidance: ${pooja.guidance}');
+    debugPrint('completion: ${pooja.completion}');
+    debugPrint('deitySummary: ${pooja.deitySummary}');
+    debugPrint('deityDoc keys: ${pooja.deityDoc?.keys.toList()}');
+    debugPrint('===================================================');
+
     final sections = <Widget>[];
 
     final why = _whyPerformed;
@@ -688,6 +856,46 @@ class _PoojaKnowMoreScreen extends StatelessWidget {
         _KnowMoreInfoCard(
           title: 'Core Blessings of this Deity',
           bullets: blessings,
+        ),
+      );
+    }
+
+    final mantras = _mantraBullets;
+    if (mantras.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Mantras & Chanting',
+          bullets: mantras,
+        ),
+      );
+    }
+
+    final spiritual = _spiritualSignificanceBullets;
+    if (spiritual.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Spiritual Significance of Key Actions',
+          bullets: spiritual,
+        ),
+      );
+    }
+
+    final devotional = _devotionalGuidanceBullets;
+    if (devotional.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Devotional Guidance',
+          bullets: devotional,
+        ),
+      );
+    }
+
+    final completion = _completionBullets;
+    if (completion.isNotEmpty) {
+      sections.add(
+        _KnowMoreInfoCard(
+          title: 'Completion and Integration',
+          bullets: completion,
         ),
       );
     }

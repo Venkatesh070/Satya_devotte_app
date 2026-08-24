@@ -91,10 +91,11 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       debugPrint(
         '[Detail] initState args keys=${args.keys} type=${args['type']}',
       );
-      if (args.containsKey('deity'))
+      if (args.containsKey('deity')) {
         debugPrint(
           '[Detail] args["deity"] type=${args['deity'].runtimeType} value=${args['deity'].toString().length > 100 ? "${args['deity'].toString().substring(0, 100)}..." : args['deity']}',
         );
+      }
     }
     if (args is Map && args['type'] == 'deity') {
       _selectedDeity = Map<String, dynamic>.from(args);
@@ -994,8 +995,12 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                 controller: _tabController,
                 children: [
                   Obx(() {
-                    final pending = _historyController.history['pending'] as List? ?? const [];
-                    final finished = _historyController.history['finished'] as List? ?? const [];
+                    final pending =
+                        _historyController.history['pending'] as List? ??
+                        const [];
+                    final finished =
+                        _historyController.history['finished'] as List? ??
+                        const [];
                     return _CalendarTab(
                       key: ValueKey('cal_${p.title}'),
                       pooja: p,
@@ -1081,7 +1086,7 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   bool _sessionMatchesPooja(Map session, Map<String, dynamic> pooja) {
     final sessionPooja = session['pooja'];
     if (sessionPooja is! Map) return false;
-    
+
     // 1. Basic match: ID or Title must match
     bool basicMatch = false;
     final sessionPoojaId = _entityId(sessionPooja);
@@ -1106,15 +1111,21 @@ class _RitualDetailPageState extends State<RitualDetailPage>
     if (isDaily || hasSchedules) {
       // Try scheduleId match first (most accurate)
       final pScheduleId = pooja['scheduleId'] ?? pooja['selectedScheduleId'];
-      final sScheduleId = session['scheduleId'] ?? session['schedule'] ?? session['pooja']?['scheduleId'];
-      if (pScheduleId != null && sScheduleId != null && pScheduleId.toString().isNotEmpty && sScheduleId.toString().isNotEmpty) {
+      final sScheduleId =
+          session['scheduleId'] ??
+          session['schedule'] ??
+          session['pooja']?['scheduleId'];
+      if (pScheduleId != null &&
+          sScheduleId != null &&
+          pScheduleId.toString().isNotEmpty &&
+          sScheduleId.toString().isNotEmpty) {
         return pScheduleId.toString() == sScheduleId.toString();
       }
 
       // Fallback: Try date match
       final sId = (session['_id'] ?? session['id'] ?? '').toString();
       final localSavedDate = _historyController.sessionDates[sId];
-      
+
       DateTime? sDate;
       if (localSavedDate != null) {
         sDate = DateTime.tryParse(localSavedDate);
@@ -1126,10 +1137,10 @@ class _RitualDetailPageState extends State<RitualDetailPage>
         final localS = sDate.toLocal();
         final localP = pDate.toLocal();
         return localS.year == localP.year &&
-               localS.month == localP.month &&
-               localS.day == localP.day;
+            localS.month == localP.month &&
+            localS.day == localP.day;
       }
-      
+
       // If we are a scheduled or daily puja but could not match by ID or date, return false
       // to avoid highlighting every occurrence as completed.
       return false;
@@ -1543,9 +1554,7 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['names'] ??
           deityDoc?['derivation'],
     );
-    final roles = _list(
-      deityDoc?['roles'] ?? deityDoc?['role'],
-    );
+    final roles = _list(deityDoc?['roles'] ?? deityDoc?['role']);
     final divineRole =
         _extractString(
           deityDoc?['divine_role'] ??
@@ -1674,11 +1683,7 @@ class _AboutDeityTab extends StatelessWidget {
             label: 'Derivation/ Other Names / Forms (if applicable)',
             items: altNames,
           ),
-        if (roles.isNotEmpty)
-          LabeledChipsField(
-            label: 'Roles',
-            items: roles,
-          ),
+        if (roles.isNotEmpty) LabeledChipsField(label: 'Roles', items: roles),
         // if (divineRole.isNotEmpty)
         //   LabeledField(
         //     label: 'Divine Role (God/ Goddess of)',
@@ -1698,9 +1703,7 @@ class _AboutDeityTab extends StatelessWidget {
           // Render physical items / appearance even if we have structure
           if (physicalItems.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const SectionHeader(
-              title: 'Appearance & Symbolism',
-            ),
+            const SectionHeader(title: 'Appearance & Symbolism'),
             const SizedBox(height: 10),
             _LabeledTitleDescriptionList(
               label: 'Physical Description',
@@ -1747,9 +1750,7 @@ class _AboutDeityTab extends StatelessWidget {
             ),
           if (physicalItems.isNotEmpty) ...[
             const SizedBox(height: 14),
-            const SectionHeader(
-              title: 'Appearance & Symbolism',
-            ),
+            const SectionHeader(title: 'Appearance & Symbolism'),
             const SizedBox(height: 10),
             _LabeledTitleDescriptionList(
               label: 'Physical Description',
@@ -2306,15 +2307,20 @@ class _CalendarTab extends StatelessWidget {
                   if (timeVal.isNotEmpty) {
                     if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOnly)) {
                       combined = '${dateOnly}T$timeVal:00';
-                    } else if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(dateOnly)) {
+                    } else if (RegExp(
+                      r'^\d{2}-\d{2}-\d{4}$',
+                    ).hasMatch(dateOnly)) {
                       final parts = dateOnly.split('-');
-                      combined = '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
+                      combined =
+                          '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
                     } else {
                       final parsedDate = DateTime.tryParse(dateVal);
                       if (parsedDate != null) {
                         final parts = timeVal.split(':');
                         final hour = int.tryParse(parts.first) ?? 0;
-                        final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                        final minute = parts.length > 1
+                            ? (int.tryParse(parts[1]) ?? 0)
+                            : 0;
                         final combinedDt = DateTime(
                           parsedDate.year,
                           parsedDate.month,
@@ -2386,14 +2392,17 @@ class _CalendarTab extends StatelessWidget {
     final bId = (b['_id'] ?? b['id'] ?? '').toString();
     if (aId.isNotEmpty && bId.isNotEmpty) {
       if (aId != bId) return false;
-      
+
       // Try scheduleId match first
       final aSchedId = a['scheduleId'] ?? a['selectedScheduleId'];
       final bSchedId = b['scheduleId'] ?? b['selectedScheduleId'];
-      if (aSchedId != null && bSchedId != null && aSchedId.toString().isNotEmpty && bSchedId.toString().isNotEmpty) {
+      if (aSchedId != null &&
+          bSchedId != null &&
+          aSchedId.toString().isNotEmpty &&
+          bSchedId.toString().isNotEmpty) {
         return aSchedId.toString() == bSchedId.toString();
       }
-      
+
       final aDate = a['customDate'] ?? a['date'] ?? a['scheduledDate'];
       final bDate = b['customDate'] ?? b['date'] ?? b['scheduledDate'];
       return aDate == bDate;
@@ -2428,7 +2437,9 @@ class _CalendarPujaCard extends StatelessWidget {
         ? pooja.deityName
         : pooja.category;
     final duration = pooja.duration.isNotEmpty ? pooja.duration : '45 min';
-    final date = pooja.daily ? pooja.dailyTimeText : _formatCalendarDate(pooja.date);
+    final date = pooja.daily
+        ? pooja.dailyTimeText
+        : _formatCalendarDate(pooja.date);
 
     return InkWell(
       onTap: onTap,
@@ -2668,7 +2679,6 @@ class _CalendarThumb extends StatelessWidget {
     return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
   }
 }
-
 
 // ════════════════════════════════════════════════════════════════
 //  Reusable building blocks
@@ -3604,10 +3614,7 @@ class _DayItemState extends State<_DayItem> {
     }
 
     if (images.length == 1) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: buildImage(images.first),
-      );
+      return AspectRatio(aspectRatio: 16 / 9, child: buildImage(images.first));
     }
 
     return AspectRatio(
@@ -3640,7 +3647,8 @@ class _DayItemState extends State<_DayItem> {
       );
     }
     final images = _dayImages(day);
-    final hasBody = images.isNotEmpty ||
+    final hasBody =
+        images.isNotEmpty ||
         description.trim().isNotEmpty ||
         subSteps.isNotEmpty;
 
@@ -3721,8 +3729,7 @@ class _DayItemState extends State<_DayItem> {
           ),
           if (_isExpanded) ...[
             if (images.isNotEmpty) _buildDayHeroImages(images),
-            if (description.trim().isNotEmpty ||
-                subSteps.isNotEmpty)
+            if (description.trim().isNotEmpty || subSteps.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: Column(

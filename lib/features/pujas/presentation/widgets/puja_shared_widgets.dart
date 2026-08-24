@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
@@ -567,7 +568,56 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          if (pooja.idealTime.trim().isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6200).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFFF6200).withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_filled_rounded,
+                    size: 18,
+                    color: Color(0xFFE35600),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ideal Time',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F1F1F),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          pooja.idealTime,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF4A4A4A),
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
           const Text(
             'Steps',
             style: TextStyle(
@@ -660,6 +710,28 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
               },
               textColor: AppColors.white,
               gradientColors: gradientColors,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                Get.to(() => PoojaKnowMoreScreen(pooja: pooja));
+              },
+              behavior: HitTestBehavior.opaque,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  'Know more about the puja →',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFE35600),
+                    decoration: TextDecoration.underline,
+                    decorationColor: Color(0xFFE35600),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

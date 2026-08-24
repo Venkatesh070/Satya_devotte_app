@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 
 /// Figma calendar design tokens.
@@ -70,7 +71,7 @@ class CalendarFilterTabs extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(right: i < labels.length - 1 ? 8 : 0),
               child: Material(
-                color: selected ? CalendarUi.tabSelected : Color(0xFFFCF7EF),
+                color: Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
                 child: InkWell(
                   onTap: () => onSelected(i),
@@ -80,6 +81,17 @@ class CalendarFilterTabs extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
+                      gradient: selected
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.gradientStart,
+                                AppColors.gradientEnd,
+                              ],
+                            )
+                          : null,
+                      color: selected ? null : const Color(0xFFFCF7EF),
                       border: selected
                           ? null
                           : Border.all(color: CalendarUi.cardBorder),
@@ -89,7 +101,7 @@ class CalendarFilterTabs extends StatelessWidget {
                       style: AppTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: selected ? Color(0xFFFCF7EF) : CalendarUi.textMuted,
+                        color: selected ? const Color(0xFFFCF7EF) : CalendarUi.textMuted,
                       ),
                     ),
                   ),

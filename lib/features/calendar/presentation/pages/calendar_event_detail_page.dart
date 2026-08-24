@@ -109,6 +109,29 @@ class CalendarEventDetailPage extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (event is PoojaView && (event as PoojaView).idealTime.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time_filled_rounded,
+                          size: 16,
+                          color: CalendarUi.headerOrange,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Ideal Time: ${(event as PoojaView).idealTime}',
+                            style: AppTypography.inter(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              color: CalendarUi.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   RichTextDisplay(
                     description.isNotEmpty ? description : null,

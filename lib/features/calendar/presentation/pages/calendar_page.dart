@@ -12,8 +12,15 @@ import 'package:satya_devotte_app/features/calendar/presentation/widgets/calenda
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
-class CalendarPage extends StatelessWidget {
+class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
+
+  @override
+  State<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends State<CalendarPage> {
+  int _previousIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +46,12 @@ class CalendarPage extends StatelessWidget {
                   child: CalendarFilterTabs(
                     labels: const ['Festivals', 'Lunar cycle', 'Events'],
                     selectedIndex: tab.index,
-                    onSelected: (i) =>
-                        controller.setActiveTab(CalendarFilterTab.values[i]),
+                    onSelected: (i) {
+                      setState(
+                        () => _previousIndex = controller.activeTab.value.index,
+                      );
+                      controller.setActiveTab(CalendarFilterTab.values[i]);
+                    },
                   ),
                 );
               }),
@@ -53,15 +64,85 @@ class CalendarPage extends StatelessWidget {
                 controller.poojas.length;
                 controller.moonPhases.length;
                 controller.userEvents.length;
+
                 final tab = controller.activeTab.value;
+                final currentIndex = tab.index;
+
+                Widget tabContent;
                 switch (tab) {
                   case CalendarFilterTab.festivals:
-                    return _FestivalsList(controller: controller);
+                    tabContent = _FestivalsList(
+                      key: const ValueKey('festivals'),
+                      controller: controller,
+                    );
+                    break;
                   case CalendarFilterTab.lunarCycle:
-                    return _LunarList(controller: controller);
+                    tabContent = _LunarList(
+                      key: const ValueKey('lunar'),
+                      controller: controller,
+                    );
+                    break;
                   case CalendarFilterTab.events:
-                    return _EventsList(controller: controller);
+                    tabContent = _EventsList(
+                      key: const ValueKey('events'),
+                      controller: controller,
+                    );
+                    break;
                 }
+
+                final isMovingForward = currentIndex >= _previousIndex;
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity < -250) {
+                      // Swiped left -> next tab
+                      if (currentIndex < CalendarFilterTab.values.length - 1) {
+                        setState(() => _previousIndex = currentIndex);
+                        controller.setActiveTab(
+                          CalendarFilterTab.values[currentIndex + 1],
+                        );
+                      }
+                    } else if (velocity > 250) {
+                      // Swiped right -> previous tab
+                      if (currentIndex > 0) {
+                        setState(() => _previousIndex = currentIndex);
+                        controller.setActiveTab(
+                          CalendarFilterTab.values[currentIndex - 1],
+                        );
+                      }
+                    }
+                  },
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                      final isNewPage =
+                          (child.key as ValueKey<String>?)?.value == tab.name;
+                      final offsetBegin = isNewPage
+                          ? (isMovingForward
+                              ? const Offset(1.0, 0.0)
+                              : const Offset(-1.0, 0.0))
+                          : (isMovingForward
+                              ? const Offset(-1.0, 0.0)
+                              : const Offset(1.0, 0.0));
+                      return SlideTransition(
+                        position: Tween<Offset>(
+                          begin: offsetBegin,
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: tabContent,
+                  ),
+                );
               }),
             ],
           ),
@@ -341,7 +422,9 @@ class _MonthGrid extends StatelessWidget {
                             final isFull = e.type.toUpperCase().contains(
                               'FULL',
                             );
-                            dotColor = isFull ? Color(0xFFFCF7EF) : Colors.black;
+                            dotColor = isFull
+                                ? Color(0xFFFCF7EF)
+                                : Colors.black;
                           } else if (e is FestivalModel) {
                             // Branded Gold/Orange for Festivals
                             dotColor = const Color(0xFFE8A13A);
@@ -538,7 +621,7 @@ class _DayEventListTile extends StatelessWidget {
 }
 
 class _FestivalsList extends StatelessWidget {
-  const _FestivalsList({required this.controller});
+  const _FestivalsList({super.key, required this.controller});
 
   final CalendarController controller;
 
@@ -697,7 +780,7 @@ class _FestivalImage extends StatelessWidget {
 }
 
 class _LunarList extends StatelessWidget {
-  const _LunarList({required this.controller});
+  const _LunarList({super.key, required this.controller});
 
   final CalendarController controller;
 
@@ -768,7 +851,7 @@ class _LunarCard extends StatelessWidget {
 }
 
 class _EventsList extends StatelessWidget {
-  const _EventsList({required this.controller});
+  const _EventsList({super.key, required this.controller});
 
   final CalendarController controller;
 
@@ -879,11 +962,13 @@ class _CalendarEntryCard extends StatelessWidget {
     final month = date != null
         ? DateFormat('MMM').format(date!).toUpperCase()
         : '---';
-    final dateLine = dateLabel ?? (date != null
-        ? (date!.hour != 0 || date!.minute != 0
-            ? '${DateFormat('EEEE, MMMM dd').format(date!)} - ${DateFormat('HH:mm').format(date!)}'
-            : DateFormat('EEEE, MMMM dd').format(date!))
-        : '');
+    final dateLine =
+        dateLabel ??
+        (date != null
+            ? (date!.hour != 0 || date!.minute != 0
+                  ? '${DateFormat('EEEE, MMMM dd').format(date!)} - ${DateFormat('HH:mm').format(date!)}'
+                  : DateFormat('EEEE, MMMM dd').format(date!))
+            : '');
 
     return Material(
       color: Colors.transparent,

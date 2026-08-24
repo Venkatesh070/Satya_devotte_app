@@ -268,11 +268,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               if (_isLoading && _items.isEmpty)
                 const SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.gradientEnd,
-                    ),
-                  ),
+                  child: SizedBox.shrink(),
                 )
               else if (_error != null && _items.isEmpty)
                 SliverFillRemaining(

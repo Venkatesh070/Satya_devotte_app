@@ -84,6 +84,23 @@ class PoojaView {
 
   String? get selectedScheduleId => scheduleId ?? (_raw['scheduleId'] ?? _raw['selectedScheduleId'])?.toString();
 
+  String get idealTime {
+    final rawVal = _raw['ideal_time'] ?? _raw['idealTime'];
+    if (rawVal != null) {
+      final str = _extractString(rawVal);
+      if (str.isNotEmpty) return str;
+    }
+    final dDoc = deityDoc;
+    if (dDoc != null) {
+      final conn = dDoc['connecting'];
+      if (conn is Map) {
+        final str = _extractString(conn['ideal_time'] ?? conn['idealTime']);
+        if (str.isNotEmpty) return str;
+      }
+    }
+    return '';
+  }
+
   String get deityColor {
     final dDoc = deityDoc;
     if (dDoc != null) {
