@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 
 /// Auth-scoped favourite deities (Swagger: Auth → favorite-deities).
 class FavoriteDeitiesRemoteDataSource {
@@ -9,9 +10,14 @@ class FavoriteDeitiesRemoteDataSource {
   final ApiClient _apiClient;
 
   /// GET `/api/v1/auth/favorite-deities` — returns full deity documents.
-  Future<List<Map<String, dynamic>>> fetchFavoriteDeities() async {
+  Future<List<Map<String, dynamic>>> fetchFavoriteDeities({
+    bool skipLoader = false,
+  }) async {
+    final options =
+        skipLoader ? Options(extra: {kSkipApiLoaderKey: true}) : null;
     final response = await _apiClient.dio.get<dynamic>(
       ApiEndpoints.favoriteDeities,
+      options: options,
     );
     if (response.statusCode != null && response.statusCode! >= 400) {
       throw DioException(

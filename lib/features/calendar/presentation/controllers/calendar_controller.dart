@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
@@ -379,9 +381,15 @@ class CalendarController extends GetxController {
     return null;
   }
 
-  Future<void> fetchData({bool force = false}) async {
+  Future<void> fetchData({bool force = false, bool skipLoader = false}) async {
     if (isLoading.value && !force) return;
-    isLoading.value = true;
+
+    final shouldSkipLoader =
+        skipLoader || festivals.isNotEmpty || moonPhases.isNotEmpty;
+
+    if (!shouldSkipLoader) {
+      isLoading.value = true;
+    }
 
     final offlineService = Get.find<OfflineService>();
     final cacheKey =
@@ -395,16 +403,22 @@ class CalendarController extends GetxController {
           'month': focusedDate.value.month,
           'year': focusedDate.value.year,
         };
+        final options = shouldSkipLoader
+            ? Options(extra: {kSkipApiLoaderKey: true})
+            : null;
 
         try {
           final response = await _apiClient.dio.get(
             ApiEndpoints.calendar,
             queryParameters: queryParams,
+            options: options,
           );
           payload = response.data;
           await offlineService.cacheData(cacheKey, payload);
         } catch (e) {
-          debugPrint('CalendarController: API call failed, falling back to cache: $e');
+          debugPrint(
+            'CalendarController: API call failed, falling back to cache: $e',
+          );
           payload = offlineService.getCachedData(cacheKey);
         }
       } else {
@@ -422,10 +436,12 @@ class CalendarController extends GetxController {
           festivals.assignAll(
             rawFestivals
                 .whereType<Map>()
-                .map((e) => FestivalModel.fromJson(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) => FestivalModel.fromJson(Map<String, dynamic>.from(e)),
+                )
                 .toList(),
           );
-          
+
           final explodedPoojas = <PoojaView>[];
           for (final raw in rawPoojas) {
             if (raw is Map) {
@@ -444,17 +460,24 @@ class CalendarController extends GetxController {
                         try {
                           final dateOnly = dateVal.split('T').first.trim();
                           if (timeVal.isNotEmpty) {
-                            if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOnly)) {
+                            if (RegExp(
+                              r'^\d{4}-\d{2}-\d{2}$',
+                            ).hasMatch(dateOnly)) {
                               combined = '${dateOnly}T$timeVal:00';
-                            } else if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(dateOnly)) {
+                            } else if (RegExp(
+                              r'^\d{2}-\d{2}-\d{4}$',
+                            ).hasMatch(dateOnly)) {
                               final parts = dateOnly.split('-');
-                              combined = '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
+                              combined =
+                                  '${parts[2]}-${parts[1]}-${parts[0]}T$timeVal:00';
                             } else {
                               final parsedDate = DateTime.tryParse(dateVal);
                               if (parsedDate != null) {
                                 final parts = timeVal.split(':');
                                 final hour = int.tryParse(parts.first) ?? 0;
-                                final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+                                final minute = parts.length > 1
+                                    ? (int.tryParse(parts[1]) ?? 0)
+                                    : 0;
                                 final combinedDt = DateTime(
                                   parsedDate.year,
                                   parsedDate.month,
@@ -492,7 +515,9 @@ class CalendarController extends GetxController {
           moonPhases.assignAll(
             rawMoonPhases
                 .whereType<Map>()
-                .map((e) => MoonPhaseModel.fromJson(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) => MoonPhaseModel.fromJson(Map<String, dynamic>.from(e)),
+                )
                 .toList(),
           );
 
@@ -646,14 +671,20 @@ class CalendarController extends GetxController {
     );
 
     for (final p in poojas.where((p) => p.daily)) {
-      final startD = _parseDate(p.raw['date'] ?? p.raw['scheduledDate'] ?? p.raw['scheduledAt'] ?? '');
+      final startD = _parseDate(
+        p.raw['date'] ?? p.raw['scheduledDate'] ?? p.raw['scheduledAt'] ?? '',
+      );
       final firstSchedule = p.schedules.isNotEmpty ? p.schedules.first : null;
       final schedDateStr = firstSchedule?['date']?.toString();
       final schedD = schedDateStr != null ? _parseDate(schedDateStr) : null;
-      
+
       final effectiveStart = startD ?? schedD ?? DateTime(2000);
-      final dayOnlyStart = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day);
-      
+      final dayOnlyStart = DateTime(
+        effectiveStart.year,
+        effectiveStart.month,
+        effectiveStart.day,
+      );
+
       if (!dayOnly.isBefore(dayOnlyStart)) {
         events.add(
           PoojaView(

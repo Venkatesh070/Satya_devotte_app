@@ -123,300 +123,298 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
     final displayAppName = _resolvedAppName.isNotEmpty
         ? _resolvedAppName
         : (widget.appName ?? 'Sathya');
-    final displayReleaseNotes = (widget.releaseNotes != null &&
-            widget.releaseNotes!.trim().isNotEmpty)
+    final displayReleaseNotes =
+        (widget.releaseNotes != null && widget.releaseNotes!.trim().isNotEmpty)
         ? widget.releaseNotes!
         : 'Bug fixes, performance enhancements, and new features included in this release.';
-    final displaySize = (widget.appSize != null && widget.appSize!.trim().isNotEmpty)
+    final displaySize =
+        (widget.appSize != null && widget.appSize!.trim().isNotEmpty)
         ? widget.appSize!
         : '182 MB';
-    final displayRating = (widget.contentRating != null && widget.contentRating!.trim().isNotEmpty)
+    final displayRating =
+        (widget.contentRating != null &&
+            widget.contentRating!.trim().isNotEmpty)
         ? widget.contentRating!
         : 'Rated for 3+';
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Row: Google Play header + Close 'X' button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+    return PopScope(
+      canPop: !widget.isMandatory,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Row: Google Play header + Close 'X' button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          _buildGooglePlayLogo(),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Google Play',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF5F6368),
+                              fontFamily: 'Roboto',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Main Title
+                  const Text(
+                    'Update available',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F1F1F),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'To use this app, download the latest version.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF444746),
+                      height: 1.3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // App Details Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE0E2E5)),
+                    ),
+                    child: Row(
                       children: [
-                        _buildGooglePlayLogo(),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Google Play',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF5F6368),
-                            fontFamily: 'Roboto',
+                        // App Icon
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            'assets/images/appLogo.png',
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 48,
+                                height: 48,
+                                color: const Color(0xFFD32F2F),
+                                child: const Icon(
+                                  Icons.eco,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // Details Column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayAppName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F1F1F),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    displaySize,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF5F6368),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    width: 3,
+                                    height: 3,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF5F6368),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: const Color(0xFF747775),
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: const Text(
+                                      '3+',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1F1F1F),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    displayRating,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF5F6368),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Icon(
+                                    Icons.info_outline,
+                                    size: 13,
+                                    color: Color(0xFF5F6368),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    if (!widget.isMandatory)
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: Color(0xFF5F6368)),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Close',
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Collapsible "What's new" Section
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isWhatsNewExpanded = !_isWhatsNewExpanded;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "What's new",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F1F1F),
+                            ),
+                          ),
+                          Icon(
+                            _isWhatsNewExpanded
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            color: const Color(0xFF5F6368),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
+
+                  if (_isWhatsNewExpanded) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      displayReleaseNotes,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF444746),
+                        height: 1.4,
+                      ),
+                    ),
                   ],
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                // Main Title
-                const Text(
-                  'Update available',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F1F1F),
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'To use this app, download the latest version.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF444746),
-                    height: 1.3,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // App Details Box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE0E2E5)),
-                  ),
-                  child: Row(
+                  // Action Buttons Row
+                  Row(
                     children: [
-                      // App Icon
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          'assets/images/appLogo.png',
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 48,
-                              height: 48,
-                              color: const Color(0xFFD32F2F),
-                              child: const Icon(
-                                Icons.eco,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            );
-                          },
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _handleLearnMore,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0B57D0),
+                            side: const BorderSide(color: Color(0xFF747775)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            'Learn more',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      // Details Column
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              displayAppName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F1F1F),
-                              ),
+                        child: ElevatedButton(
+                          onPressed: _handleUpdate,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0B57D0),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  displaySize,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF5F6368),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  width: 3,
-                                  height: 3,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF5F6368),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: const Color(0xFF747775),
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: const Text(
-                                    '3+',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1F1F1F),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  displayRating,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF5F6368),
-                                  ),
-                                ),
-                                const SizedBox(width: 2),
-                                const Icon(
-                                  Icons.info_outline,
-                                  size: 13,
-                                  color: Color(0xFF5F6368),
-                                ),
-                              ],
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            'Update',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Collapsible "What's new" Section
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isWhatsNewExpanded = !_isWhatsNewExpanded;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "What's new",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F1F1F),
-                          ),
-                        ),
-                        Icon(
-                          _isWhatsNewExpanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          color: const Color(0xFF5F6368),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                if (_isWhatsNewExpanded) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    displayReleaseNotes,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF444746),
-                      height: 1.4,
-                    ),
-                  ),
                 ],
-
-                const SizedBox(height: 24),
-
-                // Action Buttons Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _handleLearnMore,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0B57D0),
-                          side: const BorderSide(color: Color(0xFF747775)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Learn more',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _handleUpdate,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0B57D0),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Update',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -428,9 +426,7 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
     return SizedBox(
       width: 22,
       height: 22,
-      child: CustomPaint(
-        painter: _GooglePlayLogoPainter(),
-      ),
+      child: CustomPaint(painter: _GooglePlayLogoPainter()),
     );
   }
 }

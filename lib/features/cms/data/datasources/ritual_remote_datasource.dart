@@ -7,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
@@ -72,10 +73,12 @@ class RitualRemoteDataSource {
     int page = 1,
     int limit = 10,
     String? search,
+    bool skipLoader = false,
   }) async {
     final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
     dynamic body;
     bool isFromOnlineApi = false;
+    final options = skipLoader ? Options(extra: {kSkipApiLoaderKey: true}) : null;
 
     if (offlineService != null && offlineService.isOnline.value) {
       try {
@@ -86,6 +89,7 @@ class RitualRemoteDataSource {
             'limit': limit,
             if (search != null && search.isNotEmpty) 'search': search,
           },
+          options: options,
         );
         body = response.data;
         isFromOnlineApi = true;
@@ -108,6 +112,7 @@ class RitualRemoteDataSource {
             'limit': limit,
             if (search != null && search.isNotEmpty) 'search': search,
           },
+          options: options,
         );
         body = response.data;
         isFromOnlineApi = true;

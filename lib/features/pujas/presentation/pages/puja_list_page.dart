@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
@@ -31,7 +33,15 @@ class _RitualListPageState extends State<RitualListPage> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  Timer? _searchDebounce;
+
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  int _page = 1;
+  int _totalPages = 1;
+  static const int _pageSize = 10;
+  final ScrollController _scrollController = ScrollController();
+
   String? _error;
   List<DeityListItem> _items = const [];
   String _searchQuery = '';
@@ -44,49 +54,113 @@ class _RitualListPageState extends State<RitualListPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _favoriteDeitiesApi = FavoriteDeitiesRemoteDataSource(
       Get.find<ApiClient>(),
     );
     _poojaHistoryController = Get.find<PoojaHistoryController>();
     _poojaHistoryController.fetchHistory();
     _loadFavoritesFromApi();
-    _loadDeities();
+    _loadDeities(reset: true);
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadDeities() async {
-    if (_isLoading) return;
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoadingMore || _isLoading) return;
+    if (_page >= _totalPages) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 240) {
+      _loadDeities();
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      final next = value.trim();
+      if (next == _searchQuery) return;
+      setState(() => _searchQuery = next);
+      _loadDeities(reset: true);
+    });
+  }
+
+  Future<void> _loadDeities({
+    bool reset = false,
+    bool skipLoader = false,
+  }) async {
+    if (reset) {
+      _page = 1;
+      _totalPages = 1;
+    } else if (_page >= _totalPages) {
+      return;
+    }
+
+    if (_isLoading || _isLoadingMore) return;
     setState(() {
-      _isLoading = true;
-      _error = null;
+      if (reset) {
+        if (_items.isEmpty) {
+          _isLoading = true;
+        }
+        _error = null;
+      } else {
+        _isLoadingMore = true;
+      }
     });
 
     final offlineService = Get.find<OfflineService>();
-    const cacheKey = 'deities_list';
+    final targetPage = reset ? 1 : _page + 1;
+    final cacheKey = 'deities_list_$targetPage';
+    final skip = skipLoader || !reset || _items.isNotEmpty;
+    final options = skip ? Options(extra: {kSkipApiLoaderKey: true}) : null;
 
     try {
       dynamic payload;
       if (offlineService.isOnline.value) {
         final response = await Get.find<ApiClient>().dio.get<dynamic>(
           ApiEndpoints.deities,
+          queryParameters: {
+            'page': targetPage,
+            'limit': _pageSize,
+            if (_searchQuery.trim().isNotEmpty) 'search': _searchQuery.trim(),
+          },
+          options: options,
         );
         payload = response.data;
-        await offlineService.cacheData(cacheKey, payload);
+        if (targetPage == 1 && _searchQuery.isEmpty) {
+          await offlineService.cacheData(cacheKey, payload);
+        }
       } else {
         payload = offlineService.getCachedData(cacheKey);
       }
 
       final data = (payload is Map) ? payload['data'] : null;
 
-      // Handle different response structures
       List<dynamic> list = [];
+      int? totalPages;
+
       if (data is Map) {
         list = data['deities'] ?? data['results'] ?? data['items'] ?? [];
+        totalPages =
+            int.tryParse(data['totalPages']?.toString() ?? '') ??
+            int.tryParse(data['pages']?.toString() ?? '') ??
+            int.tryParse(data['pagination']?['totalPages']?.toString() ?? '');
+        if (totalPages == null) {
+          final total =
+              int.tryParse(data['total']?.toString() ?? '') ??
+              int.tryParse(data['totalItems']?.toString() ?? '') ??
+              int.tryParse(data['count']?.toString() ?? '');
+          if (total != null && total > 0) {
+            totalPages = (total / _pageSize).ceil();
+          }
+        }
       } else if (data is List) {
         list = data;
       } else if (payload is List) {
@@ -94,61 +168,65 @@ class _RitualListPageState extends State<RitualListPage> {
       } else if (payload is Map) {
         list =
             payload['deities'] ?? payload['results'] ?? payload['items'] ?? [];
+        totalPages =
+            int.tryParse(payload['totalPages']?.toString() ?? '') ??
+            int.tryParse(payload['pages']?.toString() ?? '') ??
+            int.tryParse(payload['pagination']?['totalPages']?.toString() ?? '');
+        if (totalPages == null) {
+          final total =
+              int.tryParse(payload['total']?.toString() ?? '') ??
+              int.tryParse(payload['totalItems']?.toString() ?? '') ??
+              int.tryParse(payload['count']?.toString() ?? '');
+          if (total != null && total > 0) {
+            totalPages = (total / _pageSize).ceil();
+          }
+        }
       }
 
-      final mapped =
+      final newItems =
           list
               .whereType<Map>()
               .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-              .toList()
-            ..sort((a, b) {
-              final cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-              if (cmp != 0) return cmp;
-              return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-            });
+              .toList();
+
+      int effectiveTotalPages = totalPages ?? 1;
+      if (newItems.length >= _pageSize && effectiveTotalPages <= targetPage) {
+        effectiveTotalPages = targetPage + 1;
+      } else if (newItems.length < _pageSize) {
+        effectiveTotalPages = targetPage;
+      }
+
       if (!mounted) return;
-      setState(() => _items = mapped);
+
+      setState(() {
+        _page = targetPage;
+        _totalPages = effectiveTotalPages < 1 ? 1 : effectiveTotalPages;
+
+        if (reset) {
+          _items = newItems;
+        } else {
+          final existingIds = _items.map((e) => e.id).toSet();
+          final filteredNew =
+              newItems.where((e) => !existingIds.contains(e.id)).toList();
+          _items.addAll(filteredNew);
+        }
+      });
     } on DioException catch (e) {
       if (!mounted) return;
-      // Try to load from cache if API fails
-      final cached = offlineService.getCachedData(cacheKey);
-      if (cached != null) {
-        final data = (cached is Map) ? cached['data'] : null;
-        List<dynamic> list = [];
-        if (data is Map) {
-          list = data['deities'] ?? data['results'] ?? data['items'] ?? [];
-        } else if (data is List) {
-          list = data;
-        } else if (cached is List) {
-          list = cached;
-        } else if (cached is Map) {
-          list =
-              cached['deities'] ?? cached['results'] ?? cached['items'] ?? [];
-        }
-        final mapped =
-            list
-                .whereType<Map>()
-                .map(
-                  (e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)),
-                )
-                .toList()
-              ..sort((a, b) {
-                final cmp = a.name.toLowerCase().compareTo(
-                  b.name.toLowerCase(),
-                );
-                if (cmp != 0) return cmp;
-                return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-              });
-        setState(() => _items = mapped);
-      } else {
+      if (_items.isEmpty) {
         setState(() => _error = e.message ?? 'Failed to load deities.');
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load deities.');
+      if (_items.isEmpty) {
+        setState(() => _error = 'Failed to load deities.');
+      }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
       }
     }
   }
@@ -169,14 +247,16 @@ class _RitualListPageState extends State<RitualListPage> {
     } catch (_) {}
   }
 
-  Future<void> _loadFavoritesFromApi() async {
+  Future<void> _loadFavoritesFromApi({bool skipLoader = false}) async {
     final offlineService = Get.find<OfflineService>();
     const cacheKey = 'favorite_deities';
 
     try {
       List<dynamic> raw;
       if (offlineService.isOnline.value) {
-        raw = await _favoriteDeitiesApi.fetchFavoriteDeities();
+        raw = await _favoriteDeitiesApi.fetchFavoriteDeities(
+          skipLoader: skipLoader,
+        );
         await offlineService.cacheData(cacheKey, raw);
       } else {
         final cached = offlineService.getCachedData(cacheKey);
@@ -330,17 +410,6 @@ class _RitualListPageState extends State<RitualListPage> {
 
       return true;
     }).toList();
-
-    // Sort alphabetically by name, then title (trimmed, case-insensitive)
-    list.sort((a, b) {
-      final cmp = a.name.trim().toLowerCase().compareTo(
-        b.name.trim().toLowerCase(),
-      );
-      if (cmp != 0) return cmp;
-      return a.title.trim().toLowerCase().compareTo(
-        b.title.trim().toLowerCase(),
-      );
-    });
     return list;
   }
 
@@ -372,13 +441,15 @@ class _RitualListPageState extends State<RitualListPage> {
         child: RefreshIndicator(
           color: AppColors.gradientEnd,
           onRefresh: () async {
+            final skip = _items.isNotEmpty;
             await Future.wait<void>([
-              _loadFavoritesFromApi(),
-              _loadDeities(),
-              _poojaHistoryController.fetchHistory(),
+              _loadFavoritesFromApi(skipLoader: skip),
+              _loadDeities(reset: true, skipLoader: skip),
+              _poojaHistoryController.fetchHistory(skipLoader: skip),
             ]);
           },
           child: CustomScrollView(
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPersistentHeader(
@@ -514,7 +585,7 @@ class _RitualListPageState extends State<RitualListPage> {
           Expanded(
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
+              onChanged: _onSearchChanged,
               cursorColor: Color(0xFFFCF7EF),
               style: AppTypography.inter(
                 fontSize: 14,
@@ -592,11 +663,28 @@ class _RitualListPageState extends State<RitualListPage> {
             const Divider(height: 1, thickness: 1, color: Color(0x14000000)),
         itemBuilder: (context, index) {
           if (index == items.length) {
+            if (_isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.gradientEnd,
+                    ),
+                  ),
+                ),
+              );
+            }
             return Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 30),
               child: Center(
                 child: Text(
-                  'You have reached to the end of the screen.',
+                  _page >= _totalPages
+                      ? 'You have reached the end of the list.'
+                      : '',
                   style: AppTypography.inter(
                     fontSize: 12,
                     color: const Color(0xFF8A6B4A),

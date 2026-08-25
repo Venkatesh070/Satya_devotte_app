@@ -65,7 +65,6 @@ class _RitualDetailPageState extends State<RitualDetailPage>
   static const _tabs = <String>[
     'Calendar Puja\'s',
     'About the Deity',
-    'Rituals and Remedies',
     'Stories of Deity',
   ];
 
@@ -1021,11 +1020,6 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                     );
                   }),
                   _AboutDeityTab(key: ValueKey('abt_${p.deityName}'), pooja: p),
-                  _RitualsTab(
-                    key: ValueKey('rit_${p.title}'),
-                    pooja: p,
-                    rituals: _deityRituals,
-                  ),
                   _StoriesTab(
                     key: ValueKey(
                       'story_${p.deityName}_${p.deityStories.length}',
@@ -1874,7 +1868,7 @@ class _AboutDeityTab extends StatelessWidget {
           ],
           if (_extractString(homePractice['placement']).isNotEmpty)
             LabeledField(
-              label: 'Placement / Altar Setup',
+              label: 'Idol / Murthi placement in the home',
               value: _extractString(homePractice['placement']),
               multiline: true,
             ),

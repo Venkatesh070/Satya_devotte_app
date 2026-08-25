@@ -36,7 +36,6 @@ import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/shared/widgets/app_update_popup.dart';
 
-
 class _HomeTabs {
   static const home = 0;
   static const pujas = 1;
@@ -54,7 +53,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final PageController _pageController;
   int _currentIndex = 0;
   bool _isAnimatingToTab = false;
@@ -75,10 +74,12 @@ class _HomePageState extends State<HomePage> {
   int _dayStreak = 0;
   late PoojaHistoryController _poojaHistoryController;
   Worker? _finishedPoojasWorker;
+  bool _isUpdateDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: _currentIndex);
 
     // Initialize PoojaHistoryController
@@ -101,6 +102,73 @@ class _HomePageState extends State<HomePage> {
         Get.find<UserNotificationsBadgeController>().refreshUnreadBadge(),
       );
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // _triggerUpdatePopupIfNeeded();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // _triggerUpdatePopupIfNeeded();
+      });
+    }
+  }
+
+  void _triggerUpdatePopupIfNeeded() {
+    if (!mounted) return;
+    _logAppVersions();
+    _promptAppUpdateIfAvailable(
+      appName: 'Sathya',
+      appSize: '182 MB',
+      isMandatory: true,
+    );
+  }
+
+  Future<void> _logAppVersions() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final currentVersion = '${info.version}+${info.buildNumber}';
+      debugPrint(
+        '[AppVersionCheck] Current Installed App Version: $currentVersion (Version: ${info.version}, Build: ${info.buildNumber})',
+      );
+
+      try {
+        final response = await Get.find<ApiClient>().dio.get<String>(
+          'https://play.google.com/store/apps/details?id=com.satya_devotte_app',
+          options: dio.Options(
+            responseType: dio.ResponseType.plain,
+            extra: {kSkipApiLoaderKey: true},
+          ),
+        );
+        final html = response.data ?? '';
+        final patterns = [
+          RegExp(r'\[\[\["([0-9]+\.[0-9]+\.[0-9]+[^"]*)"\]\]'),
+          RegExp(r'HTl26[^>]*>([0-9]+\.[0-9]+\.[0-9]+)<'),
+          RegExp(r'"([0-9]+\.[0-9]+\.[0-9]+)"'),
+        ];
+        String? foundVersion;
+        for (final p in patterns) {
+          final m = p.firstMatch(html);
+          if (m != null && m.group(1) != null) {
+            foundVersion = m.group(1);
+            break;
+          }
+        }
+        debugPrint(
+          '[AppVersionCheck] Play Store Public Version: ${foundVersion ?? "Not published on Public Store yet (Closed Testing Track Active)"}',
+        );
+      } catch (_) {
+        debugPrint(
+          '[AppVersionCheck] Play Store Status: App is currently in Closed Testing / Beta track (Not public web listing)',
+        );
+      }
+    } catch (e) {
+      debugPrint('[AppVersionCheck] Error fetching package info: $e');
+    }
   }
 
   /// Triggers the Google Play style centered update pop-up dialog over the app screen.
@@ -111,7 +179,8 @@ class _HomePageState extends State<HomePage> {
     String? storeUrl,
     bool isMandatory = false,
   }) {
-    if (!mounted) return;
+    if (!mounted || _isUpdateDialogShowing) return;
+    _isUpdateDialogShowing = true;
     showAppUpdateDialog(
       context,
       appName: appName,
@@ -119,13 +188,14 @@ class _HomePageState extends State<HomePage> {
       releaseNotes: releaseNotes,
       storeUrl: storeUrl,
       isMandatory: isMandatory,
-    );
+    ).then((_) {
+      _isUpdateDialogShowing = false;
+    });
   }
-
-
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _hideNavDebounceTimer?.cancel();
     _pageController.dispose();
     _finishedPoojasWorker?.dispose();
@@ -478,9 +548,7 @@ class _HomePageState extends State<HomePage> {
         apiClient.dio.get<dynamic>(
           ApiEndpoints.home,
           queryParameters: {'timezone': deviceTimeZone},
-          options: dio.Options(
-            headers: {'X-Timezone': deviceTimeZone},
-          ),
+          options: dio.Options(headers: {'X-Timezone': deviceTimeZone}),
         ),
         ProductRemoteDataSource(apiClient).getFeaturedProducts(limit: 10),
       ]);

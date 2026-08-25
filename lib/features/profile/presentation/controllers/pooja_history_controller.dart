@@ -35,7 +35,10 @@ class PoojaHistoryController extends GetxController {
   Future<void> _saveSessionDates() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('pooja_session_dates_map', jsonEncode(sessionDates.value));
+      await prefs.setString(
+        'pooja_session_dates_map',
+        jsonEncode(sessionDates.value),
+      );
     } catch (_) {}
   }
 
@@ -45,12 +48,14 @@ class PoojaHistoryController extends GetxController {
       final raw = prefs.getString('pooja_session_dates_map');
       if (raw != null) {
         final Map decoded = jsonDecode(raw);
-        sessionDates.assignAll(decoded.map((k, v) => MapEntry(k.toString(), v.toString())));
+        sessionDates.assignAll(
+          decoded.map((k, v) => MapEntry(k.toString(), v.toString())),
+        );
       }
     } catch (_) {}
   }
 
-  Future<void> fetchHistory() async {
+  Future<void> fetchHistory({bool skipLoader = false}) async {
     final offlineService = Get.find<OfflineService>();
     const cacheKey = 'pooja_history';
     try {
@@ -60,7 +65,7 @@ class PoojaHistoryController extends GetxController {
       dynamic payload;
       if (offlineService.isOnline.value) {
         try {
-          final data = await _repository.getPoojaHistory();
+          final data = await _repository.getPoojaHistory(skipLoader: skipLoader);
           payload = data['data'] ?? data;
           await offlineService.cacheData(cacheKey, payload);
         } catch (_) {
@@ -169,7 +174,11 @@ class PoojaHistoryController extends GetxController {
     return null;
   }
 
-  Future<Map<String, dynamic>?> startPooja(String poojaId, {String? scheduleDate, String? scheduleId}) async {
+  Future<Map<String, dynamic>?> startPooja(
+    String poojaId, {
+    String? scheduleDate,
+    String? scheduleId,
+  }) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
       // Offline start: create a temporary session
@@ -187,12 +196,17 @@ class PoojaHistoryController extends GetxController {
       return data;
     }
     try {
-      final result = await _repository.startPooja(poojaId, scheduleId: scheduleId);
+      final result = await _repository.startPooja(
+        poojaId,
+        scheduleId: scheduleId,
+      );
       final data = result['data'] ?? result;
       debugPrint('[History Controller Debug] startPooja data = $data');
       if (data is Map && scheduleDate != null) {
         final sId = (data['_id'] ?? data['id'] ?? '').toString();
-        debugPrint('[History Controller Debug] startPooja sId = $sId | scheduleDate = $scheduleDate');
+        debugPrint(
+          '[History Controller Debug] startPooja sId = $sId | scheduleDate = $scheduleDate',
+        );
         if (sId.isNotEmpty) {
           sessionDates[sId] = scheduleDate;
           await _saveSessionDates();

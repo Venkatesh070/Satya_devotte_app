@@ -32,7 +32,7 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       backgroundColor: CalendarUi.background,
       body: RefreshIndicator(
-        onRefresh: () => controller.fetchData(force: true),
+        onRefresh: () => controller.fetchData(force: true, skipLoader: true),
         color: CalendarUi.headerOrange,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

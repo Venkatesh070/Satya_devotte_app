@@ -150,6 +150,9 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
       }
     });
 
+    // Skip global Chakra overlay loader during pagination or pull-to-refresh (when items exist)
+    final skipLoader = !reset || _items.isNotEmpty;
+
     try {
       final page = reset ? 1 : _page + 1;
       final rows = <_CatalogRow>[];
@@ -161,6 +164,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               page: page,
               limit: _pageSize,
               search: _searchQuery.isEmpty ? null : _searchQuery,
+              skipLoader: skipLoader,
             );
         totalPages = result.totalPages < 1 ? 1 : result.totalPages;
         for (final item in result.items) {
@@ -185,6 +189,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               page: page,
               limit: _pageSize,
               search: _searchQuery.isEmpty ? null : _searchQuery,
+              skipLoader: skipLoader,
             );
         totalPages = result.totalPages < 1 ? 1 : result.totalPages;
         for (final item in result.items) {

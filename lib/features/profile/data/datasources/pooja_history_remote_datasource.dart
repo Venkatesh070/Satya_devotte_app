@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 
 class PoojaHistoryRemoteDataSource {
   PoojaHistoryRemoteDataSource(this._apiClient);
@@ -10,16 +11,20 @@ class PoojaHistoryRemoteDataSource {
     String? status,
     int page = 1,
     int limit = 100,
+    bool skipLoader = false,
   }) async {
     final queryParams = <String, dynamic>{
       if (status != null) 'status': status,
       'page': page,
       'limit': limit,
     };
+    final options =
+        skipLoader ? Options(extra: {kSkipApiLoaderKey: true}) : null;
 
     final response = await _apiClient.dio.get<dynamic>(
       ApiEndpoints.userPoojaHistory,
       queryParameters: queryParams,
+      options: options,
     );
     return response.data as Map<String, dynamic>;
   }

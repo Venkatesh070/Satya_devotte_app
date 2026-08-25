@@ -4,8 +4,16 @@ class PoojaHistoryRepository {
   PoojaHistoryRepository(this._remoteDataSource);
   final PoojaHistoryRemoteDataSource _remoteDataSource;
 
-  Future<Map<String, dynamic>> getPoojaHistory({String? status, int page = 1}) {
-    return _remoteDataSource.getPoojaHistory(status: status, page: page);
+  Future<Map<String, dynamic>> getPoojaHistory({
+    String? status,
+    int page = 1,
+    bool skipLoader = false,
+  }) {
+    return _remoteDataSource.getPoojaHistory(
+      status: status,
+      page: page,
+      skipLoader: skipLoader,
+    );
   }
 
   Future<Map<String, dynamic>> getPendingPoojas({int page = 1}) {
