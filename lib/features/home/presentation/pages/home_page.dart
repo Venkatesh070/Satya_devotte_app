@@ -34,6 +34,8 @@ import 'package:satya_devotte_app/features/pujas/presentation/pages/user_catalog
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+import 'package:satya_devotte_app/shared/widgets/app_update_popup.dart';
+
 
 class _HomeTabs {
   static const home = 0;
@@ -100,6 +102,27 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+
+  /// Triggers the Google Play style centered update pop-up dialog over the app screen.
+  void _promptAppUpdateIfAvailable({
+    String? appName,
+    String? releaseNotes,
+    String? appSize,
+    String? storeUrl,
+    bool isMandatory = false,
+  }) {
+    if (!mounted) return;
+    showAppUpdateDialog(
+      context,
+      appName: appName,
+      appSize: appSize,
+      releaseNotes: releaseNotes,
+      storeUrl: storeUrl,
+      isMandatory: isMandatory,
+    );
+  }
+
+
 
   @override
   void dispose() {
