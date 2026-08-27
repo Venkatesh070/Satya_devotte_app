@@ -100,8 +100,9 @@ class RitualController extends GetxController {
     _error.value = null;
     try {
       final auth = Get.find<AuthController>();
-      final status =
-          _filter.value == 'All' ? null : _filter.value.toUpperCase();
+      final status = _filter.value == 'All'
+          ? null
+          : _filter.value.toUpperCase();
       final result = await _dataSource.getRitualsPage(
         superAdmin: auth.isSuperAdmin,
         page: page ?? _page.value,
@@ -209,7 +210,7 @@ class RitualController extends GetxController {
         category: category,
         purpose: purpose,
         startingDay: startingDay,
-        ritualDays: ritualDays ?? days.length,
+        ritualDay: ritualDays ?? days.length,
         bestDayTime: bestDayTime,
         accessType: accessType,
         price: price,

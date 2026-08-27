@@ -530,213 +530,195 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 42,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            pooja.title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F1F1F),
-              height: 1.25,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              _previewChip(
-                Icons.timer_outlined,
-                pooja.duration.isEmpty ? '2 hours' : pooja.duration,
-              ),
-              _previewChip(
-                Icons.format_list_bulleted_rounded,
-                '${steps.length} Steps',
-              ),
-            ],
-          ),
-          if (pooja.idealTime.trim().isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF6200).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFF6200).withValues(alpha: 0.2),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.access_time_filled_rounded,
-                    size: 18,
-                    color: Color(0xFFE35600),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Ideal Time',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1F1F1F),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          pooja.idealTime,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xFF4A4A4A),
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              pooja.title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1F1F1F),
+                height: 1.25,
               ),
             ),
-          ],
-          const SizedBox(height: 16),
-          const Text(
-            'Steps',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1F1F1F),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                _previewChip(
+                  Icons.timer_outlined,
+                  pooja.duration.isEmpty ? '2 hours' : pooja.duration,
+                ),
+                _previewChip(
+                  Icons.format_list_bulleted_rounded,
+                  '${steps.length} Steps',
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  for (final step in steps)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
+            if (pooja.idealTime.trim().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6200).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFF6200).withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_filled_rounded,
+                      size: 18,
+                      color: Color(0xFFE35600),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 26,
-                            height: 26,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: gradientColors,
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${step.number}',
-                                style: const TextStyle(
-                                  color: Color(0xFFFCF7EF),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                          const Text(
+                            'Ideal Time',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1F1F1F),
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                step.title,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF333333),
-                                  height: 1.35,
-                                ),
-                              ),
+                          const SizedBox(height: 2),
+                          Text(
+                            pooja.idealTime,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF4A4A4A),
+                              height: 1.3,
                             ),
                           ),
                         ],
                       ),
                     ),
-                ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text(
+              'Steps',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F1F1F),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: CustomButton(
-              label: 'Begin Puja',
-              borderRadius: 24,
-              onTap: () {
-                Get.back();
-                final rawPooja = pooja.raw;
-                dynamic scheduleId =
-                    pooja.selectedScheduleId ??
-                    rawPooja['scheduleId'] ??
-                    rawPooja['selectedScheduleId'];
-                if (scheduleId == null && pooja.schedules.isNotEmpty) {
-                  final firstSched = pooja.schedules.first;
-                  scheduleId = firstSched['_id'] ?? firstSched['id'];
-                }
-                Get.toNamed(
-                  AppRoutes.poojaWizard,
-                  arguments: {
-                    'pooja': pooja,
-                    if (scheduleId != null) 'scheduleId': scheduleId.toString(),
-                  },
-                );
-              },
-              textColor: AppColors.white,
-              gradientColors: gradientColors,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: GestureDetector(
-              onTap: () {
-                Get.to(() => PoojaKnowMoreScreen(pooja: pooja));
-              },
-              behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  'Know more about the puja →',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFE35600),
-                    decoration: TextDecoration.underline,
-                    decorationColor: Color(0xFFE35600),
-                  ),
+            const SizedBox(height: 10),
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    for (final step in steps)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: gradientColors,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${step.number}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFCF7EF),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  step.title,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF333333),
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: CustomButton(
+                label: 'Begin Puja',
+                borderRadius: 24,
+                onTap: () {
+                  Get.back();
+                  final rawPooja = pooja.raw;
+                  dynamic scheduleId =
+                      pooja.selectedScheduleId ??
+                      rawPooja['scheduleId'] ??
+                      rawPooja['selectedScheduleId'];
+                  if (scheduleId == null && pooja.schedules.isNotEmpty) {
+                    final firstSched = pooja.schedules.first;
+                    scheduleId = firstSched['_id'] ?? firstSched['id'];
+                  }
+                  Get.toNamed(
+                    AppRoutes.poojaWizard,
+                    arguments: {
+                      'pooja': pooja,
+                      if (scheduleId != null)
+                        'scheduleId': scheduleId.toString(),
+                    },
+                  );
+                },
+                textColor: AppColors.white,
+                gradientColors: gradientColors,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     ),
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -909,6 +891,10 @@ Future<void> openPujaPreview(
   Map<String, dynamic> poojaMap = Map<String, dynamic>.from(
     initialData ?? <String, dynamic>{'_id': id, 'id': id},
   );
+  if (id.isNotEmpty) {
+    if ((poojaMap['_id'] ?? '').toString().trim().isEmpty) poojaMap['_id'] = id;
+    if ((poojaMap['id'] ?? '').toString().trim().isEmpty) poojaMap['id'] = id;
+  }
 
   final existingSteps = poojaMap['steps'];
   final needsFetch =
@@ -946,4 +932,83 @@ Future<void> openPujaPreview(
 
   if (!context.mounted) return;
   showPujaPreviewModal(context, PoojaView(poojaMap));
+}
+
+Future<void> openKnowMoreForPuja(
+  BuildContext context, {
+  required String id,
+  Map<String, dynamic>? initialData,
+}) async {
+  Map<String, dynamic> poojaMap = Map<String, dynamic>.from(
+    initialData ?? <String, dynamic>{'_id': id, 'id': id},
+  );
+  if (id.isNotEmpty) {
+    if ((poojaMap['_id'] ?? '').toString().trim().isEmpty) poojaMap['_id'] = id;
+    if ((poojaMap['id'] ?? '').toString().trim().isEmpty) poojaMap['id'] = id;
+  }
+
+  final existingSteps = poojaMap['steps'];
+  final needsFetch =
+      existingSteps == null || (existingSteps is List && existingSteps.isEmpty);
+
+  if (needsFetch && id.isNotEmpty) {
+    try {
+      final offlineService = Get.find<OfflineService>();
+      final cacheKey = 'pooja_detail_$id';
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.pooja(id),
+        );
+        final payload = res.data;
+        if (payload is Map) {
+          final data = payload['data'];
+          if (data is Map) {
+            final inner = data['pooja'];
+            poojaMap = inner is Map
+                ? Map<String, dynamic>.from(inner)
+                : Map<String, dynamic>.from(data);
+          } else {
+            poojaMap = Map<String, dynamic>.from(payload);
+          }
+          await offlineService.cacheData(cacheKey, poojaMap);
+        }
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        if (cached is Map) poojaMap = Map<String, dynamic>.from(cached);
+      }
+    } catch (e) {
+      debugPrint('Error fetching pooja detail for know more: $e');
+    }
+  }
+
+  if (!context.mounted) return;
+  Get.to(() => PoojaKnowMoreScreen(pooja: PoojaView(poojaMap)));
+}
+
+class EyeKnowMoreButton extends StatelessWidget {
+  const EyeKnowMoreButton({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: const BoxDecoration(
+          color: Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+          ).createShader(bounds),
+          child: const Icon(Icons.info, size: 24, color: Color(0xFFFCF7EF)),
+        ),
+      ),
+    );
+  }
 }

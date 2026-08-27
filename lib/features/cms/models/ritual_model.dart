@@ -126,8 +126,7 @@ class RitualSection {
       key = _slugifyKey(label);
     }
 
-    var description =
-        (json['description'] ?? json['content'] ?? '').toString();
+    var description = (json['description'] ?? json['content'] ?? '').toString();
 
     // Migrate legacy nested contents[] into a single description.
     if (description.trim().isEmpty && json['contents'] is List) {
@@ -136,8 +135,9 @@ class RitualSection {
         if (item is! Map) continue;
         final map = Map<String, dynamic>.from(item);
         final itemTitle = (map['title'] ?? '').toString().trim();
-        final desc =
-            (map['description'] ?? map['content'] ?? '').toString().trim();
+        final desc = (map['description'] ?? map['content'] ?? '')
+            .toString()
+            .trim();
         if (itemTitle.isNotEmpty && desc.isNotEmpty) {
           parts.add('$itemTitle\n$desc');
         } else if (itemTitle.isNotEmpty) {
@@ -158,11 +158,7 @@ class RitualSection {
     'description': description,
   };
 
-  RitualSection copyWith({
-    String? key,
-    String? label,
-    String? description,
-  }) {
+  RitualSection copyWith({String? key, String? label, String? description}) {
     return RitualSection(
       key: key ?? this.key,
       label: label ?? this.label,
@@ -221,7 +217,7 @@ class RitualModel {
     this.category,
     this.purpose,
     this.startingDay,
-    this.ritualDays,
+    this.ritualDay,
     this.recommendedDuration,
     this.bestDayTime,
     this.accessType = 'FREE',
@@ -249,7 +245,7 @@ class RitualModel {
   final String? category;
   final String? purpose;
   final String? startingDay;
-  final int? ritualDays;
+  final int? ritualDay;
   final String? recommendedDuration;
   final String? bestDayTime;
   final String accessType;
@@ -347,7 +343,9 @@ class RitualModel {
       media = RitualMedia(
         images: strings(json['images']),
         audio: media.audio.isNotEmpty ? media.audio : strings(json['audio']),
-        videos: media.videos.isNotEmpty ? media.videos : strings(json['videos']),
+        videos: media.videos.isNotEmpty
+            ? media.videos
+            : strings(json['videos']),
       );
     }
 
@@ -360,7 +358,7 @@ class RitualModel {
       category: json['category']?.toString(),
       purpose: json['purpose']?.toString(),
       startingDay: json['startingDay']?.toString(),
-      ritualDays: ritualDays,
+      ritualDay: ritualDays,
       recommendedDuration: json['recommendedDuration']?.toString(),
       bestDayTime: json['bestDayTime']?.toString(),
       accessType: (json['accessType'] ?? 'FREE').toString(),
@@ -394,7 +392,7 @@ class RitualModel {
   }
 
   Map<String, dynamic> toJson() {
-    final dayCount = ritualDays ?? days.length;
+    final dayCount = ritualDay ?? days.length;
     return {
       'title': title,
       if (slug != null && slug!.isNotEmpty) 'slug': slug,
@@ -455,7 +453,7 @@ class RitualModel {
       category: category ?? this.category,
       purpose: purpose ?? this.purpose,
       startingDay: startingDay ?? this.startingDay,
-      ritualDays: ritualDays ?? this.ritualDays,
+      ritualDay: ritualDays ?? this.ritualDay,
       recommendedDuration: recommendedDuration ?? this.recommendedDuration,
       bestDayTime: bestDayTime ?? this.bestDayTime,
       accessType: accessType ?? this.accessType,

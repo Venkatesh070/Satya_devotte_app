@@ -5,7 +5,7 @@ class AppEnv {
   /// Keep [config/app_env.default] in sync for native-only builds without dart-defines.
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'prod',
+    defaultValue: 'test',
   );
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',

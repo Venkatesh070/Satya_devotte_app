@@ -48,8 +48,14 @@ class RichTextDisplay extends StatelessWidget {
       );
     }
 
+    final crossAlign = textAlign == TextAlign.center
+        ? CrossAxisAlignment.center
+        : (textAlign == TextAlign.right
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start);
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: crossAlign,
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < blocks.length; i++) ...[
@@ -66,9 +72,9 @@ class RichTextDisplay extends StatelessWidget {
           else
             Text(
               blocks[i].content,
-              style: style?.copyWith(
-                fontWeight: FontWeight.w600,
-              ) ?? const TextStyle(fontWeight: FontWeight.w600),
+              style:
+                  style?.copyWith(fontWeight: FontWeight.w600) ??
+                  const TextStyle(fontWeight: FontWeight.w600),
               textAlign: textAlign,
               maxLines: maxLines,
               overflow: overflow,
@@ -143,7 +149,7 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       showCursor: false,
     );
     Widget child = DefaultTextStyle(
-      style: TextStyle(color: widget.style?.color ?? Color(0xFFFCF7EF)),
+      style: TextStyle(color: widget.style?.color ?? const Color(0xFFFCF7EF)),
       child: QuillEditor.basic(
         controller: _controller,
         config: config,
@@ -151,9 +157,7 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       ),
     );
 
-    // If maxLines is provided, constrain the height
     if (widget.maxLines != null) {
-      // Approximate max height based on line height
       final lineHeight = widget.style?.height ?? 1.2;
       final fontSize = widget.style?.fontSize ?? 14.0;
       final maxHeight = fontSize * lineHeight * widget.maxLines!;
@@ -163,6 +167,10 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
             ? ClipRect(child: child)
             : child,
       );
+    }
+
+    if (widget.textAlign == TextAlign.center) {
+      child = Center(child: child);
     }
 
     return child;

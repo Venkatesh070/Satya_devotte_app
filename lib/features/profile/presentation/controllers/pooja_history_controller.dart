@@ -212,6 +212,7 @@ class PoojaHistoryController extends GetxController {
           await _saveSessionDates();
         }
       }
+      await fetchHistory(skipLoader: true);
       return data as Map<String, dynamic>?;
     } catch (e) {
       print('Error starting pooja: $e');

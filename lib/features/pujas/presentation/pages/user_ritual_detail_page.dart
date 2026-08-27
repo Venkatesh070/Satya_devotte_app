@@ -69,9 +69,7 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.gradientEnd),
-            )
+          ? const SizedBox.shrink()
           : _error != null
           ? Center(
               child: Padding(
@@ -113,9 +111,8 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                       child: CachedNetworkImage(
                         imageUrl: ritual.imageUrl!,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const ColoredBox(
-                          color: Color(0xFFFAECD2),
-                        ),
+                        errorWidget: (_, __, ___) =>
+                            const ColoredBox(color: Color(0xFFFAECD2)),
                       ),
                     ),
                   ),
@@ -135,10 +132,9 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                   children: [
                     if ((ritual.category ?? '').trim().isNotEmpty)
                       _MetaChip(label: ritual.category!),
-                    if ((ritual.ritualDays ?? ritual.days.length) > 0)
+                    if ((ritual.ritualDay ?? ritual.days.length) > 0)
                       _MetaChip(
-                        label:
-                            '${ritual.ritualDays ?? ritual.days.length} days',
+                        label: '${ritual.ritualDay ?? ritual.days.length} days',
                       ),
                     if ((ritual.recommendedDuration ?? '').trim().isNotEmpty)
                       _MetaChip(label: ritual.recommendedDuration!),
@@ -195,30 +191,30 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                     ),
                   ),
                 ],
-    if (ritual.sections.isNotEmpty) ...[
-      const SizedBox(height: 8),
-      Text(
-        'Sections',
-        style: AppTypography.lora(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: const Color(0xFF4A1C00),
-        ),
-      ),
-      const SizedBox(height: 8),
-      ...ritual.sections
-          .where(
-            (section) =>
-                section.label.trim().isNotEmpty ||
-                section.description.trim().isNotEmpty,
-          )
-          .map(
-            (section) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RitualSectionCard(section: section),
-            ),
-          ),
-    ],
+                if (ritual.sections.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sections',
+                    style: AppTypography.lora(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...ritual.sections
+                      .where(
+                        (section) =>
+                            section.label.trim().isNotEmpty ||
+                            section.description.trim().isNotEmpty,
+                      )
+                      .map(
+                        (section) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _RitualSectionCard(section: section),
+                        ),
+                      ),
+                ],
               ],
             ),
     );
@@ -285,10 +281,7 @@ class _RitualDayHeroImages extends StatelessWidget {
     }
 
     if (images.length == 1) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: buildImage(images.first),
-      );
+      return AspectRatio(aspectRatio: 16 / 9, child: buildImage(images.first));
     }
 
     return AspectRatio(

@@ -21,11 +21,7 @@ Widget _cmsClickable({
 }) {
   return MouseRegion(
     cursor: SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: onTap,
-      behavior: behavior,
-      child: child,
-    ),
+    child: GestureDetector(onTap: onTap, behavior: behavior, child: child),
   );
 }
 
@@ -58,9 +54,9 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
   }
 
   void _closeForm() => setState(() {
-        _showForm = false;
-        _editing = null;
-      });
+    _showForm = false;
+    _editing = null;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +107,9 @@ class _RitualListState extends State<_RitualList> {
   @override
   void initState() {
     super.initState();
-    _searchScheduler = CmsSearchScheduler(onSearch: widget.controller.setSearch);
+    _searchScheduler = CmsSearchScheduler(
+      onSearch: widget.controller.setSearch,
+    );
   }
 
   @override
@@ -272,7 +270,8 @@ class _RitualListState extends State<_RitualList> {
                                   : FontWeight.normal,
                             ),
                           ),
-                          if (f == 'Pending' && controller.pendingCount > 0) ...[
+                          if (f == 'Pending' &&
+                              controller.pendingCount > 0) ...[
                             const SizedBox(width: 5),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -326,12 +325,12 @@ class _RitualListState extends State<_RitualList> {
                     'to create your first ritual.',
                 actionLabel:
                     (controller.filter == 'All' && controller.search.isEmpty)
-                        ? 'Add Ritual'
-                        : null,
+                    ? 'Add Ritual'
+                    : null,
                 onAction:
                     (controller.filter == 'All' && controller.search.isEmpty)
-                        ? onAdd
-                        : null,
+                    ? onAdd
+                    : null,
               );
             }
             return RefreshIndicator(
@@ -461,10 +460,10 @@ class _RitualCard extends StatelessWidget {
                         color: CmsColors.textSecond,
                       ),
                     ),
-                    if ((ritual.ritualDays ?? ritual.days.length) > 0) ...[
+                    if ((ritual.ritualDay ?? ritual.days.length) > 0) ...[
                       const SizedBox(width: 8),
                       Text(
-                        '${ritual.ritualDays ?? ritual.days.length} days',
+                        '${ritual.ritualDay ?? ritual.days.length} days',
                         style: const TextStyle(
                           fontSize: 11,
                           color: CmsColors.textSecond,
@@ -604,27 +603,23 @@ class _RitualFormState extends State<_RitualForm> {
     const _SectionDraft(label: 'Preparation'),
   ];
 
-  static List<_SectionDraft> _sectionEntriesFromModel(List<RitualSection> sections) =>
-      sections
-          .map(
-            (s) => _SectionDraft(
-              label: s.label,
-              description: s.description,
-            ),
-          )
-          .toList();
+  static List<_SectionDraft> _sectionEntriesFromModel(
+    List<RitualSection> sections,
+  ) => sections
+      .map((s) => _SectionDraft(label: s.label, description: s.description))
+      .toList();
 
   static List<RitualSection> _sectionsToModel(List<_SectionDraft> entries) =>
       entries
           .where(
-            (s) =>
-                s.label.trim().isNotEmpty ||
-                s.description.trim().isNotEmpty,
+            (s) => s.label.trim().isNotEmpty || s.description.trim().isNotEmpty,
           )
           .map(
             (s) => RitualSection(
               key: '',
-              label: s.label.trim().isEmpty ? 'Untitled section' : s.label.trim(),
+              label: s.label.trim().isEmpty
+                  ? 'Untitled section'
+                  : s.label.trim(),
               description: s.description,
             ),
           )
@@ -640,7 +635,7 @@ class _RitualFormState extends State<_RitualForm> {
     _categoryCtrl = TextEditingController(text: r?.category ?? '');
     _purposeCtrl = TextEditingController(text: r?.purpose ?? '');
     _startingDayCtrl = TextEditingController(text: r?.startingDay ?? '');
-    final dayCount = r?.ritualDays ?? r?.days.length ?? 0;
+    final dayCount = r?.ritualDay ?? r?.days.length ?? 0;
     _ritualDaysCtrl = TextEditingController(
       text: dayCount > 0 ? dayCount.toString() : '',
     );
@@ -749,8 +744,7 @@ class _RitualFormState extends State<_RitualForm> {
       _editingDayIndex = index;
       _showDayEditor = true;
       _dayTitleCtrl.text = day.title;
-      _dayDescRich =
-          day.description.trim().isEmpty ? null : day.description;
+      _dayDescRich = day.description.trim().isEmpty ? null : day.description;
       _dayEditorEpoch++;
       _dayImageUrls
         ..clear()
@@ -838,7 +832,9 @@ class _RitualFormState extends State<_RitualForm> {
         if (!mounted) return;
         _sectionLabelFocus.requestFocus();
         final text = _sectionLabelCtrl.text;
-        _sectionLabelCtrl.selection = TextSelection.collapsed(offset: text.length);
+        _sectionLabelCtrl.selection = TextSelection.collapsed(
+          offset: text.length,
+        );
       });
     });
   }
@@ -849,8 +845,9 @@ class _RitualFormState extends State<_RitualForm> {
       _editingSectionIndex = index;
       _showSectionEditor = true;
       _sectionLabelCtrl.text = section.label;
-      _sectionDescRich =
-          section.description.trim().isEmpty ? null : section.description;
+      _sectionDescRich = section.description.trim().isEmpty
+          ? null
+          : section.description;
       _sectionEditorEpoch++;
     });
     _focusSectionLabelField();
@@ -863,7 +860,8 @@ class _RitualFormState extends State<_RitualForm> {
       if (_editingSectionIndex == index) {
         _clearSectionEditorFields();
         _showSectionEditor = false;
-      } else if (_editingSectionIndex != null && index < _editingSectionIndex!) {
+      } else if (_editingSectionIndex != null &&
+          index < _editingSectionIndex!) {
         _editingSectionIndex = _editingSectionIndex! - 1;
       }
       final next = List<_SectionDraft>.from(_sectionEntries);
@@ -965,7 +963,7 @@ class _RitualFormState extends State<_RitualForm> {
       sections: cleanSections,
       purpose: _purposeCtrl.text.trim(),
       startingDay: _startingDayCtrl.text.trim(),
-      ritualDays: ritualDays ?? cleanDays.length,
+      ritualDay: ritualDays ?? cleanDays.length,
       bestDayTime: _bestTimeCtrl.text.trim(),
       accessType: _accessType,
       price: 0,
@@ -989,7 +987,7 @@ class _RitualFormState extends State<_RitualForm> {
             category: ritualData.category,
             purpose: ritualData.purpose,
             startingDay: ritualData.startingDay,
-            ritualDays: ritualData.ritualDays,
+            ritualDays: ritualData.ritualDay,
             bestDayTime: ritualData.bestDayTime,
             accessType: ritualData.accessType,
             price: ritualData.price,
@@ -1055,9 +1053,7 @@ class _RitualFormState extends State<_RitualForm> {
   Widget _buildLeftColumn() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildBasicDetailsCard(),
-      ],
+      children: [_buildBasicDetailsCard()],
     );
   }
 
@@ -1125,34 +1121,34 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   Widget _formHeader() => Row(
-        children: [
-          _cmsClickable(
-            onTap: widget.onCancel,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: CmsColors.bg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: CmsColors.border),
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 18,
-                color: CmsColors.textPrimary,
-              ),
-            ),
+    children: [
+      _cmsClickable(
+        onTap: widget.onCancel,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: CmsColors.bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CmsColors.border),
           ),
-          const SizedBox(width: 12),
-          Text(
-            _isEdit ? 'Edit Ritual' : 'Add Ritual',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: CmsColors.textPrimary,
-            ),
+          child: const Icon(
+            Icons.arrow_back,
+            size: 18,
+            color: CmsColors.textPrimary,
           ),
-        ],
-      );
+        ),
+      ),
+      const SizedBox(width: 12),
+      Text(
+        _isEdit ? 'Edit Ritual' : 'Add Ritual',
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: CmsColors.textPrimary,
+        ),
+      ),
+    ],
+  );
 
   Widget _buildBasicDetailsCard() {
     return CmsFormCard(
@@ -1337,10 +1333,9 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   static String _truncateDayPreview(String text) {
-    final plain = documentFromValue(text)
-        .toPlainText()
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final plain = documentFromValue(
+      text,
+    ).toPlainText().replaceAll(RegExp(r'\s+'), ' ').trim();
     if (plain.isEmpty) return '';
     if (plain.length <= 48) return plain;
     return '${plain.substring(0, 48)}…';
@@ -1432,28 +1427,26 @@ class _RitualFormState extends State<_RitualForm> {
             child: _RitualEmptyHint(text: 'No days yet'),
           )
         else
-          ..._dayEntries.asMap().entries.map(
-            (e) {
-              final hasImages =
-                  e.value.imageUrls.isNotEmpty || e.value.pickedImages.isNotEmpty;
-              final descPreview = e.value.description.trim().isEmpty
-                  ? ''
-                  : _truncateDayPreview(e.value.description);
-              return _RitualRailTile(
-                key: ValueKey(
-                  'day-rail-${e.key}-${e.value.title}-${e.value.description}',
-                ),
-                index: e.key + 1,
-                title: e.value.title.isEmpty ? 'Untitled Day' : e.value.title,
-                subtitle: descPreview.isNotEmpty
-                    ? descPreview
-                    : (hasImages ? 'Has images' : 'No description'),
-                isSelected: _showDayEditor && _editingDayIndex == e.key,
-                onTap: () => _startEditDay(e.key),
-                onRemove: () => _removeDay(e.key),
-              );
-            },
-          ),
+          ..._dayEntries.asMap().entries.map((e) {
+            final hasImages =
+                e.value.imageUrls.isNotEmpty || e.value.pickedImages.isNotEmpty;
+            final descPreview = e.value.description.trim().isEmpty
+                ? ''
+                : _truncateDayPreview(e.value.description);
+            return _RitualRailTile(
+              key: ValueKey(
+                'day-rail-${e.key}-${e.value.title}-${e.value.description}',
+              ),
+              index: e.key + 1,
+              title: e.value.title.isEmpty ? 'Untitled Day' : e.value.title,
+              subtitle: descPreview.isNotEmpty
+                  ? descPreview
+                  : (hasImages ? 'Has images' : 'No description'),
+              isSelected: _showDayEditor && _editingDayIndex == e.key,
+              onTap: () => _startEditDay(e.key),
+              onRemove: () => _removeDay(e.key),
+            );
+          }),
         const SizedBox(height: 8),
         _RitualPrimaryAddButton(
           label: _dayEntries.isEmpty ? 'Add first day' : 'Add day',
@@ -1465,8 +1458,9 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   Widget _buildDayWorkspace() {
-    final editingDayNumber =
-        _editingDayIndex != null ? _editingDayIndex! + 1 : _dayEntries.length + 1;
+    final editingDayNumber = _editingDayIndex != null
+        ? _editingDayIndex! + 1
+        : _dayEntries.length + 1;
 
     if (!_showDayEditor) {
       return _RitualWorkspaceHint(
@@ -1552,27 +1546,20 @@ class _RitualFormState extends State<_RitualForm> {
             child: _RitualEmptyHint(text: 'No sections yet'),
           )
         else
-          ..._sectionEntries.asMap().entries.map(
-            (e) {
-              final descPreview = e.value.description.trim().isEmpty
-                  ? ''
-                  : _truncateDayPreview(e.value.description);
-              return _RitualRailTile(
-                key: ValueKey('section-rail-${e.key}-${e.value.label}'),
-                index: e.key + 1,
-                title: e.value.label.isEmpty
-                    ? 'Untitled section'
-                    : e.value.label,
-                subtitle: descPreview.isNotEmpty
-                    ? descPreview
-                    : 'No description',
-                isSelected:
-                    _showSectionEditor && _editingSectionIndex == e.key,
-                onTap: () => _startEditSection(e.key),
-                onRemove: () => _removeSection(e.key),
-              );
-            },
-          ),
+          ..._sectionEntries.asMap().entries.map((e) {
+            final descPreview = e.value.description.trim().isEmpty
+                ? ''
+                : _truncateDayPreview(e.value.description);
+            return _RitualRailTile(
+              key: ValueKey('section-rail-${e.key}-${e.value.label}'),
+              index: e.key + 1,
+              title: e.value.label.isEmpty ? 'Untitled section' : e.value.label,
+              subtitle: descPreview.isNotEmpty ? descPreview : 'No description',
+              isSelected: _showSectionEditor && _editingSectionIndex == e.key,
+              onTap: () => _startEditSection(e.key),
+              onRemove: () => _removeSection(e.key),
+            );
+          }),
         const SizedBox(height: 8),
         _RitualPrimaryAddButton(
           label: _sectionEntries.isEmpty ? 'Add first section' : 'Add section',
@@ -1629,26 +1616,19 @@ class _RitualFormState extends State<_RitualForm> {
       subtitle: 'Enter a heading and description for this section.',
       onCancel: _cancelSectionEdit,
       onSave: _saveSectionEntry,
-      saveLabel:
-          _editingSectionIndex != null ? 'Save section' : 'Add section',
+      saveLabel: _editingSectionIndex != null ? 'Save section' : 'Add section',
       child: _buildSectionEditorFields(),
     );
   }
 }
 
 class _SectionDraft {
-  const _SectionDraft({
-    required this.label,
-    this.description = '',
-  });
+  const _SectionDraft({required this.label, this.description = ''});
 
   final String label;
   final String description;
 
-  _SectionDraft copyWith({
-    String? label,
-    String? description,
-  }) {
+  _SectionDraft copyWith({String? label, String? description}) {
     return _SectionDraft(
       label: label ?? this.label,
       description: description ?? this.description,
@@ -1675,7 +1655,11 @@ class _RitualSplitLayout extends StatelessWidget {
         SizedBox(width: leftWidth, child: left),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 14),
-          child: VerticalDivider(width: 1, thickness: 1, color: CmsColors.border),
+          child: VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: CmsColors.border,
+          ),
         ),
         Expanded(child: right),
       ],
@@ -1793,8 +1777,9 @@ class _RitualRailTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
                           color: CmsColors.textPrimary,
                         ),
                       ),
@@ -2256,7 +2241,11 @@ class _DayImageThumb extends StatelessWidget {
                 color: Colors.black87,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, size: 12, color: Color(0xFFFCF7EF)),
+              child: const Icon(
+                Icons.close,
+                size: 12,
+                color: Color(0xFFFCF7EF),
+              ),
             ),
           ),
         ),

@@ -60,7 +60,8 @@ class _CatalogRow {
   final Map<String, dynamic>? rawPooja;
 
   String? get statusLabel {
-    final map = rawPooja ?? <String, dynamic>{'_id': id, 'id': id, 'title': title};
+    final map =
+        rawPooja ?? <String, dynamic>{'_id': id, 'id': id, 'title': title};
     return statusForPooja(map);
   }
 }
@@ -83,8 +84,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
 
   bool get _isPujas => widget.kind == UserCatalogKind.pujas;
   String get _title => _isPujas ? 'Pujas' : 'Rituals';
-  String get _searchHint =>
-      _isPujas ? 'Search pujas...' : 'Search rituals...';
+  String get _searchHint => _isPujas ? 'Search pujas...' : 'Search rituals...';
   String get _emptyLabel =>
       _isPujas ? 'No approved pujas found.' : 'No approved rituals found.';
 
@@ -194,7 +194,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
         totalPages = result.totalPages < 1 ? 1 : result.totalPages;
         for (final item in result.items) {
           if (item.id.trim().isEmpty) continue;
-          final days = item.ritualDays ?? item.days.length;
+          final days = item.ritualDay ?? item.days.length;
           rows.add(
             _CatalogRow(
               id: item.id,
@@ -245,11 +245,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
 
   Future<void> _openItem(_CatalogRow item) async {
     if (_isPujas) {
-      await openPujaPreview(
-        context,
-        id: item.id,
-        initialData: item.rawPooja,
-      );
+      await openPujaPreview(context, id: item.id, initialData: item.rawPooja);
       return;
     }
     Get.to<void>(() => UserRitualDetailPage(ritualId: item.id));
@@ -546,15 +542,33 @@ class _CatalogCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.lora(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF4A1C00),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.lora(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF4A1C00),
+                          ),
+                        ),
+                      ),
+                      if (item.rawPooja != null) ...[
+                        const SizedBox(width: 8),
+                        EyeKnowMoreButton(
+                          onTap: () {
+                            openKnowMoreForPuja(
+                              context,
+                              id: item.id,
+                              initialData: item.rawPooja,
+                            );
+                          },
+                        ),
+                      ],
+                    ],
                   ),
                   if (Get.isRegistered<PoojaHistoryController>())
                     Obx(() {
@@ -600,9 +614,6 @@ class _CatalogCard extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Image.asset(
-      'assets/images/default_img.png',
-      fit: BoxFit.cover,
-    );
+    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
   }
 }

@@ -17,6 +17,7 @@ import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deiti
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 
 class RitualListPage extends StatefulWidget {
   const RitualListPage({super.key});
@@ -806,6 +807,7 @@ class DeityListItem {
     required this.description,
     required this.imageUrl,
     this.scheduledDate,
+    this.rawPooja,
   });
 
   factory DeityListItem.fromJson(Map<String, dynamic> e) {
@@ -858,6 +860,7 @@ class DeityListItem {
       description: getDescription(),
       imageUrl: resolveImageUrl(),
       scheduledDate: resolveScheduledDate(),
+      rawPooja: e,
     );
   }
 
@@ -884,6 +887,7 @@ class DeityListItem {
   final String description;
   final String? imageUrl;
   final String? scheduledDate;
+  final Map<String, dynamic>? rawPooja;
 }
 
 String? _formatListItemDate(String? raw) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
@@ -57,6 +58,9 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       _currentPage = _clampStep(_currentPage);
     }
     _pageController = PageController(initialPage: _currentPage);
+    if (_sessionId == null) {
+      _startSession();
+    }
   }
 
   Future<void> _loadFullPooja() async {
@@ -109,21 +113,48 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     }
   }
 
+  String _extractIdFromMap(dynamic data) {
+    if (data is! Map) return '';
+    if (data['_id'] != null && data['_id'].toString().trim().isNotEmpty) {
+      return data['_id'].toString().trim();
+    }
+    if (data['id'] != null && data['id'].toString().trim().isNotEmpty) {
+      return data['id'].toString().trim();
+    }
+    if (data['session'] is Map) {
+      return _extractIdFromMap(data['session']);
+    }
+    if (data['data'] is Map) {
+      return _extractIdFromMap(data['data']);
+    }
+    if (data['pooja'] is Map) {
+      return _extractIdFromMap(data['pooja']);
+    }
+    return '';
+  }
+
   Future<void> _startSession() async {
-    if (_isStartingSession) return;
+    if (_isStartingSession || _sessionId != null) return;
+    final poojaId = _currentPooja.id.isNotEmpty ? _currentPooja.id : widget.pooja.id;
+    if (poojaId.trim().isEmpty) {
+      debugPrint('[PoojaStepWizard Error] Cannot start session: poojaId is empty');
+      return;
+    }
     _isStartingSession = true;
 
     try {
       final historyCtrl = Get.find<PoojaHistoryController>();
       final result = await historyCtrl.startPooja(
-        widget.pooja.id,
-        scheduleDate: widget.pooja.date,
+        poojaId,
+        scheduleDate: _currentPooja.date.isNotEmpty ? _currentPooja.date : widget.pooja.date,
         scheduleId: widget.scheduleId,
       );
       if (result != null) {
-        if (mounted) {
+        final extractedId = _extractIdFromMap(result);
+        if (mounted && extractedId.isNotEmpty) {
           setState(() {
-            _sessionId = result['_id'] ?? result['id'];
+            _sessionId = extractedId;
+            debugPrint('[PoojaStepWizard] Session created & saved with ID: $_sessionId');
             if (widget.initialStep == null) {
               final step = result['currentStep'] as int? ?? 0;
               if (step > 0 && step < _screens.length) {
@@ -260,20 +291,22 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     return [];
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
     if (_currentPage < _screens.length - 1) {
       final nextIdx = _currentPage + 1;
 
-      // Start session lazily if not already started
+      // Ensure session is started before advancing
       if (_sessionId == null) {
-        _startSession();
+        await _startSession();
       }
 
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() => _currentPage = nextIdx);
+      if (mounted) {
+        setState(() => _currentPage = nextIdx);
+      }
 
       // Update progress if we have a session
       if (_sessionId != null) {
@@ -610,7 +643,11 @@ class _IntroScreen extends StatelessWidget {
             const Spacer(),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 240),
-              child: _WizardButton(label: 'Proceed', onTap: onNext, onBack: onBack),
+              child: _WizardButton(
+                label: 'Proceed',
+                onTap: onNext,
+                onBack: onBack,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -654,65 +691,97 @@ class PoojaKnowMoreScreen extends StatelessWidget {
     return pooja.blessings;
   }
 
-  List<String> get _mantraBullets {
+  List<_KnowMoreSubSection> get _mantraSubSections {
     final m = pooja.mantra;
-    final bullets = <String>[];
+    final subSections = <_KnowMoreSubSection>[];
 
-    final primary = (m['primary'] ?? m['mantra'] ?? m['text'] ?? '').toString().trim();
-    final repetitions = (m['repetitions'] ?? m['counts'] ?? '').toString().trim();
-    final meaning = (m['meaning'] ?? m['translation'] ?? '').toString().trim();
-    final additional = _poojaStringList(m['additional'] ?? m['other'] ?? m['list']);
+    final primary = _extractPoojaFieldString(
+      m['primary'] ?? m['mantra'] ?? m['text'],
+    );
+    final repetitions = _extractPoojaFieldString(
+      m['repetitions'] ?? m['counts'],
+    );
+    final meaning = _extractPoojaFieldString(m['meaning'] ?? m['translation']);
+    final additional = _poojaStringList(
+      m['additional'] ?? m['other'] ?? m['list'],
+    );
 
     if (primary.isNotEmpty) {
-      if (repetitions.isNotEmpty) {
-        bullets.add('$primary\n(Repetitions: $repetitions)');
-      } else {
-        bullets.add(primary);
-      }
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Primary Mantra', body: primary),
+      );
+    }
+    if (repetitions.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Repetitions', body: repetitions),
+      );
     }
     if (meaning.isNotEmpty) {
-      bullets.add('Meaning: $meaning');
+      subSections.add(_KnowMoreSubSection(subtitle: 'Meaning', body: meaning));
     }
-    for (final add in additional) {
-      if (add.isNotEmpty && add != primary) {
-        bullets.add(add);
-      }
+    if (additional.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Additional Chants', bullets: additional),
+      );
     }
 
-    if (bullets.isEmpty && pooja.deityDoc != null) {
+    if (subSections.isEmpty && pooja.deityDoc != null) {
       final chanting = pooja.deityDoc!['chanting'];
       if (chanting is Map) {
-        final chantMantra = (chanting['mantra'] ?? '').toString().trim();
-        final chantReps = (chanting['repetitions'] ?? '').toString().trim();
+        final chantMantra = _extractPoojaFieldString(chanting['mantra']);
+        final chantReps = _extractPoojaFieldString(chanting['repetitions']);
         final chantBenefits = _poojaStringList(chanting['benefits']);
 
         if (chantMantra.isNotEmpty) {
-          if (chantReps.isNotEmpty) {
-            bullets.add('$chantMantra\n(Repetitions: $chantReps)');
-          } else {
-            bullets.add(chantMantra);
-          }
+          subSections.add(
+            _KnowMoreSubSection(subtitle: 'Mantra', body: chantMantra),
+          );
         }
-        for (final b in chantBenefits) {
-          bullets.add('Benefit: $b');
+        if (chantReps.isNotEmpty) {
+          subSections.add(
+            _KnowMoreSubSection(subtitle: 'Repetitions', body: chantReps),
+          );
+        }
+        if (chantBenefits.isNotEmpty) {
+          subSections.add(
+            _KnowMoreSubSection(
+              subtitle: 'Benefits of Chanting',
+              bullets: chantBenefits,
+            ),
+          );
         }
       }
     }
 
-    return bullets;
+    return subSections;
   }
 
-  List<String> get _spiritualSignificanceBullets {
+  List<_KnowMoreSubSection> get _spiritualSignificanceSubSections {
     final sm = pooja.spiritualMeaning;
-    final bullets = <String>[];
+    final subSections = <_KnowMoreSubSection>[];
 
-    void processSection(dynamic raw, String defaultCategory) {
-      if (raw == null) return;
+    List<String> extractBullets(dynamic raw) {
+      final bullets = <String>[];
       if (raw is List) {
         for (final item in raw) {
           if (item is Map) {
-            final title = (item['title'] ?? item['name'] ?? item['action'] ?? item['offering'] ?? item['key'] ?? '').toString().trim();
-            final desc = (item['description'] ?? item['meaning'] ?? item['content'] ?? item['value'] ?? '').toString().trim();
+            final title =
+                (item['title'] ??
+                        item['name'] ??
+                        item['action'] ??
+                        item['offering'] ??
+                        item['key'] ??
+                        '')
+                    .toString()
+                    .trim();
+            final desc =
+                (item['description'] ??
+                        item['meaning'] ??
+                        item['content'] ??
+                        item['value'] ??
+                        '')
+                    .toString()
+                    .trim();
             if (title.isNotEmpty && desc.isNotEmpty) {
               bullets.add('$title: $desc');
             } else if (title.isNotEmpty) {
@@ -721,14 +790,19 @@ class PoojaKnowMoreScreen extends StatelessWidget {
               bullets.add(desc);
             }
           } else if (item != null) {
-            final str = item.toString().trim();
+            final str = _extractPoojaFieldString(item);
             if (str.isNotEmpty) bullets.add(str);
           }
         }
       } else if (raw is Map) {
         raw.forEach((k, v) {
           final title = k.toString().trim();
-          final desc = (v is Map ? (v['description'] ?? v['meaning'] ?? v['value'] ?? '') : v).toString().trim();
+          final desc =
+              (v is Map
+                      ? (v['description'] ?? v['meaning'] ?? v['value'] ?? '')
+                      : v)
+                  .toString()
+                  .trim();
           if (title.isNotEmpty && desc.isNotEmpty) {
             bullets.add('$title: $desc');
           } else if (title.isNotEmpty) {
@@ -740,90 +814,140 @@ class PoojaKnowMoreScreen extends StatelessWidget {
       } else if (raw is String && raw.trim().isNotEmpty) {
         bullets.add(raw.trim());
       }
+      return bullets;
     }
 
-    processSection(sm['actionsMeaning'] ?? sm['actions'], 'Actions');
-    processSection(sm['offeringsMeaning'] ?? sm['offerings'], 'Offerings');
-    processSection(sm['otherSymbolism'] ?? sm['symbolism'], 'Symbolism');
-
-    if (bullets.isEmpty && pooja.raw['spiritualMeaning'] != null) {
-      processSection(pooja.raw['spiritualMeaning'], '');
+    final actions = extractBullets(sm['actionsMeaning'] ?? sm['actions']);
+    if (actions.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Actions Meaning', bullets: actions),
+      );
     }
 
-    return bullets;
-  }
-
-  List<String> get _devotionalGuidanceBullets {
-    final g = pooja.guidance;
-    final bullets = <String>[];
-
-    final mindset = _poojaStringList(g['mindset'] ?? g['attitude'] ?? g['guidance'] ?? g['devotional']);
-    final avoid = _poojaStringList(g['avoid'] ?? g['donts'] ?? g['restrictions'] ?? g['precautions']);
-    final prepPersonal = _poojaStringList(pooja.preparation['personal']);
-    final prepSpace = _poojaStringList(pooja.preparation['space']);
-
-    for (final m in mindset) {
-      bullets.add(m);
-    }
-    for (final p in prepPersonal) {
-      if (!bullets.contains(p)) bullets.add('Personal Prep: $p');
-    }
-    for (final s in prepSpace) {
-      if (!bullets.contains(s)) bullets.add('Space Prep: $s');
-    }
-    for (final a in avoid) {
-      bullets.add('What to Avoid: $a');
+    final offerings = extractBullets(sm['offeringsMeaning'] ?? sm['offerings']);
+    if (offerings.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Offerings Meaning', bullets: offerings),
+      );
     }
 
-    if (bullets.isEmpty && pooja.deityDoc != null) {
-      final conn = pooja.deityDoc!['connecting'];
-      if (conn is Map) {
-        final pray = (conn['how_to_pray'] ?? '').toString().trim();
-        final pleases = _poojaStringList(conn['what_pleases']);
-        final displeases = _poojaStringList(conn['displeases']);
-        if (pray.isNotEmpty) bullets.add(pray);
-        for (final pl in pleases) bullets.add('What Pleases Deity: $pl');
-        for (final dp in displeases) bullets.add('What Displeases: $dp');
+    final symbolism = extractBullets(sm['otherSymbolism'] ?? sm['symbolism']);
+    if (symbolism.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Other Symbolism', bullets: symbolism),
+      );
+    }
+
+    if (subSections.isEmpty && pooja.raw['spiritualMeaning'] is String) {
+      final fallbackStr = (pooja.raw['spiritualMeaning'] as String).trim();
+      if (fallbackStr.isNotEmpty) {
+        subSections.add(
+          _KnowMoreSubSection(subtitle: 'Spiritual Meaning', body: fallbackStr),
+        );
       }
     }
 
-    return bullets;
+    return subSections;
   }
 
-  List<String> get _completionBullets {
+  List<_KnowMoreSubSection> get _devotionalGuidanceSubSections {
+    final g = pooja.guidance;
+    final subSections = <_KnowMoreSubSection>[];
+
+    final mindset = _poojaStringList(
+      g['mindset'] ?? g['attitude'] ?? g['guidance'] ?? g['devotional'],
+    );
+    if (mindset.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Devotional Mindset', bullets: mindset),
+      );
+    }
+
+    final avoid = _poojaStringList(
+      g['avoid'] ?? g['donts'] ?? g['restrictions'] ?? g['precautions'],
+    );
+    if (avoid.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'What to Avoid', bullets: avoid),
+      );
+    }
+
+    if (subSections.isEmpty && pooja.deityDoc != null) {
+      final conn = pooja.deityDoc!['connecting'];
+      if (conn is Map) {
+        final pray = _extractPoojaFieldString(conn['how_to_pray']);
+        final pleases = _poojaStringList(conn['what_pleases']);
+        final displeases = _poojaStringList(conn['displeases']);
+        if (pray.isNotEmpty) {
+          subSections.add(
+            _KnowMoreSubSection(subtitle: 'How to Pray', body: pray),
+          );
+        }
+        if (pleases.isNotEmpty) {
+          subSections.add(
+            _KnowMoreSubSection(
+              subtitle: 'What Pleases Deity',
+              bullets: pleases,
+            ),
+          );
+        }
+        if (displeases.isNotEmpty) {
+          subSections.add(
+            _KnowMoreSubSection(
+              subtitle: 'What Displeases Deity',
+              bullets: displeases,
+            ),
+          );
+        }
+      }
+    }
+
+    return subSections;
+  }
+
+  List<_KnowMoreSubSection> get _completionSubSections {
     final c = pooja.completion;
-    final bullets = <String>[];
+    final subSections = <_KnowMoreSubSection>[];
 
-    final closure = _poojaStringList(c['closure'] ?? c['closing'] ?? c['conclusion'] ?? c['finalSteps']);
-    final integration = _poojaStringList(c['integration'] ?? c['dailyIntegration'] ?? c['postPuja'] ?? c['dailyPractice']);
+    final closure = _poojaStringList(
+      c['closure'] ?? c['closing'] ?? c['conclusion'] ?? c['finalSteps'],
+    );
+    if (closure.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(subtitle: 'Closing Rituals', bullets: closure),
+      );
+    }
+
+    final integration = _poojaStringList(
+      c['integration'] ??
+          c['dailyIntegration'] ??
+          c['postPuja'] ??
+          c['dailyPractice'],
+    );
+    if (integration.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(
+          subtitle: 'Carry the Energy Forward',
+          bullets: integration,
+        ),
+      );
+    }
+
     final benefits = _poojaStringList(c['benefits'] ?? c['longTermBenefits']);
-
-    for (final cl in closure) {
-      bullets.add(cl);
-    }
-    for (final i in integration) {
-      bullets.add('Integration: $i');
-    }
-    for (final b in benefits) {
-      if (!bullets.contains(b)) bullets.add(b);
+    if (benefits.isNotEmpty) {
+      subSections.add(
+        _KnowMoreSubSection(
+          subtitle: 'Divine Boons and Gifts',
+          bullets: benefits,
+        ),
+      );
     }
 
-    return bullets;
+    return subSections;
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('=== [PoojaKnowMoreScreen] Debugging API Payload ===');
-    debugPrint('Pooja Title: ${pooja.title}');
-    debugPrint('raw keys: ${pooja.raw.keys.toList()}');
-    debugPrint('mantra: ${pooja.mantra}');
-    debugPrint('spiritualMeaning: ${pooja.spiritualMeaning}');
-    debugPrint('guidance: ${pooja.guidance}');
-    debugPrint('completion: ${pooja.completion}');
-    debugPrint('deitySummary: ${pooja.deitySummary}');
-    debugPrint('deityDoc keys: ${pooja.deityDoc?.keys.toList()}');
-    debugPrint('===================================================');
-
     final sections = <Widget>[];
 
     final why = _whyPerformed;
@@ -860,42 +984,39 @@ class PoojaKnowMoreScreen extends StatelessWidget {
       );
     }
 
-    final mantras = _mantraBullets;
+    final mantras = _mantraSubSections;
     if (mantras.isNotEmpty) {
       sections.add(
-        _KnowMoreInfoCard(
-          title: 'Mantras & Chanting',
-          bullets: mantras,
-        ),
+        _KnowMoreInfoCard(title: 'Mantras & Chanting', subSections: mantras),
       );
     }
 
-    final spiritual = _spiritualSignificanceBullets;
+    final spiritual = _spiritualSignificanceSubSections;
     if (spiritual.isNotEmpty) {
       sections.add(
         _KnowMoreInfoCard(
           title: 'Spiritual Significance of Key Actions',
-          bullets: spiritual,
+          subSections: spiritual,
         ),
       );
     }
 
-    final devotional = _devotionalGuidanceBullets;
+    final devotional = _devotionalGuidanceSubSections;
     if (devotional.isNotEmpty) {
       sections.add(
         _KnowMoreInfoCard(
           title: 'Devotional Guidance',
-          bullets: devotional,
+          subSections: devotional,
         ),
       );
     }
 
-    final completion = _completionBullets;
+    final completion = _completionSubSections;
     if (completion.isNotEmpty) {
       sections.add(
         _KnowMoreInfoCard(
           title: 'Completion and Integration',
-          bullets: completion,
+          subSections: completion,
         ),
       );
     }
@@ -964,12 +1085,29 @@ class PoojaKnowMoreScreen extends StatelessWidget {
   }
 }
 
+class _KnowMoreSubSection {
+  const _KnowMoreSubSection({
+    required this.subtitle,
+    this.body,
+    this.bullets = const [],
+  });
+  final String subtitle;
+  final String? body;
+  final List<String> bullets;
+}
+
 class _KnowMoreInfoCard extends StatelessWidget {
-  const _KnowMoreInfoCard({required this.title, this.body, this.bullets});
+  const _KnowMoreInfoCard({
+    required this.title,
+    this.body,
+    this.bullets,
+    this.subSections,
+  });
 
   final String title;
   final String? body;
   final List<String>? bullets;
+  final List<_KnowMoreSubSection>? subSections;
 
   @override
   Widget build(BuildContext context) {
@@ -977,7 +1115,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0XFFEAE1D5).withOpacity(0.1),
+        color: const Color(0XFFEAE1D5).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -986,8 +1124,8 @@ class _KnowMoreInfoCard extends StatelessWidget {
           Text(
             title,
             style: AppTypography.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: const Color(0xFFFFD180),
               decoration: TextDecoration.none,
             ),
@@ -999,7 +1137,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
               style: AppTypography.inter(
                 fontSize: 14,
                 height: 1.55,
-                color: Color(0xFFFCF7EF).withOpacity(0.92),
+                color: const Color(0xFFFCF7EF).withValues(alpha: 0.92),
                 decoration: TextDecoration.none,
               ),
             ),
@@ -1016,7 +1154,7 @@ class _KnowMoreInfoCard extends StatelessWidget {
                       '• ',
                       style: AppTypography.inter(
                         fontSize: 14,
-                        color: Color(0xFFFCF7EF).withOpacity(0.92),
+                        color: const Color(0xFFFCF7EF).withValues(alpha: 0.92),
                         decoration: TextDecoration.none,
                       ),
                     ),
@@ -1026,7 +1164,9 @@ class _KnowMoreInfoCard extends StatelessWidget {
                         style: AppTypography.inter(
                           fontSize: 14,
                           height: 1.5,
-                          color: Color(0xFFFCF7EF).withOpacity(0.92),
+                          color: const Color(
+                            0xFFFCF7EF,
+                          ).withValues(alpha: 0.92),
                           decoration: TextDecoration.none,
                         ),
                       ),
@@ -1035,10 +1175,104 @@ class _KnowMoreInfoCard extends StatelessWidget {
                 ),
               ),
           ],
+          if (subSections != null && subSections!.isNotEmpty) ...[
+            for (final sub in subSections!) ...[
+              const SizedBox(height: 14),
+              Text(
+                sub.subtitle,
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFFFAB40),
+                  decoration: TextDecoration.none,
+                ),
+              ),
+              if (sub.body != null && sub.body!.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                RichTextDisplay(
+                  sub.body!,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    height: 1.55,
+                    color: const Color(0xFFFCF7EF).withValues(alpha: 0.92),
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+              if (sub.bullets.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                for (final item in sub.bullets)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '• ',
+                          style: AppTypography.inter(
+                            fontSize: 14,
+                            color: const Color(
+                              0xFFFCF7EF,
+                            ).withValues(alpha: 0.92),
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        Expanded(
+                          child: RichTextDisplay(
+                            item,
+                            style: AppTypography.inter(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: const Color(
+                                0xFFFCF7EF,
+                              ).withValues(alpha: 0.92),
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+          ],
         ],
       ),
     );
   }
+}
+
+String _extractPoojaFieldString(dynamic v) {
+  if (v == null) return '';
+  if (v is String) return v.trim();
+  if (v is List) {
+    if (v.isEmpty) return '';
+    final isDelta = v.every((e) => e is Map && e.containsKey('insert'));
+    if (isDelta) {
+      try {
+        return jsonEncode(v);
+      } catch (_) {}
+    }
+    return v
+        .map((e) => _extractPoojaFieldString(e))
+        .where((s) => s.isNotEmpty)
+        .join('\n');
+  }
+  if (v is Map) {
+    if (v.containsKey('insert')) {
+      try {
+        return jsonEncode([v]);
+      } catch (_) {}
+    }
+    final title = (v['title'] ?? v['name'] ?? v['key'] ?? '').toString().trim();
+    final desc = (v['description'] ?? v['meaning'] ?? v['value'] ?? '')
+        .toString()
+        .trim();
+    if (title.isNotEmpty && desc.isNotEmpty) return '$title: $desc';
+    if (title.isNotEmpty) return title;
+    if (desc.isNotEmpty) return desc;
+  }
+  return v.toString().trim();
 }
 
 List<String> _poojaStringList(dynamic raw) {
@@ -1103,7 +1337,11 @@ class _SimpleInfoScreen extends StatelessWidget {
             const Spacer(),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 240),
-              child: _WizardButton(label: buttonLabel, onTap: onNext, onBack: onBack),
+              child: _WizardButton(
+                label: buttonLabel,
+                onTap: onNext,
+                onBack: onBack,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1167,7 +1405,11 @@ class _ListScreen extends StatelessWidget {
             ),
             _WizardFadeSlideIn(
               delay: Duration(milliseconds: 220 + (items.length * 70)),
-              child: _WizardButton(label: 'Next', onTap: onNext, onBack: onBack),
+              child: _WizardButton(
+                label: 'Next',
+                onTap: onNext,
+                onBack: onBack,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1217,7 +1459,11 @@ class _IngredientsScreen extends StatelessWidget {
             ),
             _WizardFadeSlideIn(
               delay: Duration(milliseconds: 200 + (items.length * 60)),
-              child: _WizardButton(label: 'Next', onTap: onNext, onBack: onBack),
+              child: _WizardButton(
+                label: 'Next',
+                onTap: onNext,
+                onBack: onBack,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1611,13 +1857,16 @@ class _PujaStepScreen extends StatelessWidget {
                       )
                     else
                       for (var i = 0; i < blocks.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _WizardFadeSlideIn(
-                          delay: Duration(milliseconds: 180 + (i * 70)),
-                          child: _buildStepCard(blocks[i].text, blocks[i].type),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _WizardFadeSlideIn(
+                            delay: Duration(milliseconds: 180 + (i * 70)),
+                            child: _buildStepCard(
+                              blocks[i].text,
+                              blocks[i].type,
+                            ),
+                          ),
                         ),
-                      ),
                     if (step.subSteps.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       for (var i = 0; i < step.subSteps.length; i++)
@@ -1669,6 +1918,42 @@ class _CompletionScreen extends StatelessWidget {
   final VoidCallback onFinish;
   final VoidCallback onBack;
 
+  String get _blessingText {
+    // 1. Sathya blessings (from pooja.blessings array or raw / completion)
+    if (pooja.blessings.isNotEmpty) {
+      final str = _extractPoojaFieldString(pooja.blessings);
+      if (str.isNotEmpty) return str;
+    }
+
+    final sathyaDirect = _extractPoojaFieldString(
+      pooja.raw['sathyaBlessings'] ??
+          pooja.raw['sathya_blessings'] ??
+          (pooja.raw['sathya'] is Map ? pooja.raw['sathya']['blessings'] : null) ??
+          pooja.completion['sathyaBlessings'] ??
+          pooja.completion['sathya_blessings'] ??
+          pooja.completion['blessings'],
+    );
+    if (sathyaDirect.isNotEmpty) return sathyaDirect;
+
+    // 2. Fallback to Deity Summary blessings
+    final summaryBlessings = _poojaStringList(pooja.deitySummary['blessings']);
+    if (summaryBlessings.isNotEmpty) {
+      return summaryBlessings.join('\n');
+    }
+
+    final docBlessings = _poojaStringList(pooja.deityDoc?['blessings']);
+    if (docBlessings.isNotEmpty) {
+      return docBlessings.join('\n');
+    }
+
+    // 3. Fallback to Static blessings
+    final deity = pooja.deityName.trim();
+    if (deity.isNotEmpty) {
+      return 'May Lord $deity bless you with divine peace, prosperity, and happiness.';
+    }
+    return 'May Lord bless you with divine peace, prosperity, and happiness.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return _BaseWizardScreen(
@@ -1682,7 +1967,7 @@ class _CompletionScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Color(0xFFFCF7EF).withOpacity(0.1),
+                color: const Color(0xFFFCF7EF).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1698,18 +1983,62 @@ class _CompletionScreen extends StatelessWidget {
               style: AppTypography.lora(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFFCF7EF),
+                color: const Color(0xFFFCF7EF),
                 height: 1.2,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'May Lord ${pooja.deityName} bless you with peace and prosperity.',
-              textAlign: TextAlign.center,
-              style: AppTypography.inter(
-                fontSize: 16,
-                color: Color(0xFFFCF7EF).withOpacity(0.8),
-                height: 1.5,
+            const SizedBox(height: 20),
+            // Highlighted Blessings Container
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD180).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFFFD180).withValues(alpha: 0.4),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 18,
+                        color: Color(0xFFFFD180),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Divine Blessings',
+                        style: AppTypography.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFFD180),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  RichTextDisplay(
+                    _blessingText,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.inter(
+                      fontSize: 15,
+                      color: const Color(0xFFFCF7EF),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
             const Spacer(flex: 2),

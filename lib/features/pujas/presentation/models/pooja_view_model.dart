@@ -30,7 +30,20 @@ class PoojaView {
 
   Map<String, dynamic> get raw => _raw;
 
-  String get id => (_raw['_id'] ?? _raw['id'] ?? '').toString();
+  String get id {
+    final direct = _raw['_id'] ?? _raw['id'] ?? _raw['poojaId'] ?? _raw['pooja_id'];
+    if (direct != null && direct.toString().trim().isNotEmpty) {
+      return direct.toString().trim();
+    }
+    final innerPooja = _raw['pooja'];
+    if (innerPooja is Map) {
+      final innerId = innerPooja['_id'] ?? innerPooja['id'] ?? innerPooja['poojaId'];
+      if (innerId != null && innerId.toString().trim().isNotEmpty) {
+        return innerId.toString().trim();
+      }
+    }
+    return '';
+  }
 
   String get title => (_raw['title'] ?? '').toString();
   String get category => (_raw['category'] ?? '').toString();

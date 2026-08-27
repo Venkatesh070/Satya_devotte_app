@@ -1595,8 +1595,7 @@ class _AboutDeityTab extends StatelessWidget {
     final keyQualities = _list(
       deityDoc?['key_qualities'] ??
           deityDoc?['qualities'] ??
-          deityDoc?['energies'] ??
-          summary['blessings'],
+          deityDoc?['energies'],
     );
     final weapons = _meaningList(
       deityDoc?['weapons'] ?? deityDoc?['adornments'] ?? deityDoc?['symbols'],
@@ -1607,7 +1606,7 @@ class _AboutDeityTab extends StatelessWidget {
           deityDoc?['astrology'] ??
           deityDoc?['numerology'],
     );
-    final blessings = _list(summary['blessings'] ?? deityDoc?['blessings']);
+    final blessings = _list(deityDoc?['blessings']);
     final deityNameDisplay = pooja.deityName.isNotEmpty
         ? pooja.deityName
         : pooja.title; // Always show *something*.
@@ -1899,13 +1898,13 @@ class _AboutDeityTab extends StatelessWidget {
             ),
         ],
 
+        // 5. Purpose & Blessings
         if (divineRole.isNotEmpty ||
             whyPray.isNotEmpty ||
             keyQualities.isNotEmpty ||
             chakra.isNotEmpty ||
-            astrology.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          // const SectionHeader(title: 'Purpose of the Ritual'),
+            astrology.isNotEmpty ||
+            blessings.isNotEmpty) ...[
           const SizedBox(height: 10),
           if (whyPray.isNotEmpty)
             LabeledField(
@@ -2466,16 +2465,29 @@ class _CalendarPujaCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.lora(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1C1917),
-                            height: 1.15,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.lora(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1C1917),
+                                  height: 1.15,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            EyeKnowMoreButton(
+                              onTap: () {
+                                Get.to(() => PoojaKnowMoreScreen(pooja: pooja));
+                              },
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 2),
                         if (subtitle.isNotEmpty)
