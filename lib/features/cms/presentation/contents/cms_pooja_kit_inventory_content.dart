@@ -928,19 +928,19 @@ class _InventoryBody extends StatelessWidget {
   }
 }
 
-/// Fixed column widths so headers and cells stay aligned (see Orders table).
+/// Min column widths; Item + Category flex to fill remaining space.
 const _kColGap = 12.0;
 
 const _kInventoryTableColumns = <_InvColSpec>[
-  _InvColSpec('', 44),
-  _InvColSpec('Item', 172),
-  _InvColSpec('Category', 132),
-  _InvColSpec('Item size', 96),
-  _InvColSpec('Price', 84),
-  _InvColSpec('SOH (Stock On Hand)', 120, align: TextAlign.center),
-  _InvColSpec('Level', 112),
-  _InvColSpec('Status', 108),
-  _InvColSpec('', 40),
+  _InvColSpec('', width: 44),
+  _InvColSpec('Item', width: 172, flex: 3),
+  _InvColSpec('Category', width: 132, flex: 2),
+  _InvColSpec('Item size', width: 96),
+  _InvColSpec('Price', width: 84),
+  _InvColSpec('SOH (Stock On Hand)', width: 120, align: TextAlign.center),
+  _InvColSpec('Level', width: 112),
+  _InvColSpec('Status', width: 108),
+  _InvColSpec('', width: 40),
 ];
 
 class _InventoryTable extends StatelessWidget {
@@ -977,6 +977,7 @@ class _InventoryTable extends StatelessWidget {
           child: SizedBox(
             width: tableWidth,
             child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: CmsColors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -985,6 +986,7 @@ class _InventoryTable extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const _InventoryTableHeader(),
                     const Divider(height: 1, color: CmsColors.border),
@@ -1066,10 +1068,12 @@ List<Widget> _inventoryRowCells({
   return [
     _InvCell(
       width: c[0].width,
+      flex: c[0].flex,
       child: _InventoryItemThumb(imageUrl: item.imageUrl),
     ),
     _InvCell(
       width: c[1].width,
+      flex: c[1].flex,
       child: Text(
         item.name,
         maxLines: 2,
@@ -1083,6 +1087,7 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[2].width,
+      flex: c[2].flex,
       child: Text(
         ctrl.categoryLabel(item.category),
         maxLines: 1,
@@ -1092,6 +1097,7 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[3].width,
+      flex: c[3].flex,
       child: Text(
         item.itemSizeLabel,
         maxLines: 1,
@@ -1101,10 +1107,12 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[4].width,
+      flex: c[4].flex,
       child: _InventoryPriceCell(item: item),
     ),
     _InvCell(
       width: c[5].width,
+      flex: c[5].flex,
       align: Alignment.center,
       child: Text(
         '${item.stockQuantity}',
@@ -1118,10 +1126,12 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[6].width,
+      flex: c[6].flex,
       child: _StockPill(label: item.stockLevelLabel, color: level.color),
     ),
     _InvCell(
       width: c[7].width,
+      flex: c[7].flex,
       child: Obx(
         () => _InventoryStatusSwitch(
           isActive: item.isActive,
@@ -1133,6 +1143,7 @@ List<Widget> _inventoryRowCells({
     ),
     _InvCell(
       width: c[8].width,
+      flex: c[8].flex,
       gapAfter: false,
       align: Alignment.centerRight,
       child: _InventoryRowMenu(
@@ -1420,6 +1431,7 @@ class _InventoryTableHeader extends StatelessWidget {
           for (var i = 0; i < _kInventoryTableColumns.length; i++)
             _InvCell(
               width: _kInventoryTableColumns[i].width,
+              flex: _kInventoryTableColumns[i].flex,
               gapAfter: i < _kInventoryTableColumns.length - 1,
               align: switch (_kInventoryTableColumns[i].align) {
                 TextAlign.right => Alignment.centerRight,
@@ -1449,36 +1461,52 @@ class _InvCell extends StatelessWidget {
   const _InvCell({
     required this.width,
     required this.child,
+    this.flex,
     this.align = Alignment.centerLeft,
     this.gapAfter = true,
   });
 
   final double width;
+  final int? flex;
   final Widget child;
   final Alignment align;
   final bool gapAfter;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: width,
-          child: ClipRect(
-            child: Align(alignment: align, child: child),
-          ),
-        ),
-        if (gapAfter) const SizedBox(width: _kColGap),
-      ],
+    final content = ClipRect(
+      child: Align(alignment: align, child: child),
     );
+    final padded = Padding(
+      padding: EdgeInsets.only(right: gapAfter ? _kColGap : 0),
+      child: content,
+    );
+
+    if (flex != null) {
+      return Expanded(
+        flex: flex!,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: width),
+          child: padded,
+        ),
+      );
+    }
+
+    return SizedBox(width: width + (gapAfter ? _kColGap : 0), child: padded);
   }
 }
 
 class _InvColSpec {
-  const _InvColSpec(this.label, this.width, {this.align = TextAlign.left});
+  const _InvColSpec(
+    this.label, {
+    required this.width,
+    this.flex,
+    this.align = TextAlign.left,
+  });
   final String label;
+  /// Minimum / fixed width. When [flex] is set, this is the floor width.
   final double width;
+  final int? flex;
   final TextAlign align;
 }
 

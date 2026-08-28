@@ -96,7 +96,10 @@ class CalendarController extends GetxController {
       dynamic payload;
       if (offlineService.isOnline.value) {
         try {
-          final response = await _apiClient.dio.get(ApiEndpoints.deities);
+          final response = await _apiClient.dio.get(
+            ApiEndpoints.deities,
+            queryParameters: {'page': 1, 'limit': 1000},
+          );
           payload = response.data;
           await offlineService.cacheData(cacheKey, payload);
         } catch (_) {

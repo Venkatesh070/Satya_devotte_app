@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -461,10 +463,19 @@ class _RitualCard extends StatelessWidget {
                         color: CmsColors.textSecond,
                       ),
                     ),
-                    if ((ritual.ritualDays ?? ritual.days.length) > 0) ...[
+                    if ((ritual.ritualDay ?? '').trim().isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Text(
-                        '${ritual.ritualDays ?? ritual.days.length} days',
+                        ritual.ritualDay!.trim(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: CmsColors.textSecond,
+                        ),
+                      ),
+                    ] else if (ritual.days.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${ritual.days.length} days',
                         style: const TextStyle(
                           fontSize: 11,
                           color: CmsColors.textSecond,
@@ -567,13 +578,27 @@ class _RitualFormState extends State<_RitualForm> {
   late final TextEditingController _categoryCtrl;
   late final TextEditingController _purposeCtrl;
   late final TextEditingController _startingDayCtrl;
-  late final TextEditingController _ritualDaysCtrl;
+  late final TextEditingController _ritualDayCtrl;
   late final TextEditingController _bestTimeCtrl;
   List<String> _selectedDeityIds = [];
+  List<String> _selectedFestivalIds = [];
   String _difficulty = 'BEGINNER';
   static const String _accessType = 'FREE';
-  String _status = 'PENDING';
   bool _isFeatured = false;
+
+  FestivalController get _festivalCtrl => Get.find<FestivalController>();
+
+  List<FestivalModel> get _approvedFestivals {
+    final fromSelector = _festivalCtrl.selectorFestivals;
+    if (fromSelector.isNotEmpty) return List<FestivalModel>.from(fromSelector);
+    return _festivalCtrl.festivals
+        .where(
+          (f) =>
+              f.status.toLowerCase() == 'approved' ||
+              f.status.toLowerCase() == 'published',
+        )
+        .toList();
+  }
 
   late List<_DayDraft> _dayEntries;
   final _dayTitleCtrl = TextEditingController();
@@ -640,14 +665,11 @@ class _RitualFormState extends State<_RitualForm> {
     _categoryCtrl = TextEditingController(text: r?.category ?? '');
     _purposeCtrl = TextEditingController(text: r?.purpose ?? '');
     _startingDayCtrl = TextEditingController(text: r?.startingDay ?? '');
-    final dayCount = r?.ritualDays ?? r?.days.length ?? 0;
-    _ritualDaysCtrl = TextEditingController(
-      text: dayCount > 0 ? dayCount.toString() : '',
-    );
+    _ritualDayCtrl = TextEditingController(text: r?.ritualDay ?? '');
     _bestTimeCtrl = TextEditingController(text: r?.bestDayTime ?? '');
     _selectedDeityIds = List<String>.from(r?.deities ?? const []);
+    _selectedFestivalIds = List<String>.from(r?.festivalIds ?? const []);
     _difficulty = r?.difficulty ?? 'BEGINNER';
-    _status = r?.status ?? 'PENDING';
     _isFeatured = r?.isFeatured ?? false;
     _dayEntries = (r?.days ?? [])
         .map(
@@ -662,8 +684,13 @@ class _RitualFormState extends State<_RitualForm> {
         ? _sectionEntriesFromModel(r.sections)
         : _defaultSectionEntries();
     _imageUrl = r?.imageUrl;
+    if ((_imageUrl == null || _imageUrl!.trim().isEmpty) &&
+        (r?.media.images.isNotEmpty ?? false)) {
+      _imageUrl = r!.media.images.first;
+    }
     _titleCtrl.addListener(_syncSlugFromTitle);
     Future.microtask(widget.controller.loadDeities);
+    Future.microtask(_festivalCtrl.fetchApprovedFestivalsForSelector);
     if (_dayEntries.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _openNewDayEditor();
@@ -680,7 +707,7 @@ class _RitualFormState extends State<_RitualForm> {
     _descCtrl.dispose();
     _purposeCtrl.dispose();
     _startingDayCtrl.dispose();
-    _ritualDaysCtrl.dispose();
+    _ritualDayCtrl.dispose();
     _bestTimeCtrl.dispose();
     _dayTitleCtrl.dispose();
     _dayTitleFocus.dispose();
@@ -775,7 +802,6 @@ class _RitualFormState extends State<_RitualForm> {
       final next = List<_DayDraft>.from(_dayEntries);
       next.removeAt(index);
       _dayEntries = next;
-      _ritualDaysCtrl.text = _dayEntries.length.toString();
     });
   }
 
@@ -803,7 +829,6 @@ class _RitualFormState extends State<_RitualForm> {
       } else {
         _dayEntries = [..._dayEntries, draft];
       }
-      _ritualDaysCtrl.text = _dayEntries.length.toString();
       _clearDayEditorFields();
       _showDayEditor = false;
     });
@@ -927,7 +952,7 @@ class _RitualFormState extends State<_RitualForm> {
     _saveDayEntry();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({required bool isDraft}) async {
     _flushPendingDayEntry();
     _flushPendingSectionEntry();
     if (!_formKey.currentState!.validate()) return;
@@ -940,7 +965,7 @@ class _RitualFormState extends State<_RitualForm> {
       return;
     }
 
-    final ritualDays = int.tryParse(_ritualDaysCtrl.text.trim());
+    final ritualDay = _ritualDayCtrl.text.trim();
     final cleanDays = _dayEntries.asMap().entries.map((e) {
       final d = e.value;
       return RitualDay(
@@ -953,29 +978,35 @@ class _RitualFormState extends State<_RitualForm> {
     final stepImagesByDay = _dayPickedImagesByDay();
 
     final cleanSections = _sectionsToModel(_sectionEntries);
+    final status = isDraft ? 'DRAFT' : 'PENDING';
 
+    final coverUrl = _pickedImage != null
+        ? null
+        : (_imageRemoved ? null : _imageUrl);
     final ritualData = RitualModel(
       id: widget.ritual?.id ?? '',
       title: _titleCtrl.text.trim(),
       slug: _slugCtrl.text.trim().isEmpty ? null : _slugCtrl.text.trim(),
       deities: _selectedDeityIds,
+      festivalIds: _selectedFestivalIds,
       description: _descCtrl.text.trim(),
       category: _categoryCtrl.text.trim(),
       days: cleanDays,
       sections: cleanSections,
       purpose: _purposeCtrl.text.trim(),
       startingDay: _startingDayCtrl.text.trim(),
-      ritualDays: ritualDays ?? cleanDays.length,
+      ritualDay: ritualDay.isEmpty ? null : ritualDay,
       bestDayTime: _bestTimeCtrl.text.trim(),
       accessType: _accessType,
       price: 0,
       currency: 'ZAR',
       difficulty: _difficulty,
       isFeatured: _isFeatured,
-      status: _status,
-      imageUrl: _pickedImage != null
-          ? null
-          : (_imageRemoved ? null : _imageUrl),
+      status: status,
+      media: RitualMedia(
+        images: coverUrl == null || coverUrl.isEmpty ? const [] : [coverUrl],
+      ),
+      imageUrl: coverUrl,
     );
 
     final success = widget.ritual == null
@@ -983,13 +1014,14 @@ class _RitualFormState extends State<_RitualForm> {
             title: ritualData.title,
             slug: ritualData.slug,
             deities: ritualData.deities,
+            festivalIds: ritualData.festivalIds,
             description: ritualData.description ?? '',
             days: ritualData.days,
             sections: ritualData.sections,
             category: ritualData.category,
             purpose: ritualData.purpose,
             startingDay: ritualData.startingDay,
-            ritualDays: ritualData.ritualDays,
+            ritualDay: ritualData.ritualDay,
             bestDayTime: ritualData.bestDayTime,
             accessType: ritualData.accessType,
             price: ritualData.price,
@@ -1091,11 +1123,31 @@ class _RitualFormState extends State<_RitualForm> {
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: loading ? null : () => _submit(isDraft: true),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(color: CmsColors.orange.withOpacity(0.5)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ).copyWith(mouseCursor: _cmsButtonClickCursor),
+            child: Text(
+              'Save Draft',
+              style: TextStyle(
+                color: loading ? CmsColors.textSecond : CmsColors.orange,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: loading ? null : _submit,
+            onPressed: loading ? null : () => _submit(isDraft: false),
             style: ElevatedButton.styleFrom(
               backgroundColor: CmsColors.orange,
               foregroundColor: const Color(0xFFFCF7EF),
@@ -1115,7 +1167,7 @@ class _RitualFormState extends State<_RitualForm> {
                     ),
                   )
                 : Text(
-                    _isEdit ? 'Save Changes' : 'Create Ritual',
+                    _isEdit ? 'Save Changes' : 'Submit for Approval',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
           ),
@@ -1184,6 +1236,8 @@ class _RitualFormState extends State<_RitualForm> {
         const SizedBox(height: 12),
         _buildDeityDropdown(),
         const SizedBox(height: 12),
+        _buildFestivalDropdown(),
+        const SizedBox(height: 12),
         CmsFormField(
           label: 'Category',
           hint: 'e.g. Wealth & Prosperity',
@@ -1243,9 +1297,9 @@ class _RitualFormState extends State<_RitualForm> {
           children: [
             Expanded(
               child: CmsFormField(
-                label: 'Ritual days',
-                hint: '7',
-                controller: _ritualDaysCtrl,
+                label: 'Ritual day',
+                hint: 'During the 3rd month of pregnancy...',
+                controller: _ritualDayCtrl,
               ),
             ),
             const SizedBox(width: 12),
@@ -1284,7 +1338,7 @@ class _RitualFormState extends State<_RitualForm> {
       final loaded = widget.controller.deitiesLoaded;
 
       return CmsMultiSelectField(
-        label: 'Deity (optional)',
+        label: 'Deity',
         hintText: 'Select deities',
         isLoading: isLoading && !loaded,
         loadingText: 'Loading deities...',
@@ -1299,6 +1353,30 @@ class _RitualFormState extends State<_RitualForm> {
             .toList(),
         selectedValues: _selectedDeityIds,
         onChanged: (values) => setState(() => _selectedDeityIds = values),
+      );
+    });
+  }
+
+  Widget _buildFestivalDropdown() {
+    return Obx(() {
+      final festivals = _approvedFestivals;
+      final isLoading = _festivalCtrl.isLoadingSelector;
+      return CmsMultiSelectField(
+        label: 'Associate Festivals',
+        hintText: 'Select festivals',
+        isLoading: isLoading && festivals.isEmpty,
+        loadingText: 'Loading festivals...',
+        emptyText: 'No approved festivals available',
+        options: festivals
+            .map(
+              (f) => CmsSelectOption(
+                value: f.id,
+                label: f.title,
+              ),
+            )
+            .toList(),
+        selectedValues: _selectedFestivalIds,
+        onChanged: (values) => setState(() => _selectedFestivalIds = values),
       );
     });
   }

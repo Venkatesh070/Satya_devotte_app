@@ -3379,8 +3379,12 @@ class _RitualCard extends StatelessWidget {
     final List<String> tags = [];
     if (ritual['difficulty'] != null) tags.add(ritual['difficulty'].toString());
     if (ritual['accessType'] != null) tags.add(ritual['accessType'].toString());
-    if (ritual['ritualDays'] != null) {
-      tags.add('${ritual['ritualDays']} Days');
+    if (ritual['ritualDay'] != null &&
+        ritual['ritualDay'].toString().trim().isNotEmpty) {
+      tags.add(ritual['ritualDay'].toString().trim());
+    } else if (ritual['ritualDays'] != null &&
+        ritual['ritualDays'].toString().trim().isNotEmpty) {
+      tags.add(ritual['ritualDays'].toString().trim());
     }
 
     return Container(

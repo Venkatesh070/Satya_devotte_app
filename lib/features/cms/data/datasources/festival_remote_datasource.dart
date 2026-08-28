@@ -97,6 +97,33 @@ class FestivalRemoteDataSource {
     ).map((e) => FestivalModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Fetch festivals across all pages for dropdowns/selectors.
+  Future<List<FestivalModel>> getAllFestivalsForSelector({
+    required bool superAdmin,
+    String? status,
+    int pageSize = 100,
+  }) async {
+    final firstPage = await getFestivalsPage(
+      superAdmin: superAdmin,
+      page: 1,
+      limit: pageSize,
+      status: status,
+    );
+    final allItems = List<FestivalModel>.from(firstPage.items);
+    if (firstPage.totalPages > 1) {
+      for (int p = 2; p <= firstPage.totalPages; p++) {
+        final pageResult = await getFestivalsPage(
+          superAdmin: superAdmin,
+          page: p,
+          limit: pageSize,
+          status: status,
+        );
+        allItems.addAll(pageResult.items);
+      }
+    }
+    return allItems;
+  }
+
   // ── POST /festivals/create-festival — multipart/form-data ──────
   Future<FestivalModel> createFestival(
     Map<String, dynamic> body, {

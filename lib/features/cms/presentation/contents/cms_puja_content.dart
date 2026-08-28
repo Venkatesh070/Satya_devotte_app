@@ -51,7 +51,7 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
 
   void _openAddForm() {
     if (!mounted) return;
-    _festivalController.loadFestivals();
+    _festivalController.fetchApprovedFestivalsForSelector();
     setState(() {
       _editingPooja = null;
       _showAddForm = true;
@@ -108,16 +108,19 @@ class _CmsRitualsContentState extends State<CmsRitualsContent> {
       child: _PoojaList(
         controller: _controller,
         onAdd: () {
-          _festivalController.loadFestivals();
+          _festivalController.fetchApprovedFestivalsForSelector();
           setState(() {
             _editingPooja = null;
             _showAddForm = true;
           });
         },
-        onEdit: (p) => setState(() {
-          _editingPooja = p;
-          _showAddForm = true;
-        }),
+        onEdit: (p) {
+          _festivalController.fetchApprovedFestivalsForSelector();
+          setState(() {
+            _editingPooja = p;
+            _showAddForm = true;
+          });
+        },
       ),
     );
   }
@@ -1041,13 +1044,17 @@ class _PoojaFormState extends State<_PoojaForm> {
 
   FestivalController get _festivalCtrl => Get.find<FestivalController>();
 
-  List<FestivalModel> get _approvedFestivals => _festivalCtrl.festivals
-      .where(
-        (f) =>
-            f.status.toLowerCase() == 'approved' ||
-            f.status.toLowerCase() == 'published',
-      )
-      .toList();
+  List<FestivalModel> get _approvedFestivals {
+    final fromSelector = _festivalCtrl.selectorFestivals;
+    if (fromSelector.isNotEmpty) return List<FestivalModel>.from(fromSelector);
+    return _festivalCtrl.festivals
+        .where(
+          (f) =>
+              f.status.toLowerCase() == 'approved' ||
+              f.status.toLowerCase() == 'published',
+        )
+        .toList();
+  }
   PickedFile? _pickedImage;
   // existing URLs (editing mode)
   String? _imageUrl;
@@ -1144,9 +1151,7 @@ class _PoojaFormState extends State<_PoojaForm> {
     _actionsMeaningEntries = List.from(p?.spiritualActionsMeaning ?? const []);
     _otherSymbolismEntries = List.from(p?.spiritualOtherSymbolism ?? const []);
     _imageUrl = _trimMediaUrl(p?.imageUrl);
-    if (_festivalCtrl.festivals.isEmpty) {
-      Future.microtask(_festivalCtrl.loadFestivals);
-    }
+    Future.microtask(_festivalCtrl.fetchApprovedFestivalsForSelector);
     Future.microtask(widget.controller.loadDeities);
   }
 
@@ -1567,11 +1572,6 @@ class _PoojaFormState extends State<_PoojaForm> {
     if (approved.isNotEmpty) {
       _selectedFestivalIds = [approved.first.id];
     }
-  }
-
-  String _festivalLabelById(String id) {
-    final found = _festivalCtrl.festivals.firstWhereOrNull((f) => f.id == id);
-    return found?.title ?? id;
   }
 
   void _initScheduleDatesFromPooja(PoojaModel? p) {
@@ -2354,121 +2354,24 @@ class _PoojaFormState extends State<_PoojaForm> {
           const SizedBox(height: 12),
           Obx(() {
             final festivals = _approvedFestivals;
-            final dropdownValue = null;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Associate Festivals',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: CmsColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 40,
-                        child: DropdownButtonFormField<String>(
-                          key: ValueKey(
-                            'festival-dd-${_selectedFestivalIds.join('|')}',
-                          ),
-                          isDense: true,
-                          isExpanded: true,
-                          value: dropdownValue,
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: CmsColors.textSecond,
-                            size: 20,
-                          ),
-                          dropdownColor: CmsColors.bg,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: CmsThemeColors.inputText,
-                          ),
-                          items: festivals
-                              .map(
-                                (f) => DropdownMenuItem<String>(
-                                  value: f.id,
-                                  child: Text(
-                                    f.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: CmsThemeColors.inputText,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: festivals.isEmpty
-                              ? null
-                              : (v) => setState(() {
-                                  if (v != null &&
-                                      !_selectedFestivalIds.contains(v)) {
-                                    _selectedFestivalIds.add(v);
-                                  }
-                                }),
-                          decoration: InputDecoration(
-                            hintText: festivals.isEmpty
-                                ? 'No approved festivals available'
-                                : 'Select festival',
-                            hintStyle: const TextStyle(
-                              fontSize: 13,
-                              color: CmsThemeColors.inputHint,
-                            ),
-                            filled: true,
-                            fillColor: CmsColors.bg,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: CmsColors.border,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: CmsColors.border,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                color: CmsColors.orange,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+            final isLoading = _festivalCtrl.isLoadingSelector;
+            return CmsMultiSelectField(
+              label: 'Associate Festivals',
+              hintText: 'Select festivals',
+              isLoading: isLoading && festivals.isEmpty,
+              loadingText: 'Loading festivals...',
+              emptyText: 'No approved festivals available',
+              options: festivals
+                  .map(
+                    (f) => CmsSelectOption(
+                      value: f.id,
+                      label: f.title,
                     ),
-                  ],
-                ),
-                if (_selectedFestivalIds.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: _selectedFestivalIds
-                        .map(
-                          (id) => _Chip(
-                            label: _festivalLabelById(id),
-                            onRemove: () =>
-                                setState(() => _selectedFestivalIds.remove(id)),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ],
+                  )
+                  .toList(),
+              selectedValues: _selectedFestivalIds,
+              onChanged: (values) =>
+                  setState(() => _selectedFestivalIds = values),
             );
           }),
         ],

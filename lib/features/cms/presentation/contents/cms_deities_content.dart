@@ -78,7 +78,9 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   Future<void> _loadDeities({bool force = false}) async {
     final status = _filter == 'All' ? null : _filter.toUpperCase();
     await _controller.loadDeities(
+      page: 1,
       status: status,
+      clearStatus: true,
       force: force,
     );
   }
@@ -655,7 +657,6 @@ class _DeityFormState extends State<_DeityForm> {
   String? _devotionalNotesRich;
   late final TextEditingController _storiesTitleCtrl;
   String? _storiesDescRich;
-  String _status = 'PENDING';
   late final TextEditingController _imageUrlsCtrl;
   final List<Map<String, String>> _lineageFormsEntries =
       <Map<String, String>>[];
@@ -691,7 +692,6 @@ class _DeityFormState extends State<_DeityForm> {
   void initState() {
     super.initState();
     final initial = widget.initial;
-    _status = (initial?.status ?? 'Pending').toUpperCase();
     _deityColor = initial?.deityColor.trim().isEmpty == true
         ? null
         : initial?.deityColor;
@@ -875,6 +875,7 @@ class _DeityFormState extends State<_DeityForm> {
     required List<Map<String, String>> target,
     String? richDesc,
     ValueSetter<String?>? clearRichDesc,
+    TextEditingController? descCtrl,
     int? editingIndex,
     VoidCallback? onAdded,
   }) {
@@ -898,6 +899,7 @@ class _DeityFormState extends State<_DeityForm> {
       }
       titleCtrl.clear();
       clearRichDesc?.call(null);
+      descCtrl?.clear();
       onAdded?.call();
     });
   }
@@ -1541,21 +1543,58 @@ class _DeityFormState extends State<_DeityForm> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _isSaving ? null : widget.onCancel,
-                  style: OutlinedButton.styleFrom().copyWith(
-                    mouseCursor: _cmsButtonClickCursor,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: CmsColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: CmsColors.textSecond),
                   ),
-                  child: const Text('Cancel'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
+                child: OutlinedButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () => _submitDeity(isDraft: true),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: CmsColors.orange.withOpacity(0.5)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ).copyWith(mouseCursor: _cmsButtonClickCursor),
+                  child: Text(
+                    'Save Draft',
+                    style: TextStyle(
+                      color: _isSaving ? CmsColors.textSecond : CmsColors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
                 child: ElevatedButton(
-                  onPressed: _isSaving ? null : _submitDeity,
+                  onPressed: _isSaving
+                      ? null
+                      : () => _submitDeity(isDraft: false),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CmsColors.orange,
                     foregroundColor: Color(0xFFFCF7EF),
                     disabledBackgroundColor: CmsColors.orange.withOpacity(0.6),
                     disabledForegroundColor: Color(0xFFFCF7EF),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
                   ).copyWith(mouseCursor: _cmsButtonClickCursor),
                   child: _isSaving
                       ? const SizedBox(
@@ -1563,10 +1602,16 @@ class _DeityFormState extends State<_DeityForm> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Color(0xFFFCF7EF)),
+                            valueColor:
+                                AlwaysStoppedAnimation(Color(0xFFFCF7EF)),
                           ),
                         )
-                      : const Text('Save Deity'),
+                      : Text(
+                          widget.initial == null
+                              ? 'Submit for Approval'
+                              : 'Save Changes',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                 ),
               ),
             ],
@@ -1576,7 +1621,7 @@ class _DeityFormState extends State<_DeityForm> {
     );
   }
 
-  Future<void> _submitDeity() async {
+  Future<void> _submitDeity({required bool isDraft}) async {
     if (_isSaving) return;
     if (_pickedImage != null &&
         _pickedImage!.bytes.length > CmsUploadBox.defaultMaxImageBytes) {
@@ -1595,6 +1640,7 @@ class _DeityFormState extends State<_DeityForm> {
       );
       return;
     }
+    final status = isDraft ? 'DRAFT' : 'PENDING';
     setState(() => _isSaving = true);
     try {
       await widget.onSave({
@@ -1652,7 +1698,7 @@ class _DeityFormState extends State<_DeityForm> {
         'stories': _storiesEntries,
         'pujas': List<String>.from(_ritualIds),
         'media': {'images': _csv(_imageUrlsCtrl.text)},
-        'status': _status,
+        'status': status,
       }, image: _pickedImage);
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -1695,6 +1741,7 @@ class _KeyValueEditor extends StatefulWidget {
 
 class _KeyValueEditorState extends State<_KeyValueEditor> {
   final FocusNode _titleFocus = FocusNode();
+  int _descFieldGeneration = 0;
 
   @override
   void dispose() {
@@ -1705,6 +1752,13 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
   @override
   void didUpdateWidget(covariant _KeyValueEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.onRichDescChanged != null) {
+      if (widget.showEditor && !oldWidget.showEditor) {
+        _descFieldGeneration++;
+      } else if (widget.editingIndex != oldWidget.editingIndex) {
+        _descFieldGeneration++;
+      }
+    }
     if (widget.showEditor && !oldWidget.showEditor) {
       _focusTitleField();
     } else if (widget.showEditor &&
@@ -1728,6 +1782,9 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
 
   void _handleAdd() {
     widget.onAdd();
+    if (widget.onRichDescChanged != null) {
+      setState(() => _descFieldGeneration++);
+    }
     _focusTitleField();
   }
 
@@ -1785,7 +1842,9 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
           const SizedBox(height: 10),
           widget.onRichDescChanged != null
               ? CmsRichTextField(
-                  key: ValueKey(widget.richDescValue),
+                  key: ValueKey(
+                    'kv-desc-${widget.editingIndex ?? 'new'}-$_descFieldGeneration',
+                  ),
                   label: '${widget.heading} Description',
                   initialValue: widget.richDescValue,
                   onChanged: widget.onRichDescChanged!,
@@ -1877,16 +1936,27 @@ class _KeyValueEditorState extends State<_KeyValueEditor> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  _cmsClickable(
-                    onTap: () => widget.onEdit(entry.key),
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 16,
-                      color: widget.editingIndex == entry.key
-                          ? CmsColors.orange
-                          : CmsColors.textSecond,
+                  if (widget.editingIndex != entry.key)
+                    _cmsClickable(
+                      onTap: () => widget.onEdit(entry.key),
+                      child: const Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: CmsColors.textSecond,
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.only(right: 2),
+                      child: Text(
+                        'Editing',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: CmsColors.orange,
+                        ),
+                      ),
                     ),
-                  ),
                   const SizedBox(width: 8),
                   _cmsClickable(
                     onTap: () => widget.onRemove(entry.key),

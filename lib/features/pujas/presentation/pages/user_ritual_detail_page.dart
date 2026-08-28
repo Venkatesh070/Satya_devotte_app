@@ -135,10 +135,12 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                   children: [
                     if ((ritual.category ?? '').trim().isNotEmpty)
                       _MetaChip(label: ritual.category!),
-                    if ((ritual.ritualDays ?? ritual.days.length) > 0)
+                    if ((ritual.ritualDay ?? '').trim().isNotEmpty)
+                      _MetaChip(label: ritual.ritualDay!.trim())
+                    else if (ritual.days.isNotEmpty)
                       _MetaChip(
                         label:
-                            '${ritual.ritualDays ?? ritual.days.length} days',
+                            '${ritual.days.length} day${ritual.days.length == 1 ? '' : 's'}',
                       ),
                     if ((ritual.recommendedDuration ?? '').trim().isNotEmpty)
                       _MetaChip(label: ritual.recommendedDuration!),

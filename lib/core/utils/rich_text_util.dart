@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/painting.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 bool isDeltaJson(String? value) {
@@ -23,9 +24,11 @@ Document documentFromValue(String? value) {
     } catch (_) {}
   }
   final doc = Document();
-  if (value != null && value.trim().isNotEmpty) {
-    doc.insert(0, value.trim());
-  }
+  if (value == null) return doc;
+  // Preserve internal line breaks from plain text (Enter / \n).
+  final normalized = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  if (normalized.trim().isEmpty) return doc;
+  doc.insert(0, normalized);
   return doc;
 }
 
@@ -38,6 +41,143 @@ String serializeDocument(Document document) {
     if (insert is String && insert.trim().isEmpty) return '';
   }
   return jsonEncode(delta);
+}
+
+/// Build a [TextSpan] tree from Quill delta JSON / plain text so Enter/newlines
+/// always render in preview and mobile (more reliable than read-only QuillEditor).
+TextSpan richTextToTextSpan(
+  String? value, {
+  TextStyle? style,
+}) {
+  final base = style ??
+      const TextStyle(
+        fontSize: 14,
+        height: 1.45,
+        color: Color(0xFF1A1A1A),
+      );
+
+  if (value == null || value.trim().isEmpty) {
+    return TextSpan(text: '', style: base);
+  }
+
+  if (!isDeltaJson(value)) {
+    return TextSpan(
+      text: value.replaceAll('\r\n', '\n').replaceAll('\r', '\n'),
+      style: base,
+    );
+  }
+
+  try {
+    final ops = jsonDecode(value.trim()) as List<dynamic>;
+    final children = <InlineSpan>[];
+    var orderedIndex = 1;
+
+    for (final raw in ops) {
+      if (raw is! Map) continue;
+      final insert = raw['insert'];
+      if (insert is! String) continue;
+
+      final attrs = raw['attributes'];
+      final attrMap = attrs is Map ? Map<String, dynamic>.from(attrs) : null;
+      final parts = insert.split('\n');
+
+      for (var i = 0; i < parts.length; i++) {
+        final part = parts[i];
+        if (part.isNotEmpty) {
+          children.add(
+            TextSpan(
+              text: part,
+              style: _inlineStyleFromAttrs(base, attrMap),
+            ),
+          );
+        }
+
+        if (i < parts.length - 1) {
+          // Quill stores block attrs (list/align) on the trailing newline.
+          // Prefix the line we just finished, then emit the break.
+          final listType = attrMap?['list']?.toString();
+          if (listType == 'bullet' ||
+              listType == 'checked' ||
+              listType == 'unchecked') {
+            _prefixLastLineWithMarker(children, '•  ');
+            orderedIndex = 1;
+          } else if (listType == 'ordered') {
+            _prefixLastLineWithMarker(children, '${orderedIndex}.  ');
+            orderedIndex += 1;
+          } else {
+            orderedIndex = 1;
+          }
+          children.add(const TextSpan(text: '\n'));
+        }
+      }
+    }
+
+    // Drop a single trailing newline so the widget doesn't add extra blank space,
+    // but keep intentional blank lines (multiple \n).
+    _trimSingleTrailingNewline(children);
+
+    if (children.isEmpty) {
+      return TextSpan(text: '', style: base);
+    }
+    return TextSpan(style: base, children: children);
+  } catch (_) {
+    return TextSpan(text: value, style: base);
+  }
+}
+
+TextStyle _inlineStyleFromAttrs(TextStyle base, Map<String, dynamic>? attrs) {
+  if (attrs == null || attrs.isEmpty) return base;
+  var style = base;
+  if (attrs['bold'] == true) {
+    style = style.copyWith(fontWeight: FontWeight.w700);
+  }
+  if (attrs['italic'] == true) {
+    style = style.copyWith(fontStyle: FontStyle.italic);
+  }
+  if (attrs['underline'] == true) {
+    style = style.copyWith(decoration: TextDecoration.underline);
+  }
+  if (attrs['strike'] == true) {
+    style = style.copyWith(decoration: TextDecoration.lineThrough);
+  }
+  return style;
+}
+
+void _prefixLastLineWithMarker(List<InlineSpan> children, String marker) {
+  // Find start of the last line (after the previous '\n', or start of list).
+  var lineStart = 0;
+  for (var i = children.length - 1; i >= 0; i--) {
+    final span = children[i];
+    if (span is TextSpan && span.text == '\n') {
+      lineStart = i + 1;
+      break;
+    }
+    if (i == 0) lineStart = 0;
+  }
+  // Don't double-prefix.
+  if (lineStart < children.length) {
+    final first = children[lineStart];
+    if (first is TextSpan && (first.text?.startsWith('•') == true ||
+        RegExp(r'^\d+\.\s').hasMatch(first.text ?? ''))) {
+      return;
+    }
+  }
+  children.insert(lineStart, TextSpan(text: marker));
+}
+
+void _trimSingleTrailingNewline(List<InlineSpan> children) {
+  if (children.isEmpty) return;
+  final last = children.last;
+  if (last is TextSpan && last.text == '\n') {
+    // Keep blank lines: only trim if there aren't two trailing newlines.
+    if (children.length >= 2) {
+      final prev = children[children.length - 2];
+      if (prev is TextSpan && prev.text == '\n') {
+        return;
+      }
+    }
+    children.removeLast();
+  }
 }
 
 String? plainTextOrDelta(String? value) {
@@ -217,6 +357,7 @@ List<RichTextSegment> parseDeltaSegments(String deltaJson) {
       }
 
       if (i < parts.length - 1) {
+        // Always keep the newline so blank lines (Enter Enter) are preserved.
         if (buffer.isNotEmpty) {
           buffer.add({
             'insert': '\n',
@@ -224,6 +365,20 @@ List<RichTextSegment> parseDeltaSegments(String deltaJson) {
           });
           flush();
           currentRecite = null;
+        } else {
+          // Empty paragraph / blank line between blocks.
+          segments.add(
+            RichTextSegment(
+              deltaJson: jsonEncode([
+                {
+                  'insert': '\n',
+                  if (attrs != null)
+                    'attributes': Map<String, dynamic>.from(attrs),
+                },
+              ]),
+              isRecite: false,
+            ),
+          );
         }
       }
     }

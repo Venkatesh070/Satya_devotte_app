@@ -11,7 +11,9 @@ class FestivalController extends GetxController {
   final FestivalRemoteDataSource _dataSource;
 
   final _festivals = <FestivalModel>[].obs;
+  final _selectorFestivals = <FestivalModel>[].obs;
   final _isLoading = false.obs;
+  final _isLoadingSelector = false.obs;
   final _isSubmitting = false.obs;
   final _error = RxnString();
   final _filter = 'All'.obs;
@@ -22,6 +24,9 @@ class FestivalController extends GetxController {
   final _search = ''.obs;
 
   List<FestivalModel> get festivals => _festivals;
+  /// Full approved list for puja association dropdowns (all pages).
+  List<FestivalModel> get selectorFestivals => _selectorFestivals;
+  bool get isLoadingSelector => _isLoadingSelector.value;
   bool get isLoading => _isLoading.value;
   bool get isSubmitting => _isSubmitting.value;
   String? get error => _error.value;
@@ -59,7 +64,15 @@ class FestivalController extends GetxController {
     _search.value = '';
   }
 
+  /// Called when entering Manage Festivals — resets to All and reloads page 1.
+  void resetAndLoad() {
+    _filter.value = 'All';
+    _search.value = '';
+    loadFestivals(page: 1, showErrorSnackbar: false);
+  }
+
   Future<void> resetSearchOnTabFocus() async {
+    _filter.value = 'All';
     _search.value = '';
     await loadFestivals(page: 1, showErrorSnackbar: false);
   }
@@ -117,6 +130,33 @@ class FestivalController extends GetxController {
       }
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  /// Load every approved festival for Associate Festivals dropdowns.
+  /// Does not replace the paginated Manage Festivals list.
+  Future<void> fetchApprovedFestivalsForSelector() async {
+    _isLoadingSelector.value = true;
+    try {
+      final auth = Get.find<AuthController>();
+      final list = await _dataSource.getAllFestivalsForSelector(
+        superAdmin: auth.isSuperAdmin,
+        status: 'APPROVED',
+      );
+      _selectorFestivals.assignAll(list);
+    } catch (_) {
+      // Fall back to whatever approved items are already in the page cache.
+      _selectorFestivals.assignAll(
+        _festivals
+            .where(
+              (f) =>
+                  f.status.toLowerCase() == 'approved' ||
+                  f.status.toUpperCase() == 'APPROVED',
+            )
+            .toList(),
+      );
+    } finally {
+      _isLoadingSelector.value = false;
     }
   }
 

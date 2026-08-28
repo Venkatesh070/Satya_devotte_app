@@ -3,6 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 
 import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 
 class CmsRichTextField extends StatefulWidget {
   const CmsRichTextField({
@@ -16,6 +17,9 @@ class CmsRichTextField extends StatefulWidget {
   final String label;
   final String? initialValue;
   final ValueChanged<String>? onChanged;
+
+  /// When true, shows Recite toolbar + a live preview matching CMS step
+  /// preview (Recite cards and Enter / blank-line spacing).
   final bool showReciteButton;
 
   @override
@@ -54,10 +58,16 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
   void didUpdateWidget(CmsRichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // Parent often mirrors onChanged back into initialValue via setState.
+    // That must NOT rebuild the Quill document or the caret jumps to offset 0
+    // and newly typed characters appear in reverse order.
+    final currentSerialized = serializeDocument(_controller.document);
+    if (_areValuesEqual(widget.initialValue, currentSerialized)) {
+      return;
+    }
+
     // Only reload when the parent intentionally changes the seed value
-    // (e.g. switching which step is being edited). Do NOT sync against the
-    // live controller on every parent rebuild — that resets the cursor and
-    // makes typing / formatting appear not to stick.
+    // (e.g. switching which step is being edited).
     if (!_areValuesEqual(widget.initialValue, oldWidget.initialValue)) {
       _controller.document = documentFromValue(widget.initialValue);
       _controller.updateSelection(
@@ -138,12 +148,24 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
       showDividers: false,
     );
 
-    // Get default styles and customize placeholder font size
+    // Match CMS preview body text (size + line height) and keep Enter spacing.
     final defaultStyles = DefaultStyles.getInstance(context);
+    final bodyStyle = defaultStyles.paragraph!.style.copyWith(
+      fontSize: 13,
+      height: 1.4,
+      color: CmsColors.textPrimary,
+    );
     final customStyles = defaultStyles.merge(
       DefaultStyles(
+        paragraph: DefaultTextBlockStyle(
+          bodyStyle,
+          defaultStyles.paragraph!.horizontalSpacing,
+          const VerticalSpacing(6, 0),
+          const VerticalSpacing(0, 0),
+          defaultStyles.paragraph!.decoration,
+        ),
         placeHolder: DefaultTextBlockStyle(
-          defaultStyles.placeHolder!.style.copyWith(fontSize: 14),
+          defaultStyles.placeHolder!.style.copyWith(fontSize: 14, height: 1.4),
           defaultStyles.placeHolder!.horizontalSpacing,
           defaultStyles.placeHolder!.verticalSpacing,
           defaultStyles.placeHolder!.lineSpacing,
@@ -160,7 +182,26 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
       expands: false,
       placeholder: 'Enter ${widget.label}...',
       customStyles: customStyles,
+      // Inline hint while editing: recite-marked text looks like preview mantra.
+      customStyleBuilder: (Attribute attribute) {
+        final isRecite = attribute.key == ReciteAttributes.recite.key &&
+            (attribute.value == true ||
+                attribute.value?.toString().toLowerCase() == 'true');
+        if (isRecite) {
+          return TextStyle(
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.orange,
+            backgroundColor: CmsColors.orange.withValues(alpha: 0.08),
+          );
+        }
+        return const TextStyle();
+      },
     );
+
+    final liveValue = serializeDocument(_controller.document);
+    final showLivePreview =
+        widget.showReciteButton && liveValue.trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +240,11 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
               ),
               const Divider(height: 1, color: CmsColors.border),
               DefaultTextStyle.merge(
-                style: TextStyle(color: CmsColors.textPrimary),
+                style: const TextStyle(
+                  color: CmsColors.textPrimary,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
                 child: QuillEditor.basic(
                   controller: _controller,
                   focusNode: _focusNode,
@@ -212,12 +257,34 @@ class _CmsRichTextFieldState extends State<CmsRichTextField> {
         if (widget.showReciteButton) ...[
           const SizedBox(height: 6),
           Text(
-            'Select text, then tap Recite to mark mantra lines.',
+            'Select text, then tap Recite to mark mantra lines. Preview below matches how it appears on mobile.',
             style: TextStyle(
               fontSize: 11,
               color: CmsColors.textSecond.withValues(alpha: 0.9),
             ),
           ),
+          if (showLivePreview) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'Preview',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: CmsColors.textSecond,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: CmsColors.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: CmsColors.border),
+              ),
+              child: StepRichTextDisplay.cms(liveValue),
+            ),
+          ],
         ],
       ],
     );

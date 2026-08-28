@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/features/cms/models/sloka_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/sloka_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
-import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
+
+/// Convert Quill Delta JSON (legacy) to plain text for CMS display/editing.
+String _plainSlokaText(String? value) {
+  if (value == null || value.trim().isEmpty) return '';
+  return documentFromValue(value).toPlainText().trim();
+}
 
 Widget _cmsClickable({
   required VoidCallback onTap,
@@ -436,7 +442,7 @@ class _SlokaCard extends StatelessWidget {
                 border: Border.all(color: CmsColors.orange.withOpacity(0.15)),
               ),
               child: Text(
-                sloka.sloka,
+                _plainSlokaText(sloka.sloka),
                 style: const TextStyle(
                   fontSize: 16,
                   height: 1.8,
@@ -581,7 +587,7 @@ class _RecentList extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  s.sloka,
+                                  _plainSlokaText(s.sloka),
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: CmsColors.textSecond,
@@ -623,7 +629,8 @@ class _RecentList extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════
-// SLOKA FORM — only 3 fields: sloka, author, date
+// SLOKA FORM — plain text fields: sloka, meaning, contemplation,
+// prayer, author, date
 // ════════════════════════════════════════════════════════════════
 class _SlokaForm extends StatefulWidget {
   const _SlokaForm({
@@ -640,33 +647,43 @@ class _SlokaForm extends StatefulWidget {
 }
 
 class _SlokaFormState extends State<_SlokaForm> {
+  late final TextEditingController _slokaCtrl;
+  late final TextEditingController _meaningCtrl;
+  late final TextEditingController _contemplationCtrl;
+  late final TextEditingController _prayerCtrl;
   late final TextEditingController _authorCtrl;
-  String? _slokaRich;
-  String? _meaningRich;
-  String? _contemplationRich;
-  String? _prayerRich;
 
   @override
   void initState() {
     super.initState();
     final existing = widget.ctrl.todaySloka;
-    _slokaRich = existing?.sloka;
-    _meaningRich = existing?.meaning;
-    _contemplationRich = existing?.contemplation;
-    _prayerRich = existing?.prayer;
+    _slokaCtrl = TextEditingController(
+      text: _plainSlokaText(existing?.sloka),
+    );
+    _meaningCtrl = TextEditingController(
+      text: _plainSlokaText(existing?.meaning),
+    );
+    _contemplationCtrl = TextEditingController(
+      text: _plainSlokaText(existing?.contemplation),
+    );
+    _prayerCtrl = TextEditingController(
+      text: _plainSlokaText(existing?.prayer),
+    );
     _authorCtrl = TextEditingController(text: existing?.author ?? '');
   }
 
   @override
   void dispose() {
+    _slokaCtrl.dispose();
+    _meaningCtrl.dispose();
+    _contemplationCtrl.dispose();
+    _prayerCtrl.dispose();
     _authorCtrl.dispose();
     super.dispose();
   }
 
-  String _richVal(String? v) => v ?? '';
-
   Future<void> _submit() async {
-    if (_slokaRich == null || _slokaRich!.trim().isEmpty) {
+    if (_slokaCtrl.text.trim().isEmpty) {
       Get.snackbar(
         'Required',
         'Sloka text is required',
@@ -678,10 +695,10 @@ class _SlokaFormState extends State<_SlokaForm> {
       return;
     }
     final ok = await widget.ctrl.saveSloka(
-      sloka: _richVal(_slokaRich),
-      meaning: _richVal(_meaningRich),
-      contemplation: _richVal(_contemplationRich),
-      prayer: _richVal(_prayerRich),
+      sloka: _slokaCtrl.text.trim(),
+      meaning: _meaningCtrl.text.trim(),
+      contemplation: _contemplationCtrl.text.trim(),
+      prayer: _prayerCtrl.text.trim(),
       author: _authorCtrl.text.trim(),
     );
     if (ok) widget.onSaved();
@@ -700,7 +717,6 @@ class _SlokaFormState extends State<_SlokaForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back + title
             Row(
               children: [
                 _cmsClickable(
@@ -737,7 +753,6 @@ class _SlokaFormState extends State<_SlokaForm> {
             CmsFormCard(
               title: 'Daily Sloka',
               children: [
-                // date display (read-only — set from date picker on main screen)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -767,32 +782,34 @@ class _SlokaFormState extends State<_SlokaForm> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                CmsRichTextField(
+                CmsFormField(
                   label: 'Sloka *',
-                  initialValue: _slokaRich,
-                  onChanged: (v) => setState(() => _slokaRich = v),
+                  hint: 'Enter the sloka text',
+                  controller: _slokaCtrl,
+                  maxLines: 5,
                 ),
                 const SizedBox(height: 12),
-                CmsRichTextField(
+                CmsFormField(
                   label: 'Meaning',
-                  initialValue: _meaningRich,
-                  onChanged: (v) => setState(() => _meaningRich = v),
+                  hint: 'Enter the meaning',
+                  controller: _meaningCtrl,
+                  maxLines: 4,
                 ),
                 const SizedBox(height: 12),
-                CmsRichTextField(
+                CmsFormField(
                   label: 'Contemplation',
-                  initialValue: _contemplationRich,
-                  onChanged: (v) => setState(() => _contemplationRich = v),
+                  hint: 'Enter contemplation notes',
+                  controller: _contemplationCtrl,
+                  maxLines: 4,
                 ),
                 const SizedBox(height: 12),
-                CmsRichTextField(
+                CmsFormField(
                   label: 'Prayer',
-                  initialValue: _prayerRich,
-                  onChanged: (v) => setState(() => _prayerRich = v),
+                  hint: 'Enter the prayer',
+                  controller: _prayerCtrl,
+                  maxLines: 4,
                 ),
                 const SizedBox(height: 12),
-
                 CmsFormField(
                   label: 'Author / Source',
                   hint: 'e.g. Bhagavad Gita 2.47',
@@ -801,7 +818,6 @@ class _SlokaFormState extends State<_SlokaForm> {
               ],
             ),
             const SizedBox(height: 24),
-
             Row(
               children: [
                 Expanded(

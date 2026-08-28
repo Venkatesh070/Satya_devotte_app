@@ -219,20 +219,36 @@ class RitualRemoteDataSource {
 
   Future<RitualModel> getRitualById(String id) async {
     final offlineService = Get.isRegistered<OfflineService>() ? Get.find<OfflineService>() : null;
+    Object? lastError;
+
+    Future<RitualModel> parsePayload(Map<String, dynamic> payload) async {
+      final model = RitualModel.fromJson(_extractSingle(payload));
+      if (model.id.trim().isEmpty && model.title.trim().isEmpty) {
+        throw StateError('Ritual payload missing id/title');
+      }
+      return model;
+    }
+
     if (offlineService != null && offlineService.isOnline.value) {
       try {
         final response = await _apiClient.dio.get(ApiEndpoints.ritual(id));
         final payload = response.data as Map<String, dynamic>;
+        final model = await parsePayload(payload);
         await offlineService.cacheData('ritual_detail_$id', payload);
-        return RitualModel.fromJson(_extractSingle(payload));
-      } catch (_) {}
+        return model;
+      } catch (e) {
+        lastError = e;
+      }
     }
 
     if (offlineService != null) {
       final cached = offlineService.getCachedData('ritual_detail_$id');
       if (cached is Map) {
-        final map = Map<String, dynamic>.from(cached);
-        return RitualModel.fromJson(_extractSingle(map));
+        try {
+          return await parsePayload(Map<String, dynamic>.from(cached));
+        } catch (e) {
+          lastError = e;
+        }
       }
       final allCached = offlineService.getCachedData('all_rituals');
       if (allCached is Map) {
@@ -245,10 +261,14 @@ class RitualRemoteDataSource {
       }
     }
 
-    final response = await _apiClient.dio.get(ApiEndpoints.ritual(id));
-    return RitualModel.fromJson(
-      _extractSingle(response.data as Map<String, dynamic>),
-    );
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.ritual(id));
+      return await parsePayload(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } catch (e) {
+      throw lastError ?? e;
+    }
   }
 
   Future<RitualModel> createRitual(
@@ -375,11 +395,23 @@ class RitualRemoteDataSource {
 
   Map<String, dynamic> _extractSingle(Map<String, dynamic> body) {
     final d = body['data'];
-    if (d is Map<String, dynamic>) {
-      if (d['ritual'] is Map) {
-        return Map<String, dynamic>.from(d['ritual'] as Map);
+    if (d is Map) {
+      final data = Map<String, dynamic>.from(d);
+      if (data['ritual'] is Map) {
+        return Map<String, dynamic>.from(data['ritual'] as Map);
       }
-      return d;
+      // Some APIs nest the document once more under a generic key.
+      for (final k in ['item', 'result', 'data']) {
+        if (data[k] is Map) {
+          final nested = Map<String, dynamic>.from(data[k] as Map);
+          if (nested['title'] != null || nested['_id'] != null || nested['id'] != null) {
+            return nested;
+          }
+        }
+      }
+      if (data['title'] != null || data['_id'] != null || data['id'] != null) {
+        return data;
+      }
     }
     if (body['ritual'] is Map) {
       return Map<String, dynamic>.from(body['ritual'] as Map);

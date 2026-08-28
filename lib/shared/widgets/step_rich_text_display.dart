@@ -42,7 +42,7 @@ class StepRichTextDisplay extends StatelessWidget {
       return RichTextDisplay(v, style: _instructionTextStyle(variant));
     }
 
-    final segments = parseDeltaSegments(v).where((s) => !s.isEmpty).toList();
+    final segments = parseDeltaSegments(v);
     if (segments.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -51,15 +51,17 @@ class StepRichTextDisplay extends StatelessWidget {
         for (var i = 0; i < segments.length; i++)
           Padding(
             padding: EdgeInsets.only(bottom: i == segments.length - 1 ? 0 : 14),
-            child: segments[i].isRecite
-                ? _ReciteCard(
-                    deltaJson: segments[i].deltaJson,
-                    variant: variant,
-                  )
-                : _InstructionCard(
-                    deltaJson: segments[i].deltaJson,
-                    variant: variant,
-                  ),
+            child: segments[i].isEmpty
+                ? const SizedBox(height: 8)
+                : segments[i].isRecite
+                    ? _ReciteCard(
+                        deltaJson: segments[i].deltaJson,
+                        variant: variant,
+                      )
+                    : _InstructionCard(
+                        deltaJson: segments[i].deltaJson,
+                        variant: variant,
+                      ),
           ),
       ],
     );

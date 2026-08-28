@@ -56,8 +56,7 @@ class _CmsFestivalsContentState extends State<CmsFestivalsContent> {
     // manually press the reload icon to see the API content.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _ctrl.clearSearch();
-      _ctrl.loadFestivals();
+      _ctrl.resetAndLoad();
       if (Get.currentRoute == AppRoutes.cmsFestivalCreate) {
         _openAddForm();
       }

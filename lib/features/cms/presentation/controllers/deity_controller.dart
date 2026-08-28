@@ -52,7 +52,8 @@ class DeityController extends GetxController {
 
   Future<void> resetSearchOnTabFocus() async {
     _search.value = '';
-    await loadDeities(page: 1, force: true, search: '');
+    _statusFilter.value = null;
+    await loadDeities(page: 1, force: true, search: '', clearStatus: true);
   }
 
   Future<void> goToPage(int target) async {
@@ -62,7 +63,7 @@ class DeityController extends GetxController {
   }
 
   Future<void> setPageSize(int size) async {
-    final capped = size.clamp(1, 100);
+    final capped = size.clamp(1, 1000);
     if (capped == _limit.value) return;
     _limit.value = capped;
     await loadDeities(page: 1, force: true);
@@ -71,7 +72,13 @@ class DeityController extends GetxController {
   Future<void> setStatusFilter(String? status) async {
     _search.value = '';
     _statusFilter.value = status;
-    await loadDeities(page: 1, force: true, search: '');
+    await loadDeities(
+      page: 1,
+      force: true,
+      search: '',
+      status: status,
+      clearStatus: true,
+    );
   }
 
   Future<void> loadDeities({
@@ -80,11 +87,13 @@ class DeityController extends GetxController {
     String? status,
     String? search,
     bool force = false,
+    /// When true, [status] (including `null` for All) replaces the saved filter.
+    bool clearStatus = false,
   }) async {
     if (_loadInFlight && !force) return;
     final targetPage = page ?? _page.value;
     final targetLimit = limit ?? _limit.value;
-    final targetStatus = status ?? _statusFilter.value;
+    final targetStatus = clearStatus ? status : (status ?? _statusFilter.value);
     final targetSearch = search ?? _search.value;
 
     _loadInFlight = true;

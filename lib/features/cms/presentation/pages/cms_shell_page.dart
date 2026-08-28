@@ -186,6 +186,19 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
         Get.isRegistered<InventoryController>()) {
       unawaited(Get.find<InventoryController>().resetSearchOnTabFocus());
     }
+    if (index == _NavIds.deities && Get.isRegistered<DeityController>()) {
+      unawaited(Get.find<DeityController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.pujas && Get.isRegistered<PoojaController>()) {
+      unawaited(Get.find<PoojaController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.festivals && Get.isRegistered<FestivalController>()) {
+      unawaited(Get.find<FestivalController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.manageRituals &&
+        Get.isRegistered<RitualController>()) {
+      unawaited(Get.find<RitualController>().resetSearchOnTabFocus());
+    }
     if (index == _NavIds.activity) {
       _onActivityFocus();
     }

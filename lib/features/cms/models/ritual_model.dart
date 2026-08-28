@@ -193,8 +193,14 @@ class RitualMedia {
   factory RitualMedia.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const RitualMedia();
     List<String> strings(dynamic v) {
-      if (v is! List) return [];
-      return v.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+      if (v is! List) {
+        final single = RitualModel._cleanMediaUrl(v);
+        return single == null ? <String>[] : [single];
+      }
+      return v
+          .map(RitualModel._cleanMediaUrl)
+          .whereType<String>()
+          .toList();
     }
 
     return RitualMedia(
@@ -218,10 +224,11 @@ class RitualModel {
     this.slug,
     this.description,
     required this.deities,
+    this.festivalIds = const [],
     this.category,
     this.purpose,
     this.startingDay,
-    this.ritualDays,
+    this.ritualDay,
     this.recommendedDuration,
     this.bestDayTime,
     this.accessType = 'FREE',
@@ -246,10 +253,11 @@ class RitualModel {
   final String? description;
   final List<String> deities;
   String get deity => deities.join(', ');
+  final List<String> festivalIds;
   final String? category;
   final String? purpose;
   final String? startingDay;
-  final int? ritualDays;
+  final String? ritualDay;
   final String? recommendedDuration;
   final String? bestDayTime;
   final String accessType;
@@ -289,6 +297,30 @@ class RitualModel {
     return const [];
   }
 
+  static String? _extractId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) {
+      final s = raw.trim();
+      return s.isEmpty ? null : s;
+    }
+    if (raw is Map) {
+      final id = (raw['_id'] ?? raw['id'] ?? '').toString().trim();
+      return id.isEmpty ? null : id;
+    }
+    final text = raw.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  static List<String> _extractFestivalIds(Map<String, dynamic> json) {
+    final raw = json['festivalIds'];
+    if (raw is! List) return const [];
+    return raw
+        .map(_extractId)
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
   static String _parseDocumentId(Map<String, dynamic> json) {
     final raw = json['_id'] ?? json['id'];
     if (raw == null) return '';
@@ -304,11 +336,60 @@ class RitualModel {
     return text;
   }
 
+  static num _parseNum(dynamic raw) {
+    if (raw is num) return raw;
+    if (raw == null) return 0;
+    return num.tryParse(raw.toString().trim()) ?? 0;
+  }
+
+  static String? _cleanMediaUrl(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is List) {
+      for (final item in raw) {
+        final cleaned = _cleanMediaUrl(item);
+        if (cleaned != null) return cleaned;
+      }
+      return null;
+    }
+    if (raw is Map) {
+      return _cleanMediaUrl(
+        raw['url'] ?? raw['imageUrl'] ?? raw['src'] ?? raw['path'],
+      );
+    }
+    final text = raw.toString().replaceAll('`', '').trim();
+    if (text.isEmpty || text == 'null' || text == 'undefined') return null;
+    return text;
+  }
+
+  static List<String> _cleanMediaUrlList(dynamic raw) {
+    if (raw is! List) {
+      final single = _cleanMediaUrl(raw);
+      return single == null ? const [] : [single];
+    }
+    final out = <String>[];
+    for (final item in raw) {
+      final cleaned = _cleanMediaUrl(item);
+      if (cleaned != null && !out.contains(cleaned)) out.add(cleaned);
+    }
+    return out;
+  }
+
   factory RitualModel.fromJson(Map<String, dynamic> json) {
     if (json['ritual'] is Map) {
       return RitualModel.fromJson(
         Map<String, dynamic>.from(json['ritual'] as Map),
       );
+    }
+    if (json['data'] is Map) {
+      final data = Map<String, dynamic>.from(json['data'] as Map);
+      if (data['ritual'] is Map) {
+        return RitualModel.fromJson(
+          Map<String, dynamic>.from(data['ritual'] as Map),
+        );
+      }
+      if (data['title'] != null || data['_id'] != null || data['id'] != null) {
+        return RitualModel.fromJson(data);
+      }
     }
 
     final daysList = (json['days'] is List)
@@ -317,39 +398,44 @@ class RitualModel {
               .toList()
         : <RitualDay>[];
 
-    final parsedRitualDays = json['ritualDays'];
-    int? ritualDays;
-    if (parsedRitualDays is int) {
-      ritualDays = parsedRitualDays;
-    } else if (parsedRitualDays != null) {
-      ritualDays = int.tryParse(parsedRitualDays.toString());
+    final ritualDayRaw = json['ritualDay'] ?? json['ritualDays'];
+    String? ritualDay;
+    if (ritualDayRaw != null) {
+      final text = ritualDayRaw.toString().trim();
+      if (text.isNotEmpty) ritualDay = text;
     }
-    ritualDays ??= daysList.isNotEmpty ? daysList.length : null;
 
     RitualMedia media = const RitualMedia();
-    List<String> strings(dynamic v) {
-      if (v is! List) return const [];
-      return v.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
-    }
+    final topImages = _cleanMediaUrlList(json['images']);
+    final topAudio = _cleanMediaUrlList(json['audio']);
+    final topVideos = _cleanMediaUrlList(json['videos']);
 
     if (json['media'] is Map) {
       media = RitualMedia.fromJson(
         Map<String, dynamic>.from(json['media'] as Map),
       );
-    } else {
+    }
+    if (media.images.isEmpty && topImages.isNotEmpty) {
       media = RitualMedia(
-        images: strings(json['images']),
-        audio: strings(json['audio']),
-        videos: strings(json['videos']),
+        images: topImages,
+        audio: media.audio.isNotEmpty ? media.audio : topAudio,
+        videos: media.videos.isNotEmpty ? media.videos : topVideos,
+      );
+    } else if (media.images.isEmpty &&
+        media.audio.isEmpty &&
+        media.videos.isEmpty &&
+        json['media'] is! Map) {
+      media = RitualMedia(
+        images: topImages,
+        audio: topAudio,
+        videos: topVideos,
       );
     }
-    if (media.images.isEmpty && strings(json['images']).isNotEmpty) {
-      media = RitualMedia(
-        images: strings(json['images']),
-        audio: media.audio.isNotEmpty ? media.audio : strings(json['audio']),
-        videos: media.videos.isNotEmpty ? media.videos : strings(json['videos']),
-      );
-    }
+
+    final coverUrl =
+        _cleanMediaUrl(json['imageUrl']) ??
+        _cleanMediaUrl(json['image']) ??
+        (media.images.isNotEmpty ? media.images.first : null);
 
     return RitualModel(
       id: _parseDocumentId(json),
@@ -357,14 +443,15 @@ class RitualModel {
       slug: json['slug']?.toString(),
       description: json['description']?.toString(),
       deities: _extractDeityIds(json),
+      festivalIds: _extractFestivalIds(json),
       category: json['category']?.toString(),
       purpose: json['purpose']?.toString(),
       startingDay: json['startingDay']?.toString(),
-      ritualDays: ritualDays,
+      ritualDay: ritualDay,
       recommendedDuration: json['recommendedDuration']?.toString(),
       bestDayTime: json['bestDayTime']?.toString(),
       accessType: (json['accessType'] ?? 'FREE').toString(),
-      price: (json['price'] ?? 0) as num,
+      price: _parseNum(json['price']),
       currency: (json['currency'] ?? 'ZAR').toString(),
       difficulty: (json['difficulty'] ?? 'BEGINNER').toString(),
       isFeatured: json['isFeatured'] == true,
@@ -376,17 +463,12 @@ class RitualModel {
                 .toList()
           : [],
       media: media,
-      imageUrl:
-          json['imageUrl']?.toString() ??
-          json['image']?.toString() ??
-          (media.images.isNotEmpty ? media.images.first : null),
+      imageUrl: coverUrl,
       audioUrl:
-          json['audioUrl']?.toString() ??
-          json['audio']?.toString() ??
+          _cleanMediaUrl(json['audioUrl']) ??
           (media.audio.isNotEmpty ? media.audio.first : null),
       videoUrl:
-          json['videoUrl']?.toString() ??
-          json['video']?.toString() ??
+          _cleanMediaUrl(json['videoUrl']) ??
           (media.videos.isNotEmpty ? media.videos.first : null),
       createdAt: json['createdAt']?.toString(),
       updatedAt: json['updatedAt']?.toString(),
@@ -394,17 +476,41 @@ class RitualModel {
   }
 
   Map<String, dynamic> toJson() {
-    final dayCount = ritualDays ?? days.length;
+    final cover = _cleanMediaUrl(imageUrl) ??
+        (media.images.isNotEmpty ? _cleanMediaUrl(media.images.first) : null);
+    final images = <String>[
+      if (cover != null) cover,
+      ...media.images
+          .map(_cleanMediaUrl)
+          .whereType<String>()
+          .where((url) => url != cover),
+    ];
+    final audio = <String>[
+      if (_cleanMediaUrl(audioUrl) != null) _cleanMediaUrl(audioUrl)!,
+      ...media.audio
+          .map(_cleanMediaUrl)
+          .whereType<String>()
+          .where((url) => url != audioUrl),
+    ];
+    final videos = <String>[
+      if (_cleanMediaUrl(videoUrl) != null) _cleanMediaUrl(videoUrl)!,
+      ...media.videos
+          .map(_cleanMediaUrl)
+          .whereType<String>()
+          .where((url) => url != videoUrl),
+    ];
+
     return {
       'title': title,
       if (slug != null && slug!.isNotEmpty) 'slug': slug,
       if (description != null) 'description': description,
       'deity': deities,
+      'festivalIds': festivalIds,
       if (category != null && category!.isNotEmpty) 'category': category,
       if (purpose != null && purpose!.isNotEmpty) 'purpose': purpose,
       if (startingDay != null && startingDay!.isNotEmpty)
         'startingDay': startingDay,
-      if (dayCount > 0) 'ritualDays': dayCount,
+      if (ritualDay != null && ritualDay!.isNotEmpty) 'ritualDay': ritualDay,
       if (bestDayTime != null && bestDayTime!.isNotEmpty)
         'bestDayTime': bestDayTime,
       'accessType': accessType,
@@ -415,10 +521,18 @@ class RitualModel {
       'status': status,
       'days': days.map((e) => e.toJson()).toList(),
       'sections': sections.map((e) => e.toJson()).toList(),
-      'media': media.toJson(),
-      if (imageUrl != null && imageUrl!.isNotEmpty) 'imageUrl': imageUrl,
-      if (audioUrl != null && audioUrl!.isNotEmpty) 'audioUrl': audioUrl,
-      if (videoUrl != null && videoUrl!.isNotEmpty) 'videoUrl': videoUrl,
+      'images': images,
+      'audio': audio,
+      'videos': videos,
+      'media': {
+        'images': images,
+        'audio': audio,
+        'videos': videos,
+      },
+      if (cover != null) 'imageUrl': cover,
+      if (cover != null) 'image': cover,
+      if (audio.isNotEmpty) 'audioUrl': audio.first,
+      if (videos.isNotEmpty) 'videoUrl': videos.first,
     };
   }
 
@@ -427,10 +541,11 @@ class RitualModel {
     String? slug,
     String? description,
     List<String>? deities,
+    List<String>? festivalIds,
     String? category,
     String? purpose,
     String? startingDay,
-    int? ritualDays,
+    String? ritualDay,
     String? recommendedDuration,
     String? bestDayTime,
     String? accessType,
@@ -452,10 +567,11 @@ class RitualModel {
       slug: slug ?? this.slug,
       description: description ?? this.description,
       deities: deities ?? this.deities,
+      festivalIds: festivalIds ?? this.festivalIds,
       category: category ?? this.category,
       purpose: purpose ?? this.purpose,
       startingDay: startingDay ?? this.startingDay,
-      ritualDays: ritualDays ?? this.ritualDays,
+      ritualDay: ritualDay ?? this.ritualDay,
       recommendedDuration: recommendedDuration ?? this.recommendedDuration,
       bestDayTime: bestDayTime ?? this.bestDayTime,
       accessType: accessType ?? this.accessType,

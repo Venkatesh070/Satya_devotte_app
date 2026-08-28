@@ -189,7 +189,11 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
         totalPages = result.totalPages < 1 ? 1 : result.totalPages;
         for (final item in result.items) {
           if (item.id.trim().isEmpty) continue;
-          final days = item.ritualDays ?? item.days.length;
+          final daysLabel = (item.ritualDay ?? '').trim().isNotEmpty
+              ? item.ritualDay!.trim()
+              : (item.days.isNotEmpty
+                    ? '${item.days.length} day${item.days.length == 1 ? '' : 's'}'
+                    : '');
           rows.add(
             _CatalogRow(
               id: item.id,
@@ -198,7 +202,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               meta: [
                 if ((item.category ?? '').trim().isNotEmpty)
                   item.category!.trim(),
-                if (days > 0) '$days day${days == 1 ? '' : 's'}',
+                if (daysLabel.isNotEmpty) daysLabel,
                 if ((item.recommendedDuration ?? '').trim().isNotEmpty)
                   item.recommendedDuration!.trim(),
               ].join(' · '),

@@ -238,6 +238,7 @@ class OfflineService extends GetxService {
       try {
         final deitiesResponse = await apiClient.dio.get<dynamic>(
           ApiEndpoints.deities,
+          queryParameters: {'page': 1, 'limit': 1000},
           options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         await cacheData('deities_list', deitiesResponse.data);

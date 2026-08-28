@@ -709,20 +709,9 @@ class PoojaModel {
       'closure': completionClosure,
       'integration': completionIntegration,
       'benefits': completionBenefits,
-      'blessings': blessings,
-      'media': {
-        'images': imageUrl != null && imageUrl!.trim().isNotEmpty
-            ? [imageUrl]
-            : [],
-        'audio': audioUrl != null && audioUrl!.trim().isNotEmpty
-            ? [audioUrl]
-            : [],
-        'videos': videoUrl != null && videoUrl!.trim().isNotEmpty
-            ? [videoUrl]
-            : [],
-      },
-      'festivalIds': festivalIds,
     },
+    // Top-level — API reads req.body.festivalIds (not nested under completion).
+    'festivalIds': festivalIds,
   };
   }
 

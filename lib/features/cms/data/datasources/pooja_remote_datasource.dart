@@ -281,46 +281,67 @@ class PoojaRemoteDataSource {
     );
   }
 
-  // ── GET /deities — for CMS dropdowns (optional status filter) ─
+  // ── GET /deities/all — for CMS dropdowns (optional status filter) ─
   Future<List<Map<String, String>>> getDeities({String? status}) async {
-    final response = await _apiClient.dio.get(
-      ApiEndpoints.allDeities,
-      queryParameters: {
-        if (status != null && status.isNotEmpty) 'status': status,
-        'limit': 100,
-      },
-    );
-    final raw = response.data;
-    List<dynamic> list = const [];
-    if (raw is Map<String, dynamic>) {
-      final d = raw['data'];
-      if (d is List) list = d;
-      if (d is Map && d['deities'] is List) list = d['deities'] as List;
-      if (list.isEmpty && raw['deities'] is List) list = raw['deities'] as List;
-    } else if (raw is List) {
-      list = raw;
+    final all = <Map<String, String>>[];
+    var page = 1;
+    const pageSize = 100;
+    var totalPages = 1;
+
+    while (page <= totalPages) {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.allDeities,
+        queryParameters: {
+          if (status != null && status.isNotEmpty) 'status': status,
+          'page': page,
+          'limit': pageSize,
+        },
+      );
+      final raw = response.data;
+      List<dynamic> list = const [];
+      if (raw is Map<String, dynamic>) {
+        final d = raw['data'];
+        if (d is List) list = d;
+        if (d is Map && d['deities'] is List) list = d['deities'] as List;
+        if (list.isEmpty && raw['deities'] is List) list = raw['deities'] as List;
+        final pagination = CmsPaginationParser.fromBody(
+          raw,
+          requestedPage: page,
+          requestedLimit: pageSize,
+          itemCount: list.length,
+        );
+        totalPages = pagination.totalPages < 1 ? 1 : pagination.totalPages;
+      } else if (raw is List) {
+        list = raw;
+        totalPages = 1;
+      }
+
+      final statusFilter = status?.trim().toUpperCase();
+      all.addAll(
+        list
+            .whereType<Map>()
+            .where((e) {
+              if (statusFilter == null || statusFilter.isEmpty) return true;
+              final itemStatus = (e['status'] ?? '').toString().toUpperCase();
+              return itemStatus == statusFilter;
+            })
+            .map((e) {
+              final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+              final name =
+                  e['name']?.toString() ??
+                  e['title']?.toString() ??
+                  e['deityName']?.toString() ??
+                  '';
+              return {'id': id.trim(), 'name': name.trim()};
+            })
+            .where((e) => e['id']!.isNotEmpty),
+      );
+
+      page += 1;
+      if (list.isEmpty) break;
     }
 
-    final statusFilter = status?.trim().toUpperCase();
-
-    return list
-        .whereType<Map>()
-        .where((e) {
-          if (statusFilter == null || statusFilter.isEmpty) return true;
-          final itemStatus = (e['status'] ?? '').toString().toUpperCase();
-          return itemStatus == statusFilter;
-        })
-        .map((e) {
-          final id = e['_id']?.toString() ?? e['id']?.toString() ?? '';
-          final name =
-              e['name']?.toString() ??
-              e['title']?.toString() ??
-              e['deityName']?.toString() ??
-              '';
-          return {'id': id.trim(), 'name': name.trim()};
-        })
-        .where((e) => e['id']!.isNotEmpty)
-        .toList();
+    return all;
   }
 
   // ── CREATE pooja — multipart/form-data with optional media files ──
@@ -484,7 +505,28 @@ class PoojaRemoteDataSource {
 
   Map<String, dynamic> _extractSingle(Map<String, dynamic> body) {
     final d = body['data'];
-    if (d is Map<String, dynamic>) return d;
+    if (d is Map) {
+      final data = Map<String, dynamic>.from(d);
+      if (data['pooja'] is Map) {
+        return Map<String, dynamic>.from(data['pooja'] as Map);
+      }
+      for (final k in ['item', 'result', 'data']) {
+        if (data[k] is Map) {
+          final nested = Map<String, dynamic>.from(data[k] as Map);
+          if (nested['title'] != null ||
+              nested['_id'] != null ||
+              nested['id'] != null) {
+            return nested;
+          }
+        }
+      }
+      if (data['title'] != null || data['_id'] != null || data['id'] != null) {
+        return data;
+      }
+    }
+    if (body['pooja'] is Map) {
+      return Map<String, dynamic>.from(body['pooja'] as Map);
+    }
     return body;
   }
 

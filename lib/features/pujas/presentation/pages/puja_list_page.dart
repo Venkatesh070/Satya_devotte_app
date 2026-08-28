@@ -74,6 +74,7 @@ class _RitualListPageState extends State<RitualListPage> {
       if (offlineService.isOnline.value) {
         final response = await Get.find<ApiClient>().dio.get<dynamic>(
           ApiEndpoints.deities,
+          queryParameters: {'page': 1, 'limit': 1000},
         );
         payload = response.data;
         await offlineService.cacheData(cacheKey, payload);
