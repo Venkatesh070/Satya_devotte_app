@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
+import 'package:satya_devotte_app/features/profile/domain/repositories/ritual_history_repository.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
 import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -150,6 +151,10 @@ class OfflineService extends GetxService {
         lastTempSessionId =
             payload['tempId'] ?? 'offline_'; // Not perfect but helps
         await _syncQueueBox.delete(key);
+      } else if (result is Map && type == 'start_ritual') {
+        realSessionId = (result['_id'] ?? result['id'])?.toString();
+        lastTempSessionId = payload['tempId'];
+        await _syncQueueBox.delete(key);
       } else if (result == true) {
         await _syncQueueBox.delete(key);
       } else {
@@ -164,6 +169,9 @@ class OfflineService extends GetxService {
   ) async {
     try {
       final historyRepo = Get.find<PoojaHistoryRepository>();
+      final ritualHistoryRepo = Get.isRegistered<RitualHistoryRepository>()
+          ? Get.find<RitualHistoryRepository>()
+          : null;
       switch (type) {
         case 'record_streak':
           final deviceTimeZone = payload['timezone']?.toString() ?? 'UTC';
@@ -197,6 +205,26 @@ class OfflineService extends GetxService {
               scheduleId: payload['scheduleId'],
             );
           }
+          return true;
+        case 'start_ritual':
+          if (ritualHistoryRepo == null) return false;
+          final res = await ritualHistoryRepo.startRitual(payload['ritualId']);
+          return res['data']?['session'] ?? res['session'] ?? res['data'];
+        case 'start_ritual_day':
+          if (ritualHistoryRepo == null) return false;
+          await ritualHistoryRepo.startDay(payload['sessionId']);
+          return true;
+        case 'update_ritual_progress':
+          if (ritualHistoryRepo == null) return false;
+          await ritualHistoryRepo.updateProgress(
+            payload['sessionId'],
+            currentStep: payload['currentStep'] as int,
+            currentDay: payload['currentDay'] as int?,
+          );
+          return true;
+        case 'complete_ritual_day':
+          if (ritualHistoryRepo == null) return false;
+          await ritualHistoryRepo.completeDay(payload['sessionId']);
           return true;
         default:
           return true;

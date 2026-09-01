@@ -262,8 +262,13 @@ class RitualRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
     List<List<PickedFile>> stepImagesByDay = const [],
+    List<List<List<PickedFile>>> ritualStepImagesByDay = const [],
   }) async {
-    final hasStepImages = stepImagesByDay.any((files) => files.isNotEmpty);
+    final hasDayImages = stepImagesByDay.any((files) => files.isNotEmpty);
+    final hasRitualStepImages = ritualStepImagesByDay.any(
+      (daySteps) => daySteps.any((files) => files.isNotEmpty),
+    );
+    final hasStepImages = hasDayImages || hasRitualStepImages;
     final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
     final payload = Map<String, dynamic>.from(ritual.toJson());
     if (hasMedia) {
@@ -292,6 +297,7 @@ class RitualRemoteDataSource {
       audio: audio,
       video: video,
       stepImagesByDay: stepImagesByDay,
+      ritualStepImagesByDay: ritualStepImagesByDay,
     );
 
     final response = await _apiClient.dio.post(
@@ -310,8 +316,13 @@ class RitualRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
     List<List<PickedFile>> stepImagesByDay = const [],
+    List<List<List<PickedFile>>> ritualStepImagesByDay = const [],
   }) async {
-    final hasStepImages = stepImagesByDay.any((files) => files.isNotEmpty);
+    final hasDayImages = stepImagesByDay.any((files) => files.isNotEmpty);
+    final hasRitualStepImages = ritualStepImagesByDay.any(
+      (daySteps) => daySteps.any((files) => files.isNotEmpty),
+    );
+    final hasStepImages = hasDayImages || hasRitualStepImages;
     final hasMedia = _hasMediaFiles(image: image, audio: audio, video: video);
     if (!hasMedia && !hasStepImages) {
       final payload = Map<String, dynamic>.from(ritual.toJson());
@@ -339,6 +350,7 @@ class RitualRemoteDataSource {
       audio: audio,
       video: video,
       stepImagesByDay: stepImagesByDay,
+      ritualStepImagesByDay: ritualStepImagesByDay,
     );
 
     final response = await _apiClient.dio.patch(
@@ -475,6 +487,7 @@ class RitualRemoteDataSource {
     PickedFile? audio,
     PickedFile? video,
     List<List<PickedFile>> stepImagesByDay = const [],
+    List<List<List<PickedFile>>> ritualStepImagesByDay = const [],
   }) {
     if (image != null) {
       formMap['image'] = MultipartFile.fromBytes(
@@ -502,7 +515,7 @@ class RitualRemoteDataSource {
     final stepImageFiles = <MultipartFile>[];
     for (var dayIdx = 0; dayIdx < stepImagesByDay.length; dayIdx++) {
       for (final file in stepImagesByDay[dayIdx]) {
-        stepImageMeta.add({'stepNumber': dayIdx + 1});
+        stepImageMeta.add({'dayNumber': dayIdx + 1});
         stepImageFiles.add(
           MultipartFile.fromBytes(
             file.bytes,
@@ -510,6 +523,24 @@ class RitualRemoteDataSource {
             contentType: MediaType.parse(file.mimeType),
           ),
         );
+      }
+    }
+    for (var dayIdx = 0; dayIdx < ritualStepImagesByDay.length; dayIdx++) {
+      final daySteps = ritualStepImagesByDay[dayIdx];
+      for (var stepIdx = 0; stepIdx < daySteps.length; stepIdx++) {
+        for (final file in daySteps[stepIdx]) {
+          stepImageMeta.add({
+            'dayNumber': dayIdx + 1,
+            'stepNumber': stepIdx + 1,
+          });
+          stepImageFiles.add(
+            MultipartFile.fromBytes(
+              file.bytes,
+              filename: file.filename,
+              contentType: MediaType.parse(file.mimeType),
+            ),
+          );
+        }
       }
     }
     if (stepImageMeta.isNotEmpty) {

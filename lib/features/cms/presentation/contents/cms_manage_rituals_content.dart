@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_w
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
 import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
+import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 
 Widget _cmsClickable({
   required VoidCallback onTap,
@@ -559,6 +560,9 @@ class _RitualForm extends StatefulWidget {
 }
 
 class _RitualFormState extends State<_RitualForm> {
+  static const String _ritualTypeSingle = '1 day ritual';
+  static const String _ritualTypeMultiple = 'Multiple days ritual';
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleCtrl;
   late final TextEditingController _slugCtrl;
@@ -568,6 +572,7 @@ class _RitualFormState extends State<_RitualForm> {
   late final TextEditingController _startingDayCtrl;
   late final TextEditingController _ritualDaysCtrl;
   late final TextEditingController _bestTimeCtrl;
+  String _ritualDayType = _ritualTypeSingle;
   List<String> _selectedDeityIds = [];
   String _difficulty = 'BEGINNER';
   static const String _accessType = 'FREE';
@@ -576,11 +581,18 @@ class _RitualFormState extends State<_RitualForm> {
 
   late List<_DayDraft> _dayEntries;
   final _dayTitleCtrl = TextEditingController();
-  String? _dayDescRich;
-  int _dayEditorEpoch = 0;
   final _dayTitleFocus = FocusNode();
-  final List<String> _dayImageUrls = [];
-  final List<PickedFile> _dayPickedImages = [];
+  final _dayRequiredItemCtrl = TextEditingController();
+  List<String> _dayRequiredItems = [];
+  List<_DayStepDraft> _dayStepEntries = [];
+  bool _showDayStepEditor = false;
+  int? _editingDayStepIndex;
+  final _dayStepTitleCtrl = TextEditingController();
+  final _dayStepTitleFocus = FocusNode();
+  String? _dayStepDescRich;
+  int _dayStepEditorEpoch = 0;
+  final List<String> _dayStepImageUrls = [];
+  final List<PickedFile> _dayStepPickedImages = [];
   bool _showDayEditor = false;
   int? _editingDayIndex;
 
@@ -597,6 +609,39 @@ class _RitualFormState extends State<_RitualForm> {
   bool _imageRemoved = false;
 
   bool get _isEdit => widget.ritual != null;
+
+  bool get _isSingleDayRitual => _ritualDayType == _ritualTypeSingle;
+
+  bool get _canAddAnotherDay => !_isSingleDayRitual || _dayEntries.isEmpty;
+
+  static String _ritualDayTypeFromModel(RitualModel? ritual) {
+    if (ritual == null) return _ritualTypeSingle;
+    if (ritual.days.length > 1) return _ritualTypeMultiple;
+    final stored = ritual.ritualDay;
+    if (stored != null && stored > 1) return _ritualTypeMultiple;
+    return _ritualTypeSingle;
+  }
+
+  void _onRitualDayTypeChanged(String? value) {
+    if (value == null || value == _ritualDayType) return;
+    if (value == _ritualTypeSingle && _dayEntries.length > 1) {
+      setState(() {
+        _ritualDayType = value;
+        if (_editingDayIndex != null && _editingDayIndex! > 0) {
+          _clearDayEditorFields();
+          _showDayEditor = false;
+        }
+        _dayEntries = [_dayEntries.first];
+        _editingDayIndex = null;
+      });
+      showCmsSnackbar(
+        title: 'Single day ritual',
+        message: 'Extra days were removed. Only day 1 is kept.',
+      );
+      return;
+    }
+    setState(() => _ritualDayType = value);
+  }
 
   static List<_SectionDraft> _defaultSectionEntries() => [
     const _SectionDraft(label: 'Overview'),
@@ -649,7 +694,16 @@ class _RitualFormState extends State<_RitualForm> {
           (d) => _DayDraft(
             title: d.title,
             description: d.description,
-            imageUrls: List<String>.from(d.images),
+            requiredItems: List<String>.from(d.requiredItems),
+            steps: d.steps
+                .map(
+                  (s) => _DayStepDraft(
+                    title: s.title,
+                    description: s.description,
+                    imageUrls: List<String>.from(s.images),
+                  ),
+                )
+                .toList(),
           ),
         )
         .toList();
@@ -679,36 +733,150 @@ class _RitualFormState extends State<_RitualForm> {
     _bestTimeCtrl.dispose();
     _dayTitleCtrl.dispose();
     _dayTitleFocus.dispose();
+    _dayRequiredItemCtrl.dispose();
+    _dayStepTitleCtrl.dispose();
+    _dayStepTitleFocus.dispose();
     _sectionLabelCtrl.dispose();
     _sectionLabelFocus.dispose();
     super.dispose();
   }
 
-  List<List<PickedFile>> _dayPickedImagesByDay() => _dayEntries
-      .map((day) => List<PickedFile>.from(day.pickedImages))
+  List<List<List<PickedFile>>> _ritualStepPickedImagesByDay() => _dayEntries
+      .map(
+        (day) => day.steps
+            .map((step) => List<PickedFile>.from(step.pickedImages))
+            .toList(),
+      )
       .toList();
-
-  Future<void> _pickDayImages() async {
-    final files = await Get.find<MediaUploadService>().pickImages();
-    if (files.isEmpty) return;
-    setState(() => _dayPickedImages.addAll(files));
-  }
-
-  void _removeDayPickedImage(int index) {
-    setState(() => _dayPickedImages.removeAt(index));
-  }
-
-  void _removeDayImageUrl(int index) {
-    setState(() => _dayImageUrls.removeAt(index));
-  }
 
   void _clearDayEditorFields() {
     _dayTitleCtrl.clear();
-    _dayDescRich = null;
-    _dayImageUrls.clear();
-    _dayPickedImages.clear();
+    _dayRequiredItemCtrl.clear();
+    _dayRequiredItems = [];
+    _clearDayStepEditorFields();
+    _dayStepEntries = [];
     _editingDayIndex = null;
-    _dayEditorEpoch++;
+  }
+
+  void _clearDayStepEditorFields() {
+    _dayStepTitleCtrl.clear();
+    _dayStepDescRich = null;
+    _dayStepImageUrls.clear();
+    _dayStepPickedImages.clear();
+    _editingDayStepIndex = null;
+    _showDayStepEditor = false;
+    _dayStepEditorEpoch++;
+  }
+
+  void _toggleDayStepEditor() {
+    setState(() {
+      if (_showDayStepEditor) {
+        _clearDayStepEditorFields();
+      } else {
+        _clearDayStepEditorFields();
+        _showDayStepEditor = true;
+      }
+    });
+    if (_showDayStepEditor) {
+      _focusDayStepTitleField();
+    }
+  }
+
+  void _focusDayStepTitleField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _dayStepTitleFocus.requestFocus();
+        final text = _dayStepTitleCtrl.text;
+        _dayStepTitleCtrl.selection =
+            TextSelection.collapsed(offset: text.length);
+      });
+    });
+  }
+
+  Future<void> _pickDayStepImages() async {
+    final files = await Get.find<MediaUploadService>().pickImages();
+    if (files.isEmpty) return;
+    setState(() => _dayStepPickedImages.addAll(files));
+  }
+
+  void _removeDayStepPickedImage(int index) {
+    setState(() => _dayStepPickedImages.removeAt(index));
+  }
+
+  void _removeDayStepImageUrl(int index) {
+    setState(() => _dayStepImageUrls.removeAt(index));
+  }
+
+  void _startEditDayStep(int index) {
+    final step = _dayStepEntries[index];
+    setState(() {
+      _editingDayStepIndex = index;
+      _showDayStepEditor = true;
+      _dayStepTitleCtrl.text = step.title;
+      _dayStepDescRich =
+          step.description.trim().isEmpty ? null : step.description;
+      _dayStepEditorEpoch++;
+      _dayStepImageUrls
+        ..clear()
+        ..addAll(step.imageUrls);
+      _dayStepPickedImages
+        ..clear()
+        ..addAll(step.pickedImages);
+    });
+    _focusDayStepTitleField();
+  }
+
+  void _removeDayStep(int index) {
+    setState(() {
+      if (_editingDayStepIndex == index) {
+        _clearDayStepEditorFields();
+      } else if (_editingDayStepIndex != null &&
+          index < _editingDayStepIndex!) {
+        _editingDayStepIndex = _editingDayStepIndex! - 1;
+      }
+      _dayStepEntries.removeAt(index);
+    });
+  }
+
+  void _saveDayStepEntry() {
+    final title = _dayStepTitleCtrl.text.trim();
+    final description = (_dayStepDescRich ?? '').trim();
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _dayStepImageUrls.isEmpty &&
+        _dayStepPickedImages.isEmpty) {
+      return;
+    }
+    final editingIndex = _editingDayStepIndex;
+    final draft = _DayStepDraft(
+      title: title.isEmpty ? 'Untitled Step' : title,
+      description: description,
+      imageUrls: List<String>.from(_dayStepImageUrls),
+      pickedImages: List<PickedFile>.from(_dayStepPickedImages),
+    );
+    setState(() {
+      if (editingIndex != null && editingIndex < _dayStepEntries.length) {
+        _dayStepEntries[editingIndex] = draft;
+      } else {
+        _dayStepEntries.add(draft);
+      }
+      _clearDayStepEditorFields();
+    });
+  }
+
+  void _flushPendingDayStepEntry() {
+    if (!_showDayStepEditor) return;
+    final title = _dayStepTitleCtrl.text.trim();
+    final description = (_dayStepDescRich ?? '').trim();
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _dayStepImageUrls.isEmpty &&
+        _dayStepPickedImages.isEmpty) {
+      return;
+    }
+    _saveDayStepEntry();
   }
 
   void _focusDayTitleField() {
@@ -724,6 +892,14 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   void _openNewDayEditor() {
+    if (!_canAddAnotherDay) {
+      showCmsSnackbar(
+        title: 'Single day ritual',
+        message: 'Only one day is allowed for a 1 day ritual.',
+        isError: true,
+      );
+      return;
+    }
     setState(() {
       _clearDayEditorFields();
       _showDayEditor = true;
@@ -744,14 +920,10 @@ class _RitualFormState extends State<_RitualForm> {
       _editingDayIndex = index;
       _showDayEditor = true;
       _dayTitleCtrl.text = day.title;
-      _dayDescRich = day.description.trim().isEmpty ? null : day.description;
-      _dayEditorEpoch++;
-      _dayImageUrls
-        ..clear()
-        ..addAll(day.imageUrls);
-      _dayPickedImages
-        ..clear()
-        ..addAll(day.pickedImages);
+      _dayRequiredItemCtrl.clear();
+      _dayRequiredItems = List<String>.from(day.requiredItems);
+      _dayStepEntries = List<_DayStepDraft>.from(day.steps);
+      _clearDayStepEditorFields();
     });
     _focusDayTitleField();
   }
@@ -774,20 +946,28 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   void _saveDayEntry() {
+    _flushPendingDayStepEntry();
     final title = _dayTitleCtrl.text.trim();
-    final description = (_dayDescRich ?? '').trim();
-    if (title.isEmpty &&
-        description.isEmpty &&
-        _dayImageUrls.isEmpty &&
-        _dayPickedImages.isEmpty) {
+    if (title.isEmpty && _dayRequiredItems.isEmpty && _dayStepEntries.isEmpty) {
       return;
     }
     final editingIndex = _editingDayIndex;
+    if (editingIndex == null && !_canAddAnotherDay) {
+      showCmsSnackbar(
+        title: 'Single day ritual',
+        message: 'Only one day is allowed for a 1 day ritual.',
+        isError: true,
+      );
+      return;
+    }
+    final preservedDescription = editingIndex != null
+        ? _dayEntries[editingIndex].description
+        : '';
     final draft = _DayDraft(
       title: title.isEmpty ? 'Untitled Day' : title,
-      description: description,
-      imageUrls: List<String>.from(_dayImageUrls),
-      pickedImages: List<PickedFile>.from(_dayPickedImages),
+      description: preservedDescription,
+      requiredItems: List<String>.from(_dayRequiredItems),
+      steps: List<_DayStepDraft>.from(_dayStepEntries),
     );
     setState(() {
       if (editingIndex != null) {
@@ -915,11 +1095,7 @@ class _RitualFormState extends State<_RitualForm> {
   void _flushPendingDayEntry() {
     if (!_showDayEditor) return;
     final title = _dayTitleCtrl.text.trim();
-    final description = (_dayDescRich ?? '').trim();
-    if (title.isEmpty &&
-        description.isEmpty &&
-        _dayImageUrls.isEmpty &&
-        _dayPickedImages.isEmpty) {
+    if (title.isEmpty && _dayRequiredItems.isEmpty && _dayStepEntries.isEmpty) {
       return;
     }
     _saveDayEntry();
@@ -945,10 +1121,20 @@ class _RitualFormState extends State<_RitualForm> {
         stepNumber: e.key + 1,
         title: d.title,
         description: d.description,
-        images: d.imageUrls,
+        images: [],
+        requiredItems: d.requiredItems,
+        steps: d.steps.asMap().entries.map((s) {
+          final step = s.value;
+          return RitualDayStep(
+            stepNumber: s.key + 1,
+            title: step.title,
+            description: step.description,
+            images: step.imageUrls,
+          );
+        }).toList(),
       );
     }).toList();
-    final stepImagesByDay = _dayPickedImagesByDay();
+    final ritualStepImagesByDay = _ritualStepPickedImagesByDay();
 
     final cleanSections = _sectionsToModel(_sectionEntries);
 
@@ -996,13 +1182,13 @@ class _RitualFormState extends State<_RitualForm> {
             isFeatured: ritualData.isFeatured,
             status: ritualData.status,
             image: _pickedImage,
-            stepImagesByDay: stepImagesByDay,
+            ritualStepImagesByDay: ritualStepImagesByDay,
           )
         : await widget.controller.updateRitual(
             widget.ritual!.id,
             ritualData,
             image: _pickedImage,
-            stepImagesByDay: stepImagesByDay,
+            ritualStepImagesByDay: ritualStepImagesByDay,
           );
 
     if (success) widget.onSaved();
@@ -1303,31 +1489,205 @@ class _RitualFormState extends State<_RitualForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          'Title for this day',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
         CmsFormField(
-          label: 'Title for this day',
+          label: '',
           hint: 'e.g. Day 1 — Light the lamp',
           controller: _dayTitleCtrl,
           focusNode: _dayTitleFocus,
           onFieldSubmitted: (_) => _saveDayEntry(),
           textInputAction: TextInputAction.done,
         ),
-        const SizedBox(height: 10),
-        CmsRichTextField(
-          key: ValueKey(
-            'day-desc-${_editingDayIndex ?? 'new'}-$_dayEditorEpoch',
+        const SizedBox(height: 16),
+        const Text(
+          'Required items for this day',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textPrimary,
           ),
-          label: 'What to do on this day',
-          initialValue: _dayDescRich,
-          onChanged: (v) => _dayDescRich = v,
         ),
-        const SizedBox(height: 10),
-        _DayMultiImagePicker(
-          imageUrls: _dayImageUrls,
-          pickedImages: _dayPickedImages,
-          onPick: _pickDayImages,
-          onRemoveUrl: _removeDayImageUrl,
-          onRemovePicked: _removeDayPickedImage,
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: CmsFormField(
+                label: '',
+                hint: 'Add item (e.g. Incense, Flowers...)',
+                controller: _dayRequiredItemCtrl,
+                onFieldSubmitted: (_) {
+                  final value = _dayRequiredItemCtrl.text.trim();
+                  if (value.isNotEmpty) {
+                    setState(() {
+                      _dayRequiredItems.add(value);
+                      _dayRequiredItemCtrl.clear();
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () {
+                final value = _dayRequiredItemCtrl.text.trim();
+                if (value.isEmpty) return;
+                setState(() {
+                  _dayRequiredItems.add(value);
+                  _dayRequiredItemCtrl.clear();
+                });
+              },
+              style: OutlinedButton.styleFrom().copyWith(
+                mouseCursor: _cmsButtonClickCursor,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
         ),
+        if (_dayRequiredItems.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _dayRequiredItems
+                .asMap()
+                .entries
+                .map(
+                  (e) => _RitualItemChip(
+                    label: e.value,
+                    onRemove: () =>
+                        setState(() => _dayRequiredItems.removeAt(e.key)),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Steps for this day',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: CmsColors.textPrimary,
+                ),
+              ),
+            ),
+            _cmsClickable(
+              onTap: _toggleDayStepEditor,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: CmsColors.orange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _showDayStepEditor ? Icons.remove : Icons.add,
+                  color: const Color(0xFFFCF7EF),
+                  size: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_showDayStepEditor) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'Step title',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          CmsFormField(
+            label: '',
+            hint: 'e.g. Invocation',
+            controller: _dayStepTitleCtrl,
+            focusNode: _dayStepTitleFocus,
+            onFieldSubmitted: (_) => _saveDayStepEntry(),
+            textInputAction: TextInputAction.done,
+          ),
+          const SizedBox(height: 10),
+          CmsRichTextField(
+            key: ValueKey(
+              'day-step-desc-${_editingDayStepIndex ?? 'new'}-$_dayStepEditorEpoch',
+            ),
+            label: 'Step description',
+            initialValue: _dayStepDescRich,
+            showReciteButton: true,
+            onChanged: (v) => _dayStepDescRich = v,
+          ),
+          const SizedBox(height: 10),
+          _DayMultiImagePicker(
+            imagesLabel: 'Step images',
+            imageUrls: _dayStepImageUrls,
+            pickedImages: _dayStepPickedImages,
+            onPick: _pickDayStepImages,
+            onRemoveUrl: _removeDayStepImageUrl,
+            onRemovePicked: _removeDayStepPickedImage,
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              children: [
+                if (_editingDayStepIndex != null)
+                  TextButton(
+                    onPressed: _clearDayStepEditorFields,
+                    style: TextButton.styleFrom().copyWith(
+                      mouseCursor: _cmsButtonClickCursor,
+                    ),
+                    child: const Text('Cancel step'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: _saveDayStepEntry,
+                  icon: Icon(
+                    _editingDayStepIndex != null
+                        ? Icons.save_outlined
+                        : Icons.add,
+                    size: 16,
+                  ),
+                  label: Text(
+                    _editingDayStepIndex != null ? 'Update step' : 'Add step',
+                  ),
+                  style: OutlinedButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_dayStepEntries.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ..._dayStepEntries.asMap().entries.map(
+            (e) => _RitualDayStepRow(
+              index: e.key + 1,
+              title: e.value.title,
+              description: e.value.description,
+              imageUrls: e.value.imageUrls,
+              pickedImages: e.value.pickedImages,
+              isEditing: _showDayStepEditor && _editingDayStepIndex == e.key,
+              onEdit: () => _startEditDayStep(e.key),
+              onRemove: () => _removeDayStep(e.key),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1349,8 +1709,8 @@ class _RitualFormState extends State<_RitualForm> {
           icon: Icons.event_note_outlined,
           title: 'What is this?',
           body:
-              'List each day of the ritual in order. Devotees follow these steps '
-              'one day at a time — for example “Day 1: Invocation”, '
+              'List each day of the ritual in order. For a 1 day ritual, only one day '
+              'can be added. For multiple days, add each day — e.g. “Day 1: Invocation”, '
               '“Day 2: Offerings”.',
         ),
         const SizedBox(height: 14),
@@ -1417,9 +1777,11 @@ class _RitualFormState extends State<_RitualForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _RitualRailHeading(
+        _RitualRailHeading(
           title: 'Days',
-          hint: 'Select a day to edit, or add a new one',
+          hint: _isSingleDayRitual
+              ? 'One day only for a 1 day ritual'
+              : 'Select a day to edit, or add a new one',
         ),
         if (_dayEntries.isEmpty)
           const Padding(
@@ -1428,31 +1790,33 @@ class _RitualFormState extends State<_RitualForm> {
           )
         else
           ..._dayEntries.asMap().entries.map((e) {
-            final hasImages =
-                e.value.imageUrls.isNotEmpty || e.value.pickedImages.isNotEmpty;
-            final descPreview = e.value.description.trim().isEmpty
-                ? ''
-                : _truncateDayPreview(e.value.description);
+            final stepCount = e.value.steps.length;
+            final itemCount = e.value.requiredItems.length;
+            final details = [
+              if (stepCount > 0)
+                '$stepCount ${stepCount == 1 ? 'step' : 'steps'}',
+              if (itemCount > 0)
+                '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+            ].join(' · ');
             return _RitualRailTile(
               key: ValueKey(
-                'day-rail-${e.key}-${e.value.title}-${e.value.description}',
+                'day-rail-${e.key}-${e.value.title}',
               ),
               index: e.key + 1,
               title: e.value.title.isEmpty ? 'Untitled Day' : e.value.title,
-              subtitle: descPreview.isNotEmpty
-                  ? descPreview
-                  : (hasImages ? 'Has images' : 'No description'),
+              subtitle: details.isNotEmpty ? details : 'No steps yet',
               isSelected: _showDayEditor && _editingDayIndex == e.key,
               onTap: () => _startEditDay(e.key),
               onRemove: () => _removeDay(e.key),
             );
           }),
         const SizedBox(height: 8),
-        _RitualPrimaryAddButton(
-          label: _dayEntries.isEmpty ? 'Add first day' : 'Add day',
-          onPressed: _openNewDayEditor,
-          compact: true,
-        ),
+        if (_canAddAnotherDay)
+          _RitualPrimaryAddButton(
+            label: _dayEntries.isEmpty ? 'Add first day' : 'Add day',
+            onPressed: _openNewDayEditor,
+            compact: true,
+          ),
       ],
     );
   }
@@ -1467,6 +1831,8 @@ class _RitualFormState extends State<_RitualForm> {
         icon: Icons.event_note_outlined,
         text: _dayEntries.isEmpty
             ? 'Click “Add first day” on the left to start the daily program.'
+            : _isSingleDayRitual
+            ? 'Select the day on the left to edit.'
             : 'Select a day on the left to edit, or add a new one.',
       );
     }
@@ -1475,7 +1841,7 @@ class _RitualFormState extends State<_RitualForm> {
       title: _editingDayIndex != null
           ? 'Edit day $editingDayNumber'
           : 'Add day $editingDayNumber',
-      subtitle: 'Enter the title, instructions, and optional images.',
+      subtitle: 'Enter the title, required items, and steps.',
       onCancel: _cancelDayEdit,
       onSave: _saveDayEntry,
       saveLabel: _editingDayIndex != null ? 'Save day' : 'Add this day',
@@ -2117,6 +2483,19 @@ class _DayDraft {
   const _DayDraft({
     required this.title,
     required this.description,
+    this.requiredItems = const [],
+    this.steps = const [],
+  });
+  final String title;
+  final String description;
+  final List<String> requiredItems;
+  final List<_DayStepDraft> steps;
+}
+
+class _DayStepDraft {
+  const _DayStepDraft({
+    required this.title,
+    required this.description,
     this.imageUrls = const [],
     this.pickedImages = const [],
   });
@@ -2124,6 +2503,180 @@ class _DayDraft {
   final String description;
   final List<String> imageUrls;
   final List<PickedFile> pickedImages;
+}
+
+class _RitualItemChip extends StatelessWidget {
+  const _RitualItemChip({required this.label, required this.onRemove});
+
+  final String label;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      deleteIcon: const Icon(Icons.close, size: 16),
+      onDeleted: onRemove,
+      backgroundColor: CmsColors.orange.withValues(alpha: 0.08),
+      side: BorderSide(color: CmsColors.orange.withValues(alpha: 0.25)),
+    );
+  }
+}
+
+class _RitualDayStepRow extends StatelessWidget {
+  const _RitualDayStepRow({
+    required this.index,
+    required this.title,
+    required this.description,
+    required this.onRemove,
+    this.onEdit,
+    this.imageUrls = const [],
+    this.pickedImages = const [],
+    this.isEditing = false,
+  });
+
+  final int index;
+  final String title;
+  final String description;
+  final VoidCallback onRemove;
+  final VoidCallback? onEdit;
+  final List<String> imageUrls;
+  final List<PickedFile> pickedImages;
+  final bool isEditing;
+
+  Widget _imageStrip() {
+    if (imageUrls.isEmpty && pickedImages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 108,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final url in imageUrls)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  url,
+                  width: 108,
+                  height: 108,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 108,
+                    height: 108,
+                    color: CmsColors.bg,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          for (final file in pickedImages)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  Uint8List.fromList(file.bytes),
+                  width: 108,
+                  height: 108,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImages = imageUrls.isNotEmpty || pickedImages.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isEditing ? CmsColors.orange.withValues(alpha: 0.06) : null,
+          borderRadius: BorderRadius.circular(10),
+          border: isEditing
+              ? Border.all(color: CmsColors.orange.withValues(alpha: 0.35))
+              : Border.all(color: CmsColors.border),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(
+                  color: CmsColors.orange,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '$index',
+                    style: const TextStyle(
+                      color: Color(0xFFFCF7EF),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CmsColors.textPrimary,
+                      ),
+                    ),
+                    if (description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      StepRichTextDisplay.cms(description),
+                    ],
+                    if (hasImages) ...[
+                      const SizedBox(height: 10),
+                      _imageStrip(),
+                    ],
+                  ],
+                ),
+              ),
+              if (onEdit != null) ...[
+                _cmsClickable(
+                  onTap: onEdit!,
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: isEditing ? CmsColors.orange : Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              _cmsClickable(
+                onTap: onRemove,
+                child: const Icon(Icons.close, size: 16, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DayMultiImagePicker extends StatelessWidget {

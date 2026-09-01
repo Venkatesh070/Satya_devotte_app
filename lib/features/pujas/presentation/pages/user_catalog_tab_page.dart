@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_dat
 import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
@@ -50,6 +51,7 @@ class _CatalogRow {
     required this.meta,
     this.imageUrl,
     this.rawPooja,
+    this.rawRitual,
   });
 
   final String id;
@@ -58,6 +60,7 @@ class _CatalogRow {
   final String meta;
   final String? imageUrl;
   final Map<String, dynamic>? rawPooja;
+  final Map<String, dynamic>? rawRitual;
 
   String? get statusLabel {
     final map =
@@ -93,6 +96,9 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _load(reset: true);
+    if (!_isPujas && Get.isRegistered<RitualHistoryController>()) {
+      Get.find<RitualHistoryController>().fetchHistory();
+    }
 
     if (Get.isRegistered<OfflineService>()) {
       _onlineWorker = ever(Get.find<OfflineService>().isOnline, (isOnline) {
@@ -208,6 +214,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
                   item.recommendedDuration!.trim(),
               ].join(' · '),
               imageUrl: item.imageUrl,
+              rawRitual: {'_id': item.id, 'id': item.id, 'title': item.title},
             ),
           );
         }
@@ -572,6 +579,20 @@ class _CatalogCard extends StatelessWidget {
                   ),
                   if (Get.isRegistered<PoojaHistoryController>())
                     Obx(() {
+                      if (Get.isRegistered<RitualHistoryController>()) {
+                        Get.find<RitualHistoryController>()
+                            .pendingRituals
+                            .length;
+                        Get.find<RitualHistoryController>()
+                            .finishedRituals
+                            .length;
+                      }
+                      if (Get.isRegistered<PoojaHistoryController>()) {
+                        Get.find<PoojaHistoryController>().pendingPoojas.length;
+                        Get.find<PoojaHistoryController>()
+                            .finishedPoojas
+                            .length;
+                      }
                       final statusLabel = item.statusLabel;
                       if (statusLabel == null) return const SizedBox.shrink();
                       return Padding(

@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "1053803605697-4102icte4i3tgifsqamq3jla1somkmk8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.developer.sathya",
+            "certificate_hash": "56b8b472b1c019e600828ad6512761ab53dfb272"
+          }
+        },
+        {
           "client_id": "1053803605697-gq5i6qtp245ncjlk9gtsoh7b8s5uh670.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

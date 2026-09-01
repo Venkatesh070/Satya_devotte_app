@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -835,6 +836,56 @@ bool sessionMatchesPooja(Map session, Map<String, dynamic> pooja) {
   }
 
   return true;
+}
+
+String? statusForRitual(
+  Map<String, dynamic> ritual, {
+  List<dynamic>? pendingSessions,
+  List<dynamic>? finishedSessions,
+}) {
+  List<dynamic> pending = pendingSessions ?? const [];
+  List<dynamic> finished = finishedSessions ?? const [];
+
+  if (pendingSessions == null &&
+      finishedSessions == null &&
+      Get.isRegistered<RitualHistoryController>()) {
+    final history = Get.find<RitualHistoryController>();
+    pending = history.pendingRituals;
+    finished = history.finishedRituals;
+  }
+
+  final isPending = pending.whereType<Map>().any(
+    (session) => sessionMatchesRitual(session, ritual),
+  );
+  if (isPending) return 'In Progress';
+
+  final isFinished = finished.whereType<Map>().any(
+    (session) => sessionMatchesRitual(session, ritual),
+  );
+  if (isFinished) return 'Finished';
+
+  return null;
+}
+
+bool sessionMatchesRitual(Map session, Map<String, dynamic> ritual) {
+  final sessionRitual = session['ritual'];
+  if (sessionRitual is! Map) return false;
+
+  final sessionRitualId = (sessionRitual['_id'] ?? sessionRitual['id'] ?? '')
+      .toString()
+      .trim();
+  final ritualId = (ritual['_id'] ?? ritual['id'] ?? '').toString().trim();
+
+  if (sessionRitualId.isNotEmpty && ritualId.isNotEmpty) {
+    return sessionRitualId == ritualId;
+  }
+
+  final sessionTitle = (sessionRitual['title'] ?? '')
+      .toString()
+      .trim()
+      .toLowerCase();
+  final title = (ritual['title'] ?? '').toString().trim().toLowerCase();
+  return sessionTitle.isNotEmpty && sessionTitle == title;
 }
 
 class PujaSessionStatusBadge extends StatelessWidget {
