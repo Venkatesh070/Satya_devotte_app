@@ -195,6 +195,7 @@ class RitualController extends GetxController {
     PickedFile? audio,
     PickedFile? video,
     List<List<PickedFile>> stepImagesByDay = const [],
+    List<List<List<PickedFile>>> ritualStepImagesByDay = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -226,6 +227,7 @@ class RitualController extends GetxController {
         audio: audio,
         video: video,
         stepImagesByDay: stepImagesByDay,
+        ritualStepImagesByDay: ritualStepImagesByDay,
       );
       _rituals.insert(0, created);
       showCmsSnackbar(title: 'Success', message: 'Ritual created successfully');
@@ -250,6 +252,7 @@ class RitualController extends GetxController {
     PickedFile? audio,
     PickedFile? video,
     List<List<PickedFile>> stepImagesByDay = const [],
+    List<List<List<PickedFile>>> ritualStepImagesByDay = const [],
   }) async {
     _isSubmitting.value = true;
     _error.value = null;
@@ -261,6 +264,7 @@ class RitualController extends GetxController {
         audio: audio,
         video: video,
         stepImagesByDay: stepImagesByDay,
+        ritualStepImagesByDay: ritualStepImagesByDay,
       );
       final index = _rituals.indexWhere((r) => r.id == id);
       if (index != -1) {

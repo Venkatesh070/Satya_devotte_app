@@ -1,7 +1,7 @@
 // lib/features/cms/models/ritual_model.dart
 
-class RitualDay {
-  const RitualDay({
+class RitualDayStep {
+  const RitualDayStep({
     required this.stepNumber,
     required this.title,
     this.description = '',
@@ -9,23 +9,105 @@ class RitualDay {
     this.subSteps = const [],
   });
 
-  /// Matches Pooja stepSchema: stepNumber, title, description, images, subSteps.
   final int stepNumber;
   final String title;
   final String description;
   final List<String> images;
   final List<String> subSteps;
 
+  factory RitualDayStep.fromJson(Map<String, dynamic> json) {
+    final stepNumber = RitualDay._parseStepNumber(json);
+    return RitualDayStep(
+      stepNumber: stepNumber,
+      title: (json['title'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      images: RitualDay._parseImages(json),
+      subSteps: RitualDay._parseSubSteps(json),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'stepNumber': stepNumber,
+    'title': title,
+    'description': description,
+    if (images.isNotEmpty) 'images': images,
+    if (subSteps.isNotEmpty) 'subSteps': subSteps,
+  };
+
+  RitualDayStep copyWith({
+    int? stepNumber,
+    String? title,
+    String? description,
+    List<String>? images,
+    List<String>? subSteps,
+  }) {
+    return RitualDayStep(
+      stepNumber: stepNumber ?? this.stepNumber,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      images: images ?? this.images,
+      subSteps: subSteps ?? this.subSteps,
+    );
+  }
+}
+
+class RitualDay {
+  const RitualDay({
+    required this.stepNumber,
+    required this.title,
+    this.description = '',
+    this.images = const [],
+    this.subSteps = const [],
+    this.requiredItems = const [],
+    this.steps = const [],
+  });
+
+  /// Matches ritual day schema: stepNumber, title, description, images,
+  /// requiredItems, and nested steps.
+  final int stepNumber;
+  final String title;
+  final String description;
+  final List<String> images;
+  final List<String> subSteps;
+  final List<String> requiredItems;
+  final List<RitualDayStep> steps;
+
   int get dayNumber => stepNumber;
 
   factory RitualDay.fromJson(Map<String, dynamic> json) {
     final stepNumber = _parseStepNumber(json);
+    final parsedSubSteps = _parseSubSteps(json);
+    final requiredItems = _parseStringList(json['requiredItems']);
+    final stepsRaw = json['steps'];
+    List<RitualDayStep> steps = stepsRaw is List
+        ? stepsRaw
+              .whereType<Map>()
+              .map((e) => RitualDayStep.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+        : <RitualDayStep>[];
+
+    if (steps.isEmpty && parsedSubSteps.isNotEmpty) {
+      steps = parsedSubSteps
+          .asMap()
+          .entries
+          .map(
+            (e) => RitualDayStep(
+              stepNumber: e.key + 1,
+              title: 'Step ${e.key + 1}',
+              description: e.value,
+            ),
+          )
+          .toList();
+    }
+
     return RitualDay(
       stepNumber: stepNumber,
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
       images: _parseImages(json),
-      subSteps: _parseSubSteps(json),
+      subSteps: steps.isNotEmpty ? const [] : parsedSubSteps,
+      requiredItems: requiredItems,
+      steps: steps,
     );
   }
 
@@ -84,6 +166,8 @@ class RitualDay {
     'description': description,
     if (images.isNotEmpty) 'images': images,
     if (subSteps.isNotEmpty) 'subSteps': subSteps,
+    if (requiredItems.isNotEmpty) 'requiredItems': requiredItems,
+    if (steps.isNotEmpty) 'steps': steps.map((e) => e.toJson()).toList(),
   };
 
   RitualDay copyWith({
@@ -92,6 +176,8 @@ class RitualDay {
     String? description,
     List<String>? images,
     List<String>? subSteps,
+    List<String>? requiredItems,
+    List<RitualDayStep>? steps,
   }) {
     return RitualDay(
       stepNumber: stepNumber ?? this.stepNumber,
@@ -99,6 +185,8 @@ class RitualDay {
       description: description ?? this.description,
       images: images ?? this.images,
       subSteps: subSteps ?? this.subSteps,
+      requiredItems: requiredItems ?? this.requiredItems,
+      steps: steps ?? this.steps,
     );
   }
 }
@@ -473,6 +561,23 @@ class RitualModel {
       createdAt: json['createdAt']?.toString(),
       updatedAt: json['updatedAt']?.toString(),
     );
+  }
+
+  bool get isMultiDayRitual {
+    final label = (ritualDay ?? '').trim().toLowerCase();
+    if (label.contains('multiple')) return true;
+    if (label.contains('1 day')) return false;
+    return days.length > 1;
+  }
+
+  RitualDay? dayByNumber(int dayNumber) {
+    for (final day in days) {
+      if (day.stepNumber == dayNumber) return day;
+    }
+    if (dayNumber >= 1 && dayNumber <= days.length) {
+      return days[dayNumber - 1];
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {

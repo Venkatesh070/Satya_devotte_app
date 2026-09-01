@@ -61,11 +61,14 @@ import 'package:satya_devotte_app/features/donations/state/donations_list_contro
 import 'package:satya_devotte_app/features/donations/state/my_contributions_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/pooja_history_remote_datasource.dart';
+import 'package:satya_devotte_app/features/profile/data/datasources/ritual_history_remote_datasource.dart';
 import 'package:satya_devotte_app/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
+import 'package:satya_devotte_app/features/profile/domain/repositories/ritual_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -135,6 +138,18 @@ class InitialBinding extends Bindings {
     );
     Get.put<PoojaHistoryController>(
       PoojaHistoryController(Get.find<PoojaHistoryRepository>()),
+      permanent: true,
+    );
+    Get.put<RitualHistoryRemoteDataSource>(
+      RitualHistoryRemoteDataSource(Get.find<ApiClient>()),
+      permanent: true,
+    );
+    Get.put<RitualHistoryRepository>(
+      RitualHistoryRepository(Get.find<RitualHistoryRemoteDataSource>()),
+      permanent: true,
+    );
+    Get.put<RitualHistoryController>(
+      RitualHistoryController(Get.find<RitualHistoryRepository>()),
       permanent: true,
     );
     Get.put<PoojaRemoteDataSource>(

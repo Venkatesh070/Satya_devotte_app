@@ -58,6 +58,18 @@ class ApiEndpoints {
   static String updatePoojaProgress(String sessionId) => '/api/v1/user/pooja-history/sessions/$sessionId/progress';
   static String finishPoojaBySession(String sessionId) => '/api/v1/user/pooja-history/sessions/$sessionId/finish';
 
+  // ── User Ritual History ─────────────────────────────────────
+  static const String userRitualHistory = '/api/v1/user/ritual-history';
+  static const String userRitualHistoryPending = '/api/v1/user/ritual-history/pending';
+  static const String userRitualHistoryFinished = '/api/v1/user/ritual-history/finished';
+  static String startUserRitual(String ritualId) => '/api/v1/user/ritual-history/$ritualId/start';
+  static String finishUserRitual(String ritualId) => '/api/v1/user/ritual-history/$ritualId/finish';
+  static String userRitualSession(String sessionId) => '/api/v1/user/ritual-history/sessions/$sessionId';
+  static String startRitualDay(String sessionId) => '/api/v1/user/ritual-history/sessions/$sessionId/start-day';
+  static String updateRitualProgress(String sessionId) => '/api/v1/user/ritual-history/sessions/$sessionId/progress';
+  static String completeRitualDay(String sessionId) => '/api/v1/user/ritual-history/sessions/$sessionId/complete-day';
+  static String finishRitualBySession(String sessionId) => '/api/v1/user/ritual-history/sessions/$sessionId/finish';
+
   /// Super Admin — list / invite admin users.
   static const String superadminAdmins = '/api/v1/superadmin/admins';
 

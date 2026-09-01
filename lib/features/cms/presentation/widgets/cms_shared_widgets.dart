@@ -160,15 +160,17 @@ class _CmsFormFieldState extends State<CmsFormField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: CmsColors.textPrimary,
+        if (widget.label.trim().isNotEmpty) ...[
+          Text(
+            widget.label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: CmsColors.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
+          const SizedBox(height: 6),
+        ],
         input,
       ],
     );
