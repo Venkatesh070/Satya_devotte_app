@@ -541,6 +541,28 @@ class _RitualDayCard extends StatelessWidget {
                         .toList(),
                   ),
                 ],
+                if (day.satyaBlessings.trim().isNotEmpty) ...[
+                  if (day.description.trim().isNotEmpty ||
+                      day.requiredItems.isNotEmpty)
+                    const SizedBox(height: 12),
+                  Text(
+                    'Blessings from Sathya',
+                    style: AppTypography.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4A1C00),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  RichTextDisplay(
+                    day.satyaBlessings,
+                    style: AppTypography.inter(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: const Color(0xFF5C4634),
+                    ),
+                  ),
+                ],
                 if (day.steps.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(

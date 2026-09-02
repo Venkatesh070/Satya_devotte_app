@@ -59,17 +59,19 @@ class RitualDay {
     this.images = const [],
     this.subSteps = const [],
     this.requiredItems = const [],
+    this.satyaBlessings = '',
     this.steps = const [],
   });
 
   /// Matches ritual day schema: stepNumber, title, description, images,
-  /// requiredItems, and nested steps.
+  /// requiredItems, satyaBlessings, and nested steps.
   final int stepNumber;
   final String title;
   final String description;
   final List<String> images;
   final List<String> subSteps;
   final List<String> requiredItems;
+  final String satyaBlessings;
   final List<RitualDayStep> steps;
 
   int get dayNumber => stepNumber;
@@ -107,6 +109,7 @@ class RitualDay {
       images: _parseImages(json),
       subSteps: steps.isNotEmpty ? const [] : parsedSubSteps,
       requiredItems: requiredItems,
+      satyaBlessings: (json['satyaBlessings'] ?? '').toString(),
       steps: steps,
     );
   }
@@ -167,6 +170,7 @@ class RitualDay {
     if (images.isNotEmpty) 'images': images,
     if (subSteps.isNotEmpty) 'subSteps': subSteps,
     if (requiredItems.isNotEmpty) 'requiredItems': requiredItems,
+    if (satyaBlessings.trim().isNotEmpty) 'satyaBlessings': satyaBlessings,
     if (steps.isNotEmpty) 'steps': steps.map((e) => e.toJson()).toList(),
   };
 
@@ -177,6 +181,7 @@ class RitualDay {
     List<String>? images,
     List<String>? subSteps,
     List<String>? requiredItems,
+    String? satyaBlessings,
     List<RitualDayStep>? steps,
   }) {
     return RitualDay(
@@ -186,6 +191,7 @@ class RitualDay {
       images: images ?? this.images,
       subSteps: subSteps ?? this.subSteps,
       requiredItems: requiredItems ?? this.requiredItems,
+      satyaBlessings: satyaBlessings ?? this.satyaBlessings,
       steps: steps ?? this.steps,
     );
   }

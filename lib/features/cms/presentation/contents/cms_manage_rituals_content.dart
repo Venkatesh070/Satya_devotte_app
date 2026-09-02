@@ -609,6 +609,7 @@ class _RitualFormState extends State<_RitualForm> {
   final _dayTitleFocus = FocusNode();
   final _dayRequiredItemCtrl = TextEditingController();
   List<String> _dayRequiredItems = [];
+  final _daySatyaBlessingsCtrl = TextEditingController();
   List<_DayStepDraft> _dayStepEntries = [];
   bool _showDayStepEditor = false;
   int? _editingDayStepIndex;
@@ -672,8 +673,9 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   static List<_SectionDraft> _defaultSectionEntries() => [
-    const _SectionDraft(label: 'Overview'),
-    const _SectionDraft(label: 'Preparation'),
+    const _SectionDraft(label: 'Why is this ritual performed?'),
+    const _SectionDraft(label: 'What outcomes can be expected?'),
+    const _SectionDraft(label: 'Core Blessings of this Ritual'),
   ];
 
   static List<_SectionDraft> _sectionEntriesFromModel(List<RitualSection> sections) =>
@@ -724,6 +726,7 @@ class _RitualFormState extends State<_RitualForm> {
             title: d.title,
             description: d.description,
             requiredItems: List<String>.from(d.requiredItems),
+            satyaBlessings: d.satyaBlessings,
             steps: d.steps
                 .map(
                   (s) => _DayStepDraft(
@@ -767,6 +770,7 @@ class _RitualFormState extends State<_RitualForm> {
     _dayTitleCtrl.dispose();
     _dayTitleFocus.dispose();
     _dayRequiredItemCtrl.dispose();
+    _daySatyaBlessingsCtrl.dispose();
     _dayStepTitleCtrl.dispose();
     _dayStepTitleFocus.dispose();
     _sectionLabelCtrl.dispose();
@@ -786,6 +790,7 @@ class _RitualFormState extends State<_RitualForm> {
     _dayTitleCtrl.clear();
     _dayRequiredItemCtrl.clear();
     _dayRequiredItems = [];
+    _daySatyaBlessingsCtrl.clear();
     _clearDayStepEditorFields();
     _dayStepEntries = [];
     _editingDayIndex = null;
@@ -843,6 +848,7 @@ class _RitualFormState extends State<_RitualForm> {
       _showDayEditor = true;
       _dayTitleCtrl.text = day.title;
       _dayRequiredItems = List<String>.from(day.requiredItems);
+      _daySatyaBlessingsCtrl.text = day.satyaBlessings;
       _dayStepEntries = List<_DayStepDraft>.from(day.steps);
       _clearDayStepEditorFields();
     });
@@ -889,6 +895,7 @@ class _RitualFormState extends State<_RitualForm> {
       title: title.isEmpty ? 'Untitled Day' : title,
       description: preservedDescription,
       requiredItems: List<String>.from(_dayRequiredItems),
+      satyaBlessings: _daySatyaBlessingsCtrl.text.trim(),
       steps: List<_DayStepDraft>.from(_dayStepEntries),
     );
     setState(() {
@@ -1150,6 +1157,7 @@ class _RitualFormState extends State<_RitualForm> {
         description: d.description,
         images: [],
         requiredItems: d.requiredItems,
+        satyaBlessings: d.satyaBlessings,
         steps: d.steps.asMap().entries.map((s) {
           final step = s.value;
           return RitualDayStep(
@@ -1649,6 +1657,22 @@ class _RitualFormState extends State<_RitualForm> {
           ),
         ],
         const SizedBox(height: 16),
+        const Text(
+          'Sathya blessings for this day',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: CmsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        CmsFormField(
+          label: '',
+          hint: 'Blessings from Sathya for this day',
+          controller: _daySatyaBlessingsCtrl,
+          maxLines: 4,
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
             const Expanded(
@@ -1940,14 +1964,16 @@ class _RitualFormState extends State<_RitualForm> {
 
   Widget _buildSectionsCard() {
     return CmsFormCard(
-      title: 'Content sections (optional)',
+      title: 'Content sections',
       children: [
         const _RitualHelpBanner(
           icon: Icons.view_agenda_outlined,
           title: 'What is this?',
           body:
-              'Extra information under headings — e.g. “Overview” or '
-              '“Preparation”. Each section has a heading and description.',
+              'Standard ritual information under fixed headings — '
+              '“Why is this ritual performed?”, “What outcomes can be expected?”, '
+              'and “Core Blessings of this Ritual”. Each section has a heading '
+              'and description.',
         ),
         const SizedBox(height: 14),
         if (_sectionEntries.isNotEmpty) ...[
@@ -2038,7 +2064,8 @@ class _RitualFormState extends State<_RitualForm> {
       children: [
         CmsFormField(
           label: 'Section heading',
-          hint: 'e.g. Overview, Preparation, After the ritual',
+          hint:
+              'e.g. Why is this ritual performed?, What outcomes can be expected?',
           controller: _sectionLabelCtrl,
           focusNode: _sectionLabelFocus,
           onFieldSubmitted: (_) => _saveSectionEntry(),
@@ -2582,11 +2609,13 @@ class _DayDraft {
     required this.title,
     required this.description,
     this.requiredItems = const [],
+    this.satyaBlessings = '',
     this.steps = const [],
   });
   final String title;
   final String description;
   final List<String> requiredItems;
+  final String satyaBlessings;
   final List<_DayStepDraft> steps;
 }
 

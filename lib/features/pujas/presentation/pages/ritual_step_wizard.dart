@@ -72,7 +72,14 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
         .toList();
   }
 
-  int get _totalPages => 1 + _steps.length + (_ritualFinished ? 1 : 0);
+  bool get _hasSatyaBlessings =>
+      (_dayDef?.satyaBlessings.trim().isNotEmpty ?? false);
+
+  int get _totalPages =>
+      1 +
+      _steps.length +
+      (_hasSatyaBlessings ? 1 : 0) +
+      (_ritualFinished ? 1 : 0);
 
   Future<bool> _ensureSession() async {
     if (_sessionId != null) return true;
@@ -217,11 +224,15 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
         ritual: widget.ritual,
         dayNumber: _currentDay,
         day: day,
-        onNext: _steps.isEmpty ? _completeDay : _nextPage,
+        onNext: _steps.isEmpty
+            ? (_hasSatyaBlessings ? _nextPage : _completeDay)
+            : _nextPage,
         onBack: _previousPage,
         isBusy: _isBusy,
         actionLabel: _steps.isEmpty
-            ? 'Complete Day $_currentDay'
+            ? (_hasSatyaBlessings
+                ? 'Continue'
+                : 'Complete Day $_currentDay')
             : 'Start Day $_currentDay',
       ),
     ];
@@ -235,9 +246,28 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
           stepIndex: i + 1,
           totalSteps: _steps.length,
           dayNumber: _currentDay,
-          onNext: isLast ? _completeDay : _nextPage,
+          onNext: isLast
+              ? (_hasSatyaBlessings ? _nextPage : _completeDay)
+              : _nextPage,
           onBack: _previousPage,
-          nextLabel: isLast ? 'Complete Day $_currentDay' : 'Next',
+          nextLabel: isLast
+              ? (_hasSatyaBlessings
+                  ? 'Continue'
+                  : 'Complete Day $_currentDay')
+              : 'Next',
+          isBusy: _isBusy,
+        ),
+      );
+    }
+
+    if (_hasSatyaBlessings) {
+      pages.add(
+        _SatyaBlessingsScreen(
+          dayNumber: _currentDay,
+          dayTitle: day?.title ?? '',
+          blessings: day!.satyaBlessings,
+          onComplete: _completeDay,
+          onBack: _previousPage,
           isBusy: _isBusy,
         ),
       );
@@ -582,6 +612,93 @@ class _RitualStepScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SatyaBlessingsScreen extends StatelessWidget {
+  const _SatyaBlessingsScreen({
+    required this.dayNumber,
+    required this.dayTitle,
+    required this.blessings,
+    required this.onComplete,
+    required this.onBack,
+    required this.isBusy,
+  });
+
+  final int dayNumber;
+  final String dayTitle;
+  final String blessings;
+  final VoidCallback onComplete;
+  final VoidCallback onBack;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = dayTitle.trim().isNotEmpty ? dayTitle.trim() : 'Day $dayNumber';
+
+    return _WizardShell(
+      onBack: onBack,
+      title: 'Day $dayNumber',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: AppTypography.lora(
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFFFD180),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Blessings from Sathya',
+              style: AppTypography.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFFCF7EF),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: StepRichTextDisplay.wizard(blessings),
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: isBusy ? null : onComplete,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFCF7EF),
+                  foregroundColor: const Color(0xFF255AE2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
+                child: isBusy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        'Complete Day $dayNumber',
+                        style: AppTypography.inter(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
             ),
             const SizedBox(height: 24),
           ],
