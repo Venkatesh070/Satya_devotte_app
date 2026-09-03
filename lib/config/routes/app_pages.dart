@@ -28,6 +28,7 @@ import 'package:satya_devotte_app/features/pujas/bindings/puja_binding.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/puja_list_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_pooja_history_page.dart';
+import 'package:satya_devotte_app/features/profile/presentation/pages/profile_ritual_history_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/features/splash/presentation/pages/splash_page.dart';
 
@@ -86,6 +87,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.poojaHistory,
       page: () => const ProfilePoojaHistoryPage(),
+      middlewares: [AuthGuard()],
+    ),
+    GetPage(
+      name: AppRoutes.ritualHistory,
+      page: () => const ProfileRitualHistoryPage(),
       middlewares: [AuthGuard()],
     ),
     GetPage(

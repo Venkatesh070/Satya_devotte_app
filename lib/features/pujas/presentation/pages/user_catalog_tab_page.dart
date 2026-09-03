@@ -49,6 +49,8 @@ class _CatalogRow {
     required this.title,
     required this.subtitle,
     required this.meta,
+    this.category = '',
+    this.totalDays = 0,
     this.imageUrl,
     this.rawPooja,
     this.rawRitual,
@@ -58,11 +60,16 @@ class _CatalogRow {
   final String title;
   final String subtitle;
   final String meta;
+  final String category;
+  final int totalDays;
   final String? imageUrl;
   final Map<String, dynamic>? rawPooja;
   final Map<String, dynamic>? rawRitual;
 
   String? get statusLabel {
+    if (rawRitual != null) {
+      return statusForRitual(rawRitual!);
+    }
     final map =
         rawPooja ?? <String, dynamic>{'_id': id, 'id': id, 'title': title};
     return statusForPooja(map);
@@ -201,18 +208,24 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
         for (final item in result.items) {
           if (item.id.trim().isEmpty) continue;
           final days = item.ritualDay ?? item.days.length;
+          final cat = (item.category ?? '').trim();
+          final metaParts = <String>[];
+          if (cat.isNotEmpty) {
+            metaParts.add(cat);
+          }
+          if (days > 0) {
+            metaParts.add('$days day${days == 1 ? '' : 's'}');
+          } else if ((item.recommendedDuration ?? '').trim().isNotEmpty) {
+            metaParts.add(item.recommendedDuration!.trim());
+          }
           rows.add(
             _CatalogRow(
               id: item.id,
               title: item.title.trim().isEmpty ? 'Ritual' : item.title.trim(),
               subtitle: (item.description ?? item.purpose ?? '').trim(),
-              meta: [
-                if ((item.category ?? '').trim().isNotEmpty)
-                  item.category!.trim(),
-                if (days > 0) '$days day${days == 1 ? '' : 's'}',
-                if ((item.recommendedDuration ?? '').trim().isNotEmpty)
-                  item.recommendedDuration!.trim(),
-              ].join(' · '),
+              meta: metaParts.join(' · '),
+              category: cat,
+              totalDays: days,
               imageUrl: item.imageUrl,
               rawRitual: {'_id': item.id, 'id': item.id, 'title': item.title},
             ),
@@ -255,7 +268,10 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
       await openPujaPreview(context, id: item.id, initialData: item.rawPooja);
       return;
     }
-    Get.to<void>(() => UserRitualDetailPage(ritualId: item.id));
+    await Get.to<void>(() => UserRitualDetailPage(ritualId: item.id));
+    if (Get.isRegistered<RitualHistoryController>()) {
+      Get.find<RitualHistoryController>().fetchHistory(skipLoader: true);
+    }
   }
 
   @override
@@ -577,53 +593,103 @@ class _CatalogCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (Get.isRegistered<PoojaHistoryController>())
+                  if (item.rawRitual != null &&
+                      Get.isRegistered<RitualHistoryController>())
                     Obx(() {
-                      if (Get.isRegistered<RitualHistoryController>()) {
-                        Get.find<RitualHistoryController>()
-                            .pendingRituals
-                            .length;
-                        Get.find<RitualHistoryController>()
-                            .finishedRituals
-                            .length;
+                      final history = Get.find<RitualHistoryController>();
+                      history.pendingRituals.length;
+                      history.finishedRituals.length;
+
+                      final pending = history.findPendingSession(item.id);
+                      final finished = history.findFinishedSession(item.id);
+                      final totalDays = item.totalDays > 0 ? item.totalDays : 1;
+
+                      int completedCount = 0;
+                      if (finished != null) {
+                        completedCount =
+                            (finished['completedDays'] as List?)?.length ??
+                            totalDays;
+                        if (completedCount == 0) completedCount = totalDays;
+                      } else if (pending != null) {
+                        completedCount =
+                            (pending['completedDays'] as List?)?.length ?? 0;
                       }
-                      if (Get.isRegistered<PoojaHistoryController>()) {
+
+                      final daysText =
+                          '$totalDays day${totalDays == 1 ? '' : 's'}';
+                      final cat = item.category.trim();
+                      final metaText = cat.isNotEmpty
+                          ? '$cat · $daysText'
+                          : daysText;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (finished != null)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6),
+                              child: PujaSessionStatusBadge(label: 'Finished'),
+                            )
+                          else if (pending != null)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6),
+                              child: PujaSessionStatusBadge(
+                                label: 'In Progress',
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            metaText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFE35600),
+                            ),
+                          ),
+                        ],
+                      );
+                    })
+                  else ...[
+                    if (Get.isRegistered<PoojaHistoryController>())
+                      Obx(() {
                         Get.find<PoojaHistoryController>().pendingPoojas.length;
                         Get.find<PoojaHistoryController>()
                             .finishedPoojas
                             .length;
-                      }
-                      final statusLabel = item.statusLabel;
-                      if (statusLabel == null) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: PujaSessionStatusBadge(label: statusLabel),
-                      );
-                    }),
-                  if (item.meta.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      item.meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE35600),
+                        final statusLabel = item.statusLabel;
+                        if (statusLabel == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: PujaSessionStatusBadge(label: statusLabel),
+                        );
+                      }),
+                    if (item.meta.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE35600),
+                        ),
                       ),
-                    ),
-                  ],
-                  if (item.subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    RichTextDisplay(
-                      item.subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        fontSize: 13,
-                        color: const Color(0xFF6C5B46),
+                    ],
+                    if (item.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      RichTextDisplay(
+                        item.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          fontSize: 13,
+                          color: const Color(0xFF6C5B46),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ],
               ),

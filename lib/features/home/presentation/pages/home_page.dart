@@ -23,8 +23,6 @@ import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/search_page.dart';
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
-import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
-import 'package:satya_devotte_app/features/profile/domain/repositories/pooja_history_repository.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
@@ -71,9 +69,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
   List<ProductModel> _featuredProducts = [];
   int _poojasCompleted = 0;
+  int _ritualsCompleted = 0;
   int _dayStreak = 0;
-  late PoojaHistoryController _poojaHistoryController;
-  Worker? _finishedPoojasWorker;
   bool _isUpdateDialogShowing = false;
 
   @override
@@ -82,21 +79,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: _currentIndex);
 
-    // Initialize PoojaHistoryController
-    if (Get.isRegistered<PoojaHistoryController>()) {
-      _poojaHistoryController = Get.find<PoojaHistoryController>();
-    } else {
-      final repo = Get.find<PoojaHistoryRepository>();
-      _poojaHistoryController = Get.put(PoojaHistoryController(repo));
-    }
-
-    // Add listener to finishedPoojas
-    _finishedPoojasWorker = ever(_poojaHistoryController.finishedPoojas, (_) {
-      _fetchPoojasCompleted();
-    });
-
+    _recordUserStreak();
     _fetchHomeDataIfNeeded();
-    _fetchAchievementsData(recordStreak: true);
     if (Get.isRegistered<UserNotificationsBadgeController>()) {
       unawaited(
         Get.find<UserNotificationsBadgeController>().refreshUnreadBadge(),
@@ -198,7 +182,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _hideNavDebounceTimer?.cancel();
     _pageController.dispose();
-    _finishedPoojasWorker?.dispose();
     super.dispose();
   }
 
@@ -220,8 +203,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() => _currentIndex = index);
     if (index == 0) {
+      _recordUserStreak();
       _fetchHomeDataIfNeeded();
-      _fetchAchievementsData(recordStreak: true);
     } else if (index == _HomeTabs.calendar) {
       if (Get.isRegistered<CalendarController>()) {
         Get.find<CalendarController>().fetchData();
@@ -231,17 +214,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<String> _deviceTimeZone() => deviceIanaTimeZone();
-
-  Future<void> _fetchAchievementsData({required bool recordStreak}) async {
-    await Future.wait([
-      recordStreak ? _recordUserStreak() : _fetchUserStreakStatus(),
-      _poojaHistoryController.fetchHistory(),
-    ]);
-    // fetchHistory updates finishedPoojas which triggers the ever() worker
-    // to call _fetchPoojasCompleted. Call it directly as a safety net in
-    // case ever() didn't fire (e.g. no change in the list).
-    _fetchPoojasCompleted();
-  }
 
   /// `POST /user/streak` with device IANA timezone for daily streak tracking.
   Future<void> _recordUserStreak() async {
@@ -258,159 +230,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             extra: {kSkipApiLoaderKey: true},
           ),
         );
-        _updateDayStreakFromPayload(response.data);
+        if (response.data is Map) {
+          final data = response.data['data'] ?? response.data;
+          if (data is Map) {
+            final streak = data['streak'] is Map ? data['streak'] : data;
+            final count = _readInt(streak, const ['streakCount', 'count']);
+            if (count != null && mounted) {
+              setState(() => _dayStreak = count);
+            }
+          }
+        }
       } else {
         await offlineService.queueAction('record_streak', {
           'timezone': deviceTimeZone,
         });
-        await _fetchUserStreakStatus();
-      }
-    } on dio.DioException catch (error) {
-      debugPrint('User streak API failed: ${error.message}');
-      await _fetchUserStreakStatus();
-    } catch (error) {
-      debugPrint('User streak API failed: $error');
-      await _fetchUserStreakStatus();
-    }
-  }
-
-  Future<void> _fetchUserStreakStatus() async {
-    final offlineService = Get.find<OfflineService>();
-    const cacheKey = 'user_streak';
-
-    // First, try to load cached data immediately
-    try {
-      final cached = offlineService.getCachedData(cacheKey);
-      if (cached != null) {
-        _updateDayStreakFromPayload(cached);
       }
     } catch (error) {
-      debugPrint('Error loading cached streak: $error');
+      debugPrint('User streak recording failed: $error');
     }
-
-    // If offline, we're done
-    if (!offlineService.isOnline.value) {
-      return;
-    }
-
-    try {
-      final apiClient = Get.find<ApiClient>();
-      final deviceTimeZone = await _deviceTimeZone();
-      final response = await apiClient.dio.get<dynamic>(
-        ApiEndpoints.userStreak,
-        options: dio.Options(
-          headers: {'X-Timezone': deviceTimeZone},
-          extra: {kSkipApiLoaderKey: true},
-        ),
-      );
-      await offlineService.cacheData(cacheKey, response.data);
-      _updateDayStreakFromPayload(response.data);
-    } on dio.DioException catch (error) {
-      debugPrint('User streak status API failed: ${error.message}');
-    } catch (error) {
-      debugPrint('User streak status API failed: $error');
-    }
-  }
-
-  Future<void> _fetchPoojasCompleted() async {
-    try {
-      debugPrint('HomePage._fetchPoojasCompleted(): starting...');
-      // Use PoojaHistoryController which already fetches and de-duplicates finished poojas
-      PoojaHistoryController? historyController;
-      if (Get.isRegistered<PoojaHistoryController>()) {
-        historyController = Get.find<PoojaHistoryController>();
-      } else {
-        // Initialize it if not yet registered
-        final repo = Get.find<PoojaHistoryRepository>();
-        historyController = Get.put(PoojaHistoryController(repo));
-      }
-
-      if (historyController == null) return;
-
-      debugPrint(
-        'HomePage._fetchPoojasCompleted(): finishedPoojas length = ${historyController!.finishedPoojas.length}',
-      );
-
-      // Count unique pooja IDs from the already de-duplicated list
-      final Set<String> seenIds = {};
-      for (final session in historyController!.finishedPoojas) {
-        debugPrint('HomePage._fetchPoojasCompleted(): session = $session');
-        if (session is Map) {
-          final pooja = session['pooja'];
-          if (pooja is Map) {
-            final id = (pooja['_id'] ?? pooja['id'])?.toString().trim();
-            debugPrint('HomePage._fetchPoojasCompleted(): id = $id');
-            if (id != null && id.isNotEmpty) {
-              seenIds.add(id);
-            }
-          }
-        }
-      }
-
-      debugPrint(
-        'HomePage._fetchPoojasCompleted(): seenIds.length = ${seenIds.length}',
-      );
-
-      if (!mounted) return;
-      setState(() => _poojasCompleted = seenIds.length);
-    } catch (error) {
-      debugPrint('Failed to fetch completed poojas count: $error');
-    }
-  }
-
-  void _updateDayStreakFromPayload(dynamic payload) {
-    final streak =
-        _extractMap(payload, const ['data', 'streak']) ??
-        _extractMap(payload, const ['streak']);
-    final count = _readInt(streak, const ['streakCount']);
-    if (count == null || !mounted) return;
-    setState(() => _dayStreak = count);
-  }
-
-  int _extractCompletedPoojaCount(dynamic payload) {
-    final root = payload is Map ? payload : const <String, dynamic>{};
-    final direct = _readInt(root, const [
-      'total',
-      'totalCount',
-      'count',
-      'completed',
-      'completedCount',
-      'finishedCount',
-    ]);
-    if (direct != null) return direct;
-
-    final data = root['data'];
-    if (data is List) return data.length;
-    if (data is Map) {
-      final dataCount = _readInt(data, const [
-        'total',
-        'totalCount',
-        'count',
-        'completed',
-        'completedCount',
-        'finishedCount',
-      ]);
-      if (dataCount != null) return dataCount;
-
-      final pagination = data['pagination'];
-      final pagedCount = _readInt(pagination, const ['total', 'totalCount']);
-      if (pagedCount != null) return pagedCount;
-
-      for (final key in const ['finished', 'items', 'results', 'docs']) {
-        final value = data[key];
-        if (value is List) return value.length;
-      }
-    }
-    return 0;
-  }
-
-  Map? _extractMap(dynamic payload, List<String> path) {
-    dynamic current = payload;
-    for (final key in path) {
-      if (current is! Map) return null;
-      current = current[key];
-    }
-    return current is Map ? current : null;
   }
 
   int? _readInt(dynamic source, List<String> keys) {
@@ -500,8 +337,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _refreshHomeData() async {
     await Future.wait([
+      _recordUserStreak(),
       _fetchHomeDataIfNeeded(forceRefresh: true),
-      _fetchAchievementsData(recordStreak: false),
     ]);
     if (Get.isRegistered<UserNotificationsBadgeController>()) {
       await Get.find<UserNotificationsBadgeController>().refreshUnreadBadge();
@@ -586,6 +423,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final poojasData = data['poojas'];
     final festivalsData = data['festivals'];
     final todayDateAndTithi = data['todayDateAndTithi']?.toString().trim();
+    final todayDate = data['todayDate']?.toString().trim();
+    final todayTithi = data['todayTithi']?.toString().trim();
+
+    final completedPujas = _readInt(data, const [
+      'completedPujasCount',
+      'completedPoojasCount',
+      'completedPoojaCount',
+      'completedPujaCount',
+    ]);
+    final completedRituals = _readInt(data, const [
+      'completedRitualsCount',
+      'completedRitualCount',
+    ]);
+    final streakData = data['streak'];
+    final streakCount = streakData is Map
+        ? _readInt(streakData, const ['streakCount', 'count'])
+        : _readInt(data, const ['streakCount', 'dayStreak']);
 
     final parsedSloka = slokaData is Map
         ? slokaData['sloka']?.toString().trim()
@@ -613,11 +467,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       useDatePlaceholderWhenImageMissing: true,
     );
 
+    String? resolvedDateAndTithi;
+    if (todayDateAndTithi != null && todayDateAndTithi.isNotEmpty) {
+      resolvedDateAndTithi = todayDateAndTithi;
+    } else if (todayDate != null &&
+        todayDate.isNotEmpty &&
+        todayTithi != null &&
+        todayTithi.isNotEmpty) {
+      resolvedDateAndTithi = '$todayDate | $todayTithi';
+    } else if (todayDate != null && todayDate.isNotEmpty) {
+      resolvedDateAndTithi = todayDate;
+    }
+
     if (!mounted) return;
     setState(() {
       _featuredProducts = products;
-      if (todayDateAndTithi != null && todayDateAndTithi.isNotEmpty) {
-        _todayDateAndTithi = todayDateAndTithi;
+      if (completedPujas != null) {
+        _poojasCompleted = completedPujas;
+      }
+      if (completedRituals != null) {
+        _ritualsCompleted = completedRituals;
+      }
+      if (streakCount != null) {
+        _dayStreak = streakCount;
+      }
+      if (resolvedDateAndTithi != null && resolvedDateAndTithi.isNotEmpty) {
+        _todayDateAndTithi = resolvedDateAndTithi;
       }
       if (parsedSloka != null && parsedSloka.isNotEmpty) {
         _dailySloka = parsedSloka;
@@ -810,6 +685,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             festivals: _festivals,
             featuredProducts: _featuredProducts,
             poojasCompleted: _poojasCompleted,
+            ritualsCompleted: _ritualsCompleted,
             dayStreak: _dayStreak,
             onPoojasViewMore: _openPoojasTabFromViewMore,
             onFestivalsViewMore: _openFestivalsCalendarTab,
@@ -895,6 +771,7 @@ class _HomeTabContent extends StatefulWidget {
     required this.festivals,
     required this.featuredProducts,
     required this.poojasCompleted,
+    required this.ritualsCompleted,
     required this.dayStreak,
     required this.onPoojasViewMore,
     required this.onFestivalsViewMore,
@@ -915,6 +792,7 @@ class _HomeTabContent extends StatefulWidget {
   final List<HomeCircleItem> festivals;
   final List<ProductModel> featuredProducts;
   final int poojasCompleted;
+  final int ritualsCompleted;
   final int dayStreak;
   final Future<void> Function() onPoojasViewMore;
   final Future<void> Function() onFestivalsViewMore;
@@ -961,6 +839,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                   festivals: widget.festivals,
                   featuredProducts: widget.featuredProducts,
                   poojasCompleted: widget.poojasCompleted,
+                  ritualsCompleted: widget.ritualsCompleted,
                   dayStreak: widget.dayStreak,
                   onPoojasViewMore: widget.onPoojasViewMore,
                   onFestivalsViewMore: widget.onFestivalsViewMore,
@@ -985,6 +864,7 @@ class _HomeBodySections extends StatelessWidget {
     required this.festivals,
     required this.featuredProducts,
     required this.poojasCompleted,
+    required this.ritualsCompleted,
     required this.dayStreak,
     required this.onPoojasViewMore,
     required this.onFestivalsViewMore,
@@ -996,6 +876,7 @@ class _HomeBodySections extends StatelessWidget {
   final List<HomeCircleItem> festivals;
   final List<ProductModel> featuredProducts;
   final int poojasCompleted;
+  final int ritualsCompleted;
   final int dayStreak;
   final Future<void> Function() onPoojasViewMore;
   final Future<void> Function() onFestivalsViewMore;
@@ -1040,6 +921,7 @@ class _HomeBodySections extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
           child: _AchievementsSection(
             poojasCompleted: poojasCompleted,
+            ritualsCompleted: ritualsCompleted,
             dayStreak: dayStreak,
           ),
         ),
@@ -1052,10 +934,12 @@ class _HomeBodySections extends StatelessWidget {
 class _AchievementsSection extends StatelessWidget {
   const _AchievementsSection({
     required this.poojasCompleted,
+    required this.ritualsCompleted,
     required this.dayStreak,
   });
 
   final int poojasCompleted;
+  final int ritualsCompleted;
   final int dayStreak;
 
   @override
@@ -1073,9 +957,19 @@ class _AchievementsSection extends StatelessWidget {
                 label: 'Pujas Completed',
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
-              child: _AchievementCard(value: dayStreak, label: 'Day Streak 🔥'),
+              child: _AchievementCard(
+                value: ritualsCompleted,
+                label: 'Rituals Completed',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _AchievementCard(
+                value: dayStreak,
+                label: 'Day Streak 🔥',
+              ),
             ),
           ],
         ),
@@ -1094,7 +988,7 @@ class _AchievementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xF8FCF7EF),
         borderRadius: BorderRadius.circular(10),
@@ -1113,22 +1007,22 @@ class _AchievementCard extends StatelessWidget {
           Text(
             '$value',
             style: AppTypography.inter(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF252525),
               height: 1,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
               color: const Color(0xFF7A746D),
-              height: 1,
+              height: 1.1,
             ),
           ),
         ],

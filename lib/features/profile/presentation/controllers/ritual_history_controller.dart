@@ -24,17 +24,17 @@ class RitualHistoryController extends GetxController {
     }
   }
 
-  Future<void> fetchHistory() async {
+  Future<void> fetchHistory({bool skipLoader = false}) async {
     final offlineService = Get.find<OfflineService>();
     const cacheKey = 'ritual_history';
     try {
-      isLoading.value = true;
+      if (!skipLoader) isLoading.value = true;
       error.value = null;
 
       dynamic payload;
       if (offlineService.isOnline.value) {
         try {
-          final data = await _repository.getRitualHistory();
+          final data = await _repository.getRitualHistory(skipLoader: skipLoader);
           payload = data['data'] ?? data;
           await offlineService.cacheData(cacheKey, payload);
         } catch (_) {
@@ -96,6 +96,15 @@ class RitualHistoryController extends GetxController {
     return null;
   }
 
+  Map<String, dynamic>? findFinishedSession(String ritualId) {
+    for (final session in finishedRituals) {
+      if (session is Map && _ritualIdFromSession(session) == ritualId) {
+        return Map<String, dynamic>.from(session);
+      }
+    }
+    return null;
+  }
+
   bool isRitualFinished(String ritualId) {
     return finishedRituals.whereType<Map>().any(
       (session) => _ritualIdFromSession(session) == ritualId,
@@ -122,7 +131,7 @@ class RitualHistoryController extends GetxController {
     try {
       final result = await _repository.startRitual(ritualId);
       final data = result['data'] ?? result;
-      await fetchHistory();
+      await fetchHistory(skipLoader: true);
       return data is Map<String, dynamic> ? data : null;
     } on DioException catch (e) {
       _handleDioError(e);
@@ -153,7 +162,7 @@ class RitualHistoryController extends GetxController {
     }
   }
 
-  Future<void> updateProgress(
+  Future<String?> updateProgress(
     String sessionId,
     int currentStep, {
     int? currentDay,
@@ -165,7 +174,7 @@ class RitualHistoryController extends GetxController {
         'currentStep': currentStep,
         if (currentDay != null) 'currentDay': currentDay,
       });
-      return;
+      return null;
     }
     try {
       await _repository.updateProgress(
@@ -173,8 +182,19 @@ class RitualHistoryController extends GetxController {
         currentStep: currentStep,
         currentDay: currentDay,
       );
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String? msg;
+      if (data is Map) {
+        msg = (data['message'] ?? data['error'])?.toString();
+      }
+      msg ??= e.message;
+      debugPrint('Error updating ritual progress: $msg');
+      return msg ?? 'Failed to update ritual progress';
     } catch (e) {
       debugPrint('Error updating ritual progress: $e');
+      return e.toString();
     }
   }
 
@@ -188,7 +208,7 @@ class RitualHistoryController extends GetxController {
     }
     try {
       final result = await _repository.completeDay(sessionId);
-      await fetchHistory();
+      await fetchHistory(skipLoader: true);
       return (result['data'] ?? result) as Map<String, dynamic>?;
     } on DioException catch (e) {
       _handleDioError(e);

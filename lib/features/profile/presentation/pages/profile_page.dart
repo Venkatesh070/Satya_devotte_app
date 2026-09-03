@@ -145,6 +145,11 @@ class ProfilePage extends StatelessWidget {
                             label: 'Puja History',
                             onTap: () => Get.toNamed(AppRoutes.poojaHistory),
                           ),
+                          ProfileLinkTile(
+                            icon: Icons.auto_stories_outlined,
+                            label: 'Ritual History',
+                            onTap: () => Get.toNamed(AppRoutes.ritualHistory),
+                          ),
                           // ProfileLinkTile(
                           //   icon: Icons.emoji_events_outlined,
                           //   label: 'Achievements',

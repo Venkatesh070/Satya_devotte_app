@@ -56,6 +56,7 @@ class RitualDay {
     required this.stepNumber,
     required this.title,
     this.description = '',
+    this.satyaBlessings = '',
     this.images = const [],
     this.subSteps = const [],
     this.requiredItems = const [],
@@ -67,6 +68,7 @@ class RitualDay {
   final int stepNumber;
   final String title;
   final String description;
+  final String satyaBlessings;
   final List<String> images;
   final List<String> subSteps;
   final List<String> requiredItems;
@@ -78,6 +80,7 @@ class RitualDay {
     final stepNumber = _parseStepNumber(json);
     final parsedSubSteps = _parseSubSteps(json);
     final requiredItems = _parseStringList(json['requiredItems']);
+    final satyaBlessings = (json['satyaBlessings'] ?? json['satya_blessings'] ?? '').toString().trim();
     final stepsRaw = json['steps'];
     List<RitualDayStep> steps = stepsRaw is List
         ? stepsRaw
@@ -104,6 +107,7 @@ class RitualDay {
       stepNumber: stepNumber,
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
+      satyaBlessings: satyaBlessings,
       images: _parseImages(json),
       subSteps: steps.isNotEmpty ? const [] : parsedSubSteps,
       requiredItems: requiredItems,
@@ -164,6 +168,7 @@ class RitualDay {
     'stepNumber': stepNumber,
     'title': title,
     'description': description,
+    if (satyaBlessings.isNotEmpty) 'satyaBlessings': satyaBlessings,
     if (images.isNotEmpty) 'images': images,
     if (subSteps.isNotEmpty) 'subSteps': subSteps,
     if (requiredItems.isNotEmpty) 'requiredItems': requiredItems,
@@ -174,6 +179,7 @@ class RitualDay {
     int? stepNumber,
     String? title,
     String? description,
+    String? satyaBlessings,
     List<String>? images,
     List<String>? subSteps,
     List<String>? requiredItems,
@@ -183,6 +189,7 @@ class RitualDay {
       stepNumber: stepNumber ?? this.stepNumber,
       title: title ?? this.title,
       description: description ?? this.description,
+      satyaBlessings: satyaBlessings ?? this.satyaBlessings,
       images: images ?? this.images,
       subSteps: subSteps ?? this.subSteps,
       requiredItems: requiredItems ?? this.requiredItems,

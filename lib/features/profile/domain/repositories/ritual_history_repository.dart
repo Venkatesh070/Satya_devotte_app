@@ -4,8 +4,16 @@ class RitualHistoryRepository {
   RitualHistoryRepository(this._remoteDataSource);
   final RitualHistoryRemoteDataSource _remoteDataSource;
 
-  Future<Map<String, dynamic>> getRitualHistory({String? status, int page = 1}) {
-    return _remoteDataSource.getRitualHistory(status: status, page: page);
+  Future<Map<String, dynamic>> getRitualHistory({
+    String? status,
+    int page = 1,
+    bool skipLoader = false,
+  }) {
+    return _remoteDataSource.getRitualHistory(
+      status: status,
+      page: page,
+      skipLoader: skipLoader,
+    );
   }
 
   Future<Map<String, dynamic>> getSession(String sessionId) {

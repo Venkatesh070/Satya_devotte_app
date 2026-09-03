@@ -142,6 +142,7 @@ class SathyaApp extends StatelessWidget {
                   AppRoutes.rituals,
                   AppRoutes.ritualDetail,
                   AppRoutes.poojaHistory,
+                  AppRoutes.ritualHistory,
                   AppRoutes.poojaWizard,
                   AppRoutes.splash, // Usually okay to keep splash
                 ];

@@ -10,6 +10,7 @@ class AppRoutes {
   static const String rituals = '/rituals';
   static const String ritualDetail = '/ritual-detail';
   static const String poojaHistory = '/pooja-history';
+  static const String ritualHistory = '/ritual-history';
   static const String poojaWizard = '/pooja-wizard';
   static const String editProfile = '/edit-profile';
   static const String search = '/search';

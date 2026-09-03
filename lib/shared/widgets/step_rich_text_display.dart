@@ -16,13 +16,13 @@ class StepRichTextDisplay extends StatelessWidget {
   });
 
   const StepRichTextDisplay.wizard(this.value, {super.key})
-      : variant = StepRichTextVariant.wizard;
+    : variant = StepRichTextVariant.wizard;
 
   const StepRichTextDisplay.detail(this.value, {super.key})
-      : variant = StepRichTextVariant.detail;
+    : variant = StepRichTextVariant.detail;
 
   const StepRichTextDisplay.cms(this.value, {super.key})
-      : variant = StepRichTextVariant.cms;
+    : variant = StepRichTextVariant.cms;
 
   final String? value;
   final StepRichTextVariant variant;
@@ -101,21 +101,7 @@ class _InstructionCard extends StatelessWidget {
     if (variant == StepRichTextVariant.cms) {
       return RichTextDisplay(deltaJson, style: textStyle);
     }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: variant == StepRichTextVariant.wizard
-            ? const Color(0xFFFCF7EF).withOpacity(0.1)
-            : const Color(0xFFFFF8F0),
-        borderRadius: BorderRadius.circular(12),
-        border: variant == StepRichTextVariant.detail
-            ? Border.all(color: const Color(0xFFE8D5B7))
-            : null,
-      ),
-      child: RichTextDisplay(deltaJson, style: textStyle),
-    );
+    return RichTextDisplay(deltaJson, style: textStyle);
   }
 }
 

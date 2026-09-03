@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -8,8 +12,8 @@ import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
-import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
 
 class UserRitualDetailPage extends StatefulWidget {
   const UserRitualDetailPage({super.key, required this.ritualId});
@@ -32,7 +36,9 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
     super.initState();
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _history.fetchHistory();
+      if (Get.isRegistered<RitualHistoryController>()) {
+        _history.fetchHistory();
+      }
     });
   }
 
@@ -60,6 +66,7 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   }
 
   Map<String, dynamic>? _pendingSession(RitualModel ritual) {
+    if (!Get.isRegistered<RitualHistoryController>()) return null;
     return _history.findPendingSession(ritual.id);
   }
 
@@ -71,305 +78,6 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
     });
   }
 
-  Future<void> _openWizard(RitualModel ritual) async {
-    final session = _pendingSession(ritual);
-    final sessionId = session != null
-        ? (session['_id'] ?? session['id'])?.toString()
-        : null;
-    final currentDay = (session?['currentDay'] as num?)?.toInt() ?? 1;
-    final currentStep = (session?['currentStep'] as num?)?.toInt() ?? 0;
-
-    final result = await Get.to<bool>(
-      () => RitualStepWizard(
-        ritual: ritual,
-        sessionId: sessionId,
-        initialDay: currentDay,
-        initialStep: currentStep > 0 ? currentStep : 0,
-      ),
-    );
-
-    if (result == true || mounted) {
-      await _history.fetchHistory();
-      if (mounted) setState(() {});
-    }
-  }
-
-  Widget? _buildBottomBar(RitualModel ritual) {
-    final status = _statusLabel(ritual);
-    if (status == 'Finished') {
-      return SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _openWizard(ritual),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4A1C00),
-                    side: const BorderSide(color: Color(0xFFE7D5BC)),
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  child: const Text('Start again'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final session = _pendingSession(ritual);
-    final currentDay = (session?['currentDay'] as num?)?.toInt() ?? 1;
-    final label = session != null ? 'Continue Day $currentDay' : 'Begin Ritual';
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: () => _openWizard(ritual),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gradientEnd,
-              foregroundColor: const Color(0xFFFCF7EF),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            child: Text(
-              label,
-              style: AppTypography.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ritual = _ritual;
-    return Scaffold(
-      backgroundColor: AppColors.appBgColor,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBgColor,
-        elevation: 0,
-        foregroundColor: const Color(0xFF4A1C00),
-        title: Text(
-          ritual?.title.trim().isNotEmpty == true ? ritual!.title : 'Ritual',
-          style: AppTypography.lora(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF4A1C00),
-          ),
-        ),
-      ),
-      bottomNavigationBar: ritual == null
-          ? null
-          : Obx(() => _buildBottomBar(ritual) ?? const SizedBox.shrink()),
-      body: _isLoading
-          ? const SizedBox.shrink()
-          : _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _load,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gradientEnd,
-                        foregroundColor: const Color(0xFFFCF7EF),
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : ritual == null
-          ? const SizedBox.shrink()
-          : Obx(() {
-              final status = _statusLabel(ritual);
-              final session = _pendingSession(ritual);
-              final nextDue = session?['nextDayDueDateKey']?.toString();
-
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 36),
-                children: [
-                  if (status != null) ...[
-                    PujaSessionStatusBadge(label: status),
-                    const SizedBox(height: 12),
-                  ],
-                  if (nextDue != null && nextDue.isNotEmpty) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0E4),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE7D5BC)),
-                      ),
-                      child: Text(
-                        'Complete Day ${session?['currentDay'] ?? 1} by $nextDue',
-                        style: AppTypography.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFE35600),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if ((ritual.imageUrl ?? '').trim().isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: CachedNetworkImage(
-                          imageUrl: ritual.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) =>
-                              const ColoredBox(color: Color(0xFFFAECD2)),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  Text(
-                    ritual.title,
-                    style: AppTypography.lora(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if ((ritual.category ?? '').trim().isNotEmpty)
-                        _MetaChip(label: ritual.category!),
-                      if ((ritual.ritualDay ?? ritual.days.length) > 0)
-                        _MetaChip(
-                          label:
-                              '${ritual.ritualDay ?? ritual.days.length} day${(ritual.ritualDay ?? ritual.days.length) == 1 ? '' : 's'}',
-                        ),
-                      if ((ritual.recommendedDuration ?? '').trim().isNotEmpty)
-                        _MetaChip(label: ritual.recommendedDuration!),
-                      if ((ritual.difficulty).trim().isNotEmpty)
-                        _MetaChip(label: ritual.difficulty),
-                    ],
-                  ),
-                  if ((ritual.description ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 18),
-                    RichTextDisplay(
-                      ritual.description,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        height: 1.45,
-                        color: const Color(0xFF5C4634),
-                      ),
-                    ),
-                  ],
-                  if ((ritual.purpose ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 18),
-                    Text(
-                      'Purpose',
-                      style: AppTypography.lora(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    RichTextDisplay(
-                      ritual.purpose,
-                      style: AppTypography.inter(
-                        fontSize: 14,
-                        height: 1.45,
-                        color: const Color(0xFF5C4634),
-                      ),
-                    ),
-                  ],
-                  if (ritual.days.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    Text(
-                      'Days',
-                      style: AppTypography.lora(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...ritual.days.map(
-                      (day) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _RitualDayCard(
-                          day: day,
-                          isCurrentDay:
-                              session != null &&
-                              day.stepNumber ==
-                                  ((session['currentDay'] as num?)?.toInt() ??
-                                      1),
-                          isCompleted:
-                              session != null &&
-                              _isDayCompleted(session, day.stepNumber),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (ritual.sections.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sections',
-                      style: AppTypography.lora(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4A1C00),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...ritual.sections
-                        .where(
-                          (section) =>
-                              section.label.trim().isNotEmpty ||
-                              section.description.trim().isNotEmpty,
-                        )
-                        .map(
-                          (section) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _RitualSectionCard(section: section),
-                          ),
-                        ),
-                  ],
-                ],
-              );
-            }),
-    );
-  }
-
   bool _isDayCompleted(Map session, int dayNumber) {
     final completed = session['completedDays'];
     if (completed is! List) return false;
@@ -377,27 +85,287 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
       (d) => (d['dayNumber'] as num?)?.toInt() == dayNumber,
     );
   }
-}
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label});
-  final String label;
+  Future<void> _openDay(RitualModel ritual, int dayNumber) async {
+    final session = _pendingSession(ritual);
+    final sessionId = session != null
+        ? (session['_id'] ?? session['id'])?.toString()
+        : null;
+
+    final result = await Get.to<bool>(
+      () => RitualStepWizard(
+        ritual: ritual,
+        sessionId: sessionId,
+        initialDay: dayNumber,
+        initialStep: 0,
+      ),
+    );
+
+    if (result == true || mounted) {
+      if (Get.isRegistered<RitualHistoryController>()) {
+        await _history.fetchHistory();
+      }
+      if (mounted) setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF0E4),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFFE35600),
+    if (_isLoading && _ritual == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFFFF4E0),
+        body: Center(child: ChakraLoadingIndicator()),
+      );
+    }
+
+    if (_ritual == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFFF4E0),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFFF4E0),
+          elevation: 0,
+          foregroundColor: const Color(0xFF4A1C00),
         ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _error ?? 'No ritual found',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    color: const Color(0xFF4A1C00),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: _load,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gradientEnd,
+                    foregroundColor: const Color(0xFFFCF7EF),
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final ritual = _ritual!;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF4E0),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Stack(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 220,
+                      child: _ShapedRitualHeaderBanner(
+                        networkUrl: ritual.imageUrl,
+                      ),
+                    ),
+                    Positioned(
+                      top: MediaQuery.paddingOf(context).top + 8,
+                      left: 16,
+                      child: GestureDetector(
+                        onTap: () => Get.back(),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.35),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: Color(0xFFFCF7EF),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+                  child: Obx(() {
+                    final session = _pendingSession(ritual);
+                    final finished = _history.findFinishedSession(ritual.id);
+                    final totalDays =
+                        ritual.ritualDay ??
+                        (ritual.days.isNotEmpty ? ritual.days.length : 1);
+
+                    int completedCount = 0;
+                    if (finished != null) {
+                      completedCount =
+                          (finished['completedDays'] as List?)?.length ??
+                          totalDays;
+                      if (completedCount == 0) completedCount = totalDays;
+                    } else if (session != null) {
+                      completedCount =
+                          (session['completedDays'] as List?)?.length ?? 0;
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Text(
+                          ritual.title,
+                          style: AppTypography.lora(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF3B1E08),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Days / Completed indicator: ALWAYS x/y days completed
+                        Text(
+                          '$completedCount/$totalDays days completed',
+                          style: AppTypography.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE35600),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Description
+                        if ((ritual.description ?? '').trim().isNotEmpty) ...[
+                          RichTextDisplay(
+                            ritual.description!,
+                            style: AppTypography.inter(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: const Color(0xFF5C4634),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Preferred day and timings
+                        if ((ritual.bestDayTime ?? '').trim().isNotEmpty) ...[
+                          RichText(
+                            text: TextSpan(
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: const Color(0xFF5C4634),
+                              ),
+                              children: [
+                                const TextSpan(
+                                  text: 'Preferred day and timings : ',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(text: ritual.bestDayTime!),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Ritual Schedule
+                        // RichText(
+                        //   text: TextSpan(
+                        //     style: AppTypography.inter(
+                        //       fontSize: 13,
+                        //       height: 1.5,
+                        //       color: const Color(0xFF5C4634),
+                        // ),
+                        // children: [
+                        //   const TextSpan(
+                        //     text: 'Ritual Schedule: ',
+                        //     style: TextStyle(fontWeight: FontWeight.w700),
+                        //   ),
+                        //   TextSpan(
+                        //     text:
+                        //         (ritual.startingDay ?? '')
+                        //                 .trim()
+                        //                 .isNotEmpty
+                        //             ? 'Starts on ${ritual.startingDay!} and repeats every week. The ritual can only be initiated on the designated day. If it is not started on the scheduled day, you will need to wait until the following week to begin.'
+                        //             : 'The ritual can only be initiated on scheduled days. Once started, follow the daily program in order.',
+                        //   ),
+                        // ],
+                        //   ),
+                        // ),
+                        const SizedBox(height: 12),
+
+                        // Ritual Continuity
+                        RichText(
+                          text: TextSpan(
+                            style: AppTypography.inter(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: const Color(0xFF5C4634),
+                            ),
+                            children: const [
+                              TextSpan(
+                                text: 'Ritual Continuity: ',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(
+                                text:
+                                    'Once the ritual has been started, it must be followed continuously. If you miss any 1 day or skip a scheduled day, the ritual will reset, and you will need to start again from the beginning.',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Rituals / Days Section
+                        if (ritual.days.isNotEmpty) ...[
+                          Text(
+                            'Rituals',
+                            style: AppTypography.lora(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF4A1C00),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...ritual.days.map((day) {
+                            final isCompleted =
+                                session != null &&
+                                _isDayCompleted(session, day.stepNumber);
+                            final isCurrent =
+                                session != null &&
+                                day.stepNumber ==
+                                    ((session['currentDay'] as num?)?.toInt() ??
+                                        1);
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _RitualDayCard(
+                                day: day,
+                                ritualTitle: ritual.title,
+                                isCompleted: isCompleted,
+                                isCurrent: isCurrent,
+                                onTap: () => _openDay(ritual, day.stepNumber),
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -406,297 +374,169 @@ class _MetaChip extends StatelessWidget {
 class _RitualDayCard extends StatelessWidget {
   const _RitualDayCard({
     required this.day,
-    this.isCurrentDay = false,
-    this.isCompleted = false,
+    required this.ritualTitle,
+    required this.isCompleted,
+    required this.isCurrent,
+    required this.onTap,
   });
 
   final RitualDay day;
-  final bool isCurrentDay;
+  final String ritualTitle;
   final bool isCompleted;
+  final bool isCurrent;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final title = day.title.trim().isEmpty
-        ? 'Day ${day.stepNumber}'
-        : 'Day ${day.stepNumber}: ${day.title.trim()}';
+    final title = day.title.trim().isNotEmpty
+        ? day.title.trim()
+        : 'Day ${day.stepNumber}';
 
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: isCurrentDay ? 0.92 : 0.72),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isCurrentDay
-              ? const Color(0xFFE35600)
-              : const Color(0xFFE7D5BC),
-          width: isCurrentDay ? 1.5 : 1,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBF5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCompleted
+                ? const Color(0xFF81C784)
+                : isCurrent
+                    ? const Color(0xFFE35600)
+                    : const Color(0xFFE7D5BC),
+            width: (isCompleted || isCurrent) ? 1.5 : 1,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.lora(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF4A1C00),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Day ${day.stepNumber}',
+                    style: AppTypography.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF8A6B4A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (isCompleted)
+              const Icon(Icons.check_circle, color: Color(0xFF0F8F5F), size: 22)
+            else if (isCurrent)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
-                if (isCompleted)
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF0F8F5F),
-                    size: 20,
-                  )
-                else if (isCurrentDay)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E4),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Today',
-                      style: AppTypography.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE35600),
-                      ),
-                    ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF0E4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE35600)),
+                ),
+                child: Text(
+                  'Current',
+                  style: AppTypography.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFE35600),
                   ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (day.description.trim().isNotEmpty) ...[
-                  RichTextDisplay(
-                    day.description,
-                    style: AppTypography.inter(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: const Color(0xFF5C4634),
-                    ),
-                  ),
-                ],
-                if (day.requiredItems.isNotEmpty) ...[
-                  if (day.description.trim().isNotEmpty)
-                    const SizedBox(height: 12),
-                  Text(
-                    'Required items',
-                    style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: day.requiredItems
-                        .map(
-                          (item) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF8F0),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE7D5BC),
-                              ),
-                            ),
-                            child: Text(
-                              item,
-                              style: AppTypography.inter(
-                                fontSize: 12,
-                                color: const Color(0xFF5C4634),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-                if (day.steps.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Steps',
-                    style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  for (var i = 0; i < day.steps.length; i++) ...[
-                    _RitualInnerStepCard(step: day.steps[i], index: i + 1),
-                    if (i != day.steps.length - 1) const SizedBox(height: 10),
-                  ],
-                ] else if (day.subSteps.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    'Steps',
-                    style: AppTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4A1C00),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  for (var i = 0; i < day.subSteps.length; i++) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${i + 1}.',
-                          style: AppTypography.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFE35600),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: RichTextDisplay(
-                            day.subSteps[i],
-                            style: AppTypography.inter(
-                              fontSize: 13,
-                              height: 1.4,
-                              color: const Color(0xFF5C4634),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (i != day.subSteps.length - 1) const SizedBox(height: 8),
-                  ],
-                ],
-              ],
-            ),
-          ),
-        ],
+                ),
+              )
+            else
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFFB07A3A),
+                size: 22,
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _RitualInnerStepCard extends StatelessWidget {
-  const _RitualInnerStepCard({required this.step, required this.index});
-
-  final RitualDayStep step;
-  final int index;
+class _ShapedRitualHeaderBanner extends StatefulWidget {
+  final String? networkUrl;
+  const _ShapedRitualHeaderBanner({this.networkUrl});
 
   @override
-  Widget build(BuildContext context) {
-    final title = step.title.trim().isEmpty ? 'Step $index' : step.title.trim();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8F0),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE7D5BC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$index. $title',
-            style: AppTypography.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF4A1C00),
-            ),
-          ),
-          if (step.description.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
-            StepRichTextDisplay.detail(step.description),
-          ],
-          if (step.images.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 120,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: step.images.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, imageIndex) => ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: step.images[imageIndex],
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  State<_ShapedRitualHeaderBanner> createState() =>
+      _ShapedRitualHeaderBannerState();
 }
 
-class _RitualSectionCard extends StatelessWidget {
-  const _RitualSectionCard({required this.section});
+class _ShapedRitualHeaderBannerState extends State<_ShapedRitualHeaderBanner> {
+  ui.Image? _maskImage;
 
-  final RitualSection section;
+  @override
+  void initState() {
+    super.initState();
+    _loadMask();
+  }
+
+  Future<void> _loadMask() async {
+    try {
+      final ByteData data = await rootBundle.load(
+        'assets/images/appHeaderImg.png',
+      );
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+      );
+      final ui.FrameInfo fi = await codec.getNextFrame();
+      if (mounted) setState(() => _maskImage = fi.image);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
-    final description = section.description.trim();
+    final hasNetwork =
+        widget.networkUrl != null && widget.networkUrl!.trim().isNotEmpty;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE7D5BC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            section.label,
-            style: AppTypography.lora(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF4A1C00),
-            ),
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            RichTextDisplay(
-              description,
-              style: AppTypography.inter(
-                fontSize: 13,
-                height: 1.4,
-                color: const Color(0xFF5C4634),
-              ),
-            ),
-          ],
-        ],
+    if (_maskImage == null || !hasNetwork) {
+      return Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.fill);
+    }
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (Rect bounds) {
+        final double sx = bounds.width / _maskImage!.width;
+        final double sy = bounds.height / _maskImage!.height;
+        final matrix = Matrix4.identity().scaled(sx, sy, 1.0).storage;
+        return ImageShader(_maskImage!, TileMode.clamp, TileMode.clamp, matrix);
+      },
+      child: CachedNetworkImage(
+        imageUrl: widget.networkUrl!,
+        fit: BoxFit.cover,
+        alignment: const Alignment(0, -0.4),
+        placeholder: (_, __) =>
+            Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.cover),
+        errorWidget: (_, __, ___) =>
+            Image.asset('assets/images/appHeaderImg.png', fit: BoxFit.cover),
       ),
     );
   }
