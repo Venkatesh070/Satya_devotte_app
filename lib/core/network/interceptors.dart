@@ -29,8 +29,14 @@ class ApiLoadingInterceptor extends Interceptor {
 
   final ApiLoadingService _loadingService;
 
-  bool _shouldSkip(RequestOptions options) =>
-      options.extra[kSkipApiLoaderKey] == true;
+  bool _shouldSkip(RequestOptions options) {
+    if (options.extra['showGlobalLoader'] == true) return false;
+    if (options.extra[kSkipApiLoaderKey] == true) return true;
+    // GET requests (queries / background fetches) should never show the full-screen
+    // blocking chakra loader overlay over pages that already have loaded data.
+    if (options.method.toUpperCase() == 'GET') return true;
+    return false;
+  }
 
   @override
   void onRequest(

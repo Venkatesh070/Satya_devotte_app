@@ -17,6 +17,7 @@ import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deiti
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 
 class RitualListPage extends StatefulWidget {
@@ -461,12 +462,14 @@ class _RitualListPageState extends State<RitualListPage> {
                   child: _buildHeader(),
                 ),
               ),
-              if (_error != null && !_isLoading)
+              if (_error != null && _items.isEmpty && !_isLoading)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _buildErrorState(),
                 )
-              else if (!_isLoading)
+              else if (_isLoading && _items.isEmpty)
+                const SliverCatalogListSkeleton()
+              else
                 _buildList(),
             ],
           ),
@@ -1058,11 +1061,7 @@ class _DeityCard extends StatelessWidget {
   }
 
   Widget _imageFallback() {
-    return Container(
-      color: const Color(0xFFEDE6D7),
-      alignment: Alignment.center,
-      child: const Icon(Icons.auto_awesome, color: Color(0xFFB07A3A), size: 22),
-    );
+    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
   }
 }
 

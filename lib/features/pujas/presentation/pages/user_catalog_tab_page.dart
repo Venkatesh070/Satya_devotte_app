@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/ritu
 import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
 
 enum UserCatalogKind { pujas, rituals }
 
@@ -290,10 +291,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
             slivers: [
               SliverToBoxAdapter(child: _buildHeader()),
               if (_isLoading && _items.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: SizedBox.shrink(),
-                )
+                const SliverCatalogListSkeleton()
               else if (_error != null && _items.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,

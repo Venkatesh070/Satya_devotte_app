@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/pooj
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
+import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
 
 class ProfilePoojaHistoryPage extends StatefulWidget {
   const ProfilePoojaHistoryPage({super.key});
@@ -69,7 +70,7 @@ class _ProfilePoojaHistoryPageState extends State<ProfilePoojaHistoryPage> {
           if (c.isLoading.value &&
               c.finishedPoojas.isEmpty &&
               c.pendingPoojas.isEmpty) {
-            return const SizedBox.shrink();
+            return const HistoryListSkeleton();
           }
 
           if (c.error.value != null &&

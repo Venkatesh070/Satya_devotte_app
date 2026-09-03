@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/features/notifications/presentation/controller
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -158,10 +159,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               child: RefreshIndicator(
                 onRefresh: _loadFirstPage,
                 child: _loading
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [SizedBox(height: 400)],
-                      )
+                    ? const NotificationsListSkeleton()
                     : _error != null
                     ? ListView(
                         children: [

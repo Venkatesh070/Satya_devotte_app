@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/ritu
 import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
+import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
 
 class ProfileRitualHistoryPage extends StatefulWidget {
   const ProfileRitualHistoryPage({super.key});
@@ -71,7 +72,7 @@ class _ProfileRitualHistoryPageState extends State<ProfileRitualHistoryPage> {
           if (c.isLoading.value &&
               c.finishedRituals.isEmpty &&
               c.pendingRituals.isEmpty) {
-            return const SizedBox.shrink();
+            return const HistoryListSkeleton();
           }
 
           if (c.error.value != null &&

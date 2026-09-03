@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -56,8 +57,14 @@ class _CalendarPageState extends State<CalendarPage> {
                 );
               }),
               Obx(() {
-                if (controller.isLoading.value) {
-                  return const SizedBox.shrink();
+                if (controller.isLoading.value &&
+                    controller.festivals.isEmpty &&
+                    controller.moonPhases.isEmpty &&
+                    controller.poojas.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(child: ChakraLoadingIndicator(size: 28)),
+                  );
                 }
                 controller.focusedDate.value;
                 controller.festivals.length;
