@@ -107,7 +107,7 @@ class ProfilePage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 50),
-                          const ProfileSectionHeading('Spiritual'),
+                          const ProfileSectionHeading(''),
                           ProfileLinkTile(
                             icon: Icons.inventory_2_outlined,
                             label: 'My Orders',

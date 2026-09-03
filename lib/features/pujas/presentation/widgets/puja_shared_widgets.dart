@@ -717,6 +717,48 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
                 gradientColors: gradientColors,
               ),
             ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Get.back();
+                  openKnowMoreForPuja(
+                    context,
+                    id: pooja.id,
+                    initialData: pooja.raw,
+                  );
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: Color(0xFFE35600),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Know more about the puja →',
+                      style: AppTypography.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFFE35600),
+                        decoration: TextDecoration.underline,
+                        decorationColor: Color(0xFFE35600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

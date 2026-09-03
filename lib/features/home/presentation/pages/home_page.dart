@@ -662,7 +662,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
-    const navHeight = 74.0;
+    const navHeight = 78.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2EBDC),
@@ -704,7 +704,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         removeBottom: true,
         child: SafeArea(
           child: SizedBox(
-            height: navHeight + bottomSafe,
+            height: navHeight + 52 + bottomSafe,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -734,7 +734,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ? const SizedBox.shrink()
                           : _BottomNavBar(
                               currentIndex: _currentIndex,
-                              pageController: _pageController,
                               onTap: _onTabSelected,
                             ),
                     ),
@@ -742,9 +741,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
                 Positioned(
                   left: 0,
-                  bottom: bottomSafe + 5,
-                  child: _StickyShopButton(
-                    onTap: () => Get.to(() => const PoojaKitPage()),
+                  bottom: bottomSafe + navHeight + 6,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 360),
+                    curve: Curves.easeInOutCubicEmphasized,
+                    offset: (_showBottomNav && _currentIndex == _HomeTabs.home)
+                        ? Offset.zero
+                        : const Offset(-1.2, 0),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeInOut,
+                      opacity:
+                          (_showBottomNav && _currentIndex == _HomeTabs.home)
+                          ? 1.0
+                          : 0.0,
+                      child: _StickyShopButton(
+                        onTap: () => Get.to(() => const PoojaKitPage()),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -966,10 +980,7 @@ class _AchievementsSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _AchievementCard(
-                value: dayStreak,
-                label: 'Day Streak 🔥',
-              ),
+              child: _AchievementCard(value: dayStreak, label: 'Day Streak 🔥'),
             ),
           ],
         ),
@@ -1081,232 +1092,261 @@ class _HomeCircleSection extends StatelessWidget {
   }
 }
 
-class _BottomNavBar extends StatefulWidget {
-  const _BottomNavBar({
-    required this.currentIndex,
-    required this.pageController,
-    required this.onTap,
-  });
+class _BottomNavBar extends StatelessWidget {
+  const _BottomNavBar({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
-  final PageController pageController;
   final Future<void> Function(int) onTap;
   static const int lastTabIndex = _HomeTabs.last;
 
-  @override
-  State<_BottomNavBar> createState() => _BottomNavBarState();
-}
-
-class _BottomNavBarState extends State<_BottomNavBar> {
-  double _dragPageValue = 0;
-  bool _isDragging = false;
-  bool _isSettling = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _dragPageValue = widget.currentIndex.toDouble();
-  }
-
-  @override
-  void didUpdateWidget(covariant _BottomNavBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_isDragging && !_isSettling) {
-      _dragPageValue = widget.currentIndex.toDouble();
-    }
-  }
-
-  void _handleDragStart(DragStartDetails details) {
-    if (_isSettling) return;
-    _isDragging = true;
-    _dragPageValue = widget.currentIndex.toDouble();
-  }
-
-  void _handleDragUpdate(DragUpdateDetails details) {
-    if (_isSettling) return;
-    const tabWidth = 72.0;
-    setState(() {
-      _dragPageValue = (_dragPageValue - (details.delta.dx / tabWidth)).clamp(
-        0.0,
-        _BottomNavBar.lastTabIndex.toDouble(),
-      );
-    });
-  }
-
-  Future<void> _handleDragEnd(DragEndDetails details) async {
-    final targetIndex = _dragPageValue.round().clamp(
-      0,
-      _BottomNavBar.lastTabIndex,
-    );
-    await _settleToIndex(targetIndex);
-  }
-
-  Future<void> _settleToIndex(int targetIndex) async {
-    if (_isSettling) return;
-    setState(() {
-      _isSettling = true;
-      _isDragging = false;
-      _dragPageValue = targetIndex.toDouble();
-    });
-    await widget.onTap(targetIndex);
-    if (!mounted) return;
-    setState(() {
-      _isSettling = false;
-    });
-  }
-
-  double _tabTopOffset({required double centerX, required double totalWidth}) {
-    final t = (centerX / totalWidth).clamp(0.0, 1.0);
-    final curveY =
-        ((1 - t) * (1 - t) * 24) + (2 * (1 - t) * t * -10) + (t * t * 24);
-    // Map each tab center to the same convex arc as the nav shell.
-    return 14 + ((curveY + 10) * 0.45);
-  }
+  static const Color navBarColor = Color(0xFFF8F1E2);
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 90,
+      height: 78,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const slotWidth = 72.0;
-          final centeredSlotLeft = (constraints.maxWidth - slotWidth) / 2;
-          return AnimatedBuilder(
-            animation: widget.pageController,
-            builder: (context, _) {
-              final pageValue = _isDragging
-                  ? _dragPageValue
-                  : _isSettling
-                  ? _dragPageValue
-                  : (widget.pageController.hasClients
-                        ? (widget.pageController.page ??
-                              widget.currentIndex.toDouble())
-                        : widget.currentIndex.toDouble());
-              // Shift tab slots with page progress for smooth tab swapping.
-              final horizontalShift =
-                  pageValue.clamp(0.0, _BottomNavBar.lastTabIndex.toDouble()) *
-                  slotWidth;
-              final homeLeft = centeredSlotLeft - horizontalShift;
-              final pujasLeft = homeLeft + slotWidth;
-              final ritualsLeft = pujasLeft + slotWidth;
-              final deitiesLeft = ritualsLeft + slotWidth;
-              final calendarLeft = deitiesLeft + slotWidth;
-              final profileLeft = calendarLeft + slotWidth;
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onHorizontalDragStart: _handleDragStart,
-                onHorizontalDragUpdate: _handleDragUpdate,
-                onHorizontalDragEnd: _handleDragEnd,
-                child: Stack(
-                  children: [
+          final totalWidth = constraints.maxWidth;
+          final slotWidth = totalWidth / 6;
+
+          return TweenAnimationBuilder<double>(
+            tween: Tween<double>(
+              begin: currentIndex.toDouble(),
+              end: currentIndex.toDouble(),
+            ),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            builder: (context, animProgress, _) {
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Fluid elevated hump background with flat side edges
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _FluidHumpPainter(
+                        animProgress: animProgress,
+                        totalTabs: 6,
+                        color: navBarColor,
+                      ),
+                    ),
+                  ),
+
+                  // 6 Navigation Tab Items
+                  for (int i = 0; i < 6; i++)
                     Positioned(
+                      left: i * slotWidth,
+                      width: slotWidth,
                       top: 0,
-                      left: 0,
-                      right: 0,
                       bottom: 0,
-                      child: PhysicalShape(
-                        color: const Color(0xFFF8F1E2),
-                        clipper: _ConvexNavClipper(),
-                        elevation: 10,
-                        shadowColor: const Color(0x24000000),
-                        child: CustomPaint(
-                          painter: _TopCurveHighlightPainter(),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
+                      child: _buildNavItem(i, animProgress),
                     ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: homeLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: homeLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.home_outlined,
-                        label: 'Home',
-                        selected: widget.currentIndex == _HomeTabs.home,
-                        onTap: () => _settleToIndex(_HomeTabs.home),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: pujasLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: pujasLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.local_fire_department_outlined,
-                        label: 'Pujas',
-                        selected: widget.currentIndex == _HomeTabs.pujas,
-                        onTap: () => _settleToIndex(_HomeTabs.pujas),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: ritualsLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: ritualsLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.self_improvement_outlined,
-                        label: 'Rituals',
-                        selected: widget.currentIndex == _HomeTabs.rituals,
-                        onTap: () => _settleToIndex(_HomeTabs.rituals),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: deitiesLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: deitiesLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.temple_hindu_outlined,
-                        label: 'Deities',
-                        selected: widget.currentIndex == _HomeTabs.deities,
-                        onTap: () => _settleToIndex(_HomeTabs.deities),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: calendarLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: calendarLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Calendar',
-                        selected: widget.currentIndex == _HomeTabs.calendar,
-                        onTap: () => _settleToIndex(_HomeTabs.calendar),
-                      ),
-                    ),
-                    Positioned(
-                      top: _tabTopOffset(
-                        centerX: profileLeft + (slotWidth / 2),
-                        totalWidth: constraints.maxWidth,
-                      ),
-                      left: profileLeft,
-                      width: slotWidth,
-                      child: _BottomItem(
-                        icon: Icons.person_outline,
-                        label: 'Profile',
-                        selected: widget.currentIndex == _HomeTabs.profile,
-                        onTap: () => _settleToIndex(_HomeTabs.profile),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               );
             },
           );
         },
       ),
     );
+  }
+
+  Widget _buildNavItem(int index, double animProgress) {
+    final dist = (animProgress - index).abs().clamp(0.0, 1.0);
+    final isSelected = index == currentIndex;
+    final itemTop = 14.0 + (dist * 10.0);
+
+    final IconData icon;
+    final String label;
+    switch (index) {
+      case _HomeTabs.home:
+        icon = Icons.home_outlined;
+        label = 'Home';
+        break;
+      case _HomeTabs.pujas:
+        icon = Icons.local_fire_department_outlined;
+        label = 'Pujas';
+        break;
+      case _HomeTabs.rituals:
+        icon = Icons.self_improvement_outlined;
+        label = 'Rituals';
+        break;
+      case _HomeTabs.deities:
+        icon = Icons.temple_hindu_outlined;
+        label = 'Deities';
+        break;
+      case _HomeTabs.calendar:
+        icon = Icons.calendar_today_outlined;
+        label = 'Calendar';
+        break;
+      case _HomeTabs.profile:
+        icon = Icons.person_outlined;
+        label = 'Profile';
+        break;
+      default:
+        icon = Icons.circle_outlined;
+        label = '';
+    }
+
+    const unselectedColor = Color(0xFF7F776D);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onTap(index),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Positioned(
+            top: itemTop,
+            child: AnimatedScale(
+              scale: isSelected ? 1.05 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  isSelected
+                      ? ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds),
+                          blendMode: BlendMode.srcIn,
+                          child: Icon(
+                            icon,
+                            size: 24,
+                            color: const Color(0xFFFCF7EF),
+                          ),
+                        )
+                      : Icon(
+                          icon,
+                          size: 22,
+                          color: unselectedColor,
+                        ),
+                  const SizedBox(height: 3),
+                  isSelected
+                      ? ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ).createShader(bounds),
+                          blendMode: BlendMode.srcIn,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.visible,
+                            style: AppTypography.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFFCF7EF),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.visible,
+                          style: AppTypography.inter(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: unselectedColor,
+                          ),
+                        ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FluidHumpPainter extends CustomPainter {
+  const _FluidHumpPainter({
+    required this.animProgress,
+    required this.totalTabs,
+    required this.color,
+  });
+
+  final double animProgress;
+  final int totalTabs;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final slotWidth = size.width / totalTabs;
+    final cx = (animProgress + 0.5) * slotWidth;
+    const topY = 16.0;
+    const humpSpan = 38.0;
+
+    final path = Path();
+    path.moveTo(0, topY);
+
+    final xLeft = cx - humpSpan;
+    final xRight = cx + humpSpan;
+
+    if (xLeft > 0) {
+      path.lineTo(xLeft, topY);
+    }
+
+    path.cubicTo(
+      cx - (humpSpan * 0.55), topY,
+      cx - (humpSpan * 0.45), 0,
+      cx, 0,
+    );
+    path.cubicTo(
+      cx + (humpSpan * 0.45), 0,
+      cx + (humpSpan * 0.55), topY,
+      xRight.clamp(0.0, size.width), topY,
+    );
+
+    path.lineTo(size.width, topY);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    // Subtle top border/shadow for definition
+    final shadowPaint = Paint()
+      ..color = const Color(0x18000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawPath(path.shift(const Offset(0, -2)), shadowPaint);
+
+    // Main background fill
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, paint);
+
+    // Subtle top contour stroke
+    final strokePath = Path();
+    strokePath.moveTo(0, topY);
+    if (xLeft > 0) strokePath.lineTo(xLeft, topY);
+    strokePath.cubicTo(
+      cx - (humpSpan * 0.55), topY,
+      cx - (humpSpan * 0.45), 0,
+      cx, 0,
+    );
+    strokePath.cubicTo(
+      cx + (humpSpan * 0.45), 0,
+      cx + (humpSpan * 0.55), topY,
+      xRight.clamp(0.0, size.width), topY,
+    );
+    strokePath.lineTo(size.width, topY);
+
+    final strokePaint = Paint()
+      ..color = const Color(0xFFEADBCE)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawPath(strokePath, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FluidHumpPainter oldDelegate) {
+    return oldDelegate.animProgress != animProgress ||
+        oldDelegate.color != color ||
+        oldDelegate.totalTabs != totalTabs;
   }
 }
 
@@ -2213,7 +2253,10 @@ class _StickyShopButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
         child: Ink(
           height: 42,
           padding: const EdgeInsets.only(left: 16, right: 18),
@@ -2223,125 +2266,34 @@ class _StickyShopButton extends StatelessWidget {
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(10)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 12,
-                offset: Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              'Shop',
-              style: AppTypography.inter(
-                color: Color(0xFFFCF7EF),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(16),
+              bottomRight: Radius.circular(16),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomItem extends StatelessWidget {
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = const Color(0xFF7F776D);
-    final isProfile = label.trim().toLowerCase() == 'profile';
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 56,
-        child: AnimatedScale(
-          scale: selected ? 1.08 : 1,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (isProfile)
-                Container(
-                  width: selected ? 32 : 26,
-                  height: selected ? 32 : 26,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected
-                        ? Color(0xFFFCF7EF).withValues(alpha: 0.14)
-                        : Colors.transparent,
-                  ),
-                  child: Center(
-                    child: selected
-                        ? ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ).createShader(bounds),
-                            blendMode: BlendMode.srcIn,
-                            child: Icon(
-                              icon,
-                              size: 22,
-                              color: Color(0xFFFCF7EF),
-                            ),
-                          )
-                        : Icon(icon, size: 18, color: color),
-                  ),
-                )
-              else
-                (selected
-                    ? ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(bounds),
-                        blendMode: BlendMode.srcIn,
-                        child: Icon(icon, size: 26, color: Color(0xFFFCF7EF)),
-                      )
-                    : Icon(icon, size: 20, color: color)),
-              const SizedBox(height: 2),
-              selected
-                  ? ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ).createShader(bounds),
-                      blendMode: BlendMode.srcIn,
-                      child: Text(
-                        label,
-                        style: AppTypography.inter(
-                          fontSize: 11,
-                          color: Color(0xFFFCF7EF),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    )
-                  : Text(
-                      label,
-                      style: AppTypography.inter(
-                        fontSize: 11,
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              const Icon(
+                Icons.storefront_outlined,
+                size: 19,
+                color: Color(0xFFFCF7EF),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Shop',
+                style: AppTypography.inter(
+                  color: const Color(0xFFFCF7EF),
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 11,
+                color: const Color(0xFFFCF7EF).withValues(alpha: 0.9),
+              ),
             ],
           ),
         ),
@@ -2350,42 +2302,7 @@ class _BottomItem extends StatelessWidget {
   }
 }
 
-class _ConvexNavClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path()..moveTo(0, 24);
-    path.quadraticBezierTo(size.width * 0.5, -10, size.width, 24);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    return path;
-  }
 
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-class _TopCurveHighlightPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, 28);
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0x00F7B25A), Color(0x90F29A37), Color(0x00F7B25A)],
-        stops: [0.3, 0.5, 0.7],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..isAntiAlias = true;
-    final path = Path()
-      ..moveTo(0, 24)
-      ..quadraticBezierTo(size.width * 0.5, -10, size.width, 24);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 // ignore: unused_element
 class _FeaturedProductsSection extends StatelessWidget {
