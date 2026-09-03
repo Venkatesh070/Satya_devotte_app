@@ -167,10 +167,10 @@ class RitualDay {
     'stepNumber': stepNumber,
     'title': title,
     'description': description,
+    'satyaBlessings': satyaBlessings,
     if (images.isNotEmpty) 'images': images,
     if (subSteps.isNotEmpty) 'subSteps': subSteps,
     if (requiredItems.isNotEmpty) 'requiredItems': requiredItems,
-    if (satyaBlessings.trim().isNotEmpty) 'satyaBlessings': satyaBlessings,
     if (steps.isNotEmpty) 'steps': steps.map((e) => e.toJson()).toList(),
   };
 

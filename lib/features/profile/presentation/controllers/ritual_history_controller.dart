@@ -54,16 +54,16 @@ class RitualHistoryController extends GetxController {
 
         final finished = payload['finished'];
         if (finished is List) {
-          final pendingIds = pendingRituals
-              .whereType<Map>()
-              .map((s) => _ritualIdFromSession(s))
-              .where((id) => id.isNotEmpty)
-              .toSet();
+          // One entry per ritual. Keep finished even if the user restarted
+          // the same ritual (PENDING) so completed count matches achievements.
           final unique = <String, dynamic>{};
           for (final session in finished) {
             if (session is! Map) continue;
             final id = _ritualIdFromSession(session);
-            if (id.isEmpty || pendingIds.contains(id)) continue;
+            if (id.isEmpty) continue;
+            // Skip sessions whose ritual was deleted / failed to populate.
+            final ritual = session['ritual'];
+            if (ritual is! Map) continue;
             unique.putIfAbsent(id, () => session);
           }
           finishedRituals.assignAll(unique.values);

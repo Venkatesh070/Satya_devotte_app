@@ -871,12 +871,15 @@ class _RitualFormState extends State<_RitualForm> {
     });
   }
 
+  bool get _hasPendingDayContent =>
+      _dayTitleCtrl.text.trim().isNotEmpty ||
+      _dayRequiredItems.isNotEmpty ||
+      _dayStepEntries.isNotEmpty ||
+      _daySatyaBlessingsCtrl.text.trim().isNotEmpty;
+
   void _saveDayEntry() {
     _flushPendingDayStepEntry();
-    final title = _dayTitleCtrl.text.trim();
-    if (title.isEmpty &&
-        _dayRequiredItems.isEmpty &&
-        _dayStepEntries.isEmpty) {
+    if (!_hasPendingDayContent) {
       return;
     }
     final editingIndex = _editingDayIndex;
@@ -891,6 +894,7 @@ class _RitualFormState extends State<_RitualForm> {
     final preservedDescription = editingIndex != null
         ? _dayEntries[editingIndex].description
         : '';
+    final title = _dayTitleCtrl.text.trim();
     final draft = _DayDraft(
       title: title.isEmpty ? 'Untitled Day' : title,
       description: preservedDescription,
@@ -1017,13 +1021,7 @@ class _RitualFormState extends State<_RitualForm> {
   }
 
   void _flushPendingDayEntry() {
-    if (!_showDayEditor) return;
-    final title = _dayTitleCtrl.text.trim();
-    if (title.isEmpty &&
-        _dayRequiredItems.isEmpty &&
-        _dayStepEntries.isEmpty) {
-      return;
-    }
+    if (!_showDayEditor || !_hasPendingDayContent) return;
     _saveDayEntry();
   }
 
