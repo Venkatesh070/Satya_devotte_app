@@ -32,3 +32,37 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+// Shorebird OTA        
+
+Build and send to playstore:
+
+shorebird release android 
+
+patch the release
+shorebird patch --platforms=android --release-version=1.0.0+13
+
+
+// Test Shorebird OTA
+
+1. Create a Shorebird Android release as an APK
+
+shorebird release android --artifact apk
+
+2. Verify the release
+shorebird releases list
+
+3. Install the Shorebird release on your Android phone
+shorebird preview
+
+4. Now make a code change
+
+5.Create an OTA patch
+shorebird patch android --track=staging
+
+6. Preview the staging OTA patch
+shorebird preview --track=staging
+
+7. Test the OTA behavior
+
+ 
