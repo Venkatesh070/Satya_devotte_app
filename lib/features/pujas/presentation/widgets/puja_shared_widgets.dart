@@ -6,10 +6,13 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_wizard.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
@@ -1078,6 +1081,30 @@ Future<void> openKnowMoreForPuja(
   Get.to(() => PoojaKnowMoreScreen(pooja: PoojaView(poojaMap)));
 }
 
+Future<void> openKnowMoreForRitual(
+  BuildContext context, {
+  required String id,
+  RitualModel? initialModel,
+}) async {
+  RitualModel? ritual = initialModel;
+  final needsFetch = ritual == null || ritual.sections.isEmpty;
+
+  if (needsFetch && id.isNotEmpty) {
+    try {
+      final ritualData =
+          await Get.find<RitualRemoteDataSource>().getRitualById(id);
+      ritual = ritualData;
+    } catch (e) {
+      debugPrint('Error fetching ritual detail for know more: $e');
+    }
+  }
+
+  if (!context.mounted) return;
+  if (ritual != null) {
+    Get.to<void>(() => RitualKnowMoreScreen(ritual: ritual!));
+  }
+}
+
 class EyeKnowMoreButton extends StatelessWidget {
   const EyeKnowMoreButton({super.key, required this.onTap});
   final VoidCallback onTap;
@@ -1104,4 +1131,192 @@ class EyeKnowMoreButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String resolveRitualRestrictionMessage({
+  required String rawError,
+  required int targetDay,
+  int? currentSessionDay,
+  int? lastCompletedDay,
+  String? ritualTitle,
+}) {
+  final lower = rawError.toLowerCase().trim();
+
+  // 1. Multiple rituals on the same day / already performed a ritual today
+  if (lower.contains('another ritual') ||
+      lower.contains('multiple ritual') ||
+      lower.contains('already performed a ritual') ||
+      lower.contains('already completed a ritual') ||
+      lower.contains('already in progress') ||
+      lower.contains('two rituals') ||
+      lower.contains('same day') ||
+      lower.contains('one ritual per day') ||
+      lower.contains('already performed today') ||
+      lower.contains('already completed today') ||
+      lower.contains('ritual completed today') ||
+      lower.contains('already performed a ritual for today')) {
+    return 'Multiple rituals cannot be performed on the same day. Please return tomorrow to perform this ritual.';
+  }
+
+  // 2. Future day out of sequence (e.g. Day 3 attempted when Day 1 is done and Day 2 is next)
+  final nextExpectedDay = (lastCompletedDay != null && lastCompletedDay > 0)
+      ? lastCompletedDay + 1
+      : (currentSessionDay ?? 1);
+
+  if (targetDay > nextExpectedDay ||
+      lower.contains('sequence') ||
+      lower.contains('previous day') ||
+      lower.contains('cannot skip') ||
+      lower.contains('before day') ||
+      lower.contains('not unlocked') ||
+      lower.contains('complete day') ||
+      lower.contains('invalid day') ||
+      lower.contains('future')) {
+    return 'Please complete Day $nextExpectedDay first before starting Day $targetDay. Ritual days must be performed in sequential order.';
+  }
+
+  // 3. Day of the same ritual already performed today (trying to perform next day on the same day)
+  if (lower.contains('day') &&
+      (lower.contains('tomorrow') ||
+          lower.contains('next day') ||
+          lower.contains('today') ||
+          lower.contains('already completed'))) {
+    final completedDay = lastCompletedDay ?? (targetDay > 1 ? targetDay - 1 : 1);
+    return 'You have already completed Day $completedDay today. Day $targetDay can only be performed tomorrow. Only one ritual day can be performed per day.';
+  }
+
+  // 4. Fallback for clean errors or generic fallback
+  if (lower.contains('schedule') ||
+      lower.contains('restrict') ||
+      lower.contains('not allowed')) {
+    return 'This ritual cannot be performed at this time. Please follow the designated ritual schedule.';
+  }
+
+  if (rawError.isNotEmpty &&
+      !rawError.contains('DioException') &&
+      !rawError.contains('HttpException') &&
+      !rawError.contains('SocketException') &&
+      !rawError.contains('{') &&
+      !rawError.contains('status code')) {
+    return rawError;
+  }
+
+  return 'Multiple rituals cannot be performed on the same day. Please return tomorrow to continue your ritual.';
+}
+
+void showRitualRestrictionDialog(
+  BuildContext context, {
+  required String message,
+  VoidCallback? onClose,
+}) {
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            Navigator.of(dialogContext).pop();
+            if (onClose != null) {
+              onClose();
+            } else {
+              Get.back();
+            }
+          }
+        },
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A1005),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFFFD180).withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD180).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month_outlined,
+                    size: 28,
+                    color: Color(0xFFFFD180),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Ritual Schedule',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.lora(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFFFD180),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.inter(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: const Color(0xFFFCF7EF).withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      if (onClose != null) {
+                        onClose();
+                      } else {
+                        Get.back();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFCF7EF),
+                      foregroundColor: const Color(0xFF255AE2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Close',
+                      style: AppTypography.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF255AE2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }

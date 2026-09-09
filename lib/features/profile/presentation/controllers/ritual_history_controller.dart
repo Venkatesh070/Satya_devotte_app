@@ -111,7 +111,9 @@ class RitualHistoryController extends GetxController {
     );
   }
 
-  Future<Map<String, dynamic>?> startRitual(String ritualId) async {
+  Future<({Map<String, dynamic>? data, String? error})> startRitualWithDetails(
+    String ritualId,
+  ) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
       final tempId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
@@ -119,27 +121,43 @@ class RitualHistoryController extends GetxController {
         'ritualId': ritualId,
         'tempId': tempId,
       });
-      return {
-        'session': {
-          '_id': tempId,
-          'ritual': ritualId,
-          'currentDay': 1,
-          'currentStep': 0,
+      return (
+        data: {
+          'session': {
+            '_id': tempId,
+            'ritual': ritualId,
+            'currentDay': 1,
+            'currentStep': 0,
+          },
         },
-      };
+        error: null,
+      );
     }
     try {
       final result = await _repository.startRitual(ritualId);
       final data = result['data'] ?? result;
       await fetchHistory(skipLoader: true);
-      return data is Map<String, dynamic> ? data : null;
+      return (
+        data: data is Map<String, dynamic> ? data : null,
+        error: null,
+      );
     } on DioException catch (e) {
-      _handleDioError(e);
-      return null;
+      final data = e.response?.data;
+      String? msg;
+      if (data is Map) {
+        msg = (data['message'] ?? data['error'])?.toString();
+      }
+      msg ??= e.message;
+      return (data: null, error: msg ?? 'Failed to start ritual');
     } catch (e) {
       debugPrint('Error starting ritual: $e');
-      return null;
+      return (data: null, error: e.toString());
     }
+  }
+
+  Future<Map<String, dynamic>?> startRitual(String ritualId) async {
+    final res = await startRitualWithDetails(ritualId);
+    return res.data;
   }
 
   Future<Map<String, dynamic>?> startDay(String sessionId) async {

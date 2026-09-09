@@ -11,7 +11,6 @@ import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_da
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
-import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
@@ -68,14 +67,6 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   Map<String, dynamic>? _pendingSession(RitualModel ritual) {
     if (!Get.isRegistered<RitualHistoryController>()) return null;
     return _history.findPendingSession(ritual.id);
-  }
-
-  String? _statusLabel(RitualModel ritual) {
-    return statusForRitual({
-      '_id': ritual.id,
-      'id': ritual.id,
-      'title': ritual.title,
-    });
   }
 
   bool _isDayCompleted(Map session, int dayNumber) {

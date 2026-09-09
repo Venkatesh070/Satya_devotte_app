@@ -335,14 +335,14 @@ class PoojaKitRepository {
         ApiEndpoints.confirmDelivery(orderId),
         data: {
           'satisfied': satisfied,
-          'feedback': feedback,
+          'feedback': (feedback ?? '').trim(),
           if (collectionCode != null && collectionCode.trim().isNotEmpty)
             'collectionCode': collectionCode.trim(),
         },
       );
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Could not confirm delivery.';
-      throw Exception(msg);
+      throw Exception(msg is String ? msg : msg.toString());
     }
   }
 

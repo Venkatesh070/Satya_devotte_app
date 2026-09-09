@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
@@ -81,12 +82,18 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
 
   int get _totalPages => _buildPages().length;
 
+  String? _startSessionError;
+
   Future<void> _startSession() async {
     if (!Get.isRegistered<RitualHistoryController>()) return;
     try {
       final history = Get.find<RitualHistoryController>();
-      final result = await history.startRitual(widget.ritual.id);
-      final session = result?['session'];
+      final result = await history.startRitualWithDetails(widget.ritual.id);
+      if (result.error != null && result.error!.isNotEmpty) {
+        _startSessionError = result.error;
+        return;
+      }
+      final session = result.data?['session'] ?? result.data;
       if (session is Map && mounted) {
         final id = (session['_id'] ?? session['id'])?.toString();
         if (id != null && id.isNotEmpty) {
@@ -133,108 +140,7 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
   bool _isStartingDay = false;
 
   void _showDayRestrictionDialog(String message) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) {
-              Navigator.of(dialogContext).pop();
-              Get.back();
-            }
-          },
-          child: Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A1005),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFFFD180).withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD180).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.calendar_month_outlined,
-                      size: 28,
-                      color: Color(0xFFFFD180),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Ritual Schedule',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.lora(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFFFD180),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.inter(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: const Color(0xFFFCF7EF).withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        Get.back();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFCF7EF),
-                        foregroundColor: const Color(0xFF255AE2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Close',
-                        style: AppTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF255AE2),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    showRitualRestrictionDialog(context, message: message);
   }
 
   Future<void> _startRitualSteps() async {
@@ -242,18 +148,73 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
     setState(() => _isStartingDay = true);
 
     try {
-      if (_sessionId == null && Get.isRegistered<RitualHistoryController>()) {
-        final result = await Get.find<RitualHistoryController>().startRitual(
+      final history = Get.isRegistered<RitualHistoryController>()
+          ? Get.find<RitualHistoryController>()
+          : null;
+
+      if (history != null) {
+        final session = history.findPendingSession(widget.ritual.id);
+        int maxCompleted = 0;
+        if (session != null) {
+          final completed = (session['completedDays'] as List?)
+                  ?.whereType<Map>()
+                  .map((d) => (d['dayNumber'] as num?)?.toInt() ?? 0)
+                  .toList() ??
+              [];
+          if (completed.isNotEmpty) {
+            maxCompleted = completed.reduce((a, b) => a > b ? a : b);
+          }
+        }
+        final currentDay = (session?['currentDay'] as num?)?.toInt() ?? 1;
+        final expectedDay = maxCompleted > 0 ? maxCompleted + 1 : currentDay;
+
+        if (_currentDay > expectedDay) {
+          _showDayRestrictionDialog(
+            'Please complete Day $expectedDay first before starting Day $_currentDay. Ritual days must be performed in sequential order.',
+          );
+          return;
+        }
+
+        if (session == null && _currentDay > 1) {
+          _showDayRestrictionDialog(
+            'Please start with Day 1 first before starting Day $_currentDay. Ritual days must be performed in sequential order.',
+          );
+          return;
+        }
+      }
+
+      if (_sessionId == null && history != null) {
+        if (_startSessionError != null && _startSessionError!.isNotEmpty) {
+          final formattedMsg = resolveRitualRestrictionMessage(
+            rawError: _startSessionError!,
+            targetDay: _currentDay,
+            ritualTitle: widget.ritual.title,
+          );
+          _showDayRestrictionDialog(formattedMsg);
+          return;
+        }
+
+        final result = await history.startRitualWithDetails(
           widget.ritual.id,
         );
-        final session = result?['session'];
+        if (result.error != null && result.error!.isNotEmpty) {
+          if (!mounted) return;
+          final formattedMsg = resolveRitualRestrictionMessage(
+            rawError: result.error!,
+            targetDay: _currentDay,
+            ritualTitle: widget.ritual.title,
+          );
+          _showDayRestrictionDialog(formattedMsg);
+          return;
+        }
+        final session = result.data?['session'] ?? result.data;
         if (session is Map) {
           _sessionId = (session['_id'] ?? session['id'])?.toString();
         }
       }
 
-      if (_sessionId != null && Get.isRegistered<RitualHistoryController>()) {
-        final errorMsg = await Get.find<RitualHistoryController>().updateProgress(
+      if (_sessionId != null && history != null) {
+        final errorMsg = await history.updateProgress(
           _sessionId!,
           1,
           currentDay: _currentDay,
@@ -261,7 +222,28 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
 
         if (errorMsg != null && errorMsg.isNotEmpty) {
           if (!mounted) return;
-          _showDayRestrictionDialog(errorMsg);
+          final session = history.findPendingSession(widget.ritual.id);
+          int? lastCompleted;
+          int? currentDay;
+          if (session != null) {
+            final completed = (session['completedDays'] as List?)
+                ?.whereType<Map>()
+                .map((d) => (d['dayNumber'] as num?)?.toInt() ?? 0)
+                .toList();
+            if (completed != null && completed.isNotEmpty) {
+              lastCompleted = completed.reduce((a, b) => a > b ? a : b);
+            }
+            currentDay = (session['currentDay'] as num?)?.toInt();
+          }
+
+          final formattedMsg = resolveRitualRestrictionMessage(
+            rawError: errorMsg,
+            targetDay: _currentDay,
+            currentSessionDay: currentDay,
+            lastCompletedDay: lastCompleted,
+            ritualTitle: widget.ritual.title,
+          );
+          _showDayRestrictionDialog(formattedMsg);
           return;
         }
       }
@@ -1283,12 +1265,10 @@ class _WizardGradientTitle extends StatelessWidget {
   const _WizardGradientTitle({
     required this.text,
     this.fontSize = 28,
-    this.textAlign = TextAlign.start,
   });
 
   final String text;
   final double fontSize;
-  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -1301,7 +1281,7 @@ class _WizardGradientTitle extends StatelessWidget {
       blendMode: BlendMode.srcIn,
       child: Text(
         text,
-        textAlign: textAlign,
+        textAlign: TextAlign.start,
         style: AppTypography.lora(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,

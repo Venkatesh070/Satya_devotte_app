@@ -15,10 +15,7 @@ class OrderFulfillmentFeedbackResult {
 }
 
 class OrderFulfillmentFeedbackSheet extends StatefulWidget {
-  const OrderFulfillmentFeedbackSheet({
-    super.key,
-    required this.isPickup,
-  });
+  const OrderFulfillmentFeedbackSheet({super.key, required this.isPickup});
 
   final bool isPickup;
 
@@ -45,18 +42,32 @@ class _OrderFulfillmentFeedbackSheetState
   final _feedbackCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _feedbackCtrl.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _feedbackCtrl.removeListener(_onTextChanged);
     _feedbackCtrl.dispose();
     super.dispose();
   }
 
+  bool get _canSubmit =>
+      _satisfied != null && _feedbackCtrl.text.trim().isNotEmpty;
+
   void _submit() {
-    if (_satisfied == null) return;
+    if (!_canSubmit) return;
     final feedback = _feedbackCtrl.text.trim();
     Navigator.of(context).pop(
       OrderFulfillmentFeedbackResult(
         satisfied: _satisfied!,
-        feedback: feedback.isEmpty ? null : feedback,
+        feedback: feedback,
       ),
     );
   }
@@ -69,9 +80,7 @@ class _OrderFulfillmentFeedbackSheetState
         : 'Your order was delivered. How was your experience?';
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         decoration: const BoxDecoration(
           color: Color(0xFFFCF7EF),
@@ -145,7 +154,9 @@ class _OrderFulfillmentFeedbackSheetState
               maxLines: 3,
               maxLength: 2000,
               decoration: InputDecoration(
-                labelText: 'Comments (optional)',
+                labelText: 'Comments',
+                hintText: 'Please leave your feedback...',
+                floatingLabelBehavior: FloatingLabelBehavior.always,
                 alignLabelWithHint: true,
                 filled: true,
                 fillColor: Colors.white,
@@ -153,16 +164,31 @@ class _OrderFulfillmentFeedbackSheetState
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Color(0xFFE7D5BC)),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE7D5BC)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFDC5B0A),
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
             SizedBox(
               height: 48,
               child: ElevatedButton(
-                onPressed: _satisfied == null ? null : _submit,
+                onPressed: _canSubmit ? _submit : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFDC5B0A),
+                  disabledBackgroundColor: const Color(
+                    0xFFDC5B0A,
+                  ).withValues(alpha: 0.35),
                   foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/pooja_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/ritual_remote_datasource.dart';
+import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
@@ -55,6 +56,7 @@ class _CatalogRow {
     this.imageUrl,
     this.rawPooja,
     this.rawRitual,
+    this.ritualModel,
   });
 
   final String id;
@@ -66,6 +68,7 @@ class _CatalogRow {
   final String? imageUrl;
   final Map<String, dynamic>? rawPooja;
   final Map<String, dynamic>? rawRitual;
+  final RitualModel? ritualModel;
 
   String? get statusLabel {
     if (rawRitual != null) {
@@ -229,6 +232,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               totalDays: days,
               imageUrl: item.imageUrl,
               rawRitual: {'_id': item.id, 'id': item.id, 'title': item.title},
+              ritualModel: item,
             ),
           );
         }
@@ -445,7 +449,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 110),
       sliver: SliverList.separated(
         itemCount: _items.length + 1,
-        separatorBuilder: (_, __) =>
+        separatorBuilder: (context, index) =>
             const Divider(height: 1, thickness: 1, color: Color(0x14000000)),
         itemBuilder: (context, index) {
           if (index == _items.length) {
@@ -552,8 +556,8 @@ class _CatalogCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _fallback(),
-                        placeholder: (_, __) => _fallback(),
+                        errorWidget: (context, url, error) => _fallback(),
+                        placeholder: (context, url) => _fallback(),
                       )
                     : _fallback(),
               ),
@@ -585,6 +589,17 @@ class _CatalogCard extends StatelessWidget {
                               context,
                               id: item.id,
                               initialData: item.rawPooja,
+                            );
+                          },
+                        ),
+                      ] else if (item.rawRitual != null || item.ritualModel != null) ...[
+                        const SizedBox(width: 8),
+                        EyeKnowMoreButton(
+                          onTap: () {
+                            openKnowMoreForRitual(
+                              context,
+                              id: item.id,
+                              initialModel: item.ritualModel,
                             );
                           },
                         ),
@@ -646,6 +661,18 @@ class _CatalogCard extends StatelessWidget {
                               color: const Color(0xFFE35600),
                             ),
                           ),
+                          if (item.subtitle.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            RichTextDisplay(
+                              item.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF6C5B46),
+                              ),
+                            ),
+                          ],
                         ],
                       );
                     })
