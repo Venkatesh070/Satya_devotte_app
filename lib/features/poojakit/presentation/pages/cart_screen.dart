@@ -26,6 +26,7 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final _pickupNameCtrl = TextEditingController();
   final _pickupPhoneCtrl = TextEditingController();
+  final _showLocationError = false.obs;
 
   @override
   void initState() {
@@ -124,7 +125,9 @@ class _CartScreenState extends State<CartScreen> {
                 onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                 child: Obx(() {
                   if (c.isLoading && c.cart == null) {
-                    return const SizedBox.shrink();
+                    return const Center(
+                      child: ChakraLoadingIndicator(size: 36),
+                    );
                   }
 
                   final cart = c.cart;
@@ -154,6 +157,7 @@ class _CartScreenState extends State<CartScreen> {
                         nameController: _pickupNameCtrl,
                         phoneController: _pickupPhoneCtrl,
                         onMethodChanged: (method) {
+                          _showLocationError.value = false;
                           final items = c.cart?.items
                                   .map(
                                     (i) => {
@@ -221,6 +225,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
             Obx(() {
+              if (c.isLoading && c.cart == null) {
+                return const SizedBox.shrink();
+              }
               final cart = c.cart;
               if (cart == null || cart.isEmpty) {
                 return _GradientCtaBar(
@@ -229,10 +236,61 @@ class _CartScreenState extends State<CartScreen> {
                   onTap: () => Get.off(() => const PoojaKitPage()),
                 );
               }
-              return _GradientCtaBar(
-                enabled: true,
-                label: 'Proceed to Payment',
-                onTap: () => _handleProceedToPayment(c, checkoutCtrl),
+
+              final hasOption = checkoutCtrl.hasFulfillmentMethod;
+              final isDeliveryWithoutAddress =
+                  checkoutCtrl.isDelivery && checkoutCtrl.shippingAddress == null;
+              final showError =
+                  _showLocationError.value && isDeliveryWithoutAddress;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showError)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE8E8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFF05252),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Color(0xFFE02424),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Please set delivery location to proceed.',
+                              style: AppTypography.inter(
+                                color: const Color(0xFF9B1C1C),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  _GradientCtaBar(
+                    enabled: hasOption,
+                    label: 'Proceed to Payment',
+                    onTap: hasOption
+                        ? () => _handleProceedToPayment(c, checkoutCtrl)
+                        : null,
+                  ),
+                ],
               );
             }),
           ],
@@ -250,6 +308,7 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
     if (checkoutCtrl.isPickup) {
+      _showLocationError.value = false;
       if (checkoutCtrl.pickupLocation == null) {
         final items = cartCtrl.cart?.items
                 .map(
@@ -280,9 +339,10 @@ class _CartScreenState extends State<CartScreen> {
     } else {
       final address = checkoutCtrl.shippingAddress;
       if (address == null) {
-        Get.toNamed(AppRoutes.poojaKitCheckout, arguments: null);
+        _showLocationError.value = true;
         return;
       }
+      _showLocationError.value = false;
       if (checkoutCtrl.selectedRate == null) {
         if (checkoutCtrl.quoteRates.isEmpty && !checkoutCtrl.isQuoting) {
           final items = cartCtrl.cart?.items

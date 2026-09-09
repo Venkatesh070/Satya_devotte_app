@@ -486,46 +486,70 @@ class _CartBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        _CircleIconButton(
-          icon: Icons.shopping_cart_outlined,
-          onTap: () async {
-            await controller.fetchCart();
-            if (context.mounted) {
-              Get.toNamed(AppRoutes.poojaKitCart);
-            }
-          },
-        ),
-        Positioned(
-          right: -1,
-          top: -1,
-          child: Obx(() {
-            final count = controller.itemCount;
-            if (count == 0) return const SizedBox.shrink();
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE95700),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Color(0xFFFCF7EF), width: 1.2),
+    return Material(
+      color: const Color(0xFFFCF7EF),
+      shape: const CircleBorder(),
+      elevation: 5,
+      shadowColor: const Color(0x22000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () {
+          Get.toNamed(AppRoutes.poojaKitCart);
+          controller.fetchCart();
+        },
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              const Icon(
+                Icons.shopping_cart_outlined,
+                size: 19,
+                color: Color(0xFF1C1C1C),
               ),
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  color: Color(0xFFFCF7EF),
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
+              Positioned(
+                right: -2,
+                top: -2,
+                child: IgnorePointer(
+                  child: Obx(() {
+                    final count = controller.itemCount;
+                    if (count == 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE95700),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFFCF7EF),
+                          width: 1.2,
+                        ),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 17,
+                        minHeight: 17,
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: Color(0xFFFCF7EF),
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }),
                 ),
-                textAlign: TextAlign.center,
               ),
-            );
-          }),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }
