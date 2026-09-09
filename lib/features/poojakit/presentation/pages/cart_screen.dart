@@ -9,10 +9,10 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
-import 'package:satya_devotte_app/features/poojakit/data/models/pickup_location_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/shipping_quote_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
 
@@ -24,45 +24,87 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  final _pickupNameCtrl = TextEditingController();
+  final _pickupPhoneCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     final c = Get.find<CartController>();
     c.fetchCart();
     final checkout = Get.find<PoojaKitCheckoutController>();
-    if (checkout.isPickup && checkout.pickupLocation == null) {
-      final cart = Get.find<CartController>();
-      final items = cart.cart?.items
-              .map(
-                (i) => {
-                  'productId': i.product.id,
-                  'quantity': i.quantity,
-                },
-              )
-              .toList() ??
-          [];
-      if (items.isNotEmpty) {
-        checkout.fetchPickupLocation(cartItems: items);
-      } else {
-        checkout.fetchPickupLocation();
-      }
-    } else if (checkout.isDelivery &&
-        checkout.shippingAddress != null &&
-        checkout.quoteRates.isEmpty) {
-      final items = c.cart?.items
-              .map(
-                (i) => {
-                  'productId': i.product.id,
-                  'quantity': i.quantity,
-                },
-              )
-              .toList() ??
-          [];
-      checkout.fetchShippingQuote(
-        checkout.shippingAddress!,
-        items: items.isEmpty ? null : items,
-      );
+    checkout.resetFulfillmentMethod();
+    _initCollectorDetails(checkout);
+
+    // Proactively prefetch pickup location so it is ready immediately with 0 buffering
+    if (checkout.pickupLocation == null && !checkout.isLoadingPickup) {
+      checkout.fetchPickupLocation();
     }
+  }
+
+  void _initCollectorDetails(PoojaKitCheckoutController checkout) {
+    final addr = checkout.shippingAddress;
+    if (addr != null) {
+      if (addr.fullName.trim().isNotEmpty) {
+        _pickupNameCtrl.text = addr.fullName.trim();
+      }
+      if (addr.phone.trim().isNotEmpty) {
+        _pickupPhoneCtrl.text = addr.phone.trim();
+      }
+    }
+    if (_pickupNameCtrl.text.isEmpty || _pickupPhoneCtrl.text.isEmpty) {
+      if (Get.isRegistered<ProfileController>()) {
+        final profile = Get.find<ProfileController>().resolvedUser;
+        if (profile != null) {
+          if (_pickupNameCtrl.text.isEmpty) {
+            final name = (profile['fullName'] ??
+                    profile['name'] ??
+                    profile['displayName'] ??
+                    '')
+                .toString()
+                .trim();
+            if (name.isNotEmpty) _pickupNameCtrl.text = name;
+          }
+          if (_pickupPhoneCtrl.text.isEmpty) {
+            final phone = (profile['phone'] ??
+                    profile['mobile'] ??
+                    profile['phoneNumber'] ??
+                    '')
+                .toString()
+                .trim();
+            if (phone.isNotEmpty) _pickupPhoneCtrl.text = phone;
+          }
+        }
+      }
+    }
+  }
+
+  void _syncPickupContactToCheckout() {
+    final checkout = Get.find<PoojaKitCheckoutController>();
+    final currentAddr = checkout.shippingAddress;
+    final name = _pickupNameCtrl.text.trim();
+    final phone = _pickupPhoneCtrl.text.trim();
+    final updated = AddressModel(
+      fullName: name,
+      phone: phone,
+      addressLine1: currentAddr?.addressLine1 ?? '',
+      city: currentAddr?.city ?? '',
+      state: currentAddr?.state ?? '',
+      postalCode: currentAddr?.postalCode ?? '',
+      country: currentAddr?.country ?? 'South Africa',
+      lat: currentAddr?.lat,
+      lng: currentAddr?.lng,
+      localArea: currentAddr?.localArea,
+      enteredAddress: currentAddr?.enteredAddress,
+    );
+    checkout.saveShippingAddress(updated);
+  }
+
+  @override
+  void dispose() {
+    _pickupNameCtrl.dispose();
+    _pickupPhoneCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,18 +119,23 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             _ShopTopBar(title: 'Shopping Cart', onBack: () => Get.back()),
             Expanded(
-              child: Obx(() {
-                if (c.isLoading && c.cart == null) {
-                  return const SizedBox.shrink();
-                }
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                child: Obx(() {
+                  if (c.isLoading && c.cart == null) {
+                    return const SizedBox.shrink();
+                  }
 
-                final cart = c.cart;
-                if (cart == null || cart.isEmpty) {
-                  return const _EmptyCart();
-                }
+                  final cart = c.cart;
+                  if (cart == null || cart.isEmpty) {
+                    return const _EmptyCart();
+                  }
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                   child: Column(
                     children: [
                       ...cart.items.map(
@@ -102,10 +149,44 @@ class _CartScreenState extends State<CartScreen> {
                         thickness: 0.7,
                         color: Color(0x1A6B4A2B),
                       ),
-                      Obx(
-                        () => _FulfillmentMethodSection(
-                          method: checkoutCtrl.fulfillmentMethod,
-                          onChanged: (method) {
+                      _DeliveryOptionsSection(
+                        checkoutCtrl: checkoutCtrl,
+                        nameController: _pickupNameCtrl,
+                        phoneController: _pickupPhoneCtrl,
+                        onMethodChanged: (method) {
+                          final items = c.cart?.items
+                                  .map(
+                                    (i) => {
+                                      'productId': i.product.id,
+                                      'quantity': i.quantity,
+                                    },
+                                  )
+                                  .toList() ??
+                              [];
+                          checkoutCtrl.setFulfillmentMethod(
+                            method,
+                            pickupItems:
+                                items.isNotEmpty ? items : null,
+                          );
+                        },
+                        onSyncPickupContact: _syncPickupContactToCheckout,
+                        onRetryPickup: () {
+                          final items = c.cart?.items
+                                  .map(
+                                    (i) => {
+                                      'productId': i.product.id,
+                                      'quantity': i.quantity,
+                                    },
+                                  )
+                                  .toList() ??
+                              [];
+                          checkoutCtrl.fetchPickupLocation(
+                            cartItems: items.isNotEmpty ? items : null,
+                          );
+                        },
+                        onRetryQuote: () {
+                          final addr = checkoutCtrl.shippingAddress;
+                          if (addr != null) {
                             final items = c.cart?.items
                                     .map(
                                       (i) => {
@@ -115,92 +196,22 @@ class _CartScreenState extends State<CartScreen> {
                                     )
                                     .toList() ??
                                 [];
-                            checkoutCtrl.setFulfillmentMethod(
-                              method,
-                              pickupItems:
-                                  items.isNotEmpty ? items : null,
+                            checkoutCtrl.fetchShippingQuote(
+                              addr,
+                              items: items.isEmpty ? null : items,
                             );
-                          },
+                          }
+                        },
+                        onChangeAddressTap: () => Get.toNamed(
+                          AppRoutes.poojaKitCheckout,
+                          arguments: null,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Obx(() {
-                        if (checkoutCtrl.isPickup) {
-                          return _PickupLocationSection(
-                            location: checkoutCtrl.pickupLocation,
-                            isLoading: checkoutCtrl.isLoadingPickup,
-                            onRetry: () {
-                              final items = c.cart?.items
-                                      .map(
-                                        (i) => {
-                                          'productId': i.product.id,
-                                          'quantity': i.quantity,
-                                        },
-                                      )
-                                      .toList() ??
-                                  [];
-                              checkoutCtrl.fetchPickupLocation(
-                                cartItems: items.isNotEmpty ? items : null,
-                              );
-                            },
-                            onEditContact: () => Get.toNamed(
-                              AppRoutes.poojaKitCheckout,
-                              arguments: null,
-                            ),
-                            contactName:
-                                checkoutCtrl.shippingAddress?.fullName,
-                            contactPhone:
-                                checkoutCtrl.shippingAddress?.phone,
-                          );
-                        }
-                        return Column(
-                          children: [
-                            _DeliveryLocationSection(
-                              address: checkoutCtrl.shippingAddress,
-                              onChangeTap: () => Get.toNamed(
-                                AppRoutes.poojaKitCheckout,
-                                arguments: null,
-                              ),
-                            ),
-                            if (checkoutCtrl.shippingAddress != null) ...[
-                              const SizedBox(height: 12),
-                              _CourierRatesSection(
-                                rates: checkoutCtrl.quoteRates,
-                                selected: checkoutCtrl.selectedRate,
-                                currency: checkoutCtrl.quoteCurrency,
-                                isLoading: checkoutCtrl.isQuoting,
-                                error: checkoutCtrl.lastError,
-                                onSelect: checkoutCtrl.selectRate,
-                                onRetry: () {
-                                  final addr = checkoutCtrl.shippingAddress;
-                                  if (addr != null) {
-                                    final items = c.cart?.items
-                                            .map(
-                                              (i) => {
-                                                'productId': i.product.id,
-                                                'quantity': i.quantity,
-                                              },
-                                            )
-                                            .toList() ??
-                                        [];
-                                    checkoutCtrl.fetchShippingQuote(
-                                      addr,
-                                      items: items.isEmpty ? null : items,
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
-                          ],
-                        );
-                      }),
-                      const SizedBox(height: 12),
-                      Obx(
-                        () => _BillSummarySection(
-                          cart: cart,
-                          deliveryCharge: checkoutCtrl.previewDeliveryCharge,
-                          isPickup: checkoutCtrl.isPickup,
-                        ),
+                      _BillSummarySection(
+                        cart: cart,
+                        deliveryCharge: checkoutCtrl.previewDeliveryCharge,
+                        isPickup: checkoutCtrl.isPickup,
                       ),
                       const SizedBox(height: 86),
                     ],
@@ -208,6 +219,7 @@ class _CartScreenState extends State<CartScreen> {
                 );
               }),
             ),
+          ),
             Obx(() {
               final cart = c.cart;
               if (cart == null || cart.isEmpty) {
@@ -233,6 +245,10 @@ class _CartScreenState extends State<CartScreen> {
     CartController cartCtrl,
     PoojaKitCheckoutController checkoutCtrl,
   ) async {
+    if (!checkoutCtrl.hasFulfillmentMethod) {
+      ToastUtil.showInfo('Please select a delivery option (Pick from Warehouse or Door Delivery).');
+      return;
+    }
     if (checkoutCtrl.isPickup) {
       if (checkoutCtrl.pickupLocation == null) {
         final items = cartCtrl.cart?.items
@@ -254,13 +270,13 @@ class _CartScreenState extends State<CartScreen> {
           return;
         }
       }
-      final contact = checkoutCtrl.shippingAddress;
-      if (contact == null ||
-          contact.fullName.trim().isEmpty ||
-          contact.phone.trim().isEmpty) {
-        Get.toNamed(AppRoutes.poojaKitCheckout, arguments: null);
+      final name = _pickupNameCtrl.text.trim();
+      final phone = _pickupPhoneCtrl.text.trim();
+      if (name.isEmpty || phone.isEmpty) {
+        ToastUtil.showInfo('Please enter collector name and phone for pickup.');
         return;
       }
+      _syncPickupContactToCheckout();
     } else {
       final address = checkoutCtrl.shippingAddress;
       if (address == null) {
@@ -290,7 +306,10 @@ class _CartScreenState extends State<CartScreen> {
       }
     }
 
-    final init = await checkoutCtrl.initiateCartCheckout();
+    final init = await checkoutCtrl.initiateCartCheckout(
+      contactFullName: checkoutCtrl.isPickup ? _pickupNameCtrl.text.trim() : null,
+      contactPhone: checkoutCtrl.isPickup ? _pickupPhoneCtrl.text.trim() : null,
+    );
     if (init != null) {
       Get.toNamed(AppRoutes.poojaKitPayment, arguments: init);
       return;
@@ -630,102 +649,484 @@ class _EmptyCart extends StatelessWidget {
   }
 }
 
-class _FulfillmentMethodSection extends StatelessWidget {
-  const _FulfillmentMethodSection({
-    required this.method,
-    required this.onChanged,
+class _DeliveryOptionsSection extends StatelessWidget {
+  const _DeliveryOptionsSection({
+    required this.checkoutCtrl,
+    required this.nameController,
+    required this.phoneController,
+    required this.onMethodChanged,
+    required this.onSyncPickupContact,
+    required this.onRetryPickup,
+    required this.onRetryQuote,
+    required this.onChangeAddressTap,
   });
 
-  final FulfillmentMethod method;
-  final ValueChanged<FulfillmentMethod> onChanged;
+  final PoojaKitCheckoutController checkoutCtrl;
+  final TextEditingController nameController;
+  final TextEditingController phoneController;
+  final ValueChanged<FulfillmentMethod> onMethodChanged;
+  final VoidCallback onSyncPickupContact;
+  final VoidCallback onRetryPickup;
+  final VoidCallback onRetryQuote;
+  final VoidCallback onChangeAddressTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E0D6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Fulfilment method',
-            style: AppTypography.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1C1917),
+    final isPickup = checkoutCtrl.isPickup;
+    final isDelivery = checkoutCtrl.isDelivery;
+    final savedAddress = checkoutCtrl.shippingAddress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Delivery Options',
+          style: AppTypography.lora(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1C1917),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // 1. Pick from Warehouse Card
+        Material(
+          color: const Color(0xFFFCF7EF),
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () => onMethodChanged(FulfillmentMethod.pickup),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFCF7EF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isPickup
+                      ? const Color(0xFFE95700)
+                      : const Color(0xFFE8E0D6),
+                  width: isPickup ? 1.4 : 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Pick from Warehouse',
+                          style: AppTypography.inter(
+                            fontSize: 14,
+                            fontWeight:
+                                isPickup ? FontWeight.w800 : FontWeight.w600,
+                            color: const Color(0xFF1C1917),
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        isPickup
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 22,
+                        color: isPickup
+                            ? const Color(0xFFE95700)
+                            : const Color(0xFF78716C),
+                      ),
+                    ],
+                  ),
+                  if (isPickup) ...[
+                    const SizedBox(height: 14),
+                    if (checkoutCtrl.isLoadingPickup &&
+                        checkoutCtrl.pickupLocation == null)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Center(
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFDC5B0A),
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (checkoutCtrl.pickupLocation == null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Could not load pickup location.',
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF6C5B46),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: onRetryPickup,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      if (checkoutCtrl.pickupLocation!.company.isNotEmpty) ...[
+                        Text(
+                          checkoutCtrl.pickupLocation!.company,
+                          style: AppTypography.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF4A1C00),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                      ],
+                      Text(
+                        checkoutCtrl.pickupLocation!.singleLine,
+                        style: AppTypography.inter(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
+                          color: const Color(0xFF78716C),
+                        ),
+                      ),
+                      if (checkoutCtrl
+                          .pickupLocation!.hours.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Hours: ${checkoutCtrl.pickupLocation!.hours}',
+                          style: AppTypography.inter(
+                            fontSize: 10.5,
+                            color: const Color(0xFF8B765D),
+                          ),
+                        ),
+                      ],
+                      if (checkoutCtrl.pickupLocation!.instructions
+                          .trim()
+                          .isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          checkoutCtrl.pickupLocation!.instructions,
+                          style: AppTypography.inter(
+                            fontSize: 10,
+                            color: const Color(0xFF8B765D),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      Text(
+                        'Collector details :',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF4A1C00),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _CartInputField(
+                        controller: nameController,
+                        hint: 'Collector name',
+                        icon: Icons.person_outline,
+                        onChanged: (_) => onSyncPickupContact(),
+                      ),
+                      const SizedBox(height: 10),
+                      _CartInputField(
+                        controller: phoneController,
+                        hint: 'Collector phone number',
+                        keyboardType: TextInputType.phone,
+                        icon: Icons.phone_outlined,
+                        onChanged: (_) => onSyncPickupContact(),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _MethodChip(
-                  label: 'Pickup',
-                  selected: method == FulfillmentMethod.pickup,
-                  onTap: () => onChanged(FulfillmentMethod.pickup),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 2. Door Delivery Card
+        Material(
+          color: const Color(0xFFFCF7EF),
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () => onMethodChanged(FulfillmentMethod.delivery),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFCF7EF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDelivery
+                      ? const Color(0xFFE95700)
+                      : const Color(0xFFE8E0D6),
+                  width: isDelivery ? 1.4 : 1,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MethodChip(
-                  label: 'Delivery',
-                  selected: method == FulfillmentMethod.delivery,
-                  onTap: () => onChanged(FulfillmentMethod.delivery),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Door Delivery',
+                          style: AppTypography.inter(
+                            fontSize: 14,
+                            fontWeight:
+                                isDelivery ? FontWeight.w800 : FontWeight.w600,
+                            color: const Color(0xFF1C1917),
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        isDelivery
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 22,
+                        color: isDelivery
+                            ? const Color(0xFFE95700)
+                            : const Color(0xFF78716C),
+                      ),
+                    ],
+                  ),
+                  if (isDelivery) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Address',
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C1917),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (savedAddress != null) ...[
+                      Builder(
+                        builder: (_) {
+                          final name = savedAddress.fullName.trim();
+                          final phone = savedAddress.phone.trim();
+                          final header = [
+                            if (name.isNotEmpty) name,
+                            if (phone.isNotEmpty) phone,
+                          ].join(', ');
+                          if (header.isEmpty) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              header,
+                              style: AppTypography.inter(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF554D44),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      Text(
+                        [
+                          savedAddress.addressLine1,
+                          savedAddress.city,
+                          savedAddress.state,
+                          savedAddress.postalCode,
+                          savedAddress.country,
+                        ].where((e) => e.trim().isNotEmpty).join(', '),
+                        style: AppTypography.inter(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF78716C),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    ElevatedButton(
+                      onPressed: onChangeAddressTap,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2255D4),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 8,
+                        ),
+                        elevation: 2,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        savedAddress == null
+                            ? 'Set Delivery Location'
+                            : 'Change Address',
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (savedAddress != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        'Based on your address, you are eligible for the below delivery options.',
+                        style: AppTypography.inter(
+                          fontSize: 11.5,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1C1917),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (checkoutCtrl.isQuoting)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFDC5B0A),
+                              ),
+                            ),
+                          ),
+                        )
+                      else if (checkoutCtrl.quoteRates.isEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              checkoutCtrl.lastError ??
+                                  'No rates available for this address.',
+                              style: AppTypography.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF6C5B46),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: onRetryQuote,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        )
+                      else
+                        ...checkoutCtrl.quoteRates.map((rate) {
+                          final isSelected =
+                              checkoutCtrl.selectedRate?.serviceLevelCode ==
+                                  rate.serviceLevelCode;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _CourierRateSubCard(
+                              rate: rate,
+                              isSelected: isSelected,
+                              currency: checkoutCtrl.quoteCurrency,
+                              onTap: () => checkoutCtrl.selectRate(rate),
+                            ),
+                          );
+                        }),
+                    ],
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _MethodChip extends StatelessWidget {
-  const _MethodChip({
-    required this.label,
-    required this.selected,
+class _CourierRateSubCard extends StatelessWidget {
+  const _CourierRateSubCard({
+    required this.rate,
+    required this.isSelected,
+    required this.currency,
     required this.onTap,
   });
 
-  final String label;
-  final bool selected;
+  final ShippingRateModel rate;
+  final bool isSelected;
+  final String currency;
   final VoidCallback onTap;
+
+  static String _formatPrice(num value) {
+    if (value % 1 == 0) return value.toInt().toStringAsFixed(0);
+    return value.toStringAsFixed(2);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFFFFF0E4) : const Color(0xFFFFF7E8),
-      borderRadius: BorderRadius.circular(12),
+      color: isSelected ? const Color(0xFFFFF0E4) : const Color(0xFFFFF7E8),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 44,
-          alignment: Alignment.center,
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected
+              color: isSelected
                   ? const Color(0xFFE95700)
                   : const Color(0xFFE8E0D6),
-              width: selected ? 1.4 : 1,
+              width: isSelected ? 1.4 : 1,
             ),
           ),
-          child: Text(
-            label,
-            style: AppTypography.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: selected
-                  ? const Color(0xFFE95700)
-                  : const Color(0xFF6C5B46),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rate.serviceLevelName.isEmpty
+                          ? rate.serviceLevelCode
+                          : rate.serviceLevelName,
+                      style: AppTypography.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C1917),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$currency ${_formatPrice(rate.rate)}',
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? const Color(0xFFDC5B0A)
+                            : const Color(0xFF78716C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
+                size: 22,
+                color: isSelected
+                    ? const Color(0xFFE95700)
+                    : const Color(0xFF78716C),
+              ),
+            ],
           ),
         ),
       ),
@@ -733,437 +1134,113 @@ class _MethodChip extends StatelessWidget {
   }
 }
 
-class _PickupLocationSection extends StatelessWidget {
-  const _PickupLocationSection({
-    required this.location,
-    required this.isLoading,
-    required this.onRetry,
-    required this.onEditContact,
-    this.contactName,
-    this.contactPhone,
+class _CartInputField extends StatefulWidget {
+  const _CartInputField({
+    required this.controller,
+    required this.hint,
+    this.keyboardType,
+    this.icon,
+    this.onChanged,
   });
 
-  final PickupLocationModel? location;
-  final bool isLoading;
-  final VoidCallback onRetry;
-  final VoidCallback onEditContact;
-  final String? contactName;
-  final String? contactPhone;
+  final TextEditingController controller;
+  final String hint;
+  final TextInputType? keyboardType;
+  final IconData? icon;
+  final ValueChanged<String>? onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E0D6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Pickup location',
-            style: AppTypography.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1C1917),
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (isLoading && location == null)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFFDC5B0A),
-                  ),
-                ),
-              ),
-            )
-          else if (location == null)
-            Column(
-              children: [
-                Text(
-                  'Could not load pickup location.',
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF6C5B46),
-                  ),
-                ),
-                TextButton(onPressed: onRetry, child: const Text('Retry')),
-              ],
-            )
-          else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7E8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8E0D6)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    location!.singleLine,
-                    style: AppTypography.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF6C5B46),
-                    ),
-                  ),
-                  if (location!.hours.trim().isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Hours: ${location!.hours}',
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        color: const Color(0xFF8B765D),
-                      ),
-                    ),
-                  ],
-                  if (location!.instructions.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      location!.instructions,
-                      style: AppTypography.inter(
-                        fontSize: 10,
-                        color: const Color(0xFF8B765D),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Collector: ${(contactName ?? '').trim().isEmpty ? 'Not set' : contactName}'
-              '${(contactPhone ?? '').trim().isEmpty ? '' : ' · $contactPhone'}',
-              style: AppTypography.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF6C5B46),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.center,
-              child: OutlinedButton(
-                onPressed: onEditContact,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFE95700),
-                  side: const BorderSide(color: Color(0xFFE95700)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  'Set name & phone',
-                  style: AppTypography.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFFE95700),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  State<_CartInputField> createState() => _CartInputFieldState();
 }
 
-class _CourierRatesSection extends StatelessWidget {
-  const _CourierRatesSection({
-    required this.rates,
-    required this.selected,
-    required this.currency,
-    required this.isLoading,
-    required this.onSelect,
-    required this.onRetry,
-    this.error,
-  });
+class _CartInputFieldState extends State<_CartInputField> {
+  late final FocusNode _focusNode;
 
-  final List<ShippingRateModel> rates;
-  final ShippingRateModel? selected;
-  final String currency;
-  final bool isLoading;
-  final String? error;
-  final ValueChanged<ShippingRateModel> onSelect;
-  final VoidCallback onRetry;
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
 
-  static String _formatPrice(num value) {
-    if (value % 1 == 0) return value.toInt().toStringAsFixed(2);
-    return value.toStringAsFixed(2);
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E0D6)),
+    final hasFocus = _focusNode.hasFocus;
+
+    return TextField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      keyboardType: widget.keyboardType,
+      textInputAction: TextInputAction.done,
+      onEditingComplete: () => _focusNode.unfocus(),
+      onSubmitted: (_) => _focusNode.unfocus(),
+      onTapOutside: (_) => _focusNode.unfocus(),
+      onChanged: widget.onChanged,
+      style: AppTypography.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: const Color(0xFF4A1C00),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'The Courier Guy',
-            style: AppTypography.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1C1917),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Choose a door-to-door service level',
-            style: AppTypography.inter(
-              fontSize: 10,
-              color: const Color(0xFF6C5B46),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFFDC5B0A),
-                  ),
-                ),
-              ),
-            )
-          else if (rates.isEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  error ?? 'No rates available for this address.',
-                  style: AppTypography.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF6C5B46),
-                  ),
-                ),
-                TextButton(onPressed: onRetry, child: const Text('Retry')),
-              ],
-            )
-          else
-            ...rates.map((rate) {
-              final isSelected =
-                  selected?.serviceLevelCode == rate.serviceLevelCode;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: isSelected
-                      ? const Color(0xFFFFF0E4)
-                      : const Color(0xFFFFF7E8),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    onTap: () => onSelect(rate),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFFE95700)
-                              : const Color(0xFFE8E0D6),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_off,
-                            size: 18,
-                            color: isSelected
-                                ? const Color(0xFFE95700)
-                                : const Color(0xFF9B958E),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  rate.serviceLevelName.isEmpty
-                                      ? rate.serviceLevelCode
-                                      : rate.serviceLevelName,
-                                  style: AppTypography.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF1C1917),
-                                  ),
-                                ),
-                                if (rate.description.trim().isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    rate.description,
-                                    style: AppTypography.inter(
-                                      fontSize: 10,
-                                      color: const Color(0xFF6C5B46),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '$currency ${_formatPrice(rate.rate)}',
-                            style: AppTypography.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFFDC5B0A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeliveryLocationSection extends StatelessWidget {
-  const _DeliveryLocationSection({
-    required this.onChangeTap,
-    required this.address,
-  });
-
-  final VoidCallback onChangeTap;
-  final AddressModel? address;
-
-  @override
-  Widget build(BuildContext context) {
-    final savedAddress = address;
-    final addressText = savedAddress == null
-        ? 'No location set'
-        : [
-            savedAddress.addressLine1,
-            savedAddress.city,
-            savedAddress.postalCode,
-            savedAddress.country,
-          ].where((e) => e.trim().isNotEmpty).join(', ');
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: Color(0xFFFCF7EF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E0D6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Delivery Location',
-            style: AppTypography.lora(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1C1917),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF7E8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE8E0D6)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ).createShader(bounds),
-                  blendMode: BlendMode.srcIn,
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: widget.hint,
+        hintStyle: AppTypography.inter(
+          fontSize: 11,
+          color: const Color(0xFFB7AAA0),
+        ),
+        prefixIcon: widget.icon == null
+            ? null
+            : Icon(widget.icon, size: 16, color: const Color(0xFF8B765D)),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 32,
+          minHeight: 32,
+        ),
+        suffixIcon: hasFocus
+            ? null
+            : InkWell(
+                onTap: () => _focusNode.requestFocus(),
+                borderRadius: BorderRadius.circular(16),
+                child: const SizedBox(
+                  width: 32,
+                  height: 32,
                   child: Icon(
-                    Icons.location_on_outlined,
-                    size: 18,
-                    color: Color(0xFF6C5B46),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    addressText,
-                    style: AppTypography.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF6C5B46),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.center,
-            child: OutlinedButton(
-              onPressed: onChangeTap,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE95700),
-                side: const BorderSide(color: Color(0xFFE95700)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-              ),
-              child: ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ).createShader(bounds),
-                blendMode: BlendMode.srcIn,
-                child: Text(
-                  address == null
-                      ? 'Set Delivery Location'
-                      : 'Change Delivery Location',
-                  style: AppTypography.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: Color(0xFF8B765D),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 32,
+          minHeight: 32,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFFFF7E8),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 11,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE8E0D6)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE95700), width: 1.4),
+        ),
       ),
     );
   }

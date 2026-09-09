@@ -16,7 +16,6 @@ import 'package:satya_devotte_app/features/poojakit/data/models/address_model.da
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
-import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 
 class ProductCheckoutPage extends StatefulWidget {
   const ProductCheckoutPage({super.key});
@@ -48,7 +47,14 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   bool _isSearching = false;
   bool _isLoadingSuggestions = false;
   bool _isResolvingPin = false;
-  bool _isEditingReceiver = true;
+  String? _nameError;
+  String? _phoneError;
+  String? _houseError;
+  String? _streetError;
+  String? _provinceError;
+  String? _cityError;
+  String? _postalCodeError;
+  String? _countryError;
   Alignment _pinAlignment = const Alignment(0.08, 0.05);
   _PickedLocation? _pickedLocation;
   List<_LocationSuggestion> _suggestions = const [];
@@ -97,6 +103,14 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     _hydrateSavedAddress();
     unawaited(_hydrateReceiverFromProfile());
     _searchCtrl.addListener(_onSearchChanged);
+    _fullNameCtrl.addListener(_onFieldChanged);
+    _phoneCtrl.addListener(_onFieldChanged);
+    _houseCtrl.addListener(_onFieldChanged);
+    _streetCtrl.addListener(_onFieldChanged);
+    _provinceCtrl.addListener(_onFieldChanged);
+    _cityCtrl.addListener(_onFieldChanged);
+    _postalCodeCtrl.addListener(_onFieldChanged);
+    _countryCtrl.addListener(_onFieldChanged);
     // Resume mid-flow when returning from cart with a method already chosen.
     if (_checkoutCtrl.isPickup) {
       _step = 'pickup';
@@ -110,6 +124,33 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       _step = 'address';
     } else {
       _step = 'method';
+    }
+  }
+
+  void _onFieldChanged() {
+    if (_nameError != null && _fullNameCtrl.text.trim().isNotEmpty) {
+      setState(() => _nameError = null);
+    }
+    if (_phoneError != null && _phoneCtrl.text.trim().isNotEmpty) {
+      setState(() => _phoneError = null);
+    }
+    if (_houseError != null && _houseCtrl.text.trim().isNotEmpty) {
+      setState(() => _houseError = null);
+    }
+    if (_streetError != null && _streetCtrl.text.trim().isNotEmpty) {
+      setState(() => _streetError = null);
+    }
+    if (_provinceError != null && _provinceCtrl.text.trim().isNotEmpty) {
+      setState(() => _provinceError = null);
+    }
+    if (_cityError != null && _cityCtrl.text.trim().isNotEmpty) {
+      setState(() => _cityError = null);
+    }
+    if (_postalCodeError != null && _postalCodeCtrl.text.trim().isNotEmpty) {
+      setState(() => _postalCodeError = null);
+    }
+    if (_countryError != null && _countryCtrl.text.trim().isNotEmpty) {
+      setState(() => _countryError = null);
     }
   }
 
@@ -137,6 +178,15 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _searchCtrl.removeListener(_onSearchChanged);
+    _fullNameCtrl.removeListener(_onFieldChanged);
+    _phoneCtrl.removeListener(_onFieldChanged);
+    _houseCtrl.removeListener(_onFieldChanged);
+    _streetCtrl.removeListener(_onFieldChanged);
+    _provinceCtrl.removeListener(_onFieldChanged);
+    _cityCtrl.removeListener(_onFieldChanged);
+    _postalCodeCtrl.removeListener(_onFieldChanged);
+    _countryCtrl.removeListener(_onFieldChanged);
     _searchCtrl.dispose();
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -247,8 +297,6 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       longitude: null,
       address: _addressPreview(address),
     );
-    _isEditingReceiver =
-        address.fullName.trim().isEmpty || address.phone.trim().isEmpty;
   }
 
   Future<void> _hydrateMapFromSavedAddress() async {
@@ -312,8 +360,6 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       if (_phoneCtrl.text.trim().isEmpty && phone.isNotEmpty) {
         _phoneCtrl.text = phone;
       }
-      _isEditingReceiver =
-          _fullNameCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty;
     });
   }
 
@@ -502,6 +548,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     final address = _buildAddress();
     if (address == null) return;
     _checkoutCtrl.saveShippingAddress(address);
+    _checkoutCtrl.setFulfillmentMethod(FulfillmentMethod.delivery);
 
     if (_isCartCheckout) {
       final ok = await _checkoutCtrl.fetchShippingQuote(
@@ -614,16 +661,42 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   AddressModel? _buildAddress() {
-    if (_fullNameCtrl.text.trim().isEmpty ||
-        _phoneCtrl.text.trim().isEmpty ||
-        _houseCtrl.text.trim().isEmpty ||
-        _streetCtrl.text.trim().isEmpty ||
-        _provinceCtrl.text.trim().isEmpty) {
-      ToastUtil.showInfo(
-        'Please fill receiver details, house, street, and province.',
-      );
-      return null;
-    }
+    final name = _fullNameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
+    final house = _houseCtrl.text.trim();
+    final street = _streetCtrl.text.trim();
+    final province = _provinceCtrl.text.trim();
+    final city = _cityCtrl.text.trim();
+    final postalCode = _postalCodeCtrl.text.trim();
+    final country = _countryCtrl.text.trim();
+
+    bool hasError = false;
+    setState(() {
+      _nameError = name.isEmpty ? 'Please enter receiver name' : null;
+      _phoneError = phone.isEmpty ? 'Please enter phone number' : null;
+      _houseError =
+          house.isEmpty ? 'Please enter house / flat / floor & building' : null;
+      _streetError = street.isEmpty ? 'Please enter street' : null;
+      _provinceError =
+          province.isEmpty ? 'Please select or enter province' : null;
+      _cityError = city.isEmpty ? 'Please enter city' : null;
+      _postalCodeError =
+          postalCode.isEmpty ? 'Please enter postal code' : null;
+      _countryError = country.isEmpty ? 'Please enter country' : null;
+
+      if (_nameError != null ||
+          _phoneError != null ||
+          _houseError != null ||
+          _streetError != null ||
+          _provinceError != null ||
+          _cityError != null ||
+          _postalCodeError != null ||
+          _countryError != null) {
+        hasError = true;
+      }
+    });
+
+    if (hasError) return null;
 
     final lat = _pickedLocation?.latitude;
     final lng = _pickedLocation?.longitude;
@@ -636,6 +709,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       fullName: _fullNameCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
       addressLine1: line1,
+      line1: line1,
       city: _cityCtrl.text.trim(),
       state: _provinceCtrl.text.trim(),
       postalCode: _postalCodeCtrl.text.trim(),
@@ -644,8 +718,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
           : _countryCtrl.text.trim(),
       lat: lat,
       lng: lng,
-      localArea: _cityCtrl.text.trim().isEmpty ? null : _cityCtrl.text.trim(),
-      enteredAddress: _pickedLocation?.address,
+      suburb: _pickedLocation?.address,
+      localArea: _streetCtrl.text.trim(),
+      enteredAddress: _houseCtrl.text.trim(),
     );
   }
 
@@ -720,6 +795,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     }
 
     if (_step == 'map') {
+      final isConfirmEnabled =
+          _pickedLocation != null && !_isResolvingPin && !_isLocating;
       return _LocationPickerView(
         searchCtrl: _searchCtrl,
         locationText: _locationPreview,
@@ -731,6 +808,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         isSearching: _isSearching,
         isLoadingSuggestions: _isLoadingSuggestions,
         isResolvingPin: _isResolvingPin,
+        isConfirmEnabled: isConfirmEnabled,
         suggestions: _suggestions,
         onBack: () {
           if (_isCartCheckout) {
@@ -788,9 +866,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     _ReceiverCard(
                       fullNameCtrl: _fullNameCtrl,
                       phoneCtrl: _phoneCtrl,
-                      isEditing: _isEditingReceiver,
-                      onEditPhone: () =>
-                          setState(() => _isEditingReceiver = true),
+                      nameError: _nameError,
+                      phoneError: _phoneError,
                     ),
                     const SizedBox(height: 14),
                     _InputLabel(
@@ -798,6 +875,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       child: _AddressInput(
                         controller: _houseCtrl,
                         hint: 'Enter your house/flat number',
+                        errorText: _houseError,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -806,6 +884,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       child: _AddressInput(
                         controller: _streetCtrl,
                         hint: 'Enter building name and street',
+                        errorText: _streetError,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -815,10 +894,12 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                         controller: _provinceCtrl,
                         hint: 'Select',
                         suffixIcon: Icons.keyboard_arrow_down,
+                        errorText: _provinceError,
                       ),
                     ),
                     const SizedBox(height: 14),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: _InputLabel(
@@ -826,6 +907,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                             child: _AddressInput(
                               controller: _cityCtrl,
                               hint: 'City',
+                              errorText: _cityError,
                             ),
                           ),
                         ),
@@ -836,6 +918,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                             child: _AddressInput(
                               controller: _postalCodeCtrl,
                               hint: 'Code',
+                              errorText: _postalCodeError,
                             ),
                           ),
                         ),
@@ -847,6 +930,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                       child: _AddressInput(
                         controller: _countryCtrl,
                         hint: 'Country',
+                        errorText: _countryError,
                       ),
                     ),
                   ],
@@ -987,9 +1071,6 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     _ReceiverCard(
                       fullNameCtrl: _fullNameCtrl,
                       phoneCtrl: _phoneCtrl,
-                      isEditing: _isEditingReceiver,
-                      onEditPhone: () =>
-                          setState(() => _isEditingReceiver = true),
                     ),
                   ],
                 ),
@@ -1283,6 +1364,7 @@ class _LocationPickerView extends StatelessWidget {
     required this.isSearching,
     required this.isLoadingSuggestions,
     required this.isResolvingPin,
+    required this.isConfirmEnabled,
     required this.suggestions,
     required this.onBack,
     required this.onSearch,
@@ -1303,6 +1385,7 @@ class _LocationPickerView extends StatelessWidget {
   final bool isSearching;
   final bool isLoadingSuggestions;
   final bool isResolvingPin;
+  final bool isConfirmEnabled;
   final List<_LocationSuggestion> suggestions;
   final VoidCallback onBack;
   final VoidCallback onSearch;
@@ -1379,6 +1462,7 @@ class _LocationPickerView extends StatelessWidget {
                       locationText: locationText,
                       isLocating: isLocating,
                       isResolvingPin: isResolvingPin,
+                      isConfirmEnabled: isConfirmEnabled,
                       onCurrentLocationTap: onCurrentLocationTap,
                       onConfirm: onConfirm,
                     ),
@@ -1535,6 +1619,7 @@ class _MapBottomSheet extends StatelessWidget {
     required this.locationText,
     required this.isLocating,
     required this.isResolvingPin,
+    required this.isConfirmEnabled,
     required this.onCurrentLocationTap,
     required this.onConfirm,
   });
@@ -1542,6 +1627,7 @@ class _MapBottomSheet extends StatelessWidget {
   final String locationText;
   final bool isLocating;
   final bool isResolvingPin;
+  final bool isConfirmEnabled;
   final VoidCallback onCurrentLocationTap;
   final VoidCallback onConfirm;
 
@@ -1630,7 +1716,11 @@ class _MapBottomSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                _GradientButton(label: 'Confirm and Proceed', onTap: onConfirm),
+                _GradientButton(
+                  label: 'Confirm and Proceed',
+                  enabled: isConfirmEnabled,
+                  onTap: isConfirmEnabled ? onConfirm : null,
+                ),
               ],
             ),
           ),
@@ -1836,26 +1926,24 @@ class _ReceiverCard extends StatelessWidget {
   const _ReceiverCard({
     required this.fullNameCtrl,
     required this.phoneCtrl,
-    required this.isEditing,
-    required this.onEditPhone,
+    this.nameError,
+    this.phoneError,
   });
 
   final TextEditingController fullNameCtrl;
   final TextEditingController phoneCtrl;
-  final bool isEditing;
-  final VoidCallback onEditPhone;
+  final String? nameError;
+  final String? phoneError;
 
   @override
   Widget build(BuildContext context) {
-    final name = fullNameCtrl.text.trim();
-    final phone = phoneCtrl.text.trim();
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFFFCF7EF).withValues(alpha: 0.72),
+        color: const Color(0xFFFCF7EF).withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8E0D6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1869,85 +1957,26 @@ class _ReceiverCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (!isEditing) ...[
-            _ReceiverInfoRow(label: 'Name', value: name),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _ReceiverInfoRow(label: 'Phone number', value: phone),
-                ),
-                TextButton.icon(
-                  onPressed: onEditPhone,
-                  icon: const Icon(Icons.edit_outlined, size: 14),
-                  label: const Text('Edit'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFE95700),
-                    textStyle: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
+          _InputLabel(
+            label: 'Name',
+            child: _AddressInput(
+              controller: fullNameCtrl,
+              hint: 'Enter receiver name',
+              errorText: nameError,
             ),
-          ] else ...[
-            Text(
-              'Enter receiver details to continue.',
-              style: AppTypography.inter(
-                fontSize: 9.5,
-                color: const Color(0xFF8B765D),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _AddressInput(controller: fullNameCtrl, hint: 'Name'),
-            const SizedBox(height: 10),
-            _AddressInput(
+          ),
+          const SizedBox(height: 10),
+          _InputLabel(
+            label: 'Phone number',
+            child: _AddressInput(
               controller: phoneCtrl,
-              hint: 'Phone number',
+              hint: 'Enter receiver phone number',
               keyboardType: TextInputType.phone,
+              errorText: phoneError,
             ),
-          ],
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _ReceiverInfoRow extends StatelessWidget {
-  const _ReceiverInfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 92,
-          child: Text(
-            label,
-            style: AppTypography.inter(
-              fontSize: 10,
-              color: const Color(0xFF4A1C00),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value.isEmpty ? 'Not provided' : value,
-            textAlign: TextAlign.right,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF4A1C00),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1984,49 +2013,78 @@ class _AddressInput extends StatelessWidget {
     required this.hint,
     this.keyboardType,
     this.suffixIcon,
+    this.errorText,
   });
 
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
   final IconData? suffixIcon;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: AppTypography.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: const Color(0xFF4A1C00),
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: hint,
-        hintStyle: AppTypography.inter(
-          fontSize: 11,
-          color: const Color(0xFFB7AAA0),
+    final hasError = errorText != null && errorText!.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: AppTypography.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF4A1C00),
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: hint,
+            hintStyle: AppTypography.inter(
+              fontSize: 11,
+              color: const Color(0xFFB7AAA0),
+            ),
+            suffixIcon: suffixIcon == null
+                ? null
+                : Icon(suffixIcon, size: 18, color: const Color(0xFF6C5B46)),
+            filled: true,
+            fillColor: const Color(0xFFFCF7EF),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: hasError
+                    ? const Color(0xFFD32F2F)
+                    : AppColors.inputBorderColor,
+                width: hasError ? 1.4 : 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: hasError
+                    ? const Color(0xFFD32F2F)
+                    : const Color(0xFFE95700),
+                width: 1.4,
+              ),
+            ),
+          ),
         ),
-        suffixIcon: suffixIcon == null
-            ? null
-            : Icon(suffixIcon, size: 18, color: const Color(0xFF6C5B46)),
-        filled: true,
-        fillColor: Color(0xFFFCF7EF),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.inputBorderColor),
-        ),
-        focusedBorder: GradientOutlineInputBorder(
-          gradient: AppColors.inputBorderGradient,
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE95700)),
-        ),
-      ),
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Text(
+            errorText!,
+            style: AppTypography.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFD32F2F),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -2084,24 +2142,26 @@ class _GradientButton extends StatelessWidget {
                   end: Alignment.centerRight,
                 )
               : const LinearGradient(
-                  colors: [Color(0xFFB8B1AA), Color(0xFFB8B1AA)],
+                  colors: [Color(0xFFD6CEC6), Color(0xFFD6CEC6)],
                 ),
           borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x22000000),
-              blurRadius: 14,
-              offset: Offset(0, 6),
-            ),
-          ],
+          boxShadow: enabled
+              ? const [
+                  BoxShadow(
+                    color: Color(0x22000000),
+                    blurRadius: 14,
+                    offset: Offset(0, 6),
+                  ),
+                ]
+              : null,
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: AppTypography.inter(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFFFCF7EF),
+            fontWeight: FontWeight.w600,
+            color: enabled ? const Color(0xFFFCF7EF) : const Color(0xFF8B837B),
           ),
         ),
       ),

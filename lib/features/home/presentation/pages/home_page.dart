@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -55,9 +54,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final PageController _pageController;
   int _currentIndex = 0;
   bool _isAnimatingToTab = false;
-  bool _showBottomNav = true;
-  bool _hideNavContent = false;
-  Timer? _hideNavDebounceTimer;
   bool _isFetchingHome = false;
   String _todayDateAndTithi = HomeConstants.dateAndTithi;
   String _dailySloka = HomeConstants.quote;
@@ -180,7 +176,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _hideNavDebounceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -188,12 +183,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _onTabSelected(int index) async {
     if (_currentIndex == index) return;
     if (_isAnimatingToTab) return;
-    if (!_showBottomNav) {
-      setState(() {
-        _showBottomNav = true;
-        _hideNavContent = false;
-      });
-    }
     _isAnimatingToTab = true;
     await _pageController.animateToPage(
       index,
@@ -627,38 +616,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return result;
   }
 
-  void _onHomeScrollDirectionChanged(ScrollDirection direction) {
-    if (_currentIndex != 0) return;
-
-    if (direction == ScrollDirection.reverse && _showBottomNav) {
-      _hideNavDebounceTimer?.cancel();
-      _hideNavDebounceTimer = Timer(const Duration(milliseconds: 320), () {
-        if (!mounted || !_showBottomNav) return;
-        setState(() => _showBottomNav = false);
-      });
-      return;
-    }
-
-    if (direction == ScrollDirection.forward && !_showBottomNav) {
-      _hideNavDebounceTimer?.cancel();
-      setState(() {
-        _showBottomNav = true;
-        _hideNavContent = false;
-      });
-    }
-  }
-
-  void _onBottomNavSlideEnd() {
-    if (!mounted) return;
-    if (!_showBottomNav && !_hideNavContent) {
-      setState(() => _hideNavContent = true);
-      return;
-    }
-    if (_showBottomNav && _hideNavContent) {
-      setState(() => _hideNavContent = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
@@ -672,7 +629,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         physics: const NeverScrollableScrollPhysics(),
         children: [
           _HomeTabContent(
-            onScrollDirectionChanged: _onHomeScrollDirectionChanged,
             onRefresh: _refreshHomeData,
             onOpenTab: _onTabSelected,
             todayDateAndTithi: _todayDateAndTithi,
@@ -721,46 +677,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   right: 0,
                   bottom: bottomSafe,
                   height: navHeight,
-                  child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 380),
-                    curve: Curves.easeInOutCubicEmphasized,
-                    offset: _showBottomNav ? Offset.zero : const Offset(0, 1.1),
-                    onEnd: _onBottomNavSlideEnd,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeInOutCubic,
-                      opacity: _showBottomNav ? 1 : 0,
-                      child: _hideNavContent
-                          ? const SizedBox.shrink()
-                          : _BottomNavBar(
-                              currentIndex: _currentIndex,
-                              onTap: _onTabSelected,
-                            ),
-                    ),
+                  child: _BottomNavBar(
+                    currentIndex: _currentIndex,
+                    onTap: _onTabSelected,
                   ),
                 ),
-                Positioned(
-                  left: 0,
-                  bottom: bottomSafe + navHeight + 6,
-                  child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 360),
-                    curve: Curves.easeInOutCubicEmphasized,
-                    offset: (_showBottomNav && _currentIndex == _HomeTabs.home)
-                        ? Offset.zero
-                        : const Offset(-1.2, 0),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 280),
-                      curve: Curves.easeInOut,
-                      opacity:
-                          (_showBottomNav && _currentIndex == _HomeTabs.home)
-                          ? 1.0
-                          : 0.0,
-                      child: _StickyShopButton(
-                        onTap: () => Get.to(() => const PoojaKitPage()),
-                      ),
+                if (_currentIndex == _HomeTabs.home)
+                  Positioned(
+                    left: 0,
+                    bottom: bottomSafe + navHeight + 6,
+                    child: _StickyShopButton(
+                      onTap: () => Get.to(() => const PoojaKitPage()),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -772,7 +701,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
 class _HomeTabContent extends StatefulWidget {
   const _HomeTabContent({
-    required this.onScrollDirectionChanged,
     required this.onRefresh,
     required this.onOpenTab,
     required this.todayDateAndTithi,
@@ -793,7 +721,6 @@ class _HomeTabContent extends StatefulWidget {
     required this.onFestivalTap,
   });
 
-  final ValueChanged<ScrollDirection> onScrollDirectionChanged;
   final Future<void> Function() onRefresh;
   final Future<void> Function(int index) onOpenTab;
   final String todayDateAndTithi;
@@ -824,17 +751,12 @@ class _HomeTabContentState extends State<_HomeTabContent> {
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<UserScrollNotification>(
-      onNotification: (notification) {
-        widget.onScrollDirectionChanged(notification.direction);
-        return false;
-      },
-      child: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: widget.onRefresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 20),
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: widget.onRefresh,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 20),
           child: Column(
             children: [
               _HomeHeader(
@@ -863,12 +785,11 @@ class _HomeTabContentState extends State<_HomeTabContent> {
               ),
               const SizedBox(height: 16),
               _Footer(),
-              const SizedBox(height: 35),
+              const SizedBox(height: 120),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -1155,39 +1076,64 @@ class _BottomNavBar extends StatelessWidget {
     final isSelected = index == currentIndex;
     final itemTop = 14.0 + (dist * 10.0);
 
-    final IconData icon;
+    final IconData? icon;
+    final String? assetIcon;
     final String label;
     switch (index) {
       case _HomeTabs.home:
         icon = Icons.home_outlined;
+        assetIcon = null;
         label = 'Home';
         break;
       case _HomeTabs.pujas:
         icon = Icons.local_fire_department_outlined;
+        assetIcon = null;
         label = 'Pujas';
         break;
       case _HomeTabs.rituals:
-        icon = Icons.self_improvement_outlined;
+        icon = null;
+        assetIcon = 'assets/images/yagna-ritual.png';
         label = 'Rituals';
         break;
       case _HomeTabs.deities:
         icon = Icons.temple_hindu_outlined;
+        assetIcon = null;
         label = 'Deities';
         break;
       case _HomeTabs.calendar:
         icon = Icons.calendar_today_outlined;
+        assetIcon = null;
         label = 'Calendar';
         break;
       case _HomeTabs.profile:
         icon = Icons.person_outlined;
+        assetIcon = null;
         label = 'Profile';
         break;
       default:
         icon = Icons.circle_outlined;
+        assetIcon = null;
         label = '';
     }
 
     const unselectedColor = Color(0xFF7F776D);
+
+    Widget buildIcon(double size, Color color) {
+      if (assetIcon != null) {
+        return Image.asset(
+          assetIcon,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          color: color,
+        );
+      }
+      return Icon(
+        icon ?? Icons.circle_outlined,
+        size: size,
+        color: color,
+      );
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1212,17 +1158,9 @@ class _BottomNavBar extends StatelessWidget {
                             end: Alignment.bottomRight,
                           ).createShader(bounds),
                           blendMode: BlendMode.srcIn,
-                          child: Icon(
-                            icon,
-                            size: 24,
-                            color: const Color(0xFFFCF7EF),
-                          ),
+                          child: buildIcon(24, const Color(0xFFFCF7EF)),
                         )
-                      : Icon(
-                          icon,
-                          size: 22,
-                          color: unselectedColor,
-                        ),
+                      : buildIcon(22, unselectedColor),
                   const SizedBox(height: 3),
                   isSelected
                       ? ShaderMask(
@@ -1674,7 +1612,6 @@ class _Footer extends StatelessWidget {
               color: Color(0XFF78716C),
             ),
           ),
-          const SizedBox(height: 12),
           Image.asset('assets/images/redin_logo.png', width: 136, height: 42),
         ],
       ),

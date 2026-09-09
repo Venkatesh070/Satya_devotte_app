@@ -36,7 +36,7 @@ class PoojaKitCheckoutController extends GetxController {
   final _isLoadingPickup = false.obs;
   final _lastError = RxnString();
   final _shippingAddress = Rxn<AddressModel>();
-  final _fulfillmentMethod = FulfillmentMethod.delivery.obs;
+  final _fulfillmentMethod = Rxn<FulfillmentMethod>();
   final _quoteRates = <ShippingRateModel>[].obs;
   final _selectedRate = Rxn<ShippingRateModel>();
   final _quoteCurrency = 'ZAR'.obs;
@@ -49,7 +49,8 @@ class PoojaKitCheckoutController extends GetxController {
   String? get lastError => _lastError.value;
   AddressModel? get shippingAddress => _shippingAddress.value;
   bool get hasShippingAddress => _shippingAddress.value != null;
-  FulfillmentMethod get fulfillmentMethod => _fulfillmentMethod.value;
+  FulfillmentMethod? get fulfillmentMethod => _fulfillmentMethod.value;
+  bool get hasFulfillmentMethod => _fulfillmentMethod.value != null;
   bool get isPickup => _fulfillmentMethod.value == FulfillmentMethod.pickup;
   bool get isDelivery => _fulfillmentMethod.value == FulfillmentMethod.delivery;
   List<ShippingRateModel> get quoteRates => _quoteRates;
@@ -64,22 +65,34 @@ class PoojaKitCheckoutController extends GetxController {
   }
 
   bool get canProceedCheckout {
+    if (!hasFulfillmentMethod) return false;
     if (isPickup) {
       return _pickupLocation.value != null;
     }
     return _shippingAddress.value != null && _selectedRate.value != null;
   }
 
+  void resetFulfillmentMethod() {
+    _fulfillmentMethod.value = null;
+    _selectedRate.value = null;
+    _quoteRates.clear();
+    _lastError.value = null;
+  }
+
   void setFulfillmentMethod(
     FulfillmentMethod method, {
     List<Map<String, dynamic>>? pickupItems,
   }) {
-    if (_fulfillmentMethod.value == method) return;
+    final changed = _fulfillmentMethod.value != method;
     _fulfillmentMethod.value = method;
-    _selectedRate.value = null;
-    _quoteRates.clear();
-    _lastError.value = null;
-    if (method == FulfillmentMethod.pickup && _pickupLocation.value == null) {
+    if (changed) {
+      _selectedRate.value = null;
+      _quoteRates.clear();
+      _lastError.value = null;
+    }
+    if (method == FulfillmentMethod.pickup &&
+        _pickupLocation.value == null &&
+        !_isLoadingPickup.value) {
       final items = pickupItems ?? _cartItemsForPickup();
       fetchPickupLocation(cartItems: items);
     }
@@ -173,12 +186,15 @@ class PoojaKitCheckoutController extends GetxController {
     _lastError.value = null;
     try {
       final items = cartItems ?? _cartItemsForPickup();
-      final PickupLocationModel loc;
+      PickupLocationModel? loc;
       if (items != null && items.isNotEmpty) {
-        loc = await _repo.getWarehouseForCart(items: items);
-      } else {
-        loc = await _repo.getPickupLocation();
+        try {
+          loc = await _repo.getWarehouseForCart(items: items);
+        } catch (_) {
+          loc = null;
+        }
       }
+      loc ??= await _repo.getPickupLocation();
       _pickupLocation.value = loc;
       return true;
     } catch (e) {
@@ -201,6 +217,10 @@ class PoojaKitCheckoutController extends GetxController {
     _lastError.value = null;
     try {
       final method = _fulfillmentMethod.value;
+      if (method == null) {
+        _lastError.value = 'Please select a delivery option.';
+        return null;
+      }
       if (method == FulfillmentMethod.delivery) {
         final address = shippingAddress ?? _shippingAddress.value;
         final rate = _selectedRate.value;
@@ -252,6 +272,10 @@ class PoojaKitCheckoutController extends GetxController {
     _lastError.value = null;
     try {
       final method = _fulfillmentMethod.value;
+      if (method == null) {
+        _lastError.value = 'Please select a delivery option.';
+        return null;
+      }
       if (method == FulfillmentMethod.delivery) {
         final address = shippingAddress ?? _shippingAddress.value;
         final rate = _selectedRate.value;
