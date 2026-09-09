@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
@@ -10,7 +9,6 @@ import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_request_models.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
-import 'package:satya_devotte_app/features/poojakit/presentation/widgets/fulfillment_method_chip.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_fulfillment_feedback_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_line_item_picker.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/pickup_warehouse_return_card.dart';
@@ -96,13 +94,45 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                     color: const Color(0xFF4A1C00),
                   ),
                 ),
-                const SizedBox(height: 8),
-                FulfillmentMethodChip(method: _order.fulfillmentMethod),
-                const SizedBox(height: 10),
-                UserOrderStatusChips(
-                  order: _order,
-                  request: _replacementRequest,
-                  refundRequest: _refundRequest,
+                const SizedBox(height: 12),
+                if (_order.orderNumber.isNotEmpty) ...[
+                  Text(
+                    'Order ID :',
+                    style: AppTypography.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF78716C),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '#${_order.orderNumber}',
+                    style: AppTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C1917),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Order Status : ',
+                      style: AppTypography.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF78716C),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    UserOrderStatusChips(
+                      order: _order,
+                      request: _replacementRequest,
+                      refundRequest: _refundRequest,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _OrderItemCard(
@@ -112,21 +142,9 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                 ),
                 const SizedBox(height: 16),
                 _DeliveryCard(order: _order),
-                if (_order.isPickup &&
-                    _order.hasPickupCollectionCode &&
-                    _order.orderStatus != OrderStatus.fulfilled &&
-                    _order.orderStatus != OrderStatus.cancelled) ...[
-                  const SizedBox(height: 12),
-                  _PickupCollectionCard(order: _order),
-                ],
                 if (_order.isDelivery && _order.hasCourierTracking) ...[
                   const SizedBox(height: 12),
                   _TrackingCard(order: _order),
-                ],
-                if (_order.isDelivery &&
-                    (_order.delivery?.showCourierSection == true)) ...[
-                  const SizedBox(height: 12),
-                  _CourierDeliveryCard(order: _order),
                 ],
                 if (kOrderReturnReplaceEnabled &&
                     (_replacementRequest != null ||
@@ -138,12 +156,18 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                     onOpenTracking: (url) async {
                       final uri = Uri.tryParse(url);
                       if (uri == null) return;
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
                     },
                   ),
                 ],
                 if (kOrderReturnReplaceEnabled &&
-                    orderHasRefundActivity(_order, request: _refundRequest)) ...[
+                    orderHasRefundActivity(
+                      _order,
+                      request: _refundRequest,
+                    )) ...[
                   const SizedBox(height: 12),
                   UserRefundStatusBanner(
                     order: _order,
@@ -206,78 +230,26 @@ class _OrderItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemCount = order.items.length;
-    final headline = order.orderNumber.isNotEmpty
-        ? 'Order #${order.orderNumber}'
-        : (itemCount > 1 ? '$itemCount products' : 'Order');
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          headline,
-          style: AppTypography.lora(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF2B1A0C),
-          ),
-        ),
-        const SizedBox(height: 8),
-        UserOrderStatusChips(
-          order: order,
-          request: replacementRequest,
-          refundRequest: refundRequest,
-          compact: true,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Items in this order ($itemCount)',
-          style: AppTypography.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF6C5B46),
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...order.items.map(
-          (lineItem) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _CompactOrderLine(
-              item: lineItem,
+    return _SummaryCard(
+      title: 'Items in this order ($itemCount)',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < order.items.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _CompactOrderLine(
+              item: order.items[i],
               statusTag: resolvedItemLineStatus(
                 order: order,
-                productId: lineItem.productId,
+                productId: order.items[i].productId,
                 replacementRequest: replacementRequest,
                 refundRequest: refundRequest,
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (order.subtotalAmount > order.totalAmount) ...[
-              Text(
-                order.formattedSubtotal,
-                style: AppTypography.inter(
-                  fontSize: 9,
-                  color: const Color(0x8A6C5B46),
-                  decoration: TextDecoration.lineThrough,
-                ),
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              order.formattedTotal,
-              style: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFFDC5B0A),
-              ),
-            ),
           ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -286,165 +258,214 @@ class _DeliveryCard extends StatelessWidget {
   const _DeliveryCard({required this.order});
   final AdminOrder order;
 
+  Future<void> _openMapDirections(String address) async {
+    if (address.trim().isEmpty) return;
+    final encoded = Uri.encodeComponent(address.trim());
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=$encoded';
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      await launchUrl(uri);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPickup = order.isPickup;
-    final address = isPickup
-        ? (order.pickupLocation?.singleLine ?? '')
-        : (order.shippingAddress?.singleLine ?? '');
+
+    if (isPickup) {
+      final address = order.pickupLocation?.singleLine ?? '';
+      final code = order.pickupCollection?.code.trim() ?? '';
+      final showOtp =
+          code.isNotEmpty &&
+          order.orderStatus != OrderStatus.fulfilled &&
+          order.orderStatus != OrderStatus.cancelled;
+
+      return _SummaryCard(
+        title: 'Pick from Warehouse',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pickup Location',
+              style: AppTypography.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1C1917),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 1.5),
+                  child: Icon(
+                    Icons.location_on_outlined,
+                    size: 16,
+                    color: Color(0xFF78716C),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    address.isEmpty ? 'Pickup location not available' : address,
+                    style: AppTypography.inter(
+                      fontSize: 12.5,
+                      fontStyle: FontStyle.italic,
+                      height: 1.4,
+                      color: const Color(0xFF78716C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (address.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => _openMapDirections(address),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2255D4),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 8,
+                  ),
+                  elevation: 0,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Get Directions',
+                  style: AppTypography.inter(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+            if (showOtp) ...[
+              const SizedBox(height: 18),
+              Text(
+                'Please provide this OTP at the warehouse during pickup to collect your order.',
+                style: AppTypography.inter(
+                  fontSize: 12,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1C1917),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: code.split('').map((digit) {
+                  return Container(
+                    width: 38,
+                    height: 38,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD95300),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      digit,
+                      style: AppTypography.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    final address = order.shippingAddress?.singleLine ?? '';
+    final recipientName = order.shippingAddress?.name.trim().isNotEmpty == true
+        ? order.shippingAddress!.name.trim()
+        : order.userName.trim();
+
+    final recipientPhone =
+        order.shippingAddress?.phone.trim().isNotEmpty == true
+        ? order.shippingAddress!.phone.trim()
+        : (order.delivery?.deliveryAddress.contactPhone.trim() ?? '');
+
+    final userDetails = [
+      if (recipientName.isNotEmpty) recipientName,
+      if (recipientPhone.isNotEmpty) recipientPhone,
+    ].join(' • ');
+
     return _SummaryCard(
-      title: isPickup ? 'Pickup Address' : 'Delivery Address',
+      title: 'Delivery Details',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Delivery Location',
+            style: AppTypography.inter(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1C1917),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (userDetails.isNotEmpty) ...[
+            Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: Color(0xFF78716C),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    userDetails,
+                    style: AppTypography.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF44403C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                ).createShader(bounds),
+              const Padding(
+                padding: EdgeInsets.only(top: 1.5),
                 child: Icon(
-                  isPickup ? Icons.storefront_outlined : Icons.location_on,
+                  Icons.location_on_outlined,
                   size: 16,
-                  color: const Color(0xFFFCF7EF),
+                  color: Color(0xFF78716C),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  address.isEmpty
-                      ? (isPickup
-                            ? 'Pickup location not available'
-                            : 'Address not available')
-                      : address,
-                  style: AppTypography.lora(
-                    fontSize: 14,
-                    height: 1.3,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF1C1917),
+                  address.isEmpty ? 'Address not available' : address,
+                  style: AppTypography.inter(
+                    fontSize: 12.5,
+                    fontStyle: FontStyle.italic,
+                    height: 1.4,
+                    color: const Color(0xFF78716C),
                   ),
                 ),
               ),
             ],
           ),
-          if (isPickup &&
-              (order.pickupLocation?.hours.trim().isNotEmpty ?? false)) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Hours: ${order.pickupLocation!.hours}',
-              style: AppTypography.inter(
-                fontSize: 11,
-                color: const Color(0xFF6C5B46),
-              ),
-            ),
-          ],
-          if (isPickup &&
-              order.hasPickupCollectionCode &&
-              !order.orderStatus.isShippedOrBeyond) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Show this collection PIN at the warehouse. Staff will verify it to hand over your order.',
-              style: AppTypography.inter(
-                fontSize: 11,
-                height: 1.4,
-                color: const Color(0xFF6C5B46),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PickupCollectionCard extends StatelessWidget {
-  const _PickupCollectionCard({required this.order});
-  final AdminOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final code = order.pickupCollection!.code;
-    return _SummaryCard(
-      title: 'Collection code',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            code,
-            style: AppTypography.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF78350F),
-            ).copyWith(letterSpacing: 6),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Give this PIN to warehouse staff when you collect your order.',
-            style: AppTypography.inter(
-              fontSize: 11,
-              height: 1.4,
-              color: const Color(0xFF6C5B46),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CourierDeliveryCard extends StatelessWidget {
-  const _CourierDeliveryCard({required this.order});
-  final AdminOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = order.delivery!;
-    return _SummaryCard(
-      title: 'Courier',
-      child: Column(
-        children: [
-          if (d.waybill.trim().isNotEmpty)
-            _RowLine(label: 'Waybill', value: d.waybill),
-          if (d.status.trim().isNotEmpty)
-            _RowLine(label: 'Status', value: d.status),
-          if (d.hasPodPin && !d.hasPodStatus) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Delivery PIN verification is enabled. The Courier Guy will SMS a PIN to your phone when the driver arrives — share it to receive your order.',
-              style: AppTypography.inter(
-                fontSize: 11,
-                height: 1.4,
-                color: const Color(0xFF6C5B46),
-              ),
-            ),
-          ],
-          if (d.hasPodStatus) ...[
-            const SizedBox(height: 8),
-            _RowLine(label: 'POD status', value: d.pod!.displayLabel),
-            if (d.pod!.verifiedAt != null)
-              _RowLine(
-                label: 'Verified at',
-                value: DateFormat('d MMM yyyy, h:mm a')
-                    .format(d.pod!.verifiedAt!.toLocal()),
-              ),
-          ],
-          if (d.labelUrl.trim().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            SizedBox(
-              width: double.infinity,
-              height: 36,
-              child: OutlinedButton.icon(
-                onPressed: () => launchUrl(Uri.parse(d.labelUrl)),
-                icon: const Icon(Icons.download_rounded, size: 16),
-                label: const Text('Open label'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFE95700),
-                  side: const BorderSide(color: Color(0xFFE95700)),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -457,41 +478,11 @@ class _TrackingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final courier = order.courierLabel.isEmpty ? 'Courier' : order.courierLabel;
-    final trackingNo = order.courierTrackingNumber;
-    final trackingUrl = order.courierTrackingUrl;
     return _SummaryCard(
-      title: order.orderNumber.isNotEmpty
-          ? 'Order ID #${order.orderNumber}'
-          : 'Tracking',
+      title: 'Track Order Status',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          OrderTrackingProgress(order: order),
-          const SizedBox(height: 16),
-          if (courier.isNotEmpty) _RowLine(label: 'Courier', value: courier),
-          if (trackingNo.isNotEmpty)
-            _RowLine(
-              label: 'Tracking No.',
-              value: trackingNo,
-            ),
-          if (trackingUrl.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            SizedBox(
-              width: double.infinity,
-              height: 36,
-              child: OutlinedButton.icon(
-                onPressed: () => launchUrl(Uri.parse(trackingUrl)),
-                icon: const Icon(Icons.open_in_new, size: 16),
-                label: const Text('Track Order'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFE95700),
-                  side: const BorderSide(color: Color(0xFFE95700)),
-                ),
-              ),
-            ),
-          ],
-        ],
+        children: [OrderTrackingProgress(order: order)],
       ),
     );
   }
@@ -542,24 +533,15 @@ class _TransactionCard extends StatelessWidget {
         children: [
           _RowLine(label: 'Transaction Date', value: order.formattedDate),
           if (order.paymentReference.isNotEmpty)
-            _RowLine(
-              label: 'PayFast ref',
-              value: order.paymentReference,
-            ),
+            _RowLine(label: 'PayFast ref', value: order.paymentReference),
           if (order.resolvedPayfastPaymentId.isNotEmpty)
             _RowLine(
               label: 'PayFast txn ID',
               value: order.resolvedPayfastPaymentId,
             ),
-          _RowLine(
-            label: 'Order Status',
-            value: order.orderStatus.label,
-          ),
+          _RowLine(label: 'Order Status', value: order.orderStatus.label),
           if (order.paymentStatus != PaymentStatus.paid)
-            _RowLine(
-              label: 'Payment Status',
-              value: order.paymentStatus.label,
-            ),
+            _RowLine(label: 'Payment Status', value: order.paymentStatus.label),
           if (order.invoice?.url.isNotEmpty == true) ...[
             const SizedBox(height: 8),
             SizedBox(
@@ -624,11 +606,7 @@ class _ReplacementReturnBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.sync_problem_outlined,
-                size: 18,
-                color: toneColor,
-              ),
+              Icon(Icons.sync_problem_outlined, size: 18, color: toneColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -805,8 +783,7 @@ class _ActionSection extends StatelessWidget {
         (order.orderStatus == OrderStatus.unknown &&
             !order.orderStatus.isShippedOrBeyond);
     final canConfirm = order.canUserConfirmFulfillment;
-    final canReturn =
-        kOrderReturnReplaceEnabled && order.needsUserReturn;
+    final canReturn = kOrderReturnReplaceEnabled && order.needsUserReturn;
     final canReplace = canUserRequestReturnOrReplace(
       order,
       refundRequest: refundRequest,
@@ -834,23 +811,52 @@ class _ActionSection extends StatelessWidget {
               },
             ),
           if (canConfirm)
-            _ActionButton(
-              label: 'Feedback',
-              icon: Icons.rate_review_outlined,
-              loading: loading,
-              onTap: () async {
-                final result = await OrderFulfillmentFeedbackSheet.show(
-                  context,
-                  isPickup: order.isPickup,
-                );
-                if (result == null) return;
-                final ok = await controller.confirmDelivery(
-                  order.id,
-                  satisfied: result.satisfied,
-                  feedback: result.feedback,
-                );
-                if (ok) onRefresh();
-              },
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: SizedBox(
+                height: 44,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          final result =
+                              await OrderFulfillmentFeedbackSheet.show(
+                                context,
+                                isPickup: order.isPickup,
+                              );
+                          if (result == null) return;
+                          final ok = await controller.confirmDelivery(
+                            order.id,
+                            satisfied: result.satisfied,
+                            feedback: result.feedback,
+                          );
+                          if (ok) onRefresh();
+                        },
+                  icon: loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.rate_review_outlined, size: 17),
+                  label: const Text('Feedback'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF088B56),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
             ),
           if (canReplace)
             _ActionButton(
@@ -1219,10 +1225,7 @@ class _RowLine extends StatelessWidget {
 }
 
 class _CompactOrderLine extends StatelessWidget {
-  const _CompactOrderLine({
-    required this.item,
-    this.statusTag,
-  });
+  const _CompactOrderLine({required this.item, this.statusTag});
 
   final OrderLineItem item;
   final ({String label, Color color})? statusTag;
@@ -1230,23 +1233,43 @@ class _CompactOrderLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = item.title.trim().isEmpty ? 'Puja Kit' : item.title.trim();
+    final imageUrl = item.image.trim();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE7D5BC)),
+        border: Border.all(
+          color: const Color(0xFFE8DFC8),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3E2723).withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: item.image.trim().isNotEmpty
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF6EE),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFECE4D0),
+                ),
+              ),
+              child: imageUrl.isNotEmpty
                   ? Image.network(
-                      item.image,
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => const _ThumbFallback(),
                     )
@@ -1257,36 +1280,47 @@ class _CompactOrderLine extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.lora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  style: AppTypography.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
                     color: const Color(0xFF1C1917),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                const SizedBox(height: 6),
+                Row(
                   children: [
-                    Text(
-                      'Qty: ${item.qty}',
-                      style: AppTypography.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6C5B46),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3ECE0),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Qty: ${item.qty}',
+                        style: AppTypography.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5D4E37),
+                        ),
                       ),
                     ),
-                    if (statusTag != null)
+                    if (statusTag != null) ...[
+                      const SizedBox(width: 8),
                       ItemLineStatusChip(
                         label: statusTag!.label,
                         color: statusTag!.color,
                       ),
+                    ],
                   ],
                 ),
               ],

@@ -216,9 +216,9 @@ extension FulfillmentMethodX on FulfillmentMethod {
   String get label {
     switch (this) {
       case FulfillmentMethod.delivery:
-        return 'Delivery';
+        return 'Door Delivery';
       case FulfillmentMethod.pickup:
-        return 'Pickup';
+        return 'Warehouse Pickup';
       case FulfillmentMethod.unknown:
         return 'Unknown';
     }

@@ -114,11 +114,6 @@ class _OrderCard extends StatelessWidget {
         order.orderStatus == OrderStatus.delivered ||
         order.orderStatus == OrderStatus.fulfilled;
     final isCancelled = order.orderStatus == OrderStatus.cancelled;
-    final showPickupPin = order.isPickup &&
-        order.hasPickupCollectionCode &&
-        order.orderStatus != OrderStatus.fulfilled &&
-        order.orderStatus != OrderStatus.cancelled &&
-        order.orderStatus != OrderStatus.collected;
     final canConfirmFulfillment = order.canUserConfirmFulfillment;
     final refundRequest = controller.refundRequestFor(order.id);
     final replacementRequest = controller.replacementRequestFor(order.id);
@@ -149,78 +144,45 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              headline,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.lora(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1C1917),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$dateLabel : ${order.formattedDate}',
-              style: AppTypography.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                color: isDelivered
-                    ? const Color(0xFF088B56)
-                    : isCancelled
-                    ? const Color(0xFFD14343)
-                    : const Color(0xFFC06A2D),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                UserOrderStatusChips(
-                  order: order,
-                  request: replacementRequest,
-                  refundRequest: refundRequest,
-                  compact: true,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        headline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.lora(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1C1917),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _OrderDateBadge(
+                        label: dateLabel,
+                        date: order.formattedDate,
+                        isDelivered: isDelivered,
+                        isCancelled: isCancelled,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 FulfillmentMethodChip(method: order.fulfillmentMethod),
               ],
             ),
-            if (showPickupPin) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFCD34D)),
-                ),
-                child: Text(
-                  'Collection PIN: ${order.pickupCollection!.code}',
-                  style: AppTypography.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF78350F),
-                  ).copyWith(letterSpacing: 1.2),
-                ),
-              ),
-            ],
-            if (order.isDelivery && order.delivery?.hasPodStatus == true) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Delivery verified: ${order.delivery!.pod!.displayLabel}',
-                style: AppTypography.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF088B56),
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            UserOrderStatusChips(
+              order: order,
+              request: replacementRequest,
+              refundRequest: refundRequest,
+              compact: true,
+            ),
+
             const SizedBox(height: 12),
             Text(
               'Items in this order ($itemCount)',
@@ -309,10 +271,7 @@ class _OrderCard extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    ReturnInstructionsSheet.show(
-                      context,
-                      order: order,
-                    );
+                    ReturnInstructionsSheet.show(context, order: order);
                   },
                   icon: const Icon(Icons.inventory_2_outlined, size: 15),
                   label: const Text('How to return'),
@@ -364,50 +323,8 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-class _OrderStatusPill extends StatelessWidget {
-  const _OrderStatusPill({required this.order});
-
-  final AdminOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusText =
-        order.orderStatus == OrderStatus.cancelled &&
-            order.paymentStatus == PaymentStatus.refundInitiated
-        ? 'Cancelled - refund initiated'
-        : order.orderStatus == OrderStatus.cancelled &&
-              order.paymentStatus == PaymentStatus.refunded
-        ? 'Cancelled - refunded'
-        : order.orderStatus.label;
-    final color = _statusColor(order.orderStatus);
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .12),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: .28)),
-        ),
-        child: Text(
-          statusText,
-          style: AppTypography.inter(
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _CompactOrderLine extends StatelessWidget {
-  const _CompactOrderLine({
-    required this.item,
-    this.statusTag,
-  });
+  const _CompactOrderLine({required this.item, this.statusTag});
 
   final OrderLineItem item;
   final ({String label, Color color})? statusTag;
@@ -480,29 +397,6 @@ class _CompactOrderLine extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-Color _statusColor(OrderStatus status) {
-  switch (status) {
-    case OrderStatus.cancelled:
-      return const Color(0xFFD14343);
-    case OrderStatus.delivered:
-    case OrderStatus.fulfilled:
-      return const Color(0xFF088B56);
-    case OrderStatus.shipped:
-    case OrderStatus.outForDelivery:
-      return const Color(0xFF253FA8);
-    case OrderStatus.readyForPickup:
-    case OrderStatus.packed:
-    case OrderStatus.collected:
-      return const Color(0xFF0E7490);
-    case OrderStatus.processing:
-      return const Color(0xFFC06A2D);
-    case OrderStatus.placed:
-      return const Color(0xFFE95700);
-    case OrderStatus.unknown:
-      return const Color(0xFF78716C);
   }
 }
 
@@ -597,6 +491,72 @@ class _EmptyState extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OrderDateBadge extends StatelessWidget {
+  const _OrderDateBadge({
+    required this.label,
+    required this.date,
+    required this.isDelivered,
+    required this.isCancelled,
+  });
+
+  final String label;
+  final String date;
+  final bool isDelivered;
+  final bool isCancelled;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = isDelivered
+        ? const Color(0xFF088B56)
+        : isCancelled
+        ? const Color(0xFFD14343)
+        : const Color(0xFF9A5B2D);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.20),
+          width: 0.7,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isDelivered
+                ? Icons.check_circle_outline_rounded
+                : isCancelled
+                ? Icons.cancel_outlined
+                : Icons.calendar_month_outlined,
+            size: 11.5,
+            color: statusColor,
+          ),
+          const SizedBox(width: 4.5),
+          Text(
+            '$label: ',
+            style: AppTypography.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF78716C),
+            ),
+          ),
+          Text(
+            date,
+            style: AppTypography.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: statusColor,
+            ),
+          ),
+        ],
       ),
     );
   }
