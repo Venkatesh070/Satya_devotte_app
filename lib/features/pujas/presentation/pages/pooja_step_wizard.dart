@@ -1958,188 +1958,204 @@ class _CompletionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return _BaseWizardScreen(
       onBack: onBack,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            // Success Icon
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFCF7EF).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                size: 80,
-                color: Color(0xFF4CAF50),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Puja Completed\nSuccessfully!',
-              textAlign: TextAlign.center,
-              style: AppTypography.lora(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFFCF7EF),
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Highlighted Blessings Container
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD180).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFFFFD180).withValues(alpha: 0.4),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome,
-                        size: 18,
-                        color: Color(0xFFFFD180),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Divine Blessings',
-                        style: AppTypography.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFFFD180),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  RichTextDisplay(
-                    _blessingText,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.inter(
-                      fontSize: 15,
-                      color: const Color(0xFFFCF7EF),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(flex: 2),
-
-            // Donation Section
-            GestureDetector(
-              onTap: () async {
-                if (!Get.find<OfflineService>().checkAndShowDialog()) {
-                  return;
-                }
-
-                MakeDonationScreen.show(context);
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF421204),
-                      Color(0xFF8B2C0F),
-                      Color(0xFFC04E15),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                child: Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
                   children: [
+                    const Spacer(flex: 2),
+                    const SizedBox(height: 12),
+                    // Success Icon
                     Container(
-                      width: 48,
-                      height: 48,
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Color(0xFFFCF7EF).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFFCF7EF).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.volunteer_activism_outlined,
-                        color: Color(0xFFFCF7EF),
-                        size: 26,
+                        Icons.check_circle_rounded,
+                        size: 68,
+                        color: Color(0xFF4CAF50),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Make a Donation',
-                            style: AppTypography.inter(
-                              color: Color(0xFFFCF7EF).withValues(alpha: 0.8),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Puja Completed\nSuccessfully!',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.lora(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFCF7EF),
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    // Highlighted Blessings Container
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD180).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFFFD180).withValues(alpha: 0.4),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Help us give you an outstanding experience',
-                            style: AppTypography.lora(
-                              color: Color(0xFFFCF7EF),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              height: 1.2,
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome,
+                                size: 18,
+                                color: Color(0xFFFFD180),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Divine Blessings',
+                                style: AppTypography.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFFFD180),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          RichTextDisplay(
+                            _blessingText,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.inter(
+                              fontSize: 14.5,
+                              color: const Color(0xFFFCF7EF),
+                              height: 1.5,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE87C3E),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Donate',
-                        style: AppTypography.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFFCF7EF),
+                    const Spacer(flex: 2),
+                    const SizedBox(height: 16),
+
+                    // Donation Section
+                    GestureDetector(
+                      onTap: () async {
+                        if (!Get.find<OfflineService>().checkAndShowDialog()) {
+                          return;
+                        }
+
+                        MakeDonationScreen.show(context);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF421204),
+                              Color(0xFF8B2C0F),
+                              Color(0xFFC04E15),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Color(0xFFFCF7EF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.volunteer_activism_outlined,
+                                color: Color(0xFFFCF7EF),
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Make a Donation',
+                                    style: AppTypography.inter(
+                                      color: Color(0xFFFCF7EF).withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Help us give you an outstanding experience',
+                                    style: AppTypography.lora(
+                                      color: Color(0xFFFCF7EF),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE87C3E),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Donate',
+                                style: AppTypography.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFFCF7EF),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+
+                    const Spacer(),
+                    const SizedBox(height: 8),
+                    _WizardButton(
+                      label: 'Back to Home',
+                      onTap: onFinish,
+                      showBack: false,
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-
-            const Spacer(),
-            _WizardButton(
-              label: 'Back to Home',
-              onTap: onFinish,
-              showBack: false,
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
