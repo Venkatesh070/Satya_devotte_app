@@ -318,6 +318,7 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
         ritual: widget.ritual,
         dayNumber: _currentDay,
         day: day,
+        isLoading: _isStartingDay,
         onNext: _hasRequiredItems ? _nextPage : _startRitualSteps,
         onBack: _previousPage,
         onOpenKnowMore: () {
@@ -333,6 +334,7 @@ class _RitualStepWizardState extends State<RitualStepWizard> {
           ritual: widget.ritual,
           dayNumber: _currentDay,
           day: day!,
+          isLoading: _isStartingDay,
           onNext: _startRitualSteps,
           onBack: _previousPage,
         ),
@@ -493,6 +495,7 @@ class _DayIntroScreen extends StatelessWidget {
     required this.onNext,
     required this.onBack,
     required this.onOpenKnowMore,
+    this.isLoading = false,
   });
 
   final RitualModel ritual;
@@ -501,6 +504,7 @@ class _DayIntroScreen extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onBack;
   final VoidCallback onOpenKnowMore;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -611,6 +615,7 @@ class _DayIntroScreen extends StatelessWidget {
               delay: const Duration(milliseconds: 240),
               child: _WizardButton(
                 label: 'Proceed',
+                isLoading: isLoading,
                 onTap: onNext,
                 onBack: onBack,
               ),
@@ -774,6 +779,7 @@ class _RitualIngredientsScreen extends StatefulWidget {
     required this.day,
     required this.onNext,
     required this.onBack,
+    this.isLoading = false,
   });
 
   final RitualModel ritual;
@@ -781,6 +787,7 @@ class _RitualIngredientsScreen extends StatefulWidget {
   final RitualDay day;
   final VoidCallback onNext;
   final VoidCallback onBack;
+  final bool isLoading;
 
   @override
   State<_RitualIngredientsScreen> createState() =>
@@ -909,6 +916,7 @@ class _RitualIngredientsScreenState extends State<_RitualIngredientsScreen> {
               delay: Duration(milliseconds: 160 + (items.length * 50)),
               child: _WizardButton(
                 label: 'Start Ritual',
+                isLoading: widget.isLoading,
                 onTap: widget.onNext,
                 onBack: widget.onBack,
               ),
@@ -1200,19 +1208,21 @@ class _WizardButton extends StatelessWidget {
     required this.onTap,
     this.onBack,
     this.showBack = true,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback onTap;
   final VoidCallback? onBack;
   final bool showBack;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final backBtn = SizedBox(
       height: 56,
       child: OutlinedButton(
-        onPressed: onBack ?? () => Get.back(),
+        onPressed: isLoading ? null : (onBack ?? () => Get.back()),
         style: OutlinedButton.styleFrom(
           padding: EdgeInsets.zero,
           foregroundColor: const Color(0xFFFCF7EF),
@@ -1234,20 +1244,34 @@ class _WizardButton extends StatelessWidget {
     final proceedBtn = SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: onTap,
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.zero,
           backgroundColor: const Color(0xFFFCF7EF),
           foregroundColor: const Color(0xFF255AE2),
+          disabledBackgroundColor:
+              const Color(0xFFFCF7EF).withValues(alpha: 0.8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
           elevation: 0,
         ),
-        child: Text(
-          label,
-          style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF255AE2)),
+                ),
+              )
+            : Text(
+                label,
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
 
