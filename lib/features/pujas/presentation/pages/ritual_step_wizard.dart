@@ -1013,6 +1013,8 @@ class _RitualStepScreen extends StatelessWidget {
             ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'Recite :',
@@ -1024,15 +1026,17 @@ class _RitualStepScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              RichTextDisplay(
-                mantraText,
-                textAlign: TextAlign.center,
-                style: AppTypography.lora(
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFFFD180),
-                  height: 1.35,
+              Center(
+                child: RichTextDisplay(
+                  mantraText,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.lora(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFFFD180),
+                    height: 1.35,
+                  ),
                 ),
               ),
             ],

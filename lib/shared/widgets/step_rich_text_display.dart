@@ -180,15 +180,17 @@ class _ReciteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              RichTextDisplay(
-                deltaJson,
-                textAlign: TextAlign.center,
-                style: AppTypography.lora(
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF6B2A0A),
-                  height: 1.45,
+              Center(
+                child: RichTextDisplay(
+                  deltaJson,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.lora(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6B2A0A),
+                    height: 1.45,
+                  ),
                 ),
               ),
             ],
@@ -217,15 +219,17 @@ class _ReciteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              RichTextDisplay(
-                deltaJson,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w600,
-                  color: CmsColors.textPrimary,
+              Center(
+                child: RichTextDisplay(
+                  deltaJson,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w600,
+                    color: CmsColors.textPrimary,
+                  ),
                 ),
               ),
             ],

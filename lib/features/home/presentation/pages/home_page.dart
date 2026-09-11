@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _triggerUpdatePopupIfNeeded();
+      // _triggerUpdatePopupIfNeeded();
     });
   }
 
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _triggerUpdatePopupIfNeeded();
+        // _triggerUpdatePopupIfNeeded();
       });
     }
   }

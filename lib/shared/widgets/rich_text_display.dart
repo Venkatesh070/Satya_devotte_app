@@ -115,8 +115,26 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
   }
 
   QuillController _buildController(String value) {
+    final doc = documentFromValue(value);
+    if (widget.textAlign == TextAlign.center) {
+      final len = doc.length;
+      if (len > 0) {
+        doc.format(0, len, Attribute.centerAlignment);
+      }
+    } else if (widget.textAlign == TextAlign.right) {
+      final len = doc.length;
+      if (len > 0) {
+        doc.format(0, len, Attribute.rightAlignment);
+      }
+    } else if (widget.textAlign == TextAlign.left ||
+        widget.textAlign == TextAlign.start) {
+      final len = doc.length;
+      if (len > 0) {
+        doc.format(0, len, Attribute.leftAlignment);
+      }
+    }
     return QuillController(
-      document: documentFromValue(value),
+      document: doc,
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
     );
@@ -125,7 +143,8 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
   @override
   void didUpdateWidget(_RichQuillDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
+    if (oldWidget.value != widget.value ||
+        oldWidget.textAlign != widget.textAlign) {
       final old = _controller;
       _controller = _buildController(widget.value);
       WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
@@ -149,6 +168,7 @@ class _RichQuillDisplayState extends State<_RichQuillDisplay> {
       showCursor: false,
     );
     Widget child = DefaultTextStyle(
+      textAlign: widget.textAlign ?? TextAlign.start,
       style: TextStyle(color: widget.style?.color ?? const Color(0xFFFCF7EF)),
       child: QuillEditor.basic(
         controller: _controller,
