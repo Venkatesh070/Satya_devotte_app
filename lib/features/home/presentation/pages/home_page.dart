@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // _triggerUpdatePopupIfNeeded();
+      _triggerUpdatePopupIfNeeded();
     });
   }
 
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // _triggerUpdatePopupIfNeeded();
+        _triggerUpdatePopupIfNeeded();
       });
     }
   }
@@ -757,39 +757,39 @@ class _HomeTabContentState extends State<_HomeTabContent> {
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 20),
-          child: Column(
-            children: [
-              _HomeHeader(
-                onOpenSearch: _openSearch,
-                todayDateAndTithi: widget.todayDateAndTithi,
-                dailySloka: widget.dailySloka,
-                slokaAuthor: widget.slokaAuthor,
-                slokaMeaning: widget.slokaMeaning,
-                slokaContemplation: widget.slokaContemplation,
-                slokaPrayer: widget.slokaPrayer,
+        child: Column(
+          children: [
+            _HomeHeader(
+              onOpenSearch: _openSearch,
+              todayDateAndTithi: widget.todayDateAndTithi,
+              dailySloka: widget.dailySloka,
+              slokaAuthor: widget.slokaAuthor,
+              slokaMeaning: widget.slokaMeaning,
+              slokaContemplation: widget.slokaContemplation,
+              slokaPrayer: widget.slokaPrayer,
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
+              child: _HomeBodySections(
+                poojas: widget.poojas,
+                festivals: widget.festivals,
+                featuredProducts: widget.featuredProducts,
+                poojasCompleted: widget.poojasCompleted,
+                ritualsCompleted: widget.ritualsCompleted,
+                dayStreak: widget.dayStreak,
+                onPoojasViewMore: widget.onPoojasViewMore,
+                onFestivalsViewMore: widget.onFestivalsViewMore,
+                onPujaTap: widget.onPujaTap,
+                onFestivalTap: widget.onFestivalTap,
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(0, 14, 0, 0),
-                child: _HomeBodySections(
-                  poojas: widget.poojas,
-                  festivals: widget.festivals,
-                  featuredProducts: widget.featuredProducts,
-                  poojasCompleted: widget.poojasCompleted,
-                  ritualsCompleted: widget.ritualsCompleted,
-                  dayStreak: widget.dayStreak,
-                  onPoojasViewMore: widget.onPoojasViewMore,
-                  onFestivalsViewMore: widget.onFestivalsViewMore,
-                  onPujaTap: widget.onPujaTap,
-                  onFestivalTap: widget.onFestivalTap,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _Footer(),
-              const SizedBox(height: 120),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            _Footer(),
+            const SizedBox(height: 120),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -1128,11 +1128,7 @@ class _BottomNavBar extends StatelessWidget {
           color: color,
         );
       }
-      return Icon(
-        icon ?? Icons.circle_outlined,
-        size: size,
-        color: color,
-      );
+      return Icon(icon ?? Icons.circle_outlined, size: size, color: color);
     }
 
     return GestureDetector(
@@ -1230,14 +1226,20 @@ class _FluidHumpPainter extends CustomPainter {
     }
 
     path.cubicTo(
-      cx - (humpSpan * 0.55), topY,
-      cx - (humpSpan * 0.45), 0,
-      cx, 0,
+      cx - (humpSpan * 0.55),
+      topY,
+      cx - (humpSpan * 0.45),
+      0,
+      cx,
+      0,
     );
     path.cubicTo(
-      cx + (humpSpan * 0.45), 0,
-      cx + (humpSpan * 0.55), topY,
-      xRight.clamp(0.0, size.width), topY,
+      cx + (humpSpan * 0.45),
+      0,
+      cx + (humpSpan * 0.55),
+      topY,
+      xRight.clamp(0.0, size.width),
+      topY,
     );
 
     path.lineTo(size.width, topY);
@@ -1262,14 +1264,20 @@ class _FluidHumpPainter extends CustomPainter {
     strokePath.moveTo(0, topY);
     if (xLeft > 0) strokePath.lineTo(xLeft, topY);
     strokePath.cubicTo(
-      cx - (humpSpan * 0.55), topY,
-      cx - (humpSpan * 0.45), 0,
-      cx, 0,
+      cx - (humpSpan * 0.55),
+      topY,
+      cx - (humpSpan * 0.45),
+      0,
+      cx,
+      0,
     );
     strokePath.cubicTo(
-      cx + (humpSpan * 0.45), 0,
-      cx + (humpSpan * 0.55), topY,
-      xRight.clamp(0.0, size.width), topY,
+      cx + (humpSpan * 0.45),
+      0,
+      cx + (humpSpan * 0.55),
+      topY,
+      xRight.clamp(0.0, size.width),
+      topY,
     );
     strokePath.lineTo(size.width, topY);
 
@@ -2238,8 +2246,6 @@ class _StickyShopButton extends StatelessWidget {
     );
   }
 }
-
-
 
 // ignore: unused_element
 class _FeaturedProductsSection extends StatelessWidget {
