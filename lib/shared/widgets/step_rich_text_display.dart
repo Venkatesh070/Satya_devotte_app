@@ -179,10 +179,11 @@ class _ReciteCard extends StatelessWidget {
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Recite :',
+                textAlign: TextAlign.center,
                 style: AppTypography.lora(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -192,6 +193,7 @@ class _ReciteCard extends StatelessWidget {
               const SizedBox(height: 6),
               RichTextDisplay(
                 deltaJson,
+                textAlign: TextAlign.center,
                 style: AppTypography.lora(
                   fontSize: 13,
                   fontStyle: FontStyle.italic,
@@ -213,10 +215,11 @@ class _ReciteCard extends StatelessWidget {
             border: Border.all(color: CmsColors.orange.withValues(alpha: 0.25)),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Recite :',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -226,6 +229,7 @@ class _ReciteCard extends StatelessWidget {
               const SizedBox(height: 4),
               RichTextDisplay(
                 deltaJson,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.4,

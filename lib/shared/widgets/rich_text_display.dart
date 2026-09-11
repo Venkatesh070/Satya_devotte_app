@@ -37,7 +37,11 @@ class RichTextDisplay extends StatelessWidget {
     }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: textAlign == TextAlign.center ||
+              textAlign == TextAlign.right ||
+              textAlign == TextAlign.end
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < blocks.length; i++) ...[
