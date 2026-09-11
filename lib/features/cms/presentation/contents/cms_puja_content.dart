@@ -386,7 +386,7 @@ class _PoojaListState extends State<_PoojaList> {
         // ── Content ──────────────────────────────────────────
         Expanded(
           child: Obx(() {
-            if (controller.isLoading && controller.poojas.isEmpty) {
+            if (controller.isLoading) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

@@ -8,7 +8,7 @@ class SendNotificationRequest {
   const SendNotificationRequest({
     required this.title,
     required this.body,
-    this.audience = 'ALL',
+    this.audience = 'USERS',
     this.userIds = const <String>[],
     this.data,
     this.imageUrl,

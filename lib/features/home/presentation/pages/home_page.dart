@@ -17,7 +17,6 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
-import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/home/data/home_constants.dart';
 import 'package:satya_devotte_app/features/home/presentation/pages/search_page.dart';
@@ -293,14 +292,15 @@ class _HomePageState extends State<HomePage> {
       final cachedPayload = offlineService.getCachedData(cacheKey);
       final cachedProductsData = offlineService.getCachedData(productsCacheKey);
 
-      List<ProductModel> cachedProducts = [];
-      if (cachedProductsData is List) {
+      List<ProductModel>? cachedProducts;
+      if (cachedProductsData is List && cachedProductsData.isNotEmpty) {
         cachedProducts = cachedProductsData
             .map((p) => ProductModel.fromJson(Map<String, dynamic>.from(p)))
             .toList();
       }
 
       if (cachedPayload is Map && mounted) {
+        // Prefer products embedded in home_data when present.
         _updateUIWithData(cachedPayload, cachedProducts);
       }
     } catch (error) {
@@ -316,21 +316,16 @@ class _HomePageState extends State<HomePage> {
     try {
       final apiClient = Get.find<ApiClient>();
       final deviceTimeZone = await _deviceTimeZone();
-      // Fetch home and products in parallel
-      final responses = await Future.wait([
-        apiClient.dio.get<dynamic>(
-          ApiEndpoints.home,
-          queryParameters: {'timezone': deviceTimeZone},
-          options: dio.Options(
-            headers: {'X-Timezone': deviceTimeZone},
-          ),
+      final homeResponse = await apiClient.dio.get<dynamic>(
+        ApiEndpoints.home,
+        queryParameters: {'timezone': deviceTimeZone},
+        options: dio.Options(
+          headers: {'X-Timezone': deviceTimeZone},
         ),
-        ProductRemoteDataSource(apiClient).getFeaturedProducts(limit: 10),
-      ]);
+      );
 
-      final homeResponse = responses[0] as dio.Response<dynamic>;
-      final allProducts = responses[1] as List<ProductModel>;
-      final filteredProducts = allProducts
+      final featuredFromHome = _parseFeaturedProducts(homeResponse.data);
+      final filteredProducts = featuredFromHome
           .where((p) => !p.isOrderClosed)
           .toList();
 
@@ -352,7 +347,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _updateUIWithData(dynamic payload, List<ProductModel> products) {
+  List<ProductModel> _parseFeaturedProducts(dynamic payload) {
+    if (payload is! Map) return const <ProductModel>[];
+    final data = payload['data'];
+    if (data is! Map) return const <ProductModel>[];
+    final raw = data['featuredProducts'] ?? data['featured'];
+    if (raw is! List) return const <ProductModel>[];
+    return raw
+        .whereType<Map>()
+        .map((e) => ProductModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  void _updateUIWithData(dynamic payload, [List<ProductModel>? products]) {
     if (payload is! Map) return;
     final data = payload['data'];
     if (data is! Map) return;
@@ -396,10 +403,14 @@ class _HomePageState extends State<HomePage> {
       'completedRitualCount',
     ]);
     final streakCount = _readInt(data['streak'], const ['streakCount']);
+    final featuredProducts = products ??
+        _parseFeaturedProducts(payload)
+            .where((p) => !p.isOrderClosed)
+            .toList();
 
     if (!mounted) return;
     setState(() {
-      _featuredProducts = products;
+      _featuredProducts = featuredProducts;
       if (completedPujas != null) {
         _poojasCompleted = completedPujas;
       }

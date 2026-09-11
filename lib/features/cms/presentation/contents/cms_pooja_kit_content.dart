@@ -1236,18 +1236,26 @@ class _PaginationBar extends StatelessWidget {
                   )
                   .toList(),
               onChanged: (v) {
-                if (v != null) ctrl.setPageSize(v);
+                if (v != null) {
+                  ctrl.setPageSize(v);
+                  cmsScrollContentToTop(context);
+                }
               },
             ),
           ),
         ),
       ];
 
+      void goTo(int target) {
+        ctrl.setPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _PagerBtn(
           icon: Icons.chevron_left,
           enabled: page > 1,
-          onTap: () => ctrl.setPage(page - 1),
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _pageRange(page, tp))
           n == -1
@@ -1261,12 +1269,12 @@ class _PaginationBar extends StatelessWidget {
               : _PageNumberBtn(
                   number: n,
                   isActive: n == page,
-                  onTap: () => ctrl.setPage(n),
+                  onTap: () => goTo(n),
                 ),
         _PagerBtn(
           icon: Icons.chevron_right,
           enabled: page < tp,
-          onTap: () => ctrl.setPage(page + 1),
+          onTap: () => goTo(page + 1),
         ),
       ];
 

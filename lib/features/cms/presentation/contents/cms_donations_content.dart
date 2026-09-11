@@ -1129,7 +1129,7 @@ class _CmsDonationsAllContentState extends State<CmsDonationsAllContent> {
         _AllDonationsFilterBar(ctrl: _ctrl),
         Expanded(
           child: Obx(() {
-            if (_ctrl.isLoading && _ctrl.items.isEmpty) {
+            if (_ctrl.isLoading) {
               return const _ContributionsLoading();
             }
             if (_ctrl.error != null && _ctrl.items.isEmpty) {
@@ -1882,18 +1882,26 @@ class _ContributionsPaginationBar extends StatelessWidget {
                       DropdownMenuItem(value: s, child: Text('$s')))
                   .toList(),
               onChanged: (v) {
-                if (v != null) ctrl.setLimit(v);
+                if (v != null) {
+                  ctrl.setLimit(v);
+                  cmsScrollContentToTop(context);
+                }
               },
             ),
           ),
         ),
       ];
 
+      void goTo(int target) {
+        ctrl.goToPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _PagerBtnMini(
           icon: Icons.chevron_left,
           enabled: page > 1,
-          onTap: ctrl.prevPage,
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _pageRange(page, tp))
           n == -1
@@ -1907,12 +1915,12 @@ class _ContributionsPaginationBar extends StatelessWidget {
               : _PageNumberBtnMini(
                   number: n,
                   isActive: n == page,
-                  onTap: () => ctrl.goToPage(n),
+                  onTap: () => goTo(n),
                 ),
         _PagerBtnMini(
           icon: Icons.chevron_right,
           enabled: page < tp,
-          onTap: ctrl.nextPage,
+          onTap: () => goTo(page + 1),
         ),
       ];
 

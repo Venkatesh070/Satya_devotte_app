@@ -406,7 +406,7 @@ class _RequestsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading && controller.items.isEmpty) {
+      if (controller.isLoading) {
         return const Center(child: CircularProgressIndicator());
       }
       if (controller.error != null && controller.items.isEmpty) {
@@ -668,7 +668,12 @@ class _PaginationBar extends StatelessWidget {
                 mouseCursor: _cmsButtonClickCursor,
               ),
               tooltip: 'Previous',
-              onPressed: controller.page > 1 ? controller.prevPage : null,
+              onPressed: controller.page > 1
+                  ? () {
+                      controller.prevPage();
+                      cmsScrollContentToTop(context);
+                    }
+                  : null,
               icon: const Icon(Icons.chevron_left_rounded),
             ),
             IconButton(
@@ -677,7 +682,10 @@ class _PaginationBar extends StatelessWidget {
               ),
               tooltip: 'Next',
               onPressed: controller.page < controller.totalPages
-                  ? controller.nextPage
+                  ? () {
+                      controller.nextPage();
+                      cmsScrollContentToTop(context);
+                    }
                   : null,
               icon: const Icon(Icons.chevron_right_rounded),
             ),

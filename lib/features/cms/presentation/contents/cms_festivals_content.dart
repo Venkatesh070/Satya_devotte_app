@@ -370,7 +370,7 @@ class _FestivalListState extends State<_FestivalList> {
         // ── Content ───────────────────────────────────────────────
         Expanded(
           child: Obx(() {
-            if (ctrl.isLoading && ctrl.festivals.isEmpty) {
+            if (ctrl.isLoading) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

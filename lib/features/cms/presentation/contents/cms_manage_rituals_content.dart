@@ -1,4 +1,5 @@
 // lib/features/cms/presentation/contents/cms_manage_rituals_content.dart
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -55,8 +56,7 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
     _controller = Get.find<RitualController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _controller.clearSearch();
-      _controller.loadRituals(showErrorSnackbar: false);
+      unawaited(_controller.resetSearchOnTabFocus());
     });
   }
 
@@ -312,7 +312,7 @@ class _RitualListState extends State<_RitualList> {
         const Divider(height: 1, color: CmsColors.border),
         Expanded(
           child: Obx(() {
-            if (controller.isLoading && controller.rituals.isEmpty) {
+            if (controller.isLoading) {
               return const Center(
                 child: CircularProgressIndicator(color: CmsColors.orange),
               );

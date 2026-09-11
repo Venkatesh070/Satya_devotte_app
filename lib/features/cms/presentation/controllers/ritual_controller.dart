@@ -77,7 +77,9 @@ class RitualController extends GetxController {
     _search.value = '';
   }
 
+  /// Called when entering Manage Rituals — resets status filter + search.
   Future<void> resetSearchOnTabFocus() async {
+    _filter.value = 'All';
     _search.value = '';
     await loadRituals(page: 1, showErrorSnackbar: false);
   }

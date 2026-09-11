@@ -29,12 +29,11 @@ class CmsNotificationsController extends GetxController {
   ];
 
   /// Audience options the dropdown exposes. `USER_IDS` is intentionally
-  /// omitted from the v1 UI (per the plan).
+  /// omitted from the v1 UI (per the plan). `ALL` and `SUPERADMIN` are
+  /// hidden from the send form.
   static const audienceOptions = <String>[
-    'ALL',
     'USERS',
     'ADMINS',
-    'SUPERADMIN',
   ];
 
   // ── Send-form state ──────────────────────────────────────────────

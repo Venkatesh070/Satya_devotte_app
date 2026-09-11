@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 
 import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_notifications_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
+import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/notifications/data/models/app_notification.dart';
 import 'package:satya_devotte_app/features/notifications/data/models/send_notification_request.dart';
 
@@ -69,7 +70,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
-  String _audience = 'ALL';
+  String _audience = 'USERS';
   DateTime? _scheduledAt;
 
   @override
@@ -145,7 +146,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
     _titleCtrl.clear();
     _bodyCtrl.clear();
     setState(() {
-      _audience = 'ALL';
+      _audience = 'USERS';
       _scheduledAt = null;
     });
   }
@@ -203,7 +204,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
         _StatusFilterBar(ctrl: _ctrl),
         const SizedBox(height: 8),
         Obx(() {
-          if (_ctrl.isLoading && _ctrl.items.isEmpty) {
+          if (_ctrl.isLoading) {
             return const _ListLoading();
           }
           if (_ctrl.listError != null && _ctrl.items.isEmpty) {
@@ -450,10 +451,8 @@ class _SendNotificationCard extends StatelessWidget {
           value: audience,
           decoration: const InputDecoration(border: OutlineInputBorder()),
           items: const [
-            DropdownMenuItem(value: 'ALL', child: Text('All Users')),
             DropdownMenuItem(value: 'USERS', child: Text('Users')),
             DropdownMenuItem(value: 'ADMINS', child: Text('Admins')),
-            DropdownMenuItem(value: 'SUPERADMIN', child: Text('Super Admin')),
           ],
           onChanged: onAudienceChanged,
         ),
@@ -710,11 +709,10 @@ class _NotificationCard extends StatelessWidget {
                       icon: Icons.people_outline,
                       text: n.audienceLabel,
                     ),
-                    if (n.totalRecipients > 0)
+                    if (n.totalRecipients > 0 || n.successCount > 0)
                       _MetaPill(
                         icon: Icons.check_circle_outline,
-                        text:
-                            '${n.successCount}/${n.totalRecipients} delivered',
+                        text: n.deliverySummary,
                       ),
                     _MetaPill(
                       icon: Icons.access_time,
@@ -891,18 +889,26 @@ class _NotificationsPaginationBar extends StatelessWidget {
                       DropdownMenuItem(value: s, child: Text('$s')))
                   .toList(),
               onChanged: (v) {
-                if (v != null) ctrl.setLimit(v);
+                if (v != null) {
+                  ctrl.setLimit(v);
+                  cmsScrollContentToTop(context);
+                }
               },
             ),
           ),
         ),
       ];
 
+      void goTo(int target) {
+        ctrl.goToPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _PagerBtn(
           icon: Icons.chevron_left,
           enabled: page > 1,
-          onTap: ctrl.prevPage,
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _pageRange(page, tp))
           n == -1
@@ -916,12 +922,12 @@ class _NotificationsPaginationBar extends StatelessWidget {
               : _PageNumberBtn(
                   number: n,
                   isActive: n == page,
-                  onTap: () => ctrl.goToPage(n),
+                  onTap: () => goTo(n),
                 ),
         _PagerBtn(
           icon: Icons.chevron_right,
           enabled: page < tp,
-          onTap: ctrl.nextPage,
+          onTap: () => goTo(page + 1),
         ),
       ];
 

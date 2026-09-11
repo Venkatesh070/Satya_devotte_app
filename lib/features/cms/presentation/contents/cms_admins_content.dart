@@ -184,7 +184,7 @@ class _CmsAdminsContentState extends State<CmsAdminsContent> {
             children: [
               Expanded(
                 child: Obx(() {
-                  if (_ctrl.isLoadingAdmins && _ctrl.admins.isEmpty) {
+                  if (_ctrl.isLoadingAdmins) {
                     return const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -654,6 +654,7 @@ class _AdminsPaginationBar extends StatelessWidget {
                   : (v) {
                       if (v != null) {
                         ctrl.setAdminsPageSize(v);
+                        cmsScrollContentToTop(context);
                       }
                     },
             ),
@@ -661,11 +662,16 @@ class _AdminsPaginationBar extends StatelessWidget {
         ),
       ];
 
+      void goTo(int target) {
+        ctrl.setAdminsPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _AdminsPagerBtn(
           icon: Icons.chevron_left,
           enabled: page > 1 && !ctrl.isLoadingAdmins,
-          onTap: () => ctrl.setAdminsPage(page - 1),
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _pageRange(page, totalPages))
           n == -1
@@ -679,12 +685,12 @@ class _AdminsPaginationBar extends StatelessWidget {
               : _AdminsPageNumberBtn(
                   number: n,
                   isActive: n == page,
-                  onTap: () => ctrl.setAdminsPage(n),
+                  onTap: () => goTo(n),
                 ),
         _AdminsPagerBtn(
           icon: Icons.chevron_right,
           enabled: page < totalPages && !ctrl.isLoadingAdmins,
-          onTap: () => ctrl.setAdminsPage(page + 1),
+          onTap: () => goTo(page + 1),
         ),
       ];
 

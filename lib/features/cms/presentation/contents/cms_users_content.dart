@@ -112,7 +112,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
         Expanded(
           child: Obx(() {
             // Loading
-            if (_ctrl.isLoadingRegularUsers && _ctrl.regularUsers.isEmpty) {
+            if (_ctrl.isLoadingRegularUsers) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -795,6 +795,7 @@ class _UsersPaginationBar extends StatelessWidget {
                   : (v) {
                       if (v != null) {
                         ctrl.setRegularUsersPageSize(v);
+                        cmsScrollContentToTop(context);
                       }
                     },
             ),
@@ -802,11 +803,16 @@ class _UsersPaginationBar extends StatelessWidget {
         ),
       ];
 
+      void goTo(int target) {
+        ctrl.setRegularUsersPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _UsersPagerBtn(
           icon: Icons.chevron_left,
           enabled: page > 1 && !ctrl.isLoadingRegularUsers,
-          onTap: () => ctrl.setRegularUsersPage(page - 1),
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _pageRange(page, totalPages))
           n == -1
@@ -820,12 +826,12 @@ class _UsersPaginationBar extends StatelessWidget {
               : _UsersPageNumberBtn(
                   number: n,
                   isActive: n == page,
-                  onTap: () => ctrl.setRegularUsersPage(n),
+                  onTap: () => goTo(n),
                 ),
         _UsersPagerBtn(
           icon: Icons.chevron_right,
           enabled: page < totalPages && !ctrl.isLoadingRegularUsers,
-          onTap: () => ctrl.setRegularUsersPage(page + 1),
+          onTap: () => goTo(page + 1),
         ),
       ];
 

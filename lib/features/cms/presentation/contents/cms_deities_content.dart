@@ -332,7 +332,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
           ),
           Expanded(
             child: Obx(() {
-              if (_controller.isLoading && _controller.deities.isEmpty) {
+              if (_controller.isLoading) {
                 return const Center(
                   child: CircularProgressIndicator(color: CmsColors.orange),
                 );

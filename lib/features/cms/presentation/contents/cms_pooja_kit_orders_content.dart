@@ -416,7 +416,7 @@ class _OrdersBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading && controller.items.isEmpty) {
+      if (controller.isLoading) {
         return const Center(child: CircularProgressIndicator());
       }
       if (controller.error != null && controller.items.isEmpty) {
@@ -833,18 +833,26 @@ class _OrdersPaginationBar extends StatelessWidget {
                   .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
                   .toList(),
               onChanged: (v) {
-                if (v != null) controller.setLimit(v);
+                if (v != null) {
+                  controller.setLimit(v);
+                  cmsScrollContentToTop(context);
+                }
               },
             ),
           ),
         ),
       ];
 
+      void goTo(int target) {
+        controller.goToPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _OrdersPagerBtnMini(
           icon: Icons.chevron_left,
           enabled: page > 1,
-          onTap: controller.prevPage,
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _ordersPageRange(page, tp))
           n == -1
@@ -858,12 +866,12 @@ class _OrdersPaginationBar extends StatelessWidget {
               : _OrdersPageNumberBtnMini(
                   number: n,
                   isActive: n == page,
-                  onTap: () => controller.goToPage(n),
+                  onTap: () => goTo(n),
                 ),
         _OrdersPagerBtnMini(
           icon: Icons.chevron_right,
           enabled: page < tp,
-          onTap: controller.nextPage,
+          onTap: () => goTo(page + 1),
         ),
       ];
 
@@ -1182,10 +1190,7 @@ class _OrderDetailBody extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: _ShippingCard(
-                            controller: controller,
-                            order: order,
-                          ),
+                          child: _ShippingCard(order: order),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -1197,13 +1202,13 @@ class _OrderDetailBody extends StatelessWidget {
                       ],
                     )
                   else
-                    _ShippingCard(controller: controller, order: order),
+                    _ShippingCard(order: order),
                 ] else ...[
                   _LineItemsCard(order: order),
                   const SizedBox(height: 14),
                   _OrderTotalsCard(order: order),
                   const SizedBox(height: 14),
-                  _ShippingCard(controller: controller, order: order),
+                  _ShippingCard(order: order),
                   if (order.isPaymentPaid && order.isDelivery) ...[
                     const SizedBox(height: 14),
                     _TrackingCard(controller: controller, order: order),
@@ -1723,18 +1728,8 @@ class _ItemPlaceholder extends StatelessWidget {
 }
 
 class _ShippingCard extends StatelessWidget {
-  const _ShippingCard({
-    required this.controller,
-    required this.order,
-  });
-  final AdminOrdersController controller;
+  const _ShippingCard({required this.order});
   final AdminOrder order;
-
-  Future<void> _completePickup(BuildContext context) async {
-    final pin = await AdminVerifyPickupDialog.show(context);
-    if (pin == null || pin.isEmpty) return;
-    await controller.verifyPickup(pin);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1765,23 +1760,6 @@ class _ShippingCard extends StatelessWidget {
               _MetaPair(
                 label: 'Collection PIN',
                 value: order.pickupCollection!.code,
-              ),
-            ],
-            if (order.canAdminCompletePickup) ...[
-              const SizedBox(height: 14),
-              Obx(
-                () => SizedBox(
-                  width: double.infinity,
-                  child: CmsPrimaryButton(
-                    label: 'Mark picked up (verify PIN)',
-                    icon: Icons.check_circle_outline_rounded,
-                    isLoading: controller.mutating,
-                    onTap: () {
-                      if (controller.mutating) return;
-                      _completePickup(context);
-                    },
-                  ),
-                ),
               ),
             ],
             if (addr != null && addr.name.isNotEmpty) ...[
@@ -1924,7 +1902,11 @@ class _DeliveryShippingBody extends StatelessWidget {
               leftColumn,
               if (hasWarehouse) ...[
                 const SizedBox(height: 16),
-                _WarehouseHighlightBox(location: pickup!, title: ''),
+                _WarehouseHighlightBox(
+                  location: pickup!,
+                  title: '',
+                  showInstructions: false,
+                ),
               ],
             ],
           );
@@ -1937,7 +1919,11 @@ class _DeliveryShippingBody extends StatelessWidget {
             const SizedBox(width: 20),
             Expanded(
               flex: 5,
-              child: _WarehouseHighlightBox(location: pickup!, title: ''),
+              child: _WarehouseHighlightBox(
+                location: pickup!,
+                title: '',
+                showInstructions: false,
+              ),
             ),
           ],
         );
@@ -1950,9 +1936,12 @@ class _WarehouseHighlightBox extends StatelessWidget {
   const _WarehouseHighlightBox({
     required this.location,
     required this.title,
+    this.showInstructions = true,
   });
   final OrderPickupLocation location;
   final String title;
+  /// Pickup-only copy (e.g. collection PIN reminder). Hidden for delivery.
+  final bool showInstructions;
 
   @override
   Widget build(BuildContext context) {
@@ -2030,7 +2019,8 @@ class _WarehouseHighlightBox extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (location.instructions.trim().isNotEmpty) ...[
+                if (showInstructions &&
+                    location.instructions.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     location.instructions.trim(),
@@ -2159,7 +2149,7 @@ class _TrackingEmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Use Book Courier Guy & Dispatch to create a waybill.\nTracking appears here for admin and the customer after booking.',
+          'Use Assign Courier Guy & Dispatch to create a waybill.\nTracking appears here for admin and the customer after booking.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12.5,
@@ -2173,10 +2163,15 @@ class _TrackingEmptyState extends StatelessWidget {
             () => SizedBox(
               width: double.infinity,
               child: CmsPrimaryButton(
-                label: 'Book Courier Guy & Dispatch',
+                label: 'Assign Courier Guy & Dispatch',
                 icon: Icons.local_shipping_rounded,
-                isLoading: controller.mutating,
-                onTap: () => controller.dispatch(bookCourier: true),
+                isLoading: controller.isMutating(
+                  AdminOrdersController.actionDispatch,
+                ),
+                onTap: () {
+                  if (controller.mutating) return;
+                  controller.dispatch(bookCourier: true);
+                },
               ),
             ),
           ),
@@ -2251,7 +2246,7 @@ class _TrackingBookedBody extends StatelessWidget {
     if (d?.hasLabel == true) {
       actions.add(
         _OutlinedAction(
-          label: 'Open label',
+          label: 'Courier-Invoice',
           icon: Icons.description_outlined,
           color: CmsColors.orangeDark,
           onTap: () => controller.openShippingLabel(),
@@ -2261,7 +2256,7 @@ class _TrackingBookedBody extends StatelessWidget {
     if (d?.hasWaybill == true || t?.hasTrackingNumber == true) {
       actions.add(
         _OutlinedAction(
-          label: 'Refresh POD status',
+          label: 'Refresh Order status',
           icon: Icons.refresh_rounded,
           color: CmsColors.orangeDark,
           onTap: () => controller.syncDeliveryPod(),
@@ -2510,7 +2505,7 @@ class _ActionBar extends StatelessWidget {
     final canFulfil = order.isPaymentPaid;
     return Obx(
       () {
-        final busy = controller.mutating;
+        final locked = controller.mutating;
         final children = <Widget>[];
 
         if (order.canAdminCompletePickup) {
@@ -2518,8 +2513,12 @@ class _ActionBar extends StatelessWidget {
             CmsPrimaryButton(
               label: 'Mark picked up (verify PIN)',
               icon: Icons.check_circle_outline_rounded,
-              isLoading: busy,
+              color: CmsColors.green,
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionVerifyPickup,
+              ),
               onTap: () async {
+                if (locked) return;
                 final pin = await AdminVerifyPickupDialog.show(context);
                 if (pin == null || pin.isEmpty) return;
                 await controller.verifyPickup(pin);
@@ -2533,8 +2532,13 @@ class _ActionBar extends StatelessWidget {
             CmsPrimaryButton(
               label: 'Mark processing',
               icon: Icons.play_arrow_rounded,
-              isLoading: busy,
-              onTap: () => controller.markStatus(OrderStatus.processing),
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionMarkProcessing,
+              ),
+              onTap: () {
+                if (locked) return;
+                controller.markStatus(OrderStatus.processing);
+              },
             ),
           );
         }
@@ -2545,8 +2549,13 @@ class _ActionBar extends StatelessWidget {
             CmsPrimaryButton(
               label: 'Mark packed',
               icon: Icons.inventory_2_outlined,
-              isLoading: busy,
-              onTap: () => controller.markPacked(),
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionMarkPacked,
+              ),
+              onTap: () {
+                if (locked) return;
+                controller.markPacked();
+              },
             ),
           );
         }
@@ -2559,8 +2568,13 @@ class _ActionBar extends StatelessWidget {
             CmsPrimaryButton(
               label: 'Ready for pickup',
               icon: Icons.storefront_outlined,
-              isLoading: busy,
-              onTap: () => controller.markReadyForPickup(),
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionReadyForPickup,
+              ),
+              onTap: () {
+                if (locked) return;
+                controller.markReadyForPickup();
+              },
             ),
           );
         }
@@ -2572,10 +2586,15 @@ class _ActionBar extends StatelessWidget {
                 order.orderStatus == OrderStatus.placed)) {
           children.add(
             CmsPrimaryButton(
-              label: 'Book Courier Guy & Dispatch',
+              label: 'Assign Courier Guy & Dispatch',
               icon: Icons.local_shipping_rounded,
-              isLoading: busy,
-              onTap: () => controller.dispatch(bookCourier: true),
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionDispatch,
+              ),
+              onTap: () {
+                if (locked) return;
+                controller.dispatch(bookCourier: true);
+              },
             ),
           );
         }
@@ -2584,30 +2603,15 @@ class _ActionBar extends StatelessWidget {
             (order.delivery?.hasWaybill == true || order.hasTracking)) {
           children.add(
             CmsPrimaryButton(
-              label: 'Refresh POD status',
+              label: 'Refresh Order status',
               icon: Icons.verified_user_outlined,
-              isLoading: busy,
-              onTap: () => controller.syncDeliveryPod(),
-            ),
-          );
-        }
-        if (canFulfil && nextStates.contains(OrderStatus.outForDelivery)) {
-          children.add(
-            CmsPrimaryButton(
-              label: 'Mark out for delivery',
-              icon: Icons.delivery_dining_rounded,
-              isLoading: busy,
-              onTap: () => controller.markStatus(OrderStatus.outForDelivery),
-            ),
-          );
-        }
-        if (canFulfil && nextStates.contains(OrderStatus.delivered)) {
-          children.add(
-            CmsPrimaryButton(
-              label: 'Mark delivered',
-              icon: Icons.check_circle_outline_rounded,
-              isLoading: busy,
-              onTap: () => controller.markStatus(OrderStatus.delivered),
+              isLoading: controller.isMutating(
+                AdminOrdersController.actionSyncPod,
+              ),
+              onTap: () {
+                if (locked) return;
+                controller.syncDeliveryPod();
+              },
             ),
           );
         }
@@ -2617,7 +2621,9 @@ class _ActionBar extends StatelessWidget {
               label: 'Cancel order',
               icon: Icons.cancel_outlined,
               color: CmsColors.red,
-              onTap: busy ? null : () => _showCancelDialog(context, controller),
+              onTap: locked
+                  ? null
+                  : () => _showCancelDialog(context, controller),
             ),
           );
         }
@@ -2627,7 +2633,7 @@ class _ActionBar extends StatelessWidget {
               label: 'Initiate Refund',
               icon: Icons.currency_exchange_rounded,
               color: const Color(0xFF6A1B9A),
-              onTap: busy
+              onTap: locked
                   ? null
                   : () => _showInitiateRefundDialog(context, controller),
             ),
@@ -2639,8 +2645,10 @@ class _ActionBar extends StatelessWidget {
               label: 'Verify payment',
               icon: Icons.check_rounded,
               color: CmsColors.orangeDark,
-              onTap:
-                  busy ? null : () => controller.verifyPayment(order.paymentReference),
+              onTap: locked
+                  ? null
+                  : () =>
+                      controller.verifyPayment(order.paymentReference),
             ),
           );
         }

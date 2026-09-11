@@ -60,6 +60,9 @@ class AppNotification {
     required this.successCount,
     required this.failureCount,
     required this.createdAt,
+    this.targetedUserCount = 0,
+    this.reachableUserCount = 0,
+    this.targetedTokenCount = 0,
     this.scheduledAt,
     this.sentAt,
     this.imageUrl,
@@ -77,13 +80,31 @@ class AppNotification {
   final DateTime? sentAt;
   final int successCount;
   final int failureCount;
+  final int targetedUserCount;
+  /// Users who had ≥1 FCM token when the broadcast was sent.
+  final int reachableUserCount;
+  final int targetedTokenCount;
   final DateTime createdAt;
   final String? imageUrl;
   final Map<String, dynamic>? data;
 
   String get statusLabel => _statusToWire(status);
 
-  int get totalRecipients => successCount + failureCount;
+  /// Audience size used as the delivery denominator (same for same target).
+  int get totalRecipients {
+    if (targetedUserCount > 0) return targetedUserCount;
+    return successCount + failureCount;
+  }
+
+  /// Short CMS label explaining push vs audience size.
+  String get deliverySummary {
+    final audience = totalRecipients;
+    if (audience <= 0 && successCount <= 0) return 'No delivery data';
+    if (reachableUserCount > 0) {
+      return '$successCount/$reachableUserCount with app · $audience users';
+    }
+    return '$successCount/$audience users delivered';
+  }
 
   String get audienceLabel {
     switch (audience.toUpperCase()) {
@@ -137,6 +158,9 @@ class AppNotification {
       sentAt: _date(json['sentAt']),
       successCount: _int(json['successCount']),
       failureCount: _int(json['failureCount']),
+      targetedUserCount: _int(json['targetedUserCount']),
+      reachableUserCount: _int(json['reachableUserCount']),
+      targetedTokenCount: _int(json['targetedTokenCount']),
       createdAt: _date(json['createdAt']) ?? DateTime.now(),
       imageUrl: () {
         final s = _str(json['imageUrl']);

@@ -35,7 +35,8 @@ class AppEnv {
 
   static const String _productionApiBaseUrl = 'https://api.sathya.co.za';
   static const String _testApiBaseUrl = 'https://api-test.sathya.co.za';
-  static const String _uatApiBaseUrl = 'https://satya-server-app-snqq.onrender.com';
+  static const String _uatApiBaseUrl =
+      'https://satya-server-app-snqq.onrender.com';
 
   // Android emulator reaches host machine via 10.0.2.2.
   static String get resolvedApiBaseUrl => apiBaseUrl.isNotEmpty

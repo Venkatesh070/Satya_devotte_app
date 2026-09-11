@@ -333,7 +333,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading && controller.items.isEmpty) {
+      if (controller.isLoading) {
         return const Center(child: CircularProgressIndicator());
       }
       if (controller.error != null && controller.items.isEmpty) {
@@ -777,18 +777,26 @@ class _PaymentsPaginationBar extends StatelessWidget {
                   .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
                   .toList(),
               onChanged: (v) {
-                if (v != null) controller.setLimit(v);
+                if (v != null) {
+                  controller.setLimit(v);
+                  cmsScrollContentToTop(context);
+                }
               },
             ),
           ),
         ),
       ];
 
+      void goTo(int target) {
+        controller.goToPage(target);
+        cmsScrollContentToTop(context);
+      }
+
       final pager = <Widget>[
         _PaymentsPagerBtnMini(
           icon: Icons.chevron_left,
           enabled: page > 1,
-          onTap: controller.prevPage,
+          onTap: () => goTo(page - 1),
         ),
         for (final n in _paymentsPageRange(page, tp))
           n == -1
@@ -802,12 +810,12 @@ class _PaymentsPaginationBar extends StatelessWidget {
               : _PaymentsPageNumberBtnMini(
                   number: n,
                   isActive: n == page,
-                  onTap: () => controller.goToPage(n),
+                  onTap: () => goTo(n),
                 ),
         _PaymentsPagerBtnMini(
           icon: Icons.chevron_right,
           enabled: page < tp,
-          onTap: controller.nextPage,
+          onTap: () => goTo(page + 1),
         ),
       ];
 

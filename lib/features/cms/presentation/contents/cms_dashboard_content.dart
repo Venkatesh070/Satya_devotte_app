@@ -102,17 +102,80 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
     final adminsCount = d['adminsCount'] as int? ?? 0;
     final festivals = d['festivals'] as Map<String, dynamic>? ?? {};
     final poojas = d['poojas'] as Map<String, dynamic>? ?? {};
+    final rituals = d['rituals'] as Map<String, dynamic>? ?? {};
     final deities = d['deities'] as Map<String, dynamic>? ?? {};
     final todaySloka = d['todaySloka'] as Map<String, dynamic>?;
 
-    final totalFestivals =
-        (festivals['APPROVED'] as int? ?? 0) +
-        (festivals['PENDING'] as int? ?? 0) +
-        (festivals['REJECTED'] as int? ?? 0);
     final totalPoojas =
         (poojas['APPROVED'] as int? ?? 0) +
         (poojas['PENDING'] as int? ?? 0) +
         (poojas['REJECTED'] as int? ?? 0);
+    final totalRituals =
+        (rituals['APPROVED'] as int? ?? 0) +
+        (rituals['PENDING'] as int? ?? 0) +
+        (rituals['REJECTED'] as int? ?? 0);
+
+    final overviewStats = [
+      _Stat(
+        'Active today',
+        '$todayActiveUsers/$totalUsers',
+        Icons.people_outline,
+        const Color(0xFF4CAF50),
+      ),
+      _Stat(
+        'Admins',
+        '$adminsCount',
+        Icons.admin_panel_settings_outlined,
+        CmsColors.orange,
+      ),
+      _Stat(
+        'Pujas',
+        '$totalPoojas',
+        Icons.self_improvement_outlined,
+        const Color(0xFF9C27B0),
+      ),
+      _Stat(
+        'Rituals',
+        '$totalRituals',
+        Icons.local_fire_department_outlined,
+        const Color(0xFFE65100),
+      ),
+    ];
+
+    final statusCards = [
+      _StatusCard(
+        title: 'Pujas',
+        icon: Icons.self_improvement,
+        color: const Color(0xFF9C27B0),
+        approved: poojas['APPROVED'] as int? ?? 0,
+        pending: poojas['PENDING'] as int? ?? 0,
+        rejected: poojas['REJECTED'] as int? ?? 0,
+      ),
+      _StatusCard(
+        title: 'Rituals',
+        icon: Icons.local_fire_department,
+        color: const Color(0xFFE65100),
+        approved: rituals['APPROVED'] as int? ?? 0,
+        pending: rituals['PENDING'] as int? ?? 0,
+        rejected: rituals['REJECTED'] as int? ?? 0,
+      ),
+      _StatusCard(
+        title: 'Festivals',
+        icon: Icons.celebration,
+        color: const Color(0xFF2196F3),
+        approved: festivals['APPROVED'] as int? ?? 0,
+        pending: festivals['PENDING'] as int? ?? 0,
+        rejected: festivals['REJECTED'] as int? ?? 0,
+      ),
+      _StatusCard(
+        title: 'Deities',
+        icon: Icons.auto_awesome,
+        color: CmsColors.orange,
+        approved: deities['APPROVED'] as int? ?? 0,
+        pending: deities['PENDING'] as int? ?? 0,
+        rejected: deities['REJECTED'] as int? ?? 0,
+      ),
+    ];
 
     return RefreshIndicator(
       color: CmsColors.orange,
@@ -123,124 +186,31 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Stats Grid ──────────────────────────────────
-            _StatsGrid(
+            const _SectionLabel('Overview'),
+            const SizedBox(height: 12),
+            _EqualCards(
               isWeb: isWeb,
-              stats: [
-                _Stat(
-                  'Today Active Users',
-                  '$todayActiveUsers/$totalUsers',
-                  Icons.people_outline,
-                  const Color(0xFF4CAF50),
-                ),
-                _Stat(
-                  'Admins',
-                  '$adminsCount',
-                  Icons.admin_panel_settings_outlined,
-                  CmsColors.orange,
-                ),
-                _Stat(
-                  'Total Pujas',
-                  '$totalPoojas',
-                  Icons.self_improvement_outlined,
-                  const Color(0xFF9C27B0),
-                ),
-                _Stat(
-                  'Total Festivals',
-                  '$totalFestivals',
-                  Icons.celebration_outlined,
-                  const Color(0xFF2196F3),
-                ),
+              children: [
+                for (final s in overviewStats) _OverviewStatCard(stat: s),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // ── Content Status Row ───────────────────────────
-            if (isWeb)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _StatusCard(
-                      title: 'Pujas',
-                      icon: Icons.self_improvement,
-                      color: const Color(0xFF9C27B0),
-                      approved: poojas['APPROVED'] as int? ?? 0,
-                      pending: poojas['PENDING'] as int? ?? 0,
-                      rejected: poojas['REJECTED'] as int? ?? 0,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatusCard(
-                      title: 'Festivals',
-                      icon: Icons.celebration,
-                      color: const Color(0xFF2196F3),
-                      approved: festivals['APPROVED'] as int? ?? 0,
-                      pending: festivals['PENDING'] as int? ?? 0,
-                      rejected: festivals['REJECTED'] as int? ?? 0,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatusCard(
-                      title: 'Deities',
-                      icon: Icons.auto_awesome,
-                      color: CmsColors.orange,
-                      approved: deities['APPROVED'] as int? ?? 0,
-                      pending: deities['PENDING'] as int? ?? 0,
-                      rejected: deities['REJECTED'] as int? ?? 0,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Column(
-                children: [
-                  _StatusCard(
-                    title: 'Pujas',
-                    icon: Icons.self_improvement,
-                    color: const Color(0xFF9C27B0),
-                    approved: poojas['APPROVED'] as int? ?? 0,
-                    pending: poojas['PENDING'] as int? ?? 0,
-                    rejected: poojas['REJECTED'] as int? ?? 0,
-                  ),
-                  const SizedBox(height: 12),
-                  _StatusCard(
-                    title: 'Festivals',
-                    icon: Icons.celebration,
-                    color: const Color(0xFF2196F3),
-                    approved: festivals['APPROVED'] as int? ?? 0,
-                    pending: festivals['PENDING'] as int? ?? 0,
-                    rejected: festivals['REJECTED'] as int? ?? 0,
-                  ),
-                  const SizedBox(height: 12),
-                  _StatusCard(
-                    title: 'Deities',
-                    icon: Icons.auto_awesome,
-                    color: CmsColors.orange,
-                    approved: deities['APPROVED'] as int? ?? 0,
-                    pending: deities['PENDING'] as int? ?? 0,
-                    rejected: deities['REJECTED'] as int? ?? 0,
-                  ),
-                ],
-              ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            const _SectionLabel('Content review'),
+            const SizedBox(height: 12),
+            _EqualCards(
+              isWeb: isWeb,
+              children: statusCards,
+            ),
+            const SizedBox(height: 24),
 
             // ── Today's Sloka ────────────────────────────────
-            if (todaySloka != null) _TodaySlokaCard(sloka: todaySloka),
-
-            const SizedBox(height: 20),
+            if (todaySloka != null) ...[
+              _TodaySlokaCard(sloka: todaySloka),
+              const SizedBox(height: 24),
+            ],
 
             // ── Quick Actions ────────────────────────────────
-            const Text(
-              "Quick Actions",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: CmsColors.textPrimary,
-              ),
-            ),
+            const _SectionLabel('Quick actions'),
             const SizedBox(height: 12),
             if (isWeb)
               Row(
@@ -285,41 +255,37 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                               },
                             ),
                           )
-                        : const SizedBox.shrink(),
+                        : const Expanded(child: SizedBox.shrink()),
                   ),
                 ],
               )
             else
-              Column(
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickAction(
-                          label: 'Add Puja',
-                          icon: Icons.add_circle_outline,
-                          color: const Color(0xFF9C27B0),
-                          onTap: () {
-                            if (!CmsShellNavigation.openAddPuja()) {
-                              Get.offNamed(AppRoutes.cmsPujaCreate);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickAction(
-                          label: 'Add Festival',
-                          icon: Icons.celebration_outlined,
-                          color: const Color(0xFF2196F3),
-                          onTap: () {
-                            if (!CmsShellNavigation.openAddFestival()) {
-                              Get.offNamed(AppRoutes.cmsFestivalCreate);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: _QuickAction(
+                      label: 'Add Puja',
+                      icon: Icons.add_circle_outline,
+                      color: const Color(0xFF9C27B0),
+                      onTap: () {
+                        if (!CmsShellNavigation.openAddPuja()) {
+                          Get.offNamed(AppRoutes.cmsPujaCreate);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAction(
+                      label: 'Add Festival',
+                      icon: Icons.celebration_outlined,
+                      color: const Color(0xFF2196F3),
+                      onTap: () {
+                        if (!CmsShellNavigation.openAddFestival()) {
+                          Get.offNamed(AppRoutes.cmsFestivalCreate);
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -331,7 +297,97 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
 }
 
 // ════════════════════════════════════════════════════════════════
-// STATS GRID
+// LAYOUT HELPERS
+// ════════════════════════════════════════════════════════════════
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: CmsColors.textPrimary,
+      ),
+    );
+  }
+}
+
+class _DashboardCardShell extends StatelessWidget {
+  const _DashboardCardShell({required this.child, this.padding});
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CmsColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: CmsColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _EqualCards extends StatelessWidget {
+  const _EqualCards({required this.isWeb, required this.children});
+  final bool isWeb;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isWeb) {
+      final rows = <Widget>[];
+      for (var i = 0; i < children.length; i += 2) {
+        final left = children[i];
+        final right = i + 1 < children.length ? children[i + 1] : null;
+        rows.add(
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: left),
+                const SizedBox(width: 12),
+                Expanded(child: right ?? const SizedBox.shrink()),
+              ],
+            ),
+          ),
+        );
+        if (i + 2 < children.length) rows.add(const SizedBox(height: 12));
+      }
+      return Column(children: rows);
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            Expanded(child: children[i]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// OVERVIEW STAT CARD
 // ════════════════════════════════════════════════════════════════
 class _Stat {
   const _Stat(this.label, this.value, this.icon, this.color);
@@ -340,40 +396,24 @@ class _Stat {
   final Color color;
 }
 
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.isWeb, required this.stats});
-  final bool isWeb;
-  final List<_Stat> stats;
+class _OverviewStatCard extends StatelessWidget {
+  const _OverviewStatCard({required this.stat});
+  final _Stat stat;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: isWeb ? 4 : 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: isWeb ? 2.2 : 1.8,
-    ),
-    itemCount: stats.length,
-    itemBuilder: (_, i) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: CmsColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
+  Widget build(BuildContext context) {
+    return _DashboardCardShell(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: stats[i].color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
+              color: stat.color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(stats[i].icon, color: stats[i].color, size: 18),
+            child: Icon(stat.icon, color: stat.color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -382,23 +422,23 @@ class _StatsGrid extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  stats[i].value,
+                  stat.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                     height: 1.1,
-                    color: stats[i].color,
+                    color: stat.color,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  stats[i].label,
-                  maxLines: 2,
+                  stat.label,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     height: 1.2,
                     color: CmsColors.textSecond,
                     fontWeight: FontWeight.w500,
@@ -409,8 +449,8 @@ class _StatsGrid extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -433,70 +473,91 @@ class _StatusCard extends StatelessWidget {
   int get total => approved + pending + rejected;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: CmsColors.white,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(8),
+  Widget build(BuildContext context) {
+    final approvedShare = total == 0 ? 0.0 : approved / total;
+    final pendingShare = total == 0 ? 0.0 : pending / total;
+    final rejectedShare = total == 0 ? 0.0 : rejected / total;
+
+    return _DashboardCardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, color: color, size: 17),
               ),
-              child: Icon(icon, color: color, size: 16),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: CmsColors.textPrimary,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: CmsColors.textPrimary,
+                  ),
+                ),
               ),
-            ),
-            const Spacer(),
-            Text(
-              '$total total',
-              style: const TextStyle(fontSize: 11, color: CmsColors.textSecond),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(child: _StatusChip('Approved', approved, Colors.green)),
-            const SizedBox(width: 8),
-            Expanded(child: _StatusChip('Pending', pending, CmsColors.orange)),
-            const SizedBox(width: 8),
-            Expanded(child: _StatusChip('Rejected', rejected, Colors.red)),
-          ],
-        ),
-        if (total > 0) ...[
+              Text(
+                '$total total',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: CmsColors.textSecond,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _StatusChip('Approved', approved, Colors.green)),
+              const SizedBox(width: 8),
+              Expanded(child: _StatusChip('Pending', pending, CmsColors.orange)),
+              const SizedBox(width: 8),
+              Expanded(child: _StatusChip('Rejected', rejected, Colors.red)),
+            ],
+          ),
           const SizedBox(height: 12),
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: approved / total,
-              minHeight: 6,
-              backgroundColor: Colors.red.withOpacity(0.15),
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            child: SizedBox(
+              height: 6,
+              child: total == 0
+                  ? Container(color: CmsColors.border)
+                  : Row(
+                      children: [
+                        if (approvedShare > 0)
+                          Expanded(
+                            flex: (approvedShare * 1000).round().clamp(1, 1000),
+                            child: Container(color: Colors.green),
+                          ),
+                        if (pendingShare > 0)
+                          Expanded(
+                            flex: (pendingShare * 1000).round().clamp(1, 1000),
+                            child: Container(color: CmsColors.orange),
+                          ),
+                        if (rejectedShare > 0)
+                          Expanded(
+                            flex: (rejectedShare * 1000).round().clamp(1, 1000),
+                            child: Container(color: Colors.red),
+                          ),
+                      ],
+                    ),
             ),
           ),
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _StatusChip extends StatelessWidget {
@@ -526,7 +587,7 @@ class _StatusChip extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 9,
-            color: color.withOpacity(0.8),
+            color: color.withOpacity(0.85),
             fontWeight: FontWeight.w600,
           ),
         ),

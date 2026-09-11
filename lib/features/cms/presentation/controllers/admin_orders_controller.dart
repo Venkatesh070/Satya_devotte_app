@@ -65,6 +65,25 @@ class AdminOrdersController extends GetxController {
   final _detailLoading = false.obs;
   final _detailError = RxnString();
   final _mutating = false.obs;
+  /// Which action button is currently in-flight (only that one shows a spinner).
+  final _mutatingAction = RxnString();
+
+  /// Stable keys for [isMutating] / action-bar spinners.
+  static const actionMarkStatus = 'mark_status';
+  static const actionMarkProcessing = 'mark_processing';
+  static const actionMarkPacked = 'mark_packed';
+  static const actionReadyForPickup = 'ready_for_pickup';
+  static const actionVerifyPickup = 'verify_pickup';
+  static const actionDispatch = 'dispatch';
+  static const actionSyncPod = 'sync_pod';
+  static const actionShippingLabel = 'shipping_label';
+  static const actionCancel = 'cancel';
+  static const actionRefund = 'refund';
+  static const actionVerifyPayment = 'verify_payment';
+  static const actionUpdatePayment = 'update_payment';
+  static const actionSaveTracking = 'save_tracking';
+  static const actionOutForDelivery = 'out_for_delivery';
+  static const actionDelivered = 'delivered';
 
   // public getters
   List<AdminOrder> get items => _items;
@@ -85,6 +104,11 @@ class AdminOrdersController extends GetxController {
   bool get detailLoading => _detailLoading.value;
   String? get detailError => _detailError.value;
   bool get mutating => _mutating.value;
+  String? get mutatingAction => _mutatingAction.value;
+
+  /// True only while [action] is the in-flight mutation (for per-button spinners).
+  bool isMutating(String action) =>
+      _mutating.value && _mutatingAction.value == action;
 
   // ── list actions ──────────────────────────────────────────────────
   Future<void> refresh() => _load(page: 1);
@@ -209,7 +233,13 @@ class AdminOrdersController extends GetxController {
   Future<bool> markStatus(OrderStatus next, {String? note}) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    final action = switch (next) {
+      OrderStatus.processing => actionMarkProcessing,
+      OrderStatus.outForDelivery => actionOutForDelivery,
+      OrderStatus.delivered => actionDelivered,
+      _ => actionMarkStatus,
+    };
+    return _mutate(action, () async {
       final updated = await _ds.updateStatus(id, status: next, note: note);
       _replaceDetail(updated);
       _ok('Status updated', 'Order is now ${next.label}.');
@@ -223,7 +253,7 @@ class AdminOrdersController extends GetxController {
   }) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionUpdatePayment, () async {
       final updated = await _ds.updatePayment(
         id,
         paymentStatus: paymentStatus,
@@ -242,7 +272,7 @@ class AdminOrdersController extends GetxController {
   }) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionSaveTracking, () async {
       final updated = await _ds.updateTracking(
         id,
         courier: courier,
@@ -264,7 +294,7 @@ class AdminOrdersController extends GetxController {
   }) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionDispatch, () async {
       final updated = await _ds.dispatchOrder(
         id,
         courier: courier,
@@ -288,7 +318,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> markReadyForPickup({String? note}) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionReadyForPickup, () async {
       final updated = await _ds.readyForPickup(id, note: note);
       _replaceDetail(updated);
       _ok('Ready for pickup', 'Customer has been notified to collect.');
@@ -300,7 +330,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> markPacked({String? note}) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionMarkPacked, () async {
       final updated = await _ds.markPacked(id, note: note);
       _replaceDetail(updated);
       _ok('Order packed', 'Order is packed and ready for the pickup counter.');
@@ -312,7 +342,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> verifyPickup(String pin) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionVerifyPickup, () async {
       final updated = await _ds.verifyPickup(id, pin: pin);
       _replaceDetail(updated);
       _ok('Order picked up', 'Customer can now confirm satisfaction in the app.');
@@ -324,7 +354,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> syncDeliveryPod() async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionSyncPod, () async {
       final updated = await _ds.syncDeliveryPod(id);
       _replaceDetail(updated);
       final podLabel = updated.delivery?.pod?.displayLabel ?? 'Updated';
@@ -337,7 +367,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> openShippingLabel() async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionShippingLabel, () async {
       final bytes = await _ds.downloadShippingLabelPdf(id);
       final opened = await openPdfBytes(
         bytes,
@@ -354,7 +384,7 @@ class AdminOrdersController extends GetxController {
   Future<bool> cancelOrder({String? reason}) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionCancel, () async {
       final updated = await _ds.cancelOrder(id, reason: reason);
       _replaceDetail(updated);
       _ok('Order cancelled', 'The order has been cancelled and restocked.');
@@ -369,7 +399,7 @@ class AdminOrdersController extends GetxController {
   }) async {
     final id = _selectedOrderId.value;
     if (id == null) return false;
-    return _mutate(() async {
+    return _mutate(actionRefund, () async {
       final updated = await _ds.initiateRefund(
         id,
         reason: reason,
@@ -388,7 +418,7 @@ class AdminOrdersController extends GetxController {
   /// Idempotent admin verify by payment reference.
   Future<bool> verifyPayment(String reference) async {
     if (reference.trim().isEmpty) return false;
-    return _mutate(() async {
+    return _mutate(actionVerifyPayment, () async {
       final updated = await _ds.verifyPayment(reference.trim());
       if (updated != null) {
         final cur = _detail.value;
@@ -414,9 +444,13 @@ class AdminOrdersController extends GetxController {
     }
   }
 
-  Future<bool> _mutate(Future<bool> Function() body) async {
+  Future<bool> _mutate(
+    String action,
+    Future<bool> Function() body,
+  ) async {
     if (_mutating.value) return false;
     _mutating.value = true;
+    _mutatingAction.value = action;
     try {
       return await body();
     } on DioException catch (e) {
@@ -427,6 +461,7 @@ class AdminOrdersController extends GetxController {
       return false;
     } finally {
       _mutating.value = false;
+      _mutatingAction.value = null;
     }
   }
 

@@ -101,6 +101,7 @@ class PoojaController extends GetxController {
   }
 
   Future<void> resetSearchOnTabFocus() async {
+    _filter.value = 'All';
     _search.value = '';
     await loadPoojas(page: 1, showErrorSnackbar: false);
   }

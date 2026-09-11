@@ -747,7 +747,7 @@ class _InventoryBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (ctrl.isLoading && ctrl.items.isEmpty) {
+      if (ctrl.isLoading) {
         return const Center(
           child: CircularProgressIndicator(color: CmsColors.orange),
         );
@@ -2468,7 +2468,10 @@ class _InventoryPaginationBar extends StatelessWidget {
                     .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
                     .toList(),
                 onChanged: (v) {
-                  if (v != null) controller.setLimit(v);
+                  if (v != null) {
+                    controller.setLimit(v);
+                    cmsScrollContentToTop(context);
+                  }
                 },
               ),
             ),
@@ -2477,7 +2480,12 @@ class _InventoryPaginationBar extends StatelessWidget {
               style: IconButton.styleFrom().copyWith(
                 mouseCursor: _cmsButtonClickCursor,
               ),
-              onPressed: page > 1 ? controller.prevPage : null,
+              onPressed: page > 1
+                  ? () {
+                      controller.prevPage();
+                      cmsScrollContentToTop(context);
+                    }
+                  : null,
               icon: const Icon(Icons.chevron_left),
             ),
             Text(
@@ -2488,7 +2496,12 @@ class _InventoryPaginationBar extends StatelessWidget {
               style: IconButton.styleFrom().copyWith(
                 mouseCursor: _cmsButtonClickCursor,
               ),
-              onPressed: page < tp ? controller.nextPage : null,
+              onPressed: page < tp
+                  ? () {
+                      controller.nextPage();
+                      cmsScrollContentToTop(context);
+                    }
+                  : null,
               icon: const Icon(Icons.chevron_right),
             ),
           ],

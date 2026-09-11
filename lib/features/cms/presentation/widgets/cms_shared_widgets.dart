@@ -832,14 +832,17 @@ class CmsPrimaryButton extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.isLoading = false,
+    this.color,
   });
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
   final bool isLoading;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final bg = color ?? CmsColors.orange;
     return MouseRegion(
       cursor: isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
@@ -847,13 +850,11 @@ class CmsPrimaryButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: isLoading
-                ? CmsColors.orange.withOpacity(0.6)
-                : CmsColors.orange,
+            color: isLoading ? bg.withOpacity(0.6) : bg,
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: CmsColors.orange.withOpacity(0.3),
+                color: bg.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -1047,6 +1048,65 @@ Future<bool?> showCmsDeleteDialog(
   );
 }
 
+/// Resets vertical list scroll to the top after CMS pagination changes.
+///
+/// Walks up to the nearest [Column]/[Flex] parent (list + pager layout) and
+/// jumps every vertical [Scrollable] under it to offset 0. Also resets
+/// [PrimaryScrollController] as a fallback for primary lists.
+void cmsScrollContentToTop(BuildContext context) {
+  void jumpVerticalScrollablesUnder(Element root) {
+    void visit(Element element) {
+      if (element is StatefulElement && element.state is ScrollableState) {
+        final state = element.state as ScrollableState;
+        if (state.mounted) {
+          try {
+            final position = state.position;
+            if (position.axis == Axis.vertical && position.hasPixels) {
+              position.jumpTo(0);
+            }
+          } catch (_) {
+            // Scrollable not attached yet; post-frame retry covers this.
+          }
+        }
+      }
+      element.visitChildren(visit);
+    }
+
+    visit(root);
+  }
+
+  void jumpPrimary() {
+    final primary = PrimaryScrollController.maybeOf(context);
+    if (primary == null || !primary.hasClients) return;
+    for (final position in List<ScrollPosition>.from(primary.positions)) {
+      if (position.axis == Axis.vertical && position.hasPixels) {
+        position.jumpTo(0);
+      }
+    }
+  }
+
+  void run() {
+    Element? listHost;
+    context.visitAncestorElements((element) {
+      final widget = element.widget;
+      if (widget is Column || widget is Flex) {
+        listHost = element;
+        return false;
+      }
+      return true;
+    });
+    if (listHost != null) {
+      jumpVerticalScrollablesUnder(listHost!);
+    }
+    jumpPrimary();
+  }
+
+  run();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (context.mounted) run();
+  });
+}
+
 // ── Pagination bar (shared across CMS list screens) ───────────────
 class CmsPaginationBar extends StatelessWidget {
   const CmsPaginationBar({
@@ -1069,6 +1129,16 @@ class CmsPaginationBar extends StatelessWidget {
   final ValueChanged<int> onPageSelected;
   final ValueChanged<int> onPageSizeChanged;
   final List<int> pageSizes;
+
+  void _selectPage(BuildContext context, int nextPage) {
+    onPageSelected(nextPage);
+    cmsScrollContentToTop(context);
+  }
+
+  void _changePageSize(BuildContext context, int size) {
+    onPageSizeChanged(size);
+    cmsScrollContentToTop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1109,7 +1179,7 @@ class CmsPaginationBar extends StatelessWidget {
             onChanged: isLoading
                 ? null
                 : (v) {
-                    if (v != null) onPageSizeChanged(v);
+                    if (v != null) _changePageSize(context, v);
                   },
           ),
         ),
@@ -1120,7 +1190,7 @@ class CmsPaginationBar extends StatelessWidget {
       _CmsPagerBtn(
         icon: Icons.chevron_left,
         enabled: page > 1 && !isLoading,
-        onTap: () => onPageSelected(page - 1),
+        onTap: () => _selectPage(context, page - 1),
       ),
       for (final n in _pageRange(page, totalPages))
         n == -1
@@ -1131,12 +1201,12 @@ class CmsPaginationBar extends StatelessWidget {
             : _CmsPageNumberBtn(
                 number: n,
                 isActive: n == page,
-                onTap: () => onPageSelected(n),
+                onTap: () => _selectPage(context, n),
               ),
       _CmsPagerBtn(
         icon: Icons.chevron_right,
         enabled: page < totalPages && !isLoading,
-        onTap: () => onPageSelected(page + 1),
+        onTap: () => _selectPage(context, page + 1),
       ),
     ];
 
