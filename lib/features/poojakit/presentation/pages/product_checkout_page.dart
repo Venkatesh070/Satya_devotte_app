@@ -372,11 +372,19 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   Future<void> _fetchCurrentLocation() async {
-    setState(() => _isLocating = true);
+    setState(() {
+      _isLocating = true;
+      _isResolvingPin = false;
+    });
     try {
       final pos = await LocationService().getCurrentPosition();
       await _setPickedFromCoordinates(pos.latitude, pos.longitude);
-      _pinAlignment = const Alignment(0.08, 0.05);
+      if (mounted) {
+        setState(() {
+          _pinAlignment = const Alignment(0.08, 0.05);
+          _isResolvingPin = false;
+        });
+      }
     } catch (e) {
       _showLocationError(e);
     } finally {
@@ -388,7 +396,10 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     final query = _searchCtrl.text.trim();
     if (query.isEmpty) return;
     FocusScope.of(context).unfocus();
-    setState(() => _isSearching = true);
+    setState(() {
+      _isSearching = true;
+      _isResolvingPin = false;
+    });
     try {
       final matches = await locationFromAddress(query);
       if (matches.isEmpty) {
@@ -396,8 +407,13 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
       }
       final first = matches.first;
       await _setPickedFromCoordinates(first.latitude, first.longitude);
-      _pinAlignment = const Alignment(0.08, 0.05);
-      setState(() => _suggestions = const []);
+      if (mounted) {
+        setState(() {
+          _pinAlignment = const Alignment(0.08, 0.05);
+          _suggestions = const [];
+          _isResolvingPin = false;
+        });
+      }
     } catch (e) {
       _showLocationError(e);
     } finally {
@@ -414,13 +430,19 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     setState(() {
       _suggestions = const [];
       _isSearching = true;
+      _isResolvingPin = false;
     });
     try {
       await _setPickedFromCoordinates(
         suggestion.latitude,
         suggestion.longitude,
       );
-      _pinAlignment = const Alignment(0.08, 0.05);
+      if (mounted) {
+        setState(() {
+          _pinAlignment = const Alignment(0.08, 0.05);
+          _isResolvingPin = false;
+        });
+      }
     } catch (e) {
       _showLocationError(e);
     } finally {
@@ -429,55 +451,63 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   Future<void> _setPickedFromCoordinates(double lat, double lng) async {
-    final placemarks = await placemarkFromCoordinates(lat, lng);
-    if (placemarks.isEmpty) {
-      setState(() {
-        _mapCenterLat = lat;
-        _mapCenterLng = lng;
-        _pickedLocation = _PickedLocation(
-          latitude: lat,
-          longitude: lng,
-          address:
-              'Selected location: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
-        );
-      });
-      return;
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final street = [
+          p.street,
+          p.subLocality,
+        ].where((e) => (e ?? '').trim().isNotEmpty).join(', ');
+        final city = p.locality ?? p.subAdministrativeArea ?? '';
+        final province = p.administrativeArea ?? '';
+        final postal = p.postalCode ?? '';
+        final country = (p.country ?? '').trim().isEmpty
+            ? _countryCtrl.text
+            : p.country!;
+        final address = [
+          street,
+          city,
+          province,
+          postal,
+          country,
+        ].where((e) => e.trim().isNotEmpty).join(', ');
+
+        if (!mounted) return;
+        setState(() {
+          _mapCenterLat = lat;
+          _mapCenterLng = lng;
+          _streetCtrl.text = street;
+          _cityCtrl.text = city;
+          _provinceCtrl.text = province;
+          _postalCodeCtrl.text = postal;
+          _countryCtrl.text = country;
+          _pickedLocation = _PickedLocation(
+            latitude: lat,
+            longitude: lng,
+            address: address.isEmpty
+                ? 'Selected location: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}'
+                : address,
+          );
+          _isResolvingPin = false;
+        });
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error reverse geocoding placemarks: $e');
     }
 
-    final p = placemarks.first;
-    final street = [
-      p.street,
-      p.subLocality,
-    ].where((e) => (e ?? '').trim().isNotEmpty).join(', ');
-    final city = p.locality ?? p.subAdministrativeArea ?? '';
-    final province = p.administrativeArea ?? '';
-    final postal = p.postalCode ?? '';
-    final country = (p.country ?? '').trim().isEmpty
-        ? _countryCtrl.text
-        : p.country!;
-    final address = [
-      street,
-      city,
-      province,
-      postal,
-      country,
-    ].where((e) => e.trim().isNotEmpty).join(', ');
-
+    if (!mounted) return;
     setState(() {
       _mapCenterLat = lat;
       _mapCenterLng = lng;
-      _streetCtrl.text = street;
-      _cityCtrl.text = city;
-      _provinceCtrl.text = province;
-      _postalCodeCtrl.text = postal;
-      _countryCtrl.text = country;
       _pickedLocation = _PickedLocation(
         latitude: lat,
         longitude: lng,
-        address: address.isEmpty
-            ? 'Selected location: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}'
-            : address,
+        address:
+            'Selected location: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
       );
+      _isResolvingPin = false;
     });
   }
 
@@ -1404,71 +1434,79 @@ class _LocationPickerView extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final mapSize = constraints.biggest;
-            return GestureDetector(
-              onTapDown: (details) => onMovePin(details.localPosition, mapSize),
-              onPanUpdate: (details) =>
-                  onMovePin(details.localPosition, mapSize),
-              onPanEnd: (_) => onResolvePin(),
-              child: Stack(
-                children: [
-                  Positioned.fill(
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) {
+                      onMovePin(details.localPosition, mapSize);
+                      onResolvePin();
+                    },
+                    onPanUpdate: (details) =>
+                        onMovePin(details.localPosition, mapSize),
+                    onPanEnd: (_) => onResolvePin(),
                     child: _TileMapBackground(
                       centerLat: centerLat,
                       centerLng: centerLng,
                       zoom: zoom,
                     ),
                   ),
-                  Positioned.fill(
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Color(0xFFFCF7EF).withValues(alpha: 0.02),
                       ),
                     ),
                   ),
-                  Align(
-                    alignment: pinAlignment,
+                ),
+                Align(
+                  alignment: pinAlignment,
+                  child: IgnorePointer(
                     child: const Icon(
                       Icons.location_on,
                       color: Color(0xFFFF5A52),
                       size: 44,
                     ),
                   ),
-                  Positioned(
-                    left: 14,
-                    top: 12,
-                    child: _CircleIconButton(
-                      icon: Icons.arrow_back,
-                      onTap: onBack,
-                    ),
+                ),
+                Positioned(
+                  left: 14,
+                  top: 12,
+                  child: _CircleIconButton(
+                    icon: Icons.arrow_back,
+                    onTap: onBack,
                   ),
-                  Positioned(
-                    left: 18,
-                    right: 18,
-                    top: 72,
-                    child: _SearchWithSuggestions(
-                      controller: searchCtrl,
-                      isSearching: isSearching,
-                      isLoadingSuggestions: isLoadingSuggestions,
-                      suggestions: suggestions,
-                      onSearch: onSearch,
-                      onSuggestionTap: onSuggestionTap,
-                    ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  top: 72,
+                  child: _SearchWithSuggestions(
+                    controller: searchCtrl,
+                    isSearching: isSearching,
+                    isLoadingSuggestions: isLoadingSuggestions,
+                    suggestions: suggestions,
+                    onSearch: onSearch,
+                    onSuggestionTap: onSuggestionTap,
                   ),
-                  Positioned(
-                    left: 18,
-                    right: 18,
-                    bottom: 18,
-                    child: _MapBottomSheet(
-                      locationText: locationText,
-                      isLocating: isLocating,
-                      isResolvingPin: isResolvingPin,
-                      isConfirmEnabled: isConfirmEnabled,
-                      onCurrentLocationTap: onCurrentLocationTap,
-                      onConfirm: onConfirm,
-                    ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 18,
+                  child: _MapBottomSheet(
+                    locationText: locationText,
+                    isLocating: isLocating,
+                    isResolvingPin: isResolvingPin,
+                    isConfirmEnabled: isConfirmEnabled,
+                    onCurrentLocationTap: onCurrentLocationTap,
+                    onConfirm: onConfirm,
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
