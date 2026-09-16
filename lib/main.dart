@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/app.dart';
 import 'package:satya_devotte_app/config/bindings/initial_binding.dart';
 import 'package:satya_devotte_app/core/constants/app_constants.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/core/services/screen_protection_service.dart';
 import 'package:satya_devotte_app/config/env/app_env.dart';
 import 'package:satya_devotte_app/config/firebase/firebase_options.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
@@ -45,6 +46,9 @@ Future<void> main() async {
   await Hive.openBox('sync_queue');
 
   InitialBinding().dependencies();
+
+  // Initialize screenshot protection across the app.
+  await Get.find<ScreenProtectionService>().initialize();
 
   // Initialize notifications.
   final notifs = Get.find<NotificationService>();

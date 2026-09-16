@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/core/services/location_service.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/core/services/screen_protection_service.dart';
 import 'package:satya_devotte_app/core/services/storage_service.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/services/sync_service.dart';
@@ -96,6 +97,7 @@ class InitialBinding extends Bindings {
     // ── FCM token registry (depends on ApiClient + AuthSessionService) ──
     Get.put<FcmApi>(FcmApi(Get.find<ApiClient>()), permanent: true);
     Get.put<FcmBootstrap>(FcmBootstrap(Get.find<FcmApi>()), permanent: true);
+    Get.put<ScreenProtectionService>(ScreenProtectionService(), permanent: true);
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<LocationService>(LocationService(), permanent: true);
     Get.put<SyncService>(SyncService(), permanent: true);
