@@ -127,12 +127,28 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     }
   }
 
+  String? _validateSouthAfricanPhone(String? phone) {
+    final trimmed = phone?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Please enter phone number';
+    }
+    final cleaned = trimmed.replaceAll(RegExp(r'[\s\-().]'), '');
+    final saMobileRegex = RegExp(r'^(?:(?:\+27|0027|27)|0)?[6-8]\d{8}$');
+    if (!saMobileRegex.hasMatch(cleaned)) {
+      return 'Please enter a valid South African mobile number (e.g. 082 123 4567)';
+    }
+    return null;
+  }
+
   void _onFieldChanged() {
     if (_nameError != null && _fullNameCtrl.text.trim().isNotEmpty) {
       setState(() => _nameError = null);
     }
-    if (_phoneError != null && _phoneCtrl.text.trim().isNotEmpty) {
-      setState(() => _phoneError = null);
+    if (_phoneError != null) {
+      final phone = _phoneCtrl.text.trim();
+      if (phone.isEmpty || _validateSouthAfricanPhone(phone) == null) {
+        setState(() => _phoneError = null);
+      }
     }
     if (_houseError != null && _houseCtrl.text.trim().isNotEmpty) {
       setState(() => _houseError = null);
@@ -630,8 +646,14 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   Future<void> _payPickup() async {
     final name = _fullNameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
-    if (name.isEmpty || phone.isEmpty) {
-      ToastUtil.showInfo('Please enter your name and phone for pickup.');
+    final nameError = name.isEmpty ? 'Please enter your name' : null;
+    final phoneError = _validateSouthAfricanPhone(phone);
+
+    if (nameError != null || phoneError != null) {
+      setState(() {
+        _nameError = nameError;
+        _phoneError = phoneError;
+      });
       return;
     }
 
@@ -703,7 +725,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     bool hasError = false;
     setState(() {
       _nameError = name.isEmpty ? 'Please enter receiver name' : null;
-      _phoneError = phone.isEmpty ? 'Please enter phone number' : null;
+      _phoneError = _validateSouthAfricanPhone(phone);
       _houseError =
           house.isEmpty ? 'Please enter house / flat / floor & building' : null;
       _streetError = street.isEmpty ? 'Please enter street' : null;
@@ -1101,6 +1123,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     _ReceiverCard(
                       fullNameCtrl: _fullNameCtrl,
                       phoneCtrl: _phoneCtrl,
+                      nameError: _nameError,
+                      phoneError: _phoneError,
                     ),
                   ],
                 ),
@@ -2008,7 +2032,7 @@ class _ReceiverCard extends StatelessWidget {
             label: 'Phone number',
             child: _AddressInput(
               controller: phoneCtrl,
-              hint: 'Enter receiver phone number',
+              hint: 'Enter receiver phone number (e.g. 082 123 4567)',
               keyboardType: TextInputType.phone,
               errorText: phoneError,
             ),

@@ -327,11 +327,14 @@ class _RitualListPageState extends State<RitualListPage> {
                     : null) ??
                 e.message ??
                 'Could not update favourites.';
-      ToastUtil.showInfo(msg);
+      ToastUtil.showError(msg, title: 'Favourites');
       rethrow;
     } catch (e) {
       if (!mounted) return;
-      ToastUtil.showInfo(e.toString());
+      ToastUtil.showError(
+        'Could not update favourites. Please try again.',
+        title: 'Favourites',
+      );
       rethrow;
     }
 
@@ -354,10 +357,15 @@ class _RitualListPageState extends State<RitualListPage> {
     await _persistFavoritesPrefs();
 
     if (!mounted) return;
+    final deityName = item.name.trim().isNotEmpty
+        ? item.name.trim()
+        : (item.title.trim().isNotEmpty ? item.title.trim() : 'Deity');
     ToastUtil.showSuccess(
-      wasFavorite ? 'Removed from favourites' : 'Added to favourites',
+      wasFavorite
+          ? '$deityName removed from favourites'
+          : '$deityName added to favourites',
+      title: wasFavorite ? 'Removed from Favourites' : 'Added to Favourites',
     );
-    ToastUtil.showInfo(item.name);
   }
 
   void _openFavorites() {

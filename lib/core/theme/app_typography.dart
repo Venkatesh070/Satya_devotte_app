@@ -24,6 +24,7 @@ class AppTypography {
     FontWeight? fontWeight,
     Color? color,
     double? height,
+    double? letterSpacing,
     FontStyle? fontStyle,
     TextDecoration? decoration,
     Color? decorationColor,
@@ -33,8 +34,10 @@ class AppTypography {
       fontWeight: fontWeight,
       color: color,
       height: height,
+      letterSpacing: letterSpacing,
       fontStyle: fontStyle,
       decoration: decoration,
+      decorationColor: decorationColor,
     );
   }
 
@@ -43,6 +46,7 @@ class AppTypography {
     FontWeight? fontWeight,
     Color? color,
     double? height,
+    double? letterSpacing,
     FontStyle? fontStyle,
     TextDecoration? decoration,
   }) {
@@ -51,6 +55,7 @@ class AppTypography {
       fontWeight: fontWeight,
       color: color,
       height: height,
+      letterSpacing: letterSpacing,
       fontStyle: fontStyle,
       decoration: decoration,
     );

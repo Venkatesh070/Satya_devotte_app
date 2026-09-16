@@ -335,6 +335,11 @@ class _CartScreenState extends State<CartScreen> {
         ToastUtil.showInfo('Please enter collector name and phone for pickup.');
         return;
       }
+      final cleanedPhone = phone.replaceAll(RegExp(r'[\s\-().]'), '');
+      if (!RegExp(r'^(?:(?:\+27|0027|27)|0)?[6-8]\d{8}$').hasMatch(cleanedPhone)) {
+        ToastUtil.showInfo('Please enter a valid South African mobile number (e.g. 082 123 4567).');
+        return;
+      }
       _syncPickupContactToCheckout();
     } else {
       final address = checkoutCtrl.shippingAddress;

@@ -4,31 +4,53 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 
 class ToastUtil {
+  static String _cleanMessage(String msg) {
+    var cleaned = msg
+        .replaceFirst(RegExp(r'^Exception:\s*', caseSensitive: false), '')
+        .trim();
+    return cleaned
+        .replaceAll('"', '')
+        .replaceAll('\u201C', '')
+        .replaceAll('\u201D', '')
+        .trim();
+  }
+
   static void showSuccess(String message, {String title = 'Success'}) {
     final context = Get.context;
     if (context != null) {
-      _showCustomToast(context, title, message, true);
+      _showCustomToast(context, title, _cleanMessage(message), true);
     }
   }
 
   static void showError(String message, {String title = 'Error'}) {
     final context = Get.context;
     if (context != null) {
-      _showCustomToast(context, title, message, false);
+      var cleanTitle = title;
+      final cleanMsg = _cleanMessage(message);
+      if (cleanTitle == 'Error') {
+        if (cleanMsg.toLowerCase().contains('out of stock')) {
+          cleanTitle = 'Out of Stock';
+        } else if (cleanMsg.toLowerCase().contains('stock') ||
+            cleanMsg.toLowerCase().contains('inventory') ||
+            cleanMsg.toLowerCase().contains('can be built')) {
+          cleanTitle = 'Stock Limit';
+        }
+      }
+      _showCustomToast(context, cleanTitle, cleanMsg, false);
     }
   }
 
   static void showInfo(String message, {String title = 'Info'}) {
     final context = Get.context;
     if (context != null) {
-      _showCustomToast(context, title, message, true);
+      _showCustomToast(context, title, _cleanMessage(message), true);
     }
   }
 
   static void show(String title, String message) {
     final context = Get.context;
     if (context != null) {
-      _showCustomToast(context, title, message, true);
+      _showCustomToast(context, title, _cleanMessage(message), true);
     }
   }
 
@@ -64,7 +86,7 @@ class ToastUtil {
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),

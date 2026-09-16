@@ -315,6 +315,8 @@ class _ProductListTile extends StatelessWidget {
     final description = product.description.trim().isEmpty
         ? 'Complete puja essentials.'
         : product.description.trim();
+    final isOutOfStock = !product.inStock;
+    final isClosed = product.isOrderClosed;
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -329,23 +331,68 @@ class _ProductListTile extends StatelessWidget {
               child: SizedBox(
                 width: 100,
                 height: 100,
-                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: product.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) => const ColoredBox(
-                          color: Color(0xFFFFF7E8),
-                          child: Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: _GradientSpinner(size: 24),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    product.imageUrl != null && product.imageUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: product.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, _) => const ColoredBox(
+                              color: Color(0xFFFFF7E8),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: _GradientSpinner(size: 24),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (_, _, _) => const _ProductImageFallback(),
+                          )
+                        : const _ProductImageFallback(),
+                    if (isOutOfStock)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          color: const Color(0xE6B71C1C),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'OUT OF STOCK',
+                            style: AppTypography.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.4,
                             ),
                           ),
                         ),
-                        errorWidget: (_, _, _) => _ProductImageFallback(),
                       )
-                    : const _ProductImageFallback(),
+                    else if (isClosed)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          color: const Color(0xE64A1C00),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'ORDERS CLOSED',
+                            style: AppTypography.inter(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -360,7 +407,9 @@ class _ProductListTile extends StatelessWidget {
                     style: AppTypography.lora(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF1C1917),
+                      color: isOutOfStock
+                          ? const Color(0xFF78716C)
+                          : const Color(0xFF1C1917),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -397,17 +446,65 @@ class _ProductListTile extends StatelessWidget {
                         style: AppTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFDC5B0A),
+                          color: isOutOfStock
+                              ? const Color(0xFF8D6E63)
+                              : const Color(0xFFDC5B0A),
                         ),
                       ),
                       const Spacer(),
-                      if (product.inStock)
+                      if (!isOutOfStock && !isClosed)
                         GestureDetector(
                           onTap: onAddToCartTap,
                           child: const Icon(
                             Icons.add_shopping_cart_outlined,
                             size: 20,
                             color: Color(0xFFE95700),
+                          ),
+                        )
+                      else if (isOutOfStock)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: const Color(0xFFFFCDD2),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            'Out of stock',
+                            style: AppTypography.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFC62828),
+                            ),
+                          ),
+                        )
+                      else if (isClosed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: const Color(0xFFFFE0B2),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            'Orders closed',
+                            style: AppTypography.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFE65100),
+                            ),
                           ),
                         ),
                     ],

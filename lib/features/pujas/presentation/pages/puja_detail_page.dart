@@ -172,12 +172,15 @@ class _RitualDetailPageState extends State<RitualDetailPage>
               ? (e.response!.data['message'] ?? e.message)?.toString()
               : null) ??
           e.message ??
-          'Could not update favorites.';
-      ToastUtil.showInfo(msg);
+          'Could not update favourites.';
+      ToastUtil.showError(msg, title: 'Favourites');
       return;
     } catch (e) {
       if (!mounted) return;
-      ToastUtil.showInfo(e.toString());
+      ToastUtil.showError(
+        'Could not update favourites. Please try again.',
+        title: 'Favourites',
+      );
       return;
     }
 
@@ -191,6 +194,21 @@ class _RitualDetailPageState extends State<RitualDetailPage>
       }
       _favoriteDeityIds = next;
     });
+
+    final name = (_selectedDeity?['name'] ??
+            _selectedDeity?['title'] ??
+            _pooja?['name'] ??
+            _pooja?['title'] ??
+            '')
+        ?.toString()
+        .trim();
+    final deityName = name != null && name.isNotEmpty ? name : 'Deity';
+    ToastUtil.showSuccess(
+      wasFavorite
+          ? '$deityName removed from favourites'
+          : '$deityName added to favourites',
+      title: wasFavorite ? 'Removed from Favourites' : 'Added to Favourites',
+    );
   }
 
   void _onTabChanged() {

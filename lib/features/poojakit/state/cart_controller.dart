@@ -1,5 +1,6 @@
 // lib/features/poojakit/state/cart_controller.dart
 
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart';
@@ -74,19 +75,86 @@ class CartController extends GetxController {
       _cart.value = await _repo.addToCart(productId, quantity);
       return true;
     } catch (e) {
-      final msg = e.toString().replaceFirst('Exception: ', '');
+      final (title, msg) = _formatCartError(e);
       if (isMixedWarehouseCartError(msg)) {
         await MixedWarehouseCartDialog.show(
           message: msg,
           cartGroup: cartWarehouseGroup(_cart.value?.items ?? []),
         );
       } else {
-        ToastUtil.showError(msg);
+        ToastUtil.showError(msg, title: title);
       }
       return false;
     } finally {
       _busyProductIds.remove(productId);
     }
+  }
+
+  (String title, String message) _formatCartError(dynamic e) {
+    String msg = '';
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        msg = (data['message'] ?? data['error'] ?? '').toString();
+      }
+      if (msg.isEmpty) {
+        msg = e.message ?? 'An error occurred';
+      }
+    } else {
+      msg = e.toString();
+    }
+
+    msg = msg
+        .replaceFirst(RegExp(r'^Exception:\s*', caseSensitive: false), '')
+        .trim();
+
+    // Pattern: Only X kit(s) of "Product Name" can be built from inventory
+    final match = RegExp(
+      r'Only\s+(\d+)\s*(?:kit\(s\)|item\(s\)|unit\(s\)|products?|kits?|items?)?\s*(?:of)?\s*["\u201C\u201D]?([^"\u201C\u201D]+)["\u201C\u201D]?\s*can be built from inventory',
+      caseSensitive: false,
+    ).firstMatch(msg);
+
+    if (match != null) {
+      final count = match.group(1);
+      final rawName = match.group(2);
+      final itemName = (rawName ?? 'this item').replaceAll('"', '').trim();
+      final countNum = int.tryParse(count ?? '0') ?? 0;
+      if (countNum <= 0) {
+        return ('Out of Stock', '$itemName is currently out of stock.');
+      }
+      return (
+        'Stock Limit',
+        'Only $count kit(s) of $itemName are available in stock.',
+      );
+    }
+
+    if (msg.toLowerCase().contains('can be built from inventory')) {
+      final cleaned = msg
+          .replaceAll('can be built from inventory', 'are available in stock')
+          .replaceAll('"', '')
+          .trim();
+      return ('Stock Limit', cleaned);
+    }
+
+    if (msg.toLowerCase().contains('out of stock')) {
+      final cleaned = msg.replaceAll('"', '').trim();
+      return ('Out of Stock', cleaned);
+    }
+
+    if (msg.toLowerCase().contains('insufficient stock') ||
+        msg.toLowerCase().contains('inventory stock') ||
+        msg.toLowerCase().contains('stock limit') ||
+        msg.toLowerCase().contains('limited stock')) {
+      final cleaned = msg.replaceAll('"', '').trim();
+      return ('Stock Limit', cleaned);
+    }
+
+    final cleaned = msg
+        .replaceAll('"', '')
+        .replaceAll('\u201C', '')
+        .replaceAll('\u201D', '')
+        .trim();
+    return ('Cart Update', cleaned.isEmpty ? 'Failed to update cart.' : cleaned);
   }
 
   Future<void> updateQuantity(String productId, int quantity) async {
@@ -102,7 +170,8 @@ class CartController extends GetxController {
       _cart.value = await _repo.updateCartQuantity(productId, quantity);
     } catch (e) {
       _cart.value = previousCart;
-      ToastUtil.showError(e.toString());
+      final (title, msg) = _formatCartError(e);
+      ToastUtil.showError(msg, title: title);
     } finally {
       _busyProductIds.remove(productId);
     }
@@ -117,7 +186,8 @@ class CartController extends GetxController {
       _cart.value = await _repo.removeFromCart(productId);
     } catch (e) {
       _cart.value = previousCart;
-      ToastUtil.showError(e.toString());
+      final (title, msg) = _formatCartError(e);
+      ToastUtil.showError(msg, title: title);
     } finally {
       _busyProductIds.remove(productId);
     }
@@ -128,7 +198,8 @@ class CartController extends GetxController {
       await _repo.clearCart();
       _cart.value = const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
     } catch (e) {
-      ToastUtil.showError(e.toString());
+      final (title, msg) = _formatCartError(e);
+      ToastUtil.showError(msg, title: title);
     }
   }
 
