@@ -12,6 +12,7 @@ class OnboardingStyleBackground extends StatelessWidget {
     this.wrapInPositioned = true,
     this.backgroundImage = 'assets/images/onBoardBg3.png',
     this.chakraScale = 1.0,
+    this.centerChild,
   });
 
   final AnimationController rotationController;
@@ -19,6 +20,8 @@ class OnboardingStyleBackground extends StatelessWidget {
   final bool wrapInPositioned;
   final String backgroundImage;
   final double chakraScale;
+  /// Optional static logo / mark centered in the chakra wheels (does not spin).
+  final Widget? centerChild;
 
   @override
   Widget build(BuildContext context) {
@@ -63,65 +66,71 @@ class OnboardingStyleBackground extends StatelessWidget {
             offset: Offset(0, chakraVerticalOffset),
             child: Transform.scale(
               scale: chakraScale,
-              child: AnimatedBuilder(
-                animation: rotationController,
-                builder: (context, child) {
-                  final spin = rotationController.value * 2 * math.pi;
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Transform.rotate(
-                        angle: spin,
-                        child: Image.asset(
-                          'assets/images/chakra1.png',
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: -spin,
-                        child: Transform.scale(
-                          scale: 0.90,
-                          child: Image.asset(
-                            'assets/images/chakra2.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AnimatedBuilder(
+                    animation: rotationController,
+                    builder: (context, child) {
+                      final spin = rotationController.value * 2 * math.pi;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Transform.rotate(
+                            angle: spin,
+                            child: Image.asset(
+                              'assets/images/chakra1.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
                           ),
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: spin,
-                        child: Transform.scale(
-                          scale: 0.80,
-                          child: Image.asset(
-                            'assets/images/chakra3.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+                          Transform.rotate(
+                            angle: -spin,
+                            child: Transform.scale(
+                              scale: 0.90,
+                              child: Image.asset(
+                                'assets/images/chakra2.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: -spin,
-                        child: Transform.scale(
-                          scale: 0.53,
-                          child: Image.asset(
-                            'assets/images/chakra4.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+                          Transform.rotate(
+                            angle: spin,
+                            child: Transform.scale(
+                              scale: 0.80,
+                              child: Image.asset(
+                                'assets/images/chakra3.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Opacity(
-                        opacity: 0.8,
-                        child: Image.asset(
-                          'assets/images/onBoardBgOverlay.png',
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                          Transform.rotate(
+                            angle: -spin,
+                            child: Transform.scale(
+                              scale: 0.53,
+                              child: Image.asset(
+                                'assets/images/chakra4.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
+                          ),
+                          Opacity(
+                            opacity: 0.8,
+                            child: Image.asset(
+                              'assets/images/onBoardBgOverlay.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  if (centerChild != null) centerChild!,
+                ],
               ),
             ),
           ),

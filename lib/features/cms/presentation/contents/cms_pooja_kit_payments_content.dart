@@ -395,7 +395,7 @@ class _PaymentsTable extends StatelessWidget {
                   SizedBox(width: 200, child: _Hdr(label: 'Customer')),
                   SizedBox(width: 110, child: _Hdr(label: 'Total')),
                   SizedBox(width: 92, child: _Hdr(label: 'Status')),
-                  Expanded(child: _Hdr(label: 'PayFast ref / txn ID')),
+                  Expanded(child: _Hdr(label: 'Payment ID · Reference')),
                   SizedBox(width: 152, child: _Hdr(label: 'Date')),
                   SizedBox(width: 130, child: _Hdr(label: '')),
                 ],
@@ -424,6 +424,59 @@ class _Hdr extends StatelessWidget {
         color: CmsColors.textSecond,
         letterSpacing: 0.2,
       ),
+    );
+  }
+}
+
+class _PaymentIdReferenceLines extends StatelessWidget {
+  const _PaymentIdReferenceLines({required this.order});
+
+  final AdminOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final paymentId = order.resolvedPayfastPaymentId;
+    final reference = order.paymentReference.trim();
+    if (paymentId.isEmpty && reference.isEmpty) {
+      return const Text(
+        '—',
+        style: TextStyle(fontSize: 11.5, color: CmsColors.textSecond),
+      );
+    }
+
+    Widget line(String prefix, String value) {
+      const labelStyle = TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+        color: CmsColors.textSecond,
+        height: 1.4,
+      );
+      const valueStyle = TextStyle(
+        fontSize: 11.5,
+        fontFamily: 'monospace',
+        fontWeight: FontWeight.w500,
+        color: CmsColors.textPrimary,
+        height: 1.4,
+      );
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: SelectableText.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: prefix, style: labelStyle),
+              TextSpan(text: value, style: valueStyle),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (paymentId.isNotEmpty) line('Payment Id: ', paymentId),
+        if (reference.isNotEmpty) line('Ref Id: ', reference),
+      ],
     );
   }
 }
@@ -518,26 +571,7 @@ class _PaymentRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SelectableText(
-                    order.paymentReference.isEmpty ? '—' : order.paymentReference,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontFamily: 'monospace',
-                      color: CmsColors.textPrimary,
-                    ),
-                    maxLines: 2,
-                  ),
-                  if (order.resolvedPayfastPaymentId.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      'Txn ${order.resolvedPayfastPaymentId}',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontFamily: 'monospace',
-                        color: CmsColors.textSecond,
-                      ),
-                    ),
-                  ],
+                  _PaymentIdReferenceLines(order: order),
                 ],
               ),
             ),
@@ -615,25 +649,7 @@ class _PaymentsCards extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
-              SelectableText(
-                'Ref: ${o.paymentReference.isEmpty ? '—' : o.paymentReference}',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: CmsColors.textPrimary,
-                ),
-              ),
-              if (o.resolvedPayfastPaymentId.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                SelectableText(
-                  'Txn: ${o.resolvedPayfastPaymentId}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: CmsColors.textSecond,
-                  ),
-                ),
-              ],
+              _PaymentIdReferenceLines(order: o),
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -55,10 +55,23 @@ class ProductRemoteDataSource {
   Future<({List<ProductModel> items, int total, int totalPages})> getProducts({
     int page = 1,
     int limit = 10,
+    String? category,
+    String? search,
+    String? status,
+    String? productStatus,
   }) async {
+    final q = search?.trim();
     final res = await _apiClient.dio.get(
       ApiEndpoints.allProducts,
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (category != null && category.isNotEmpty) 'category': category,
+        if (q != null && q.isNotEmpty) 'search': q,
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (productStatus != null && productStatus.isNotEmpty)
+          'productStatus': productStatus,
+      },
     );
     final body = res.data;
     if (body is! Map<String, dynamic>) {
@@ -192,6 +205,7 @@ class ProductRemoteDataSource {
     String currency = 'ZAR',
     String category = '',
     num? quantity,
+    int? lowStockThreshold,
     String status = 'PENDING',
     String productStatus = 'ACTIVE',
     bool isFeatured = false,
@@ -208,6 +222,8 @@ class ProductRemoteDataSource {
       'currency': currency,
       'category': category,
       if (quantity != null) 'quantity': quantity.toString(),
+      if (lowStockThreshold != null)
+        'lowStockThreshold': lowStockThreshold.toString(),
       'status': status,
       'productStatus': productStatus,
       'isFeatured': isFeatured.toString(),
@@ -256,6 +272,7 @@ class ProductRemoteDataSource {
     String? currency,
     String? category,
     num? quantity,
+    int? lowStockThreshold,
     String? status,
     String? productStatus,
     bool? isFeatured,
@@ -277,6 +294,8 @@ class ProductRemoteDataSource {
       if (category != null) 'category': category,
       if (quantity != null) 'quantity': quantity.toString(),
       if (clearQuantity) 'quantity': '',
+      if (lowStockThreshold != null)
+        'lowStockThreshold': lowStockThreshold.toString(),
       if (status != null) 'status': status,
       if (productStatus != null) 'productStatus': productStatus,
       if (isFeatured != null) 'isFeatured': isFeatured.toString(),

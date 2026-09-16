@@ -2383,7 +2383,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Purpose: Why',
             initialValue: _purposeWhyRich,
-            onChanged: (v) => setState(() => _purposeWhyRich = v),
+            onChanged: (v) => _purposeWhyRich = v,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2428,7 +2428,7 @@ class _PoojaFormState extends State<_PoojaForm> {
           CmsRichTextField(
             label: 'Deity Summary: About',
             initialValue: _deitySummaryAboutRich,
-            onChanged: (v) => setState(() => _deitySummaryAboutRich = v),
+            onChanged: (v) => _deitySummaryAboutRich = v,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -2480,6 +2480,7 @@ class _PoojaFormState extends State<_PoojaForm> {
         title: 'Media',
         children: [
           CmsUploadBox(
+            key: const ValueKey('puja-thumbnail-upload'),
             label: 'Thumbnail Image',
             icon: Icons.image_outlined,
             accept: '800 × 800 px, JPG, PNG up to 5MB',
@@ -2775,9 +2776,10 @@ class _PoojaFormState extends State<_PoojaForm> {
         title: 'Mantras & Chanting',
         children: [
           CmsRichTextField(
+            key: const ValueKey('puja-mantra-primary'),
             label: 'Mantra: Primary',
             initialValue: _mantraPrimaryRich,
-            onChanged: (v) => setState(() => _mantraPrimaryRich = v),
+            onChanged: (v) => _mantraPrimaryRich = v,
           ),
           const SizedBox(height: 12),
           CmsFormField(
@@ -2826,9 +2828,10 @@ class _PoojaFormState extends State<_PoojaForm> {
           ],
           const SizedBox(height: 12),
           CmsRichTextField(
+            key: const ValueKey('puja-mantra-meaning'),
             label: 'Mantra: Meaning',
             initialValue: _mantraMeaningRich,
-            onChanged: (v) => setState(() => _mantraMeaningRich = v),
+            onChanged: (v) => _mantraMeaningRich = v,
           ),
         ],
       ),
@@ -3250,9 +3253,10 @@ class _PoojaFormState extends State<_PoojaForm> {
         title: 'Blessings from Sathya',
         children: [
           CmsRichTextField(
+            key: const ValueKey('puja-blessings'),
             label: 'Blessings',
             initialValue: _blessingsRich,
-            onChanged: (v) => setState(() => _blessingsRich = v),
+            onChanged: (v) => _blessingsRich = v,
           ),
         ],
       ),

@@ -485,11 +485,30 @@ class _CmsMultiSelectDialog extends StatefulWidget {
 
 class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
   late List<String> _temp;
+  late final TextEditingController _searchCtrl;
 
   @override
   void initState() {
     super.initState();
     _temp = List<String>.from(widget.initialValues);
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<CmsSelectOption> get _filteredOptions {
+    final query = _searchCtrl.text.trim().toLowerCase();
+    if (query.isEmpty) return widget.options;
+    return widget.options
+        .where((o) {
+          if (o.value == '__loading__' || o.value == '__empty__') return false;
+          return o.label.toLowerCase().contains(query);
+        })
+        .toList();
   }
 
   @override
@@ -497,6 +516,12 @@ class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
     final hasRealOptions = widget.options.any(
       (o) => o.value != '__loading__' && o.value != '__empty__',
     );
+    final filtered = _filteredOptions;
+    final searchHint = widget.title.toLowerCase().contains('festival')
+        ? 'Search festivals...'
+        : widget.title.toLowerCase().contains('deit')
+            ? 'Search deities...'
+            : 'Search...';
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -527,48 +552,53 @@ class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
                 ],
               ),
             ),
+            if (hasRealOptions) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (_) => setState(() {}),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: CmsThemeColors.inputText,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: searchHint,
+                    hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: CmsThemeColors.inputHint,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 18,
+                      color: CmsColors.textSecond,
+                    ),
+                    filled: true,
+                    fillColor: CmsColors.bg,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: CmsColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: CmsColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: CmsColors.orange),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const Divider(height: 1, color: CmsColors.border),
             Flexible(
-              child: hasRealOptions
-                  ? ListView.builder(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      itemCount: widget.options.length,
-                      itemBuilder: (context, index) {
-                        final o = widget.options[index];
-                        final isPlaceholder =
-                            o.value == '__loading__' || o.value == '__empty__';
-                        final checked = _temp.contains(o.value);
-                        return CheckboxListTile(
-                          dense: true,
-                          enabled: !isPlaceholder && widget.canPick,
-                          value: isPlaceholder ? false : checked,
-                          title: Text(
-                            o.label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isPlaceholder
-                                  ? CmsThemeColors.inputHint
-                                  : CmsThemeColors.inputText,
-                            ),
-                          ),
-                          onChanged: isPlaceholder || !widget.canPick
-                              ? null
-                              : (v) {
-                                  setState(() {
-                                    if (v == true) {
-                                      if (!_temp.contains(o.value)) {
-                                        _temp.add(o.value);
-                                      }
-                                    } else {
-                                      _temp.remove(o.value);
-                                    }
-                                  });
-                                },
-                        );
-                      },
-                    )
-                  : Padding(
+              child: !hasRealOptions
+                  ? Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
                         widget.emptyText,
@@ -578,7 +608,57 @@ class _CmsMultiSelectDialogState extends State<_CmsMultiSelectDialog> {
                           color: CmsThemeColors.inputHint,
                         ),
                       ),
-                    ),
+                    )
+                  : filtered.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text(
+                            'No matching results',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: CmsThemeColors.inputHint,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final o = filtered[index];
+                            final isPlaceholder = o.value == '__loading__' ||
+                                o.value == '__empty__';
+                            final checked = _temp.contains(o.value);
+                            return CheckboxListTile(
+                              dense: true,
+                              enabled: !isPlaceholder && widget.canPick,
+                              value: isPlaceholder ? false : checked,
+                              title: Text(
+                                o.label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isPlaceholder
+                                      ? CmsThemeColors.inputHint
+                                      : CmsThemeColors.inputText,
+                                ),
+                              ),
+                              onChanged: isPlaceholder || !widget.canPick
+                                  ? null
+                                  : (v) {
+                                      setState(() {
+                                        if (v == true) {
+                                          if (!_temp.contains(o.value)) {
+                                            _temp.add(o.value);
+                                          }
+                                        } else {
+                                          _temp.remove(o.value);
+                                        }
+                                      });
+                                    },
+                            );
+                          },
+                        ),
             ),
             const Divider(height: 1, color: CmsColors.border),
             Padding(

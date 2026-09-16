@@ -161,4 +161,16 @@ class DonationContribution {
     if (ref.isNotEmpty) return ref;
     return '';
   }
+
+  /// PayFast dashboard Payment Id (pf_payment_id), when settled.
+  String? get displayPayfastPaymentId {
+    final id = (transactionId ?? payfastPaymentId ?? '').trim();
+    return id.isEmpty ? null : id;
+  }
+
+  /// Checkout / merchant reference (e.g. SATHYA-DON-10024).
+  String? get displayMerchantReference {
+    final ref = (reference ?? '').trim();
+    return ref.isEmpty ? null : ref;
+  }
 }

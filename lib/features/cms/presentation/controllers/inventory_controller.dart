@@ -16,7 +16,7 @@ class InventoryController extends GetxController {
   final _isSubmitting = false.obs;
   final _error = RxnString();
   final _page = 1.obs;
-  final _limit = 20.obs;
+  final _limit = 10.obs;
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _search = ''.obs;

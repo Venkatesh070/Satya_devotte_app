@@ -23,6 +23,7 @@ import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/core/routing/cms_route_paths.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/admin_verify_pickup_dialog.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -204,10 +205,21 @@ class _OrdersFiltersBarState extends State<_OrdersFiltersBar> {
         children: [
           Obx(
             () => _ChipRow(
+              label: 'Order type',
+              options: AdminOrdersController.fulfillmentMethodFilters,
+              selected: widget.controller.fulfillmentMethod,
+              onSelect: widget.controller.setFulfillmentMethodFilter,
+              optionLabel: fulfillmentMethodWireChipLabel,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Obx(
+            () => _ChipRow(
               label: 'Order status',
               options: AdminOrdersController.orderStatusFilters,
               selected: widget.controller.orderStatus,
               onSelect: widget.controller.setOrderStatusFilter,
+              optionLabel: orderStatusWireChipLabel,
             ),
           ),
           const SizedBox(height: 8),
@@ -335,7 +347,7 @@ class _ChipRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: 92,
+          width: 96,
           child: Text(
             label,
             style: const TextStyle(
@@ -1755,13 +1767,22 @@ class _ShippingCard extends StatelessWidget {
               )
             else
               _WarehouseHighlightBox(location: pickup, title: 'Pickup warehouse'),
-            if (order.hasPickupCollectionCode) ...[
-              const SizedBox(height: 12),
-              _MetaPair(
-                label: 'Collection PIN',
-                value: order.pickupCollection!.code,
-              ),
-            ],
+            if (order.hasPickupCollectionCode)
+              Obx(() {
+                if (!Get.find<AuthController>().isSuperAdmin) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    _MetaPair(
+                      label: 'Collection PIN',
+                      value: order.pickupCollection!.code,
+                    ),
+                  ],
+                );
+              }),
             if (addr != null && addr.name.isNotEmpty) ...[
               const SizedBox(height: 12),
               _AddrLine(text: 'Collector: ${addr.name}', bold: true),

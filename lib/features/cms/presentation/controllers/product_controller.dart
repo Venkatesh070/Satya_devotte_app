@@ -15,6 +15,7 @@ class ProductController extends GetxController {
   final _error = RxnString();
   final _statusPendingIds = <String>{}.obs;
   final _filter = 'All'.obs;
+  final _categoryFilter = 'ALL'.obs;
   final _search = ''.obs;
   // ── Pagination (server-driven via /products/all?page=&limit=) ───
   final _page = 1.obs;
@@ -36,12 +37,55 @@ class ProductController extends GetxController {
     loadProducts();
   }
 
+  /// Wire category values: `ALL` | `ayurvedic` | `pujakit` | `book`.
+  static const categoryFilters = <String>[
+    'ALL',
+    'ayurvedic',
+    'pujakit',
+    'book',
+  ];
+
+  String get categoryFilter => _categoryFilter.value;
+
+  void setCategoryFilter(String wire) {
+    final v = wire.trim().toLowerCase();
+    final next = v == 'all' || v.isEmpty ? 'ALL' : v;
+    if (!categoryFilters.contains(next) || _categoryFilter.value == next) {
+      return;
+    }
+    _categoryFilter.value = next;
+    _page.value = 1;
+    loadProducts();
+  }
+
   String get search => _search.value;
   void setSearch(String q) {
+    if (_search.value == q) return;
     _search.value = q;
     _page.value = 1;
-    // Search filters client-side over the current page since the backend
-    // does not (yet) support a `q=` parameter.
+    loadProducts();
+  }
+
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    _page.value = 1;
+    await loadProducts();
+  }
+
+  /// Maps the UI status chip to `/products/all` query params.
+  ({String? status, String? productStatus}) get _listStatusQuery {
+    final f = _filter.value.toUpperCase();
+    if (f == 'ALL' || f.isEmpty) {
+      return (status: null, productStatus: null);
+    }
+    if (_lifecycleFilters.contains(f)) {
+      return (status: null, productStatus: f);
+    }
+    return (status: f, productStatus: null);
   }
 
   // Pagination getters / setters
@@ -92,36 +136,11 @@ class ProductController extends GetxController {
   int get pendingCount => _products.where((p) => p.isPending).length;
   int get queuedCount => _products.where((p) => p.isQueued).length;
 
-  /// Products on the current page, filtered client-side by status + search.
-  ///
-  /// Server already paginates via `/products/all?page=&limit=`; the filter
-  /// and search are applied on top of the loaded page. Re-selecting the
-  /// filter triggers a reload so users still see fresh data.
-  // Lifecycle filters (`productStatus`) handled separately from the
-  // review-state filters (`status`).
+  /// Lifecycle filters (`productStatus`) vs review-state filters (`status`).
   static const _lifecycleFilters = {'ACTIVE', 'INACTIVE'};
 
-  List<ProductModel> get filteredProducts {
-    final f = _filter.value.toUpperCase();
-    final q = _search.value.trim().toLowerCase();
-    Iterable<ProductModel> out = _products;
-    if (f != 'ALL') {
-      if (_lifecycleFilters.contains(f)) {
-        out = out.where((p) => p.productStatus.toUpperCase() == f);
-      } else {
-        out = out.where((p) => p.status.toUpperCase() == f);
-      }
-    }
-    if (q.isNotEmpty) {
-      out = out.where(
-        (p) =>
-            p.title.toLowerCase().contains(q) ||
-            p.slug.toLowerCase().contains(q) ||
-            p.category.toLowerCase().contains(q),
-      );
-    }
-    return out.toList();
-  }
+  /// Server already applies search / category / status via `/products/all`.
+  List<ProductModel> get filteredProducts => _products.toList();
 
   /// Count of currently-loaded products matching the given chip label.
   int countFor(String label) {
@@ -133,17 +152,21 @@ class ProductController extends GetxController {
     return _products.where((p) => p.status.toUpperCase() == f).length;
   }
 
-  /// Alias kept for the existing UI — pagination is server-side now, so the
-  /// "page" is whatever the server returned (after the local filter/search).
+  /// Alias kept for the existing UI — pagination is server-side now.
   List<ProductModel> get pagedProducts => filteredProducts;
 
   Future<void> loadProducts() async {
     _isLoading.value = true;
     _error.value = null;
     try {
+      final statusQ = _listStatusQuery;
       final res = await _dataSource.getProducts(
         page: _page.value,
         limit: _pageSize.value,
+        category: _categoryFilter.value == 'ALL' ? null : _categoryFilter.value,
+        search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+        status: statusQ.status,
+        productStatus: statusQ.productStatus,
       );
       _products.assignAll(res.items);
       _totalRows.value = res.total;
@@ -152,14 +175,18 @@ class ProductController extends GetxController {
       // (e.g. after a delete on the last page).
       if (_page.value > _totalPages.value) {
         _page.value = _totalPages.value;
-        // Re-fetch the now-clamped page if we shifted.
-        await _dataSource
-            .getProducts(page: _page.value, limit: _pageSize.value)
-            .then((r) {
-          _products.assignAll(r.items);
-          _totalRows.value = r.total;
-          _totalPages.value = r.totalPages < 1 ? 1 : r.totalPages;
-        });
+        final again = await _dataSource.getProducts(
+          page: _page.value,
+          limit: _pageSize.value,
+          category:
+              _categoryFilter.value == 'ALL' ? null : _categoryFilter.value,
+          search: _search.value.trim().isEmpty ? null : _search.value.trim(),
+          status: statusQ.status,
+          productStatus: statusQ.productStatus,
+        );
+        _products.assignAll(again.items);
+        _totalRows.value = again.total;
+        _totalPages.value = again.totalPages < 1 ? 1 : again.totalPages;
       }
     } catch (e) {
       // List endpoint may not be deployed yet — keep UI usable.
@@ -182,6 +209,7 @@ class ProductController extends GetxController {
     String currency = 'ZAR',
     String category = '',
     num? quantity,
+    int? lowStockThreshold,
     String status = 'PENDING',
     String productStatus = 'ACTIVE',
     bool isFeatured = false,
@@ -201,6 +229,7 @@ class ProductController extends GetxController {
         currency: currency,
         category: category,
         quantity: quantity,
+        lowStockThreshold: lowStockThreshold,
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,
@@ -233,6 +262,7 @@ class ProductController extends GetxController {
     String? currency,
     String? category,
     num? quantity,
+    int? lowStockThreshold,
     String? status,
     String? productStatus,
     bool? isFeatured,
@@ -255,6 +285,7 @@ class ProductController extends GetxController {
         currency: currency,
         category: category,
         quantity: quantity,
+        lowStockThreshold: lowStockThreshold,
         status: status,
         productStatus: productStatus,
         isFeatured: isFeatured,

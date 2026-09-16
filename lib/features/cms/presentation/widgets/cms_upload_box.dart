@@ -68,6 +68,8 @@ class CmsUploadBox extends StatefulWidget {
 class _CmsUploadBoxState extends State<CmsUploadBox> {
   bool _picking = false;
   PickedFile? _picked; // newly picked file (bytes in memory)
+  /// Stable preview buffer — avoid copying bytes on every parent rebuild.
+  Uint8List? _previewBytes;
   String? _existingUrl; // pre-existing URL (editing mode)
 
   static String? _trimUrl(String? url) {
@@ -108,6 +110,9 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
 
         setState(() {
           _picked = file;
+          _previewBytes = widget.mediaType == PickMediaType.image
+              ? Uint8List.fromList(file.bytes)
+              : null;
           _existingUrl = null;
         });
         widget.onPicked(file);
@@ -123,12 +128,16 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
     if (_picked != null) {
       setState(() {
         _picked = null;
+        _previewBytes = null;
         _existingUrl = _trimUrl(widget.initialUrl);
       });
       widget.onRemoved?.call();
       return;
     }
-    setState(() => _existingUrl = null);
+    setState(() {
+      _existingUrl = null;
+      _previewBytes = null;
+    });
     widget.onRemoved?.call();
   }
 
@@ -142,9 +151,7 @@ class _CmsUploadBoxState extends State<CmsUploadBox> {
         icon: widget.icon,
         label: widget.label,
         filename: _picked!.filename,
-        bytes: widget.mediaType == PickMediaType.image
-            ? Uint8List.fromList(_picked!.bytes)
-            : null,
+        bytes: _previewBytes,
         onReplace: _pick,
         onRemove: _remove,
       );
@@ -245,6 +252,8 @@ class _PickedBox extends StatelessWidget {
                   width: 52,
                   height: 52,
                   fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.medium,
                 ),
               )
             : _IconTile(icon: icon, color: const Color(0xFF4CAF50)),
@@ -314,9 +323,12 @@ class _ExistingBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   url,
+                  key: ValueKey(url),
                   width: 52,
                   height: 52,
                   fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.medium,
                   errorBuilder: (_, __, ___) =>
                       _IconTile(icon: icon, color: CmsColors.orange),
                 ),

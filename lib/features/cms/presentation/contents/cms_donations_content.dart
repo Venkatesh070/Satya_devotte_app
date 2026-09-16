@@ -1386,31 +1386,71 @@ class _DateCell extends StatelessWidget {
   }
 }
 
-/// Payment reference — fully visible with copy action.
+/// PayFast payment id + merchant reference — copy both when present.
 class _ReferenceCell extends StatelessWidget {
   const _ReferenceCell({
-    required this.reference,
+    this.paymentId,
+    this.reference,
     this.dense = false,
   });
 
+  final String? paymentId;
   final String? reference;
   final bool dense;
 
+  String get _copyText {
+    final pid = paymentId?.trim() ?? '';
+    final ref = reference?.trim() ?? '';
+    if (pid.isNotEmpty && ref.isNotEmpty) {
+      return 'Payment Id: $pid\nRef Id: $ref';
+    }
+    if (pid.isNotEmpty) return pid;
+    return ref;
+  }
+
   Future<void> _copy(BuildContext context) async {
-    final text = reference?.trim() ?? '';
+    final text = _copyText.trim();
     if (text.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
     if (!context.mounted) return;
     showCmsSnackbar(
       title: 'Copied',
-      message: 'Reference ID copied to clipboard',
+      message: 'Payment ID and reference copied',
+    );
+  }
+
+  Widget _line(String prefix, String value) {
+    final labelStyle = TextStyle(
+      fontSize: dense ? 12 : 12,
+      fontWeight: FontWeight.w600,
+      color: CmsColors.textSecond,
+      height: 1.4,
+    );
+    final valueStyle = TextStyle(
+      fontSize: dense ? 12 : 12,
+      fontFamily: 'monospace',
+      fontWeight: FontWeight.w500,
+      color: CmsColors.textPrimary,
+      height: 1.4,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: SelectableText.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: prefix, style: labelStyle),
+            TextSpan(text: value, style: valueStyle),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final text = reference?.trim() ?? '';
-    if (text.isEmpty) {
+    final pid = paymentId?.trim() ?? '';
+    final ref = reference?.trim() ?? '';
+    if (pid.isEmpty && ref.isEmpty) {
       return Text(
         '—',
         style: TextStyle(
@@ -1424,21 +1464,19 @@ class _ReferenceCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: SelectableText(
-            text,
-            style: TextStyle(
-              fontSize: dense ? 12 : 12,
-              fontFamily: 'monospace',
-              color: CmsColors.textSecond,
-              height: 1.35,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (pid.isNotEmpty) _line('Payment Id: ', pid),
+              if (ref.isNotEmpty) _line('Ref Id: ', ref),
+            ],
           ),
         ),
         const SizedBox(width: 6),
         _cmsClickable(
           onTap: () => _copy(context),
           child: Tooltip(
-            message: 'Copy reference ID',
+            message: 'Copy payment ID and reference',
             child: Container(
               padding: EdgeInsets.all(dense ? 5 : 6),
               decoration: BoxDecoration(
@@ -1519,7 +1557,7 @@ class _WideTable extends StatelessWidget {
                 _pad(const Text('Status', style: _headerStyle)),
                 _pad(const Text('Date', style: _headerStyle)),
                 _pad(const Text('Note', style: _headerStyle)),
-                _pad(const Text('Reference', style: _headerStyle)),
+                _pad(const Text('Payment ID · Reference', style: _headerStyle)),
               ],
             ),
             for (final c in items)
@@ -1556,7 +1594,12 @@ class _WideTable extends StatelessWidget {
                           : CmsColors.textPrimary,
                     ),
                   )),
-                  _pad(_ReferenceCell(reference: c.payfastPaymentId)),
+                  _pad(
+                    _ReferenceCell(
+                      paymentId: c.displayPayfastPaymentId,
+                      reference: c.displayMerchantReference,
+                    ),
+                  ),
                 ],
               ),
           ],
@@ -1679,7 +1722,7 @@ class _ContributionCard extends StatelessWidget {
               const SizedBox(
                 width: 96,
                 child: Text(
-                  'Reference',
+                  'Payment ID · Reference',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: CmsColors.textSecond,
@@ -1689,7 +1732,8 @@ class _ContributionCard extends StatelessWidget {
               ),
               Expanded(
                 child: _ReferenceCell(
-                  reference: c.payfastPaymentId,
+                  paymentId: c.displayPayfastPaymentId,
+                  reference: c.displayMerchantReference,
                   dense: true,
                 ),
               ),

@@ -31,6 +31,7 @@ class AdminOrdersRemoteDataSource {
     int page = 1,
     int limit = 10,
     String? orderStatus,
+    String? fulfillmentMethod,
     String? paymentStatus,
     String? user,
     String? search,
@@ -40,6 +41,8 @@ class AdminOrdersRemoteDataSource {
       'limit': limit,
       if (orderStatus != null && orderStatus.isNotEmpty)
         'orderStatus': orderStatus,
+      if (fulfillmentMethod != null && fulfillmentMethod.isNotEmpty)
+        'fulfillmentMethod': fulfillmentMethod,
       if (paymentStatus != null && paymentStatus.isNotEmpty)
         'paymentStatus': paymentStatus,
       if (user != null && user.isNotEmpty) 'user': user,
@@ -530,6 +533,16 @@ class AdminOrdersRemoteDataSource {
             json['paystackReference'] ??
             json['reference'],
       );
+      copyIfMissing(
+        'transactionId',
+        json['transactionId'] ?? json['paymentId'],
+      );
+      copyIfMissing(
+        'payfastPaymentId',
+        json['payfastPaymentId'] ??
+            json['transactionId'] ??
+            json['paymentId'],
+      );
       copyIfMissing('totalAmount', json['totalAmount'] ?? json['amount']);
       copyIfMissing('currency', json['currency']);
       copyIfMissing('createdAt', json['createdAt']);
@@ -537,12 +550,27 @@ class AdminOrdersRemoteDataSource {
       return merged;
     }
     final flat = Map<String, dynamic>.from(json);
-    final orderId = flat['orderId'];
-    if (orderId != null) {
-      final id = orderId.toString();
+    final orderId = flat['order'];
+    if (orderId is String && orderId.isNotEmpty) {
+      flat['_id'] ??= orderId;
+    } else if (flat['orderId'] != null) {
+      final id = flat['orderId'].toString();
       if ((flat['_id'] ?? flat['id'] ?? '').toString().isEmpty) {
         flat['_id'] = id;
       }
+    }
+    final txn = flat['transactionId'] ?? flat['paymentId'];
+    if (txn != null && (flat['transactionId'] == null || '$txn'.trim().isEmpty)) {
+      flat['transactionId'] = txn;
+    }
+    if (flat['payfastPaymentId'] == null && txn != null) {
+      flat['payfastPaymentId'] = txn;
+    }
+    if ((flat['paymentReference'] == null ||
+            (flat['paymentReference'] is String &&
+                (flat['paymentReference'] as String).trim().isEmpty)) &&
+        flat['reference'] != null) {
+      flat['paymentReference'] = flat['reference'];
     }
     return flat;
   }

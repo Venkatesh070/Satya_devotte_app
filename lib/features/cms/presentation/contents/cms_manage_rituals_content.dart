@@ -50,6 +50,14 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
   bool _showForm = false;
   RitualModel? _editing;
 
+  void _openAddForm() {
+    if (!mounted) return;
+    setState(() {
+      _editing = null;
+      _showForm = true;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +65,17 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_controller.resetSearchOnTabFocus());
+      if (CmsShellNavigation.consumePendingOpenAddRitual()) {
+        _openAddForm();
+      }
     });
+    CmsShellNavigation.openAddRitualTick.addListener(_openAddForm);
+  }
+
+  @override
+  void dispose() {
+    CmsShellNavigation.openAddRitualTick.removeListener(_openAddForm);
+    super.dispose();
   }
 
   void _closeForm() => setState(() {
@@ -80,10 +98,7 @@ class _CmsManageRitualsContentState extends State<CmsManageRitualsContent> {
     }
     return _RitualList(
       controller: _controller,
-      onAdd: () => setState(() {
-        _editing = null;
-        _showForm = true;
-      }),
+      onAdd: _openAddForm,
       onOpenForm: (ritual) => setState(() {
         _editing = ritual;
         _showForm = true;

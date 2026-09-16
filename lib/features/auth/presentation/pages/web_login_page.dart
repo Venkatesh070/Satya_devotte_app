@@ -96,6 +96,14 @@ class _WebLoginPageState extends State<WebLoginPage>
     super.dispose();
   }
 
+  Widget _satyaWheelLogo({double width = 90, double height = 140}) {
+    return SvgPicture.asset(
+      'assets/svgs/whiteLogo.svg',
+      width: width,
+      height: height,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -119,6 +127,7 @@ class _WebLoginPageState extends State<WebLoginPage>
                   backgroundImage: 'assets/images/home/login_bg.png',
                   chakraVerticalOffset: 0,
                   chakraScale: 0.95,
+                  centerChild: _satyaWheelLogo(width: 100, height: 155),
                 ),
               ),
             ],
@@ -138,6 +147,7 @@ class _WebLoginPageState extends State<WebLoginPage>
             backgroundImage: 'assets/images/home/login_bg.png',
             chakraVerticalOffset: -80,
             chakraScale: 0.7,
+            centerChild: _satyaWheelLogo(width: 70, height: 108),
           ),
           SafeArea(
             child: Center(

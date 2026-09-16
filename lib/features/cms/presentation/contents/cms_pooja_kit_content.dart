@@ -10,6 +10,8 @@
 //
 // Create flow uses multipart/form-data against
 // POST /api/v1/products/create-product.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
@@ -50,6 +52,52 @@ String _resolveKitCategory(String? raw) {
     return _kitCategoryBook;
   }
   return _kitCategoryPujaKit;
+}
+
+String _formatProductQty(int n) {
+  final s = n.toString();
+  final buf = StringBuffer();
+  for (int i = 0; i < s.length; i++) {
+    if (i != 0 && (s.length - i) % 3 == 0) buf.write(',');
+    buf.write(s[i]);
+  }
+  return buf.toString();
+}
+
+Color _productStockLevelColor(ProductModel p) {
+  if (p.isOutOfStock) return const Color(0xFFC62828);
+  if (p.isLowStock) return const Color(0xFFEF6C00);
+  return const Color(0xFF2E7D32);
+}
+
+class _ProductStockLevelPill extends StatelessWidget {
+  const _ProductStockLevelPill({required this.product});
+  final ProductModel product;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _productStockLevelColor(product);
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 108),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.35)),
+      ),
+      child: Text(
+        product.stockLevelLabel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 String _kitCategoryDisplayLabel(String? raw) {
@@ -112,7 +160,9 @@ class _CmsPoojaKitContentState extends State<CmsPoojaKitContent> {
     _ctrl = Get.find<ProductController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _ctrl.loadProducts();
+      // Shell also calls [ProductController.resetSearchOnTabFocus] on nav;
+      // this covers deep-link / first mount when that hook did not run.
+      unawaited(_ctrl.resetSearchOnTabFocus());
     });
   }
 
@@ -241,74 +291,103 @@ class _ProductList extends StatelessWidget {
         // ── Filter tabs ───────────────────────────────────────────
         Container(
           color: CmsColors.white,
-          padding: EdgeInsets.only(left: isWeb ? 24 : 16, bottom: 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Obx(
-              () => Row(
-                children: _filters.expand((f) {
-                  final isSel = ctrl.filter == f;
-                  // Show a count badge for every non-"All" chip when the
-                  // currently-loaded page has at least one match. Helps
-                  // distinguish lifecycle filters (Active / Inactive) from
-                  // review filters (Pending / Queued / …) at a glance.
-                  final showCount = f != 'All' && ctrl.countFor(f) > 0;
-                  // Vertical divider between the review-status group
-                  // (…Rejected) and the lifecycle group (Active, Inactive).
-                  final leading = <Widget>[
-                    if (f == 'Active')
-                      Container(
-                        width: 1,
-                        height: 22,
-                        margin: const EdgeInsets.only(right: 12, left: 4),
-                        color: CmsColors.border,
-                      ),
-                  ];
-                  return [
-                    ...leading,
-                    _cmsClickable(
-                    onTap: () => ctrl.setFilter(f),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSel ? CmsColors.orange : CmsColors.bg,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSel ? CmsColors.orange : CmsColors.border,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            f,
-                            style: TextStyle(
-                              color: isSel
-                                  ? Color(0xFFFCF7EF)
-                                  : CmsColors.textSecond,
-                              fontSize: 12,
-                              fontWeight: isSel
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+          padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 0, isWeb ? 24 : 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Obx(
+                () => _ProductChipRow(
+                  label: 'Category',
+                  options: ProductController.categoryFilters,
+                  selected: ctrl.categoryFilter,
+                  onSelect: ctrl.setCategoryFilter,
+                  optionLabel: (wire) {
+                    switch (wire.toUpperCase()) {
+                      case 'ALL':
+                        return 'All';
+                      case 'AYURVEDIC':
+                        return 'Ayurvedic';
+                      case 'PUJAKIT':
+                        return 'Puja Kit';
+                      case 'BOOK':
+                        return 'Books';
+                      default:
+                        return wire;
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Obx(
+                  () => Row(
+                    children: _filters.expand((f) {
+                      final isSel = ctrl.filter == f;
+                      // Show a count badge for every non-"All" chip when the
+                      // currently-loaded page has at least one match. Helps
+                      // distinguish lifecycle filters (Active / Inactive) from
+                      // review filters (Pending / Queued / …) at a glance.
+                      final showCount = f != 'All' && ctrl.countFor(f) > 0;
+                      // Vertical divider between the review-status group
+                      // (…Rejected) and the lifecycle group (Active, Inactive).
+                      final leading = <Widget>[
+                        if (f == 'Active')
+                          Container(
+                            width: 1,
+                            height: 22,
+                            margin: const EdgeInsets.only(right: 12, left: 4),
+                            color: CmsColors.border,
+                          ),
+                      ];
+                      return [
+                        ...leading,
+                        _cmsClickable(
+                          onTap: () => ctrl.setFilter(f),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSel ? CmsColors.orange : CmsColors.bg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color:
+                                    isSel ? CmsColors.orange : CmsColors.border,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  f,
+                                  style: TextStyle(
+                                    color: isSel
+                                        ? Color(0xFFFCF7EF)
+                                        : CmsColors.textSecond,
+                                    fontSize: 12,
+                                    fontWeight: isSel
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                                if (showCount) ...[
+                                  const SizedBox(width: 5),
+                                  _filterCountBadge(ctrl.countFor(f), isSel),
+                                ],
+                              ],
                             ),
                           ),
-                          if (showCount) ...[
-                            const SizedBox(width: 5),
-                            _filterCountBadge(ctrl.countFor(f), isSel),
-                          ],
-                        ],
-                      ),
-                    ),
-                    ),
-                  ];
-                }).toList(),
+                        ),
+                      ];
+                    }).toList(),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
         const Divider(height: 1, color: CmsColors.border),
@@ -419,6 +498,89 @@ class _ProductList extends StatelessWidget {
           color: Color(0xFFFCF7EF),
         ),
       ),
+    );
+  }
+}
+
+class _ProductChipRow extends StatelessWidget {
+  const _ProductChipRow({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    this.optionLabel,
+  });
+
+  final String label;
+  final List<String> options;
+  final String selected;
+  final ValueChanged<String> onSelect;
+  final String Function(String wire)? optionLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    String labelFor(String wire) =>
+        optionLabel != null ? optionLabel!(wire) : wire;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 72,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: CmsColors.textSecond,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final opt in options) ...[
+                  _cmsClickable(
+                    onTap: () => onSelect(opt),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: opt == selected
+                            ? CmsColors.orange
+                            : CmsColors.bg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: opt == selected
+                              ? CmsColors.orange
+                              : CmsColors.border,
+                        ),
+                      ),
+                      child: Text(
+                        labelFor(opt),
+                        style: TextStyle(
+                          color: opt == selected
+                              ? const Color(0xFFFCF7EF)
+                              : CmsColors.textSecond,
+                          fontSize: 12,
+                          fontWeight: opt == selected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -633,6 +795,7 @@ class _ProductTable extends StatelessWidget {
   static const _flexName = 5;
   static const _flexCreated = 3;
   static const _flexQty = 2;
+  static const _flexLevel = 2;
   static const _flexPrice = 2;
   static const _flexStatus = 3;
   static const _flexAction = 4;
@@ -696,6 +859,7 @@ class _ProductTable extends StatelessWidget {
           Expanded(flex: _flexName, child: _HCell('Product Name')),
           Expanded(flex: _flexCreated, child: _HCell('Created At')),
           Expanded(flex: _flexQty, child: _HCell('SOH (Stock On Hand)')),
+          Expanded(flex: _flexLevel, child: _HCell('Level')),
           Expanded(flex: _flexPrice, child: _HCell('Price', alignRight: true)),
           Expanded(
             flex: _flexStatus,
@@ -899,12 +1063,19 @@ class _ProductTableRowState extends State<_ProductTableRow> {
             Expanded(
               flex: _ProductTable._flexQty,
               child: Text(
-                _formatQty(p.stockQuantity),
-                style: const TextStyle(
+                _formatProductQty(p.stockQuantity),
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: CmsColors.textPrimary,
+                  color: _productStockLevelColor(p),
                 ),
+              ),
+            ),
+            Expanded(
+              flex: _ProductTable._flexLevel,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _ProductStockLevelPill(product: p),
               ),
             ),
             // ── Price ────────────────────────────────────────────
@@ -1016,16 +1187,6 @@ class _ProductTableRowState extends State<_ProductTableRow> {
           size: 18,
         ),
       );
-
-  String _formatQty(int n) {
-    final s = n.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i != 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
 }
 
 // ── Small reusable bits for the table ───────────────────────────
@@ -1672,8 +1833,9 @@ class _ProductCard extends StatelessWidget {
                               ),
                               _metaChip(
                                 icon: Icons.inventory_2_outlined,
-                                label: '${product.stockQuantity} kits',
-                                color: const Color(0xFF1976D2),
+                                label:
+                                    '${product.stockQuantity} · ${product.stockLevelLabel}',
+                                color: _productStockLevelColor(product),
                               ),
                               if (product.items.isNotEmpty)
                                 _metaChip(
@@ -2026,6 +2188,7 @@ class _ProductFormState extends State<_ProductForm> {
   late final TextEditingController _priceCtrl;
   late final TextEditingController _salePriceCtrl;
   late final TextEditingController _quantityCtrl;
+  late final TextEditingController _lowStockThresholdCtrl;
   late String _currency;
   late String _kitCategory;
   late String _reviewStatus;
@@ -2066,6 +2229,11 @@ class _ProductFormState extends State<_ProductForm> {
     );
     _quantityCtrl = TextEditingController(
       text: p?.quantity == null ? '' : p!.quantity.toString(),
+    );
+    _lowStockThresholdCtrl = TextEditingController(
+      text: p?.isQuantityCategory == true
+          ? '${p!.effectiveLowStockThreshold}'
+          : '10',
     );
     _currency = p?.currency.isNotEmpty == true ? p!.currency : 'ZAR';
     _reviewStatus = p != null && _reviewStatuses.contains(p.status.toUpperCase())
@@ -2454,6 +2622,7 @@ class _ProductFormState extends State<_ProductForm> {
     _priceCtrl.dispose();
     _salePriceCtrl.dispose();
     _quantityCtrl.dispose();
+    _lowStockThresholdCtrl.dispose();
     for (final line in _kitLines) {
       line.dispose();
     }
@@ -2561,6 +2730,7 @@ class _ProductFormState extends State<_ProductForm> {
     }
 
     num? productQuantity;
+    int? lowStockThreshold;
     if (_requiresQuantityCategory) {
       final qtyText = _quantityCtrl.text.trim();
       if (qtyText.isEmpty) {
@@ -2583,6 +2753,26 @@ class _ProductFormState extends State<_ProductForm> {
         return;
       }
       productQuantity = qty;
+
+      final thText = _lowStockThresholdCtrl.text.trim();
+      if (thText.isEmpty) {
+        showCmsSnackbar(
+          title: 'Required',
+          message: 'Low stock threshold is required.',
+          isError: true,
+        );
+        return;
+      }
+      final th = int.tryParse(thText);
+      if (th == null || th < 0) {
+        showCmsSnackbar(
+          title: 'Invalid threshold',
+          message: 'Low stock threshold must be a whole number ≥ 0.',
+          isError: true,
+        );
+        return;
+      }
+      lowStockThreshold = th;
     }
 
     final items = _isPujaKitCategory ? _collectItems() : <ProductItem>[];
@@ -2630,6 +2820,7 @@ class _ProductFormState extends State<_ProductForm> {
         currency: _currency,
         category: _kitCategory,
         quantity: productQuantity,
+        lowStockThreshold: lowStockThreshold,
         // Backend rejects empty `quantity` for Puja Kit updates.
         // For Puja Kit, omit `quantity` entirely instead of sending ''.
         clearQuantity: !_requiresQuantityCategory && !_isPujaKitCategory,
@@ -2648,6 +2839,7 @@ class _ProductFormState extends State<_ProductForm> {
         currency: _currency,
         category: _kitCategory,
         quantity: productQuantity,
+        lowStockThreshold: lowStockThreshold,
         status: _reviewStatus,
         productStatus: _productStatus,
         isFeatured: _isFeatured,
@@ -2698,6 +2890,12 @@ class _ProductFormState extends State<_ProductForm> {
                             label: 'Quantity *',
                             hint: 'e.g. 100',
                             controller: _quantityCtrl,
+                          ),
+                          const SizedBox(height: 12),
+                          CmsFormField(
+                            label: 'Low stock threshold *',
+                            hint: 'e.g. 10',
+                            controller: _lowStockThresholdCtrl,
                           ),
                         ],
                         if (_isPujaKitCategory) ...[
@@ -2751,6 +2949,12 @@ class _ProductFormState extends State<_ProductForm> {
                       label: 'Quantity *',
                       hint: 'e.g. 100',
                       controller: _quantityCtrl,
+                    ),
+                    const SizedBox(height: 12),
+                    CmsFormField(
+                      label: 'Low stock threshold *',
+                      hint: 'e.g. 10',
+                      controller: _lowStockThresholdCtrl,
                     ),
                   ],
                   if (_isPujaKitCategory) ...[

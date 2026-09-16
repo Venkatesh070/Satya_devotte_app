@@ -36,6 +36,7 @@ import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_pa
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/product_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/ritual_controller.dart';
 
@@ -151,6 +152,10 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
         Get.isRegistered<InventoryController>()) {
       Get.find<InventoryController>().clearSearch();
     }
+    if (index == _NavIds.poojaKitManage &&
+        Get.isRegistered<ProductController>()) {
+      Get.find<ProductController>().clearSearch();
+    }
   }
 
   void _onSelect(int index) {
@@ -185,6 +190,10 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     if (index == _NavIds.poojaKitInventory &&
         Get.isRegistered<InventoryController>()) {
       unawaited(Get.find<InventoryController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.poojaKitManage &&
+        Get.isRegistered<ProductController>()) {
+      unawaited(Get.find<ProductController>().resetSearchOnTabFocus());
     }
     if (index == _NavIds.deities && Get.isRegistered<DeityController>()) {
       unawaited(Get.find<DeityController>().resetSearchOnTabFocus());
@@ -1503,6 +1512,27 @@ class CmsShellNavigation {
   /// Bumped after navigating to Manage Festivals so [CmsFestivalsContent] opens the add form.
   static final openAddFestivalTick = ValueNotifier<int>(0);
 
+  /// Bumped after navigating to Manage Rituals so [CmsManageRitualsContent] opens the add form.
+  static final openAddRitualTick = ValueNotifier<int>(0);
+
+  /// Bumped after navigating to Manage Deities so [CmsDeitiesContent] opens the add form.
+  static final openAddDeityTick = ValueNotifier<int>(0);
+
+  static bool _pendingOpenAddRitual = false;
+  static bool _pendingOpenAddDeity = false;
+
+  static bool consumePendingOpenAddRitual() {
+    final v = _pendingOpenAddRitual;
+    _pendingOpenAddRitual = false;
+    return v;
+  }
+
+  static bool consumePendingOpenAddDeity() {
+    final v = _pendingOpenAddDeity;
+    _pendingOpenAddDeity = false;
+    return v;
+  }
+
   static void attach(_CmsShellPageState shell) => _shell = shell;
 
   static void detach(_CmsShellPageState shell) {
@@ -1547,6 +1577,34 @@ class CmsShellNavigation {
     return true;
   }
 
+  /// Dashboard quick-action: switch to Manage Rituals and open the add form.
+  static bool openAddRitual() {
+    final shell = _shell;
+    if (shell == null) {
+      _pendingOpenAddRitual = true;
+      return false;
+    }
+    shell.navigateToTab(_NavIds.manageRituals);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddRitualTick.value++;
+    });
+    return true;
+  }
+
+  /// Dashboard quick-action: switch to Manage Deities and open the add form.
+  static bool openAddDeity() {
+    final shell = _shell;
+    if (shell == null) {
+      _pendingOpenAddDeity = true;
+      return false;
+    }
+    shell.navigateToTab(_NavIds.deities);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      openAddDeityTick.value++;
+    });
+    return true;
+  }
+
   /// Deep link from Activity inbox / FCM tap into the relevant CMS tab.
   static void openFromNotification(AdminNotificationItem n) {
     final shell = _shell;
@@ -1582,6 +1640,21 @@ class CmsShellNavigation {
         if (Get.isRegistered<AdminOrderRequestsController>()) {
           Get.find<AdminOrderRequestsController>()
               .openFromNotificationType(n.type);
+        }
+        break;
+      case 'LOW_STOCK':
+      case 'OUT_OF_STOCK':
+        final kind = (n.data?['kind'] ?? '').toString().toLowerCase();
+        if (kind == 'product') {
+          shell.navigateToTab(_NavIds.poojaKitManage);
+          if (kIsWeb) {
+            updateCmsHashRoute(AppRoutes.cmsPoojaKit);
+          }
+        } else {
+          shell.navigateToTab(_NavIds.poojaKitInventory);
+          if (kIsWeb) {
+            updateCmsHashRoute(AppRoutes.cmsPoojaKitInventory);
+          }
         }
         break;
       default:

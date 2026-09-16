@@ -53,6 +53,32 @@ const _cmsButtonClickCursor = WidgetStatePropertyAll<MouseCursor>(
   SystemMouseCursors.click,
 );
 
+OutlineInputBorder _cmsOutlineBorder(Color color) {
+  return OutlineInputBorder(
+    borderRadius: BorderRadius.circular(8),
+    borderSide: BorderSide(color: color),
+  );
+}
+
+InputDecoration _cmsFieldDecoration({
+  required String hintText,
+  bool alignLabelWithHint = false,
+}) {
+  return InputDecoration(
+    hintText: hintText,
+    hintStyle: const TextStyle(color: CmsColors.textSecond, fontSize: 13),
+    alignLabelWithHint: alignLabelWithHint,
+    filled: true,
+    fillColor: CmsColors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    border: _cmsOutlineBorder(CmsColors.border),
+    enabledBorder: _cmsOutlineBorder(CmsColors.border),
+    focusedBorder: _cmsOutlineBorder(CmsColors.orange),
+    errorBorder: _cmsOutlineBorder(CmsColors.red),
+    focusedErrorBorder: _cmsOutlineBorder(CmsColors.red),
+  );
+}
+
 class CmsNotificationsContent extends StatefulWidget {
   const CmsNotificationsContent({super.key});
 
@@ -72,6 +98,9 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
   final _bodyCtrl = TextEditingController();
   String _audience = 'USERS';
   DateTime? _scheduledAt;
+  /// Disabled until the user submits once; reset after a successful send so
+  /// clearing the fields does not flash "required" errors.
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -121,7 +150,12 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
   // ── Send ────────────────────────────────────────────────────────
   Future<void> _submit() async {
     if (_ctrl.isSending) return;
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final form = _formKey.currentState;
+    if (form == null) return;
+    if (!form.validate()) {
+      setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+      return;
+    }
     FocusScope.of(context).unfocus();
 
     final req = SendNotificationRequest(
@@ -145,9 +179,11 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
     );
     _titleCtrl.clear();
     _bodyCtrl.clear();
+    form.reset();
     setState(() {
       _audience = 'USERS';
       _scheduledAt = null;
+      _autovalidateMode = AutovalidateMode.disabled;
     });
   }
 
@@ -190,6 +226,7 @@ class _CmsNotificationsContentState extends State<CmsNotificationsContent> {
           onClearSchedule: _clearSchedule,
           isSending: () => _ctrl.isSending,
           onSubmit: _submit,
+          autovalidateMode: _autovalidateMode,
         ),
         const SizedBox(height: 24),
         const Text(
@@ -287,6 +324,7 @@ class _SendNotificationCard extends StatelessWidget {
     required this.onClearSchedule,
     required this.isSending,
     required this.onSubmit,
+    required this.autovalidateMode,
   });
 
   final GlobalKey<FormState> formKey;
@@ -299,6 +337,7 @@ class _SendNotificationCard extends StatelessWidget {
   final VoidCallback onClearSchedule;
   final bool Function() isSending;
   final VoidCallback onSubmit;
+  final AutovalidateMode autovalidateMode;
 
   static const _navy = Color(0xFF1A2A4A);
   static const _orange = Color(0xFFE8590A);
@@ -314,13 +353,14 @@ class _SendNotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Color(0xFFFCF7EF),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CmsColors.border),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
         ],
       ),
       child: Form(
         key: formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+        autovalidateMode: autovalidateMode,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -344,8 +384,7 @@ class _SendNotificationCard extends StatelessWidget {
                 controller: titleCtrl,
                 maxLength: 120,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: _cmsFieldDecoration(
                   hintText: 'e.g. Diwali is tomorrow!',
                 ),
                 inputFormatters: [LengthLimitingTextInputFormatter(120)],
@@ -366,10 +405,9 @@ class _SendNotificationCard extends StatelessWidget {
                 minLines: 4,
                 maxLines: 8,
                 textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
+                decoration: _cmsFieldDecoration(
                   hintText: 'Write the notification message...',
+                  alignLabelWithHint: true,
                 ),
                 inputFormatters: [LengthLimitingTextInputFormatter(1000)],
                 validator: (v) {
@@ -449,7 +487,7 @@ class _SendNotificationCard extends StatelessWidget {
         label: 'Target Audience',
         child: DropdownButtonFormField<String>(
           value: audience,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+          decoration: _cmsFieldDecoration(hintText: 'Select audience'),
           items: const [
             DropdownMenuItem(value: 'USERS', child: Text('Users')),
             DropdownMenuItem(value: 'ADMINS', child: Text('Admins')),
@@ -463,9 +501,7 @@ class _SendNotificationCard extends StatelessWidget {
         child: _cmsClickableInk(
           onTap: onPickSchedule,
           child: InputDecorator(
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: 'Send now',
+            decoration: _cmsFieldDecoration(hintText: 'Send now').copyWith(
               suffixIcon: scheduledAt == null
                   ? const Icon(Icons.calendar_today, size: 18)
                   : IconButton(

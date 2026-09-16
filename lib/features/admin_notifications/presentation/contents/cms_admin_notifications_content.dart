@@ -299,6 +299,10 @@ class _NotificationTile extends StatelessWidget {
         return Icons.money_off_outlined;
       case 'REPLACEMENT_REQUEST':
         return Icons.assignment_return_outlined;
+      case 'LOW_STOCK':
+        return Icons.inventory_2_outlined;
+      case 'OUT_OF_STOCK':
+        return Icons.production_quantity_limits_outlined;
       default:
         return Icons.notifications_outlined;
     }
@@ -312,7 +316,10 @@ class _NotificationTile extends StatelessWidget {
         return CmsColors.green;
       case 'REFUND_REQUEST':
       case 'REPLACEMENT_REQUEST':
+      case 'OUT_OF_STOCK':
         return CmsColors.red;
+      case 'LOW_STOCK':
+        return const Color(0xFFC2410C);
       default:
         return const Color(0xFF6B7280);
     }

@@ -37,6 +37,11 @@ class AdminOrdersController extends GetxController {
     'FULFILLED',
     'CANCELLED',
   ];
+  static const fulfillmentMethodFilters = <String>[
+    'ALL',
+    'PICKUP',
+    'DELIVERY',
+  ];
   static const paymentStatusFilters = <String>[
     'ALL',
     'PAID',
@@ -56,6 +61,7 @@ class AdminOrdersController extends GetxController {
   final _total = 0.obs;
   final _totalPages = 1.obs;
   final _orderStatus = 'ALL'.obs;
+  final _fulfillmentMethod = 'ALL'.obs;
   final _paymentStatus = 'PAID'.obs;
   final _search = ''.obs;
 
@@ -94,6 +100,7 @@ class AdminOrdersController extends GetxController {
   int get total => _total.value;
   int get totalPages => _totalPages.value;
   String get orderStatus => _orderStatus.value;
+  String get fulfillmentMethod => _fulfillmentMethod.value;
   String get paymentStatus => _paymentStatus.value;
   String get search => _search.value;
   bool get isEmpty =>
@@ -125,6 +132,16 @@ class AdminOrdersController extends GetxController {
     final u = v.toUpperCase();
     if (!orderStatusFilters.contains(u) || _orderStatus.value == u) return;
     _orderStatus.value = u;
+    _load(page: 1);
+  }
+
+  void setFulfillmentMethodFilter(String v) {
+    final u = v.toUpperCase();
+    if (!fulfillmentMethodFilters.contains(u) ||
+        _fulfillmentMethod.value == u) {
+      return;
+    }
+    _fulfillmentMethod.value = u;
     _load(page: 1);
   }
 
@@ -161,6 +178,9 @@ class AdminOrdersController extends GetxController {
         page: page,
         limit: _limit.value,
         orderStatus: _orderStatus.value == 'ALL' ? null : _orderStatus.value,
+        fulfillmentMethod: _fulfillmentMethod.value == 'ALL'
+            ? null
+            : _fulfillmentMethod.value,
         paymentStatus:
             _paymentStatus.value == 'ALL' ? null : _paymentStatus.value,
         search: _search.value.trim().isEmpty ? null : _search.value.trim(),
@@ -213,10 +233,14 @@ class AdminOrdersController extends GetxController {
       // we already had from the list, keep the list snapshot so the user
       // still sees data instead of an apparently-blank detail screen.
       final current = _detail.value;
+      final listSnap = _items.firstWhereOrNull((o) => o.id == id);
       final freshIsUsable =
           fresh.id.isNotEmpty || fresh.orderNumber.isNotEmpty;
       if (freshIsUsable) {
-        _detail.value = fresh;
+        var merged = fresh;
+        if (current != null) merged = merged.withCustomerFallback(current);
+        if (listSnap != null) merged = merged.withCustomerFallback(listSnap);
+        _detail.value = merged;
       } else if (current == null) {
         _detail.value = fresh; // nothing better available
       }
@@ -421,11 +445,7 @@ class AdminOrdersController extends GetxController {
     return _mutate(actionVerifyPayment, () async {
       final updated = await _ds.verifyPayment(reference.trim());
       if (updated != null) {
-        final cur = _detail.value;
-        final merged = (cur != null && cur.id == updated.id)
-            ? updated.withCustomerFallback(cur)
-            : updated;
-        _replaceDetail(merged);
+        _replaceDetail(updated);
       } else {
         await fetchDetail();
       }
@@ -436,10 +456,23 @@ class AdminOrdersController extends GetxController {
 
   // ── internals ─────────────────────────────────────────────────────
   void _replaceDetail(AdminOrder updated) {
-    _detail.value = updated;
-    final idx = _items.indexWhere((o) => o.id == updated.id);
+    // Mutation endpoints often return `user` as a bare id (not populated).
+    // Keep the customer name/email already shown from list/detail.
+    final current = _detail.value;
+    final listSnap = _items.firstWhereOrNull((o) => o.id == updated.id);
+    var merged = updated;
+    if (current != null && current.id == updated.id) {
+      merged = merged.withCustomerFallback(current);
+    }
+    if (listSnap != null) {
+      merged = merged.withCustomerFallback(listSnap);
+    }
+
+    _detail.value = merged;
+    final idx = _items.indexWhere((o) => o.id == merged.id);
     if (idx != -1) {
-      _items[idx] = updated;
+      // Preserve list-row customer fields if the mutation stripped them.
+      _items[idx] = merged.withCustomerFallback(_items[idx]);
       _items.refresh();
     }
   }

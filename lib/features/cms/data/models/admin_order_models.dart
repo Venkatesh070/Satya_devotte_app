@@ -216,7 +216,7 @@ extension FulfillmentMethodX on FulfillmentMethod {
   String get label {
     switch (this) {
       case FulfillmentMethod.delivery:
-        return 'Delivery';
+        return 'Door delivery';
       case FulfillmentMethod.pickup:
         return 'Pickup';
       case FulfillmentMethod.unknown:
@@ -330,6 +330,30 @@ String paymentStatusWireChipLabel(String wire) {
       if (wire.isEmpty) return wire;
       final u = wire.toUpperCase();
       return u[0] + wire.substring(1).toLowerCase();
+  }
+}
+
+/// Labels for order-status filter chips (API wire → display title).
+String orderStatusWireChipLabel(String wire) {
+  final u = wire.toUpperCase().trim();
+  if (u == 'ALL' || u.isEmpty) return 'All';
+  final parsed = OrderStatusX.parse(u);
+  if (parsed != OrderStatus.unknown) return parsed.label;
+  return u[0] + u.substring(1).toLowerCase();
+}
+
+/// Labels for order-type filter chips (pickup vs door delivery).
+String fulfillmentMethodWireChipLabel(String wire) {
+  switch (wire.toUpperCase().trim()) {
+    case 'ALL':
+      return 'All';
+    case 'PICKUP':
+      return 'Pickup';
+    case 'DELIVERY':
+      return 'Door delivery';
+    default:
+      if (wire.isEmpty) return wire;
+      return wire[0].toUpperCase() + wire.substring(1).toLowerCase();
   }
 }
 
@@ -1145,6 +1169,13 @@ class AdminOrder {
   /// PayFast pf_payment_id (numeric), when payment has settled.
   String get resolvedPayfastPaymentId =>
       (payfastPaymentId ?? transactionId ?? '').trim();
+
+  /// PayFast **Payment Id** when available; otherwise checkout reference (e.g. SATHYA-10025).
+  String get displayPayfastPaymentIdOrReference {
+    final paymentId = resolvedPayfastPaymentId;
+    if (paymentId.isNotEmpty) return paymentId;
+    return paymentReference.trim();
+  }
 
   /// PayFast reported a successful charge; fulfilment actions apply.
   bool get isPaymentPaid => paymentStatus == PaymentStatus.paid;

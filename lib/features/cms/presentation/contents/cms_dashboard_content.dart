@@ -213,37 +213,68 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
             const _SectionLabel('Quick actions'),
             const SizedBox(height: 12),
             if (isWeb)
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _QuickAction(
-                      label: 'Add Puja',
-                      icon: Icons.add_circle_outline,
-                      color: const Color(0xFF9C27B0),
-                      onTap: () {
-                        if (!CmsShellNavigation.openAddPuja()) {
-                          Get.offNamed(AppRoutes.cmsPujaCreate);
-                        }
-                      },
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Puja',
+                          icon: Icons.self_improvement_outlined,
+                          color: const Color(0xFF9C27B0),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddPuja()) {
+                              Get.offNamed(AppRoutes.cmsPujaCreate);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Festival',
+                          icon: Icons.celebration_outlined,
+                          color: const Color(0xFF2196F3),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddFestival()) {
+                              Get.offNamed(AppRoutes.cmsFestivalCreate);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Ritual',
+                          icon: Icons.local_fire_department_outlined,
+                          color: const Color(0xFF6A1B9A),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddRitual()) {
+                              Get.offNamed(AppRoutes.cmsManageRituals);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Deity',
+                          icon: Icons.auto_awesome_outlined,
+                          color: const Color(0xFF00897B),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddDeity()) {
+                              Get.offNamed(AppRoutes.cmsDeities);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickAction(
-                      label: 'Add Festival',
-                      icon: Icons.celebration_outlined,
-                      color: const Color(0xFF2196F3),
-                      onTap: () {
-                        if (!CmsShellNavigation.openAddFestival()) {
-                          Get.offNamed(AppRoutes.cmsFestivalCreate);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Obx(
                     () => Get.find<AuthController>().isSuperAdmin
-                        ? Expanded(
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 12),
                             child: _QuickAction(
                               label: 'Manage Admins',
                               icon: Icons.admin_panel_settings_outlined,
@@ -255,37 +286,72 @@ class _CmsDashboardContentState extends State<CmsDashboardContent> {
                               },
                             ),
                           )
-                        : const Expanded(child: SizedBox.shrink()),
+                        : const SizedBox.shrink(),
                   ),
                 ],
               )
             else
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _QuickAction(
-                      label: 'Add Puja',
-                      icon: Icons.add_circle_outline,
-                      color: const Color(0xFF9C27B0),
-                      onTap: () {
-                        if (!CmsShellNavigation.openAddPuja()) {
-                          Get.offNamed(AppRoutes.cmsPujaCreate);
-                        }
-                      },
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Puja',
+                          icon: Icons.self_improvement_outlined,
+                          color: const Color(0xFF9C27B0),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddPuja()) {
+                              Get.offNamed(AppRoutes.cmsPujaCreate);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Festival',
+                          icon: Icons.celebration_outlined,
+                          color: const Color(0xFF2196F3),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddFestival()) {
+                              Get.offNamed(AppRoutes.cmsFestivalCreate);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickAction(
-                      label: 'Add Festival',
-                      icon: Icons.celebration_outlined,
-                      color: const Color(0xFF2196F3),
-                      onTap: () {
-                        if (!CmsShellNavigation.openAddFestival()) {
-                          Get.offNamed(AppRoutes.cmsFestivalCreate);
-                        }
-                      },
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Ritual',
+                          icon: Icons.local_fire_department_outlined,
+                          color: const Color(0xFF6A1B9A),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddRitual()) {
+                              Get.offNamed(AppRoutes.cmsManageRituals);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Add Deity',
+                          icon: Icons.auto_awesome_outlined,
+                          color: const Color(0xFF00897B),
+                          onTap: () {
+                            if (!CmsShellNavigation.openAddDeity()) {
+                              Get.offNamed(AppRoutes.cmsDeities);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/deity_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_rich_text_field.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -55,16 +56,36 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
   late final CmsSearchScheduler _searchScheduler;
   final _searchController = TextEditingController();
 
+  void _openAddForm() {
+    if (!mounted) return;
+    if (Get.isRegistered<PoojaController>()) {
+      Get.find<PoojaController>().fetchApprovedPoojasForSelector();
+    }
+    setState(() {
+      _editing = null;
+      _showForm = true;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _searchScheduler = CmsSearchScheduler(onSearch: _controller.setSearch);
     _controller.clearSearch();
     Future.microtask(_loadDeities);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (Get.currentRoute == AppRoutes.cmsDeityCreate ||
+          CmsShellNavigation.consumePendingOpenAddDeity()) {
+        _openAddForm();
+      }
+    });
+    CmsShellNavigation.openAddDeityTick.addListener(_openAddForm);
   }
 
   @override
   void dispose() {
+    CmsShellNavigation.openAddDeityTick.removeListener(_openAddForm);
     _searchScheduler.dispose();
     _searchController.dispose();
     super.dispose();
@@ -215,15 +236,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                 CmsPrimaryButton(
                   label: isWeb ? 'Add New Deity' : 'Add',
                   icon: Icons.add,
-                  onTap: () {
-                    if (Get.isRegistered<PoojaController>()) {
-                      Get.find<PoojaController>().fetchApprovedPoojasForSelector();
-                    }
-                    setState(() {
-                      _editing = null;
-                      _showForm = true;
-                    });
-                  },
+                  onTap: _openAddForm,
                 ),
               ],
             ),

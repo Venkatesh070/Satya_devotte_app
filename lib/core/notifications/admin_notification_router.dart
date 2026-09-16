@@ -24,6 +24,8 @@ class AdminNotificationRouter {
     'PAYMENT_SUCCESS',
     'REFUND_REQUEST',
     'REPLACEMENT_REQUEST',
+    'LOW_STOCK',
+    'OUT_OF_STOCK',
   };
 
   static bool isOperationalType(String? type) =>

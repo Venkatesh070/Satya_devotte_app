@@ -223,31 +223,6 @@ class _InventoryListView extends StatelessWidget {
         Expanded(
           child: _InventoryBody(ctrl: ctrl, onEdit: onEdit),
         ),
-        Obx(() {
-          if (ctrl.total == 0 && ctrl.items.isEmpty) {
-            return const SizedBox.shrink();
-          }
-          return Material(
-            color: CmsColors.white,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: CmsColors.border)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                minimum: const EdgeInsets.only(bottom: 4),
-                child: _InventoryPaginationBar(controller: ctrl),
-              ),
-            ),
-          );
-        }),
       ],
     );
   }
@@ -773,12 +748,29 @@ class _InventoryBody extends StatelessWidget {
             horizontal: MediaQuery.of(context).size.width >= 768 ? 24 : 16,
             vertical: 16,
           ),
-          child: _InventoryTable(
-            ctrl: ctrl,
-            items: ctrl.items,
-            onEdit: onEdit,
-            onAdjust: (item) => _showAdjustStockDialog(context, ctrl, item),
-            onDelete: (item) => _confirmDelete(context, ctrl, item),
+          child: Column(
+            children: [
+              _InventoryTable(
+                ctrl: ctrl,
+                items: ctrl.items,
+                onEdit: onEdit,
+                onAdjust: (item) => _showAdjustStockDialog(context, ctrl, item),
+                onDelete: (item) => _confirmDelete(context, ctrl, item),
+              ),
+              const SizedBox(height: 12),
+              Obx(
+                () => CmsPaginationBar(
+                  page: ctrl.page,
+                  pageSize: ctrl.limit,
+                  totalPages: ctrl.totalPages,
+                  totalRows: ctrl.total,
+                  isLoading: ctrl.isLoading,
+                  onPageSelected: (p) => ctrl.goToPage(p),
+                  onPageSizeChanged: ctrl.setLimit,
+                  pageSizes: const [10, 25, 50, 100],
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -2427,87 +2419,6 @@ class _DropdownField extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _InventoryPaginationBar extends StatelessWidget {
-  const _InventoryPaginationBar({required this.controller});
-  final InventoryController controller;
-
-  static const _pageSizes = [10, 20, 50, 100];
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final page = controller.page;
-      final size = controller.limit;
-      final tp = controller.totalPages;
-      final totalRows = controller.total;
-      final start = totalRows == 0 ? 0 : (page - 1) * size + 1;
-      final end = (page * size).clamp(0, totalRows);
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            Text(
-              'Showing $start–$end of $totalRows',
-              style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
-            ),
-            const SizedBox(width: 16),
-            const Text(
-              'Rows:',
-              style: TextStyle(fontSize: 12, color: CmsColors.textSecond),
-            ),
-            const SizedBox(width: 6),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _pageSizes.contains(size) ? size : 20,
-                isDense: true,
-                items: _pageSizes
-                    .map((s) => DropdownMenuItem(value: s, child: Text('$s')))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    controller.setLimit(v);
-                    cmsScrollContentToTop(context);
-                  }
-                },
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              style: IconButton.styleFrom().copyWith(
-                mouseCursor: _cmsButtonClickCursor,
-              ),
-              onPressed: page > 1
-                  ? () {
-                      controller.prevPage();
-                      cmsScrollContentToTop(context);
-                    }
-                  : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Text(
-              'Page $page of $tp',
-              style: const TextStyle(fontSize: 12, color: CmsColors.textSecond),
-            ),
-            IconButton(
-              style: IconButton.styleFrom().copyWith(
-                mouseCursor: _cmsButtonClickCursor,
-              ),
-              onPressed: page < tp
-                  ? () {
-                      controller.nextPage();
-                      cmsScrollContentToTop(context);
-                    }
-                  : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-      );
-    });
   }
 }
 

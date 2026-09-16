@@ -134,6 +134,7 @@ class ProductModel {
     this.currency = 'ZAR',
     this.category = '',
     this.quantity,
+    this.lowStockThreshold,
     this.status = 'PENDING',
     this.productStatus = 'ACTIVE',
     this.isFeatured = false,
@@ -157,8 +158,10 @@ class ProductModel {
   final num? salePrice;
   final String currency;
   final String category;
-  /// Stock units for Ayurvedic products (`quantity` on the API).
+  /// Stock units for Ayurvedic / book products (`quantity` on the API).
   final num? quantity;
+  /// Alert when quantity is at or below this (ayurvedic / book only).
+  final int? lowStockThreshold;
   final String status;
   final String productStatus;
   final bool isFeatured;
@@ -184,6 +187,25 @@ class ProductModel {
 
   bool get inStock => stockQuantity > 0;
   num get effectivePrice => salePrice ?? price;
+
+  bool get isQuantityCategory {
+    final c = category.toLowerCase();
+    return c == 'ayurvedic' || c == 'book';
+  }
+
+  int get effectiveLowStockThreshold => lowStockThreshold ?? 10;
+
+  bool get isOutOfStock => stockQuantity <= 0;
+
+  bool get isLowStock =>
+      stockQuantity > 0 && stockQuantity <= effectiveLowStockThreshold;
+
+  /// Same labels as Inventory list Level column.
+  String get stockLevelLabel {
+    if (isOutOfStock) return 'Out of stock';
+    if (isLowStock) return 'Low stock';
+    return 'In stock';
+  }
 
   /// Orders close 7 days before the puja date.
   bool get isOrderClosed {
@@ -215,6 +237,7 @@ class ProductModel {
     String? currency,
     String? category,
     num? quantity,
+    int? lowStockThreshold,
     String? status,
     String? productStatus,
     bool? isFeatured,
@@ -237,6 +260,7 @@ class ProductModel {
       currency: currency ?? this.currency,
       category: category ?? this.category,
       quantity: quantity ?? this.quantity,
+      lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
       status: status ?? this.status,
       productStatus: productStatus ?? this.productStatus,
       isFeatured: isFeatured ?? this.isFeatured,
@@ -398,6 +422,12 @@ class ProductModel {
       currency: _str(json, ['currency'], 'ZAR'),
       category: _str(json, ['category']),
       quantity: _parseNum(json['quantity']),
+      lowStockThreshold: () {
+        final v = json['lowStockThreshold'];
+        if (v is int) return v;
+        if (v is num) return v.toInt();
+        return int.tryParse(v?.toString() ?? '');
+      }(),
       status: _str(json, ['status'], 'PENDING').toUpperCase(),
       productStatus: _str(json, ['productStatus'], 'ACTIVE').toUpperCase(),
       isFeatured: json['isFeatured'] == true,
