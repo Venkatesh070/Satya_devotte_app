@@ -45,24 +45,9 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: DonationUi.background,
-      appBar: AppBar(
-        backgroundColor: DonationUi.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          color: DonationUi.textPrimary,
-          onPressed: () => Get.back(),
-        ),
-        title: Text(
-          'History of Donations',
-          style: AppTypography.lora(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: DonationUi.textPrimary,
-          ),
-        ),
-        centerTitle: false,
+      appBar: DonationSimpleAppBar(
+        title: 'History of Donations',
+        onBack: () => Get.back(),
       ),
       body: RefreshIndicator(
         onRefresh: _ctrl.refreshContributions,

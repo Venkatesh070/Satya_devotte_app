@@ -43,12 +43,14 @@ class _ProfileRitualHistoryPageState extends State<ProfileRitualHistoryPage> {
             'Ritual History',
             style: AppTypography.lora(
               fontSize: 20,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: DonationUi.textPrimary,
             ),
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
           leading: IconButton(
             icon: const Icon(
               Icons.arrow_back_ios_new,

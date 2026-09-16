@@ -18,36 +18,28 @@ class DonationsListScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: DonationUi.background,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _FigmaDonationsHeader(
-            onBack: () => Get.back(),
-            onHistory: () => Get.toNamed(AppRoutes.userContributions),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Donations',
-                    style: AppTypography.lora(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w500,
-                      color: DonationUi.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _GeneralDonationCard(
-                    onDonate: () => MakeDonationScreen.show(context),
-                  ),
-                ],
-              ),
+      appBar: DonationSimpleAppBar(
+        title: 'Donations',
+        onBack: () => Get.back(),
+        trailing: Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Center(
+            child: DonationHistoryChip(
+              onTap: () => Get.toNamed(AppRoutes.userContributions),
             ),
           ),
-        ],
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _GeneralDonationCard(
+              onDonate: () => MakeDonationScreen.show(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -133,46 +125,6 @@ class _GeneralDonationCard extends StatelessWidget {
   }
 }
 
-/// Figma: cream bar, back + History pill, no hero image.
-class _FigmaDonationsHeader extends StatelessWidget {
-  const _FigmaDonationsHeader({required this.onBack, required this.onHistory});
-
-  final VoidCallback onBack;
-  final VoidCallback onHistory;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: DonationUi.background,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
-          child: Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Color(0xFFFCF7EF),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_sharp,
-                    size: 20,
-                    color: DonationUi.textPrimary,
-                  ),
-                  onPressed: onBack,
-                ),
-              ),
-              const Spacer(),
-              DonationHistoryChip(onTap: onHistory),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();

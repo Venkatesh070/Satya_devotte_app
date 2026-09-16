@@ -369,12 +369,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Edit Profile',
-          style: TextStyle(color: _titleColor, fontFamily: 'serif'),
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: _titleColor,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
