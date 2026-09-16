@@ -1910,9 +1910,6 @@ class _RitualFormState extends State<_RitualForm> {
         else
           ..._dayEntries.asMap().entries.map(
             (e) {
-              final descPreview = e.value.description.trim().isEmpty
-                  ? ''
-                  : _truncateDayPreview(e.value.description);
               final metaBits = <String>[];
               if (e.value.requiredItems.isNotEmpty) {
                 metaBits.add('${e.value.requiredItems.length} items');
@@ -1922,15 +1919,13 @@ class _RitualFormState extends State<_RitualForm> {
               }
               return _RitualRailTile(
                 key: ValueKey(
-                  'day-rail-${e.key}-${e.value.title}-${e.value.description}',
+                  'day-rail-${e.key}-${e.value.title}',
                 ),
                 index: e.key + 1,
                 title: e.value.title.isEmpty ? 'Untitled Day' : e.value.title,
-                subtitle: descPreview.isNotEmpty
-                    ? descPreview
-                    : metaBits.isNotEmpty
-                    ? metaBits.join(' · ')
-                    : 'No description',
+                // Keep title-only for older rituals that still carry a
+                // day.description — do not surface it as a bullet preview.
+                subtitle: metaBits.isEmpty ? null : metaBits.join(' · '),
                 isSelected: _showDayEditor && _editingDayIndex == e.key,
                 onTap: () => _startEditDay(e.key),
                 onRemove: () => _removeDay(e.key),
