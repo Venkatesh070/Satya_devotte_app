@@ -74,7 +74,27 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          'Order Details',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
+        top: false,
         child: RefreshIndicator(
           onRefresh: _refresh,
           color: AppColors.primary,
@@ -84,13 +104,11 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _TopBar(onBack: () => Get.back()),
-                const SizedBox(height: 18),
                 Text(
                   'Order Summary',
                   style: AppTypography.lora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                     color: const Color(0xFF4A1C00),
                   ),
                 ),
@@ -1340,33 +1358,6 @@ class _ThumbFallback extends StatelessWidget {
     return ColoredBox(
       color: Color(0xFFFFF7E8),
       child: Image.asset('assets/images/default_img.png', fit: BoxFit.cover),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onBack});
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Material(
-        color: Color(0xFFFCF7EF),
-        shape: const CircleBorder(),
-        elevation: 5,
-        shadowColor: const Color(0x22000000),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onBack,
-          child: const SizedBox(
-            width: 40,
-            height: 40,
-            child: Icon(Icons.arrow_back, size: 19, color: Color(0xFF1C1C1C)),
-          ),
-        ),
-      ),
     );
   }
 }

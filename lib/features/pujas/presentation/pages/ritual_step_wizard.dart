@@ -519,10 +519,6 @@ class _DayIntroScreen extends StatelessWidget {
         ? 'Day $dayNumber of $totalDays'
         : 'Day $dayNumber';
 
-    final description = day?.description.trim().isNotEmpty == true
-        ? day!.description.trim()
-        : (ritual.description ?? '').trim();
-
     return _BaseWizardScreen(
       onBack: onBack,
       child: Padding(
@@ -572,21 +568,6 @@ class _DayIntroScreen extends StatelessWidget {
               delay: const Duration(milliseconds: 60),
               child: _WizardGradientTitle(text: title, fontSize: 28),
             ),
-            if (description.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _WizardFadeSlideIn(
-                delay: const Duration(milliseconds: 120),
-                child: RichTextDisplay(
-                  description,
-                  textAlign: TextAlign.start,
-                  style: AppTypography.inter(
-                    fontSize: 16,
-                    color: const Color(0xFFFFD180),
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 16),
             _WizardFadeSlideIn(
               delay: const Duration(milliseconds: 180),

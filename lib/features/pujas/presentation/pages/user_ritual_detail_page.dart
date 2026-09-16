@@ -292,29 +292,30 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
                         // ],
                         //   ),
                         // ),
-                        const SizedBox(height: 12),
-
-                        // Ritual Continuity
-                        RichText(
-                          text: TextSpan(
-                            style: AppTypography.inter(
-                              fontSize: 13,
-                              height: 1.5,
-                              color: const Color(0xFF5C4634),
+                        // Ritual Continuity (only for multi-day rituals)
+                        if ((ritual.ritualDay != null && ritual.ritualDay! > 1) ||
+                            ritual.days.length > 1) ...[
+                          RichText(
+                            text: TextSpan(
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: const Color(0xFF5C4634),
+                              ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Ritual Continuity: ',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(
+                                  text:
+                                      'Once the ritual has been started, it must be followed continuously. If you miss any 1 day or skip a scheduled day, the ritual will reset, and you will need to start again from the beginning.',
+                                ),
+                              ],
                             ),
-                            children: const [
-                              TextSpan(
-                                text: 'Ritual Continuity: ',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              TextSpan(
-                                text:
-                                    'Once the ritual has been started, it must be followed continuously. If you miss any 1 day or skip a scheduled day, the ritual will reset, and you will need to start again from the beginning.',
-                              ),
-                            ],
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
+                        ],
 
                         // Rituals / Days Section
                         if (ritual.days.isNotEmpty) ...[

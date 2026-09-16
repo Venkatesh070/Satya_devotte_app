@@ -794,53 +794,66 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     if (_step == 'method') {
       return Scaffold(
         backgroundColor: AppColors.appBgColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            color: const Color(0xFF1D160E),
+            onPressed: () => Get.back(),
+          ),
+          title: Text(
+            'Checkout',
+            style: AppTypography.lora(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1D160E),
+            ),
+          ),
+          centerTitle: false,
+        ),
         body: SafeArea(
-          child: Column(
-            children: [
-              _TopBar(onBack: () => Get.back()),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'How would you like to receive your order?',
-                        style: AppTypography.lora(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF4A1C00),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Choose pickup at our warehouse or door-to-door delivery with The Courier Guy.',
-                        style: AppTypography.inter(
-                          fontSize: 11,
-                          color: const Color(0xFF6C5B46),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      _CheckoutMethodCard(
-                        title: 'Pickup',
-                        subtitle: 'Collect in store · R0 delivery',
-                        icon: Icons.storefront_outlined,
-                        onTap: () =>
-                            _onMethodSelected(FulfillmentMethod.pickup),
-                      ),
-                      const SizedBox(height: 12),
-                      _CheckoutMethodCard(
-                        title: 'Delivery',
-                        subtitle: 'The Courier Guy door-to-door',
-                        icon: Icons.local_shipping_outlined,
-                        onTap: () =>
-                            _onMethodSelected(FulfillmentMethod.delivery),
-                      ),
-                    ],
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How would you like to receive your order?',
+                  style: AppTypography.lora(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF4A1C00),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Choose pickup at our warehouse or door-to-door delivery with The Courier Guy.',
+                  style: AppTypography.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF6C5B46),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _CheckoutMethodCard(
+                  title: 'Pickup',
+                  subtitle: 'Collect in store · R0 delivery',
+                  icon: Icons.storefront_outlined,
+                  onTap: () =>
+                      _onMethodSelected(FulfillmentMethod.pickup),
+                ),
+                const SizedBox(height: 12),
+                _CheckoutMethodCard(
+                  title: 'Delivery',
+                  subtitle: 'The Courier Guy door-to-door',
+                  icon: Icons.local_shipping_outlined,
+                  onTap: () =>
+                      _onMethodSelected(FulfillmentMethod.delivery),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -888,10 +901,29 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
 
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () => setState(() => _step = 'map'),
+        ),
+        title: Text(
+          'Delivery Address',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            _TopBar(onBack: () => setState(() => _step = 'map')),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
@@ -901,8 +933,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     Text(
                       'Location Details',
                       style: AppTypography.lora(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF4A1C00),
                       ),
                     ),
@@ -941,11 +973,10 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     ),
                     const SizedBox(height: 14),
                     _InputLabel(
-                      label: 'Select Province',
+                      label: 'Province',
                       child: _AddressInput(
                         controller: _provinceCtrl,
-                        hint: 'Select',
-                        suffixIcon: Icons.keyboard_arrow_down,
+                        hint: 'Province',
                         errorText: _provinceError,
                       ),
                     ),
@@ -1012,18 +1043,35 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     final singleProduct = _product != null;
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () {
+            if (_product == null) {
+              Get.back();
+              return;
+            }
+            setState(() => _step = 'method');
+          },
+        ),
+        title: Text(
+          'Pickup Details',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            _TopBar(
-              onBack: () {
-                if (_product == null) {
-                  Get.back();
-                  return;
-                }
-                setState(() => _step = 'method');
-              },
-            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
@@ -1033,8 +1081,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                     Text(
                       'Pickup details',
                       style: AppTypography.lora(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                         color: const Color(0xFF4A1C00),
                       ),
                     ),
@@ -1136,7 +1184,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                 enabled: !loading,
                 label: loading
                     ? 'Please wait...'
-                    : (singleProduct ? 'Proceed to Payment' : 'Save contact'),
+                    : (singleProduct ? 'Proceed to payment' : 'Save contact'),
                 onTap: loading ? null : _saveAddress,
               );
             }),
@@ -1150,10 +1198,29 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     final singleProduct = _product != null;
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () => setState(() => _step = 'address'),
+        ),
+        title: Text(
+          'Shipping Method',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            _TopBar(onBack: () => setState(() => _step = 'address')),
             Expanded(
               child: Obx(() {
                 final rates = _checkoutCtrl.quoteRates;
@@ -1792,22 +1859,6 @@ class _MapBottomSheet extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onBack});
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
-      ),
-    );
-  }
-}
-
 class _CircleIconButton extends StatelessWidget {
   const _CircleIconButton({required this.icon, required this.onTap});
 
@@ -2074,14 +2125,12 @@ class _AddressInput extends StatelessWidget {
     required this.controller,
     required this.hint,
     this.keyboardType,
-    this.suffixIcon,
     this.errorText,
   });
 
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
-  final IconData? suffixIcon;
   final String? errorText;
 
   @override
@@ -2106,9 +2155,6 @@ class _AddressInput extends StatelessWidget {
               fontSize: 11,
               color: const Color(0xFFB7AAA0),
             ),
-            suffixIcon: suffixIcon == null
-                ? null
-                : Icon(suffixIcon, size: 18, color: const Color(0xFF6C5B46)),
             filled: true,
             fillColor: const Color(0xFFFCF7EF),
             contentPadding: const EdgeInsets.symmetric(

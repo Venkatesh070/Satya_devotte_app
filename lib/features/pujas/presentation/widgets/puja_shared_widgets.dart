@@ -979,6 +979,25 @@ class PujaSessionStatusBadge extends StatelessWidget {
   }
 }
 
+bool _isDetailedPoojaMap(Map<String, dynamic> map) {
+  final steps = map['steps'];
+  final hasSteps = steps is List && steps.isNotEmpty;
+  final purpose = map['purpose'];
+  final hasPurpose = purpose is Map && (purpose['why'] != null || purpose['benefits'] != null);
+  final deitySummary = map['deitySummary'];
+  final hasDeitySummary = deitySummary is Map && deitySummary.isNotEmpty;
+  final mantra = map['mantra'];
+  final hasMantra = (mantra is Map && mantra.isNotEmpty) || (mantra is String && mantra.isNotEmpty);
+  final spiritual = map['spiritualMeaning'];
+  final hasSpiritual = (spiritual is Map && spiritual.isNotEmpty) || (spiritual is String && spiritual.isNotEmpty);
+  final guidance = map['guidance'];
+  final hasGuidance = guidance is Map && guidance.isNotEmpty;
+  final completion = map['completion'];
+  final hasCompletion = completion is Map && completion.isNotEmpty;
+
+  return hasSteps && (hasPurpose || hasDeitySummary || hasMantra || hasSpiritual || hasGuidance || hasCompletion);
+}
+
 Future<void> openPujaPreview(
   BuildContext context, {
   required String id,
@@ -992,34 +1011,37 @@ Future<void> openPujaPreview(
     if ((poojaMap['id'] ?? '').toString().trim().isEmpty) poojaMap['id'] = id;
   }
 
-  final existingSteps = poojaMap['steps'];
-  final needsFetch =
-      existingSteps == null || (existingSteps is List && existingSteps.isEmpty);
+  final targetId = id.isNotEmpty ? id : (poojaMap['_id'] ?? poojaMap['id'] ?? '').toString();
+  final needsFetch = !_isDetailedPoojaMap(poojaMap);
 
-  if (needsFetch && id.isNotEmpty) {
+  if (needsFetch && targetId.isNotEmpty) {
     try {
       final offlineService = Get.find<OfflineService>();
-      final cacheKey = 'pooja_detail_$id';
+      final cacheKey = 'pooja_detail_$targetId';
       if (offlineService.isOnline.value) {
         final res = await Get.find<ApiClient>().dio.get<dynamic>(
-          ApiEndpoints.pooja(id),
+          ApiEndpoints.pooja(targetId),
         );
         final payload = res.data;
         if (payload is Map) {
           final data = payload['data'];
+          Map<String, dynamic> fetched;
           if (data is Map) {
             final inner = data['pooja'];
-            poojaMap = inner is Map
+            fetched = inner is Map
                 ? Map<String, dynamic>.from(inner)
                 : Map<String, dynamic>.from(data);
           } else {
-            poojaMap = Map<String, dynamic>.from(payload);
+            fetched = Map<String, dynamic>.from(payload);
           }
+          poojaMap = {...poojaMap, ...fetched};
           await offlineService.cacheData(cacheKey, poojaMap);
         }
       } else {
         final cached = offlineService.getCachedData(cacheKey);
-        if (cached is Map) poojaMap = Map<String, dynamic>.from(cached);
+        if (cached is Map) {
+          poojaMap = {...poojaMap, ...Map<String, dynamic>.from(cached)};
+        }
       }
     } catch (e) {
       debugPrint('Error fetching pooja detail for preview: $e');
@@ -1043,34 +1065,37 @@ Future<void> openKnowMoreForPuja(
     if ((poojaMap['id'] ?? '').toString().trim().isEmpty) poojaMap['id'] = id;
   }
 
-  final existingSteps = poojaMap['steps'];
-  final needsFetch =
-      existingSteps == null || (existingSteps is List && existingSteps.isEmpty);
+  final targetId = id.isNotEmpty ? id : (poojaMap['_id'] ?? poojaMap['id'] ?? '').toString();
+  final needsFetch = !_isDetailedPoojaMap(poojaMap);
 
-  if (needsFetch && id.isNotEmpty) {
+  if (needsFetch && targetId.isNotEmpty) {
     try {
       final offlineService = Get.find<OfflineService>();
-      final cacheKey = 'pooja_detail_$id';
+      final cacheKey = 'pooja_detail_$targetId';
       if (offlineService.isOnline.value) {
         final res = await Get.find<ApiClient>().dio.get<dynamic>(
-          ApiEndpoints.pooja(id),
+          ApiEndpoints.pooja(targetId),
         );
         final payload = res.data;
         if (payload is Map) {
           final data = payload['data'];
+          Map<String, dynamic> fetched;
           if (data is Map) {
             final inner = data['pooja'];
-            poojaMap = inner is Map
+            fetched = inner is Map
                 ? Map<String, dynamic>.from(inner)
                 : Map<String, dynamic>.from(data);
           } else {
-            poojaMap = Map<String, dynamic>.from(payload);
+            fetched = Map<String, dynamic>.from(payload);
           }
+          poojaMap = {...poojaMap, ...fetched};
           await offlineService.cacheData(cacheKey, poojaMap);
         }
       } else {
         final cached = offlineService.getCachedData(cacheKey);
-        if (cached is Map) poojaMap = Map<String, dynamic>.from(cached);
+        if (cached is Map) {
+          poojaMap = {...poojaMap, ...Map<String, dynamic>.from(cached)};
+        }
       }
     } catch (e) {
       debugPrint('Error fetching pooja detail for know more: $e');

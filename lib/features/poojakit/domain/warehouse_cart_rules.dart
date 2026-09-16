@@ -24,9 +24,9 @@ String? mixedWarehouseCartMessage({
   final adding = warehouseShippingGroupForCategory(addingCategory);
   if (adding == cartGroup) return null;
   if (cartGroup == WarehouseShippingGroup.ayurvedic) {
-    return 'Ayurvedic items and Books / Puja Kits are shipped from separate warehouses and cannot be combined in the same cart.';
+    return 'Ayurvedic items and Books / Puja Kits cannot be combined in the same cart.';
   }
-  return 'Books / Puja Kits and Ayurvedic items are shipped from separate warehouses and cannot be ordered together in the same cart.';
+  return 'Books / Puja Kits and Ayurvedic items cannot be ordered together in the same cart.';
 }
 
 /// Matches backend `MIXED_WAREHOUSE_CART_MESSAGE` for API error handling.
@@ -41,10 +41,18 @@ bool isMixedWarehouseCartError(String message) {
 String mixedWarehouseCartDialogTitle(WarehouseShippingGroup? cartGroup) {
   switch (cartGroup) {
     case WarehouseShippingGroup.ayurvedic:
-      return 'Separate Warehouse Shipping';
+      return 'Replace cart item?';
     case WarehouseShippingGroup.bookPujakit:
-      return 'Separate Warehouse Shipping';
+      return 'Replace cart item?';
     default:
-      return 'Different Warehouse Item';
+      return 'Replace cart item?';
   }
 }
+
+String mixedWarehouseDiscardPrompt(WarehouseShippingGroup? cartGroup) {
+  if (cartGroup == WarehouseShippingGroup.ayurvedic) {
+    return 'Your cart contains Ayurvedic items. Do you want to discard the current cart and proceed with the Books/Puja Kits?';
+  }
+  return 'Your cart contains Books/Puja Kits. Do you want to discard the current cart and proceed with the Ayurvedic item?';
+}
+

@@ -48,14 +48,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          _product.title.isNotEmpty ? _product.title : 'Product Details',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: _CartBadge(controller: _cartCtrl),
+          ),
+        ],
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            _ShopTopBar(
-              title: '',
-              onBack: () => Get.back(),
-              cartController: _cartCtrl,
-            ),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -170,75 +193,6 @@ class _CartBadge extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShopTopBar extends StatelessWidget {
-  const _ShopTopBar({
-    required this.title,
-    required this.onBack,
-    required this.cartController,
-  });
-
-  final String title;
-  final VoidCallback onBack;
-  final CartController cartController;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: SizedBox(
-        height: 46,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
-            ),
-            Text(
-              title,
-              style: AppTypography.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF1D160E),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _CartBadge(controller: cartController),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Color(0xFFFCF7EF),
-      shape: const CircleBorder(),
-      elevation: 5,
-      shadowColor: const Color(0x22000000),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, size: 19, color: const Color(0xFF1C1C1C)),
         ),
       ),
     );

@@ -2,15 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:satya_devotte_app/features/offline/presentation/pages/no_internet_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
-import 'package:satya_devotte_app/features/pujas/domain/repositories/puja_repository.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
-import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -18,6 +15,7 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class PoojaStepWizard extends StatefulWidget {
   const PoojaStepWizard({
@@ -52,7 +50,13 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     _currentPage = _normaliseStep(widget.initialStep);
     _sessionId = widget.sessionId;
 
-    if (_currentPooja.preparation.isEmpty) {
+    final hasFull = _currentPooja.preparation.isNotEmpty &&
+        (_currentPooja.purpose.isNotEmpty ||
+            _currentPooja.deitySummary.isNotEmpty ||
+            _currentPooja.mantra.isNotEmpty ||
+            _currentPooja.steps.isNotEmpty);
+
+    if (!hasFull && _currentPooja.id.isNotEmpty) {
       _loadFullPooja();
     } else {
       _screens = _buildScreens();
@@ -95,7 +99,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
 
       if (detail != null && mounted) {
         setState(() {
-          _currentPooja = PoojaView(detail!);
+          _currentPooja = PoojaView({..._currentPooja.raw, ...detail!});
         });
       }
     } catch (e) {
@@ -183,7 +187,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     // 1. Intro Screen
     screens.add(
       _IntroScreen(
-        pooja: widget.pooja,
+        pooja: _currentPooja,
         onNext: _nextPage,
         onBack: _previousPage,
       ),
@@ -201,7 +205,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     );
 
     // 3. Personal Preparation
-    final personalPrep = _stringList(widget.pooja.preparation['personal']);
+    final personalPrep = _stringList(_currentPooja.preparation['personal']);
     if (personalPrep.isNotEmpty) {
       screens.add(
         _ListScreen(
@@ -214,7 +218,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     }
 
     // 4. Space Preparation
-    final spacePrep = _stringList(widget.pooja.preparation['space']);
+    final spacePrep = _stringList(_currentPooja.preparation['space']);
     if (spacePrep.isNotEmpty) {
       screens.add(
         _ListScreen(
@@ -227,7 +231,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     }
 
     // 5. Ingredients
-    final items = _stringList(widget.pooja.preparation['items']);
+    final items = _stringList(_currentPooja.preparation['items']);
     if (items.isNotEmpty) {
       screens.add(
         _IngredientsScreen(
@@ -252,12 +256,12 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     );
 
     // 7. Puja Steps
-    for (int i = 0; i < widget.pooja.steps.length; i++) {
+    for (int i = 0; i < _currentPooja.steps.length; i++) {
       screens.add(
         _PujaStepScreen(
-          step: widget.pooja.steps[i],
-          totalSteps: widget.pooja.steps.length,
-          audioUrl: widget.pooja.audioUrl,
+          step: _currentPooja.steps[i],
+          totalSteps: _currentPooja.steps.length,
+          audioUrl: _currentPooja.audioUrl,
           onNext: _nextPage,
           onBack: _previousPage,
         ),
@@ -267,7 +271,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     // 8. Completion Screen
     screens.add(
       _CompletionScreen(
-        pooja: widget.pooja,
+        pooja: _currentPooja,
         onFinish: _finish,
         onBack: _previousPage,
       ),
@@ -524,6 +528,10 @@ class _BaseWizardScreen extends StatelessWidget {
                                   'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
                               Share.share(shareText).catchError((e) {
                                 debugPrint('Share error: $e');
+                                return const ShareResult(
+                                  '',
+                                  ShareResultStatus.dismissed,
+                                );
                               });
                             },
                             borderRadius: BorderRadius.circular(20),
@@ -658,24 +666,97 @@ class _IntroScreen extends StatelessWidget {
   }
 }
 
-class PoojaKnowMoreScreen extends StatelessWidget {
+class PoojaKnowMoreScreen extends StatefulWidget {
   const PoojaKnowMoreScreen({super.key, required this.pooja});
 
   final PoojaView pooja;
 
+  @override
+  State<PoojaKnowMoreScreen> createState() => _PoojaKnowMoreScreenState();
+}
+
+class _PoojaKnowMoreScreenState extends State<PoojaKnowMoreScreen> {
+  late PoojaView _pooja;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pooja = widget.pooja;
+    _checkAndFetchFullDetails();
+  }
+
+  bool _hasFullDetails(PoojaView p) {
+    return (p.purpose.isNotEmpty ||
+            p.deitySummary.isNotEmpty ||
+            p.mantra.isNotEmpty ||
+            p.spiritualMeaning.isNotEmpty ||
+            p.guidance.isNotEmpty ||
+            p.completion.isNotEmpty ||
+            p.blessings.isNotEmpty) &&
+        p.steps.isNotEmpty;
+  }
+
+  Future<void> _checkAndFetchFullDetails() async {
+    if (_hasFullDetails(_pooja)) return;
+    final poojaId = _pooja.id;
+    if (poojaId.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final offlineService = Get.find<OfflineService>();
+      final cacheKey = 'pooja_detail_$poojaId';
+      Map<String, dynamic>? detail;
+
+      if (offlineService.isOnline.value) {
+        final res = await Get.find<ApiClient>().dio.get<dynamic>(
+          ApiEndpoints.pooja(poojaId),
+        );
+        final payload = res.data;
+        if (payload is Map) {
+          final data = payload['data'];
+          if (data is Map) {
+            final inner = data['pooja'];
+            detail = inner is Map
+                ? Map<String, dynamic>.from(inner)
+                : Map<String, dynamic>.from(data);
+          } else {
+            detail = Map<String, dynamic>.from(payload);
+          }
+          await offlineService.cacheData(cacheKey, detail);
+        }
+      } else {
+        final cached = offlineService.getCachedData(cacheKey);
+        if (cached is Map) detail = Map<String, dynamic>.from(cached);
+      }
+
+      if (detail != null && mounted) {
+        setState(() {
+          _pooja = PoojaView({..._pooja.raw, ...detail!});
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading full pooja for know more screen: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   String get _whyPerformed {
-    final why = pooja.purpose['why']?.toString().trim() ?? '';
+    final why = _pooja.purpose['why']?.toString().trim() ?? '';
     if (why.isNotEmpty) return why;
-    return pooja.description.trim();
+    return _pooja.description.trim();
   }
 
   List<String> get _expectedOutcomes =>
-      _poojaStringList(pooja.purpose['benefits']);
+      _poojaStringList(_pooja.purpose['benefits']);
 
   String get _deityAbout {
-    final summary = pooja.deitySummary['about']?.toString().trim() ?? '';
+    final summary = _pooja.deitySummary['about']?.toString().trim() ?? '';
     if (summary.isNotEmpty) return summary;
-    final doc = pooja.deityDoc;
+    final doc = _pooja.deityDoc;
     if (doc == null) return '';
     return (doc['about'] ??
             doc['description'] ??
@@ -687,13 +768,13 @@ class PoojaKnowMoreScreen extends StatelessWidget {
   }
 
   List<String> get _coreBlessings {
-    final fromSummary = _poojaStringList(pooja.deitySummary['blessings']);
+    final fromSummary = _poojaStringList(_pooja.deitySummary['blessings']);
     if (fromSummary.isNotEmpty) return fromSummary;
-    return pooja.blessings;
+    return _pooja.blessings;
   }
 
   List<_KnowMoreSubSection> get _mantraSubSections {
-    final m = pooja.mantra;
+    final m = _pooja.mantra;
     final subSections = <_KnowMoreSubSection>[];
 
     final primary = _extractPoojaFieldString(
@@ -726,8 +807,8 @@ class PoojaKnowMoreScreen extends StatelessWidget {
       );
     }
 
-    if (subSections.isEmpty && pooja.deityDoc != null) {
-      final chanting = pooja.deityDoc!['chanting'];
+    if (subSections.isEmpty && _pooja.deityDoc != null) {
+      final chanting = _pooja.deityDoc!['chanting'];
       if (chanting is Map) {
         final chantMantra = _extractPoojaFieldString(chanting['mantra']);
         final chantReps = _extractPoojaFieldString(chanting['repetitions']);
@@ -758,7 +839,7 @@ class PoojaKnowMoreScreen extends StatelessWidget {
   }
 
   List<_KnowMoreSubSection> get _spiritualSignificanceSubSections {
-    final sm = pooja.spiritualMeaning;
+    final sm = _pooja.spiritualMeaning;
     final subSections = <_KnowMoreSubSection>[];
 
     List<String> extractBullets(dynamic raw) {
@@ -839,8 +920,8 @@ class PoojaKnowMoreScreen extends StatelessWidget {
       );
     }
 
-    if (subSections.isEmpty && pooja.raw['spiritualMeaning'] is String) {
-      final fallbackStr = (pooja.raw['spiritualMeaning'] as String).trim();
+    if (subSections.isEmpty && _pooja.raw['spiritualMeaning'] is String) {
+      final fallbackStr = (_pooja.raw['spiritualMeaning'] as String).trim();
       if (fallbackStr.isNotEmpty) {
         subSections.add(
           _KnowMoreSubSection(subtitle: 'Spiritual Meaning', body: fallbackStr),
@@ -852,7 +933,7 @@ class PoojaKnowMoreScreen extends StatelessWidget {
   }
 
   List<_KnowMoreSubSection> get _devotionalGuidanceSubSections {
-    final g = pooja.guidance;
+    final g = _pooja.guidance;
     final subSections = <_KnowMoreSubSection>[];
 
     final mindset = _poojaStringList(
@@ -873,8 +954,8 @@ class PoojaKnowMoreScreen extends StatelessWidget {
       );
     }
 
-    if (subSections.isEmpty && pooja.deityDoc != null) {
-      final conn = pooja.deityDoc!['connecting'];
+    if (subSections.isEmpty && _pooja.deityDoc != null) {
+      final conn = _pooja.deityDoc!['connecting'];
       if (conn is Map) {
         final pray = _extractPoojaFieldString(conn['how_to_pray']);
         final pleases = _poojaStringList(conn['what_pleases']);
@@ -907,7 +988,7 @@ class PoojaKnowMoreScreen extends StatelessWidget {
   }
 
   List<_KnowMoreSubSection> get _completionSubSections {
-    final c = pooja.completion;
+    final c = _pooja.completion;
     final subSections = <_KnowMoreSubSection>[];
 
     final closure = _poojaStringList(
@@ -1069,11 +1150,19 @@ class PoojaKnowMoreScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: sections.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (_, index) => sections[index],
-                    ),
+                    child: _isLoading && !_hasFullDetails(_pooja)
+                        ? const Center(
+                            child: ChakraLoadingIndicator(
+                              size: 36,
+                              color: Color(0xFFFFBF00),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: sections.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 14),
+                            itemBuilder: (_, index) => sections[index],
+                          ),
                   ),
                   const SizedBox(height: 16),
                 ],

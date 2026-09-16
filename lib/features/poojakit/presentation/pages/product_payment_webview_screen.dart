@@ -10,6 +10,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:satya_devotte_app/core/payments/payment_gateway_urls.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/order_init_data.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
@@ -229,12 +230,12 @@ class _ProductPaymentWebViewScreenState
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Payment'),
-          backgroundColor: Color(0xFFFCF7EF),
-          foregroundColor: AppColors.textColor,
+          backgroundColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            color: const Color(0xFF1D160E),
             onPressed: () async {
               final shouldPop = await _onBack();
               if (shouldPop && mounted) {
@@ -242,6 +243,15 @@ class _ProductPaymentWebViewScreenState
               }
             },
           ),
+          title: Text(
+            'Payment',
+            style: AppTypography.lora(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1D160E),
+            ),
+          ),
+          centerTitle: false,
         ),
         body: kIsWeb
             ? _PaymentWebFallback(

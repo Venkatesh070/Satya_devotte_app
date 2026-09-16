@@ -19,7 +19,33 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAECD2),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: onBack ?? () => Get.back(),
+        ),
+        title: Text(
+          'Shop',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: _CartBadge(controller: cartCtrl),
+          ),
+        ],
+      ),
       body: SafeArea(
+        top: false,
         child: Obx(() {
           if (controller.isLoading && controller.products.isEmpty) {
             return const SizedBox.shrink();
@@ -27,8 +53,6 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
           if (controller.error != null && controller.products.isEmpty) {
             return _ShopScaffold(
-              cartController: cartCtrl,
-              onBack: onBack,
               child: _StateMessage(
                 icon: Icons.error_outline,
                 title: 'Error loading products',
@@ -40,8 +64,6 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
           if (controller.products.isEmpty) {
             return _ShopScaffold(
-              cartController: cartCtrl,
-              onBack: onBack,
               child: Image.asset(
                 'assets/images/default_img.png',
                 fit: BoxFit.cover,
@@ -53,8 +75,6 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
           if (filtered.isEmpty) {
             return _ShopScaffold(
-              cartController: cartCtrl,
-              onBack: onBack,
               child: RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: () => controller.fetchProducts(refresh: true),
@@ -74,8 +94,6 @@ class PoojaKitPage extends GetView<PoojaKitController> {
           }
 
           return _ShopScaffold(
-            cartController: cartCtrl,
-            onBack: onBack,
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: () => controller.fetchProducts(refresh: true),
@@ -124,49 +142,15 @@ class PoojaKitPage extends GetView<PoojaKitController> {
 
 class _ShopScaffold extends StatelessWidget {
   const _ShopScaffold({
-    required this.cartController,
     required this.child,
-    this.onBack,
   });
 
-  final CartController cartController;
   final Widget child;
-  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-          child: SizedBox(
-            height: 46,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _CircleIconButton(
-                    icon: Icons.arrow_back,
-                    onTap: onBack ?? () => Get.back(),
-                  ),
-                ),
-                Text(
-                  'Shop',
-                  style: AppTypography.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1D160E),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _CartBadge(controller: cartController),
-                ),
-              ],
-            ),
-          ),
-        ),
         const _CategoryTabBar(),
         Expanded(child: child),
       ],
@@ -243,32 +227,6 @@ class _CategoryTabBar extends GetView<PoojaKitController> {
           }).toList(),
         );
       }),
-    );
-  }
-}
-
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Color(0xFFFCF7EF),
-      shape: const CircleBorder(),
-      elevation: 5,
-      shadowColor: const Color(0x22000000),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, size: 19, color: const Color(0xFF1C1C1C)),
-        ),
-      ),
     );
   }
 }

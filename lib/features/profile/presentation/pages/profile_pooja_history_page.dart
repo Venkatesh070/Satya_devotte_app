@@ -205,7 +205,17 @@ class _HistoryList extends StatelessWidget {
               if (poojaData is! Map) return;
               final poojaMap = Map<String, dynamic>.from(poojaData);
               final sessionId = (session['_id'] ?? session['id'])?.toString();
-              final poojaId = (poojaMap['_id'] ?? poojaMap['id'] ?? '').toString();
+              final poojaId = (poojaMap['_id'] ??
+                      poojaMap['id'] ??
+                      session['poojaId'] ??
+                      session['pooja_id'] ??
+                      '')
+                  .toString()
+                  .trim();
+              if (poojaId.isNotEmpty) {
+                poojaMap['_id'] = poojaId;
+                poojaMap['id'] = poojaId;
+              }
 
               if (_isInProgress(session)) {
                 Get.to(

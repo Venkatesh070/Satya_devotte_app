@@ -6,8 +6,6 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/data/models/admin_order_models.dart';
-import 'package:satya_devotte_app/features/poojakit/presentation/widgets/fulfillment_method_chip.dart';
-import 'package:satya_devotte_app/features/poojakit/presentation/widgets/order_fulfillment_feedback_sheet.dart';
 import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/return_instructions_sheet.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/return_or_replace_sheet.dart';
@@ -25,73 +23,85 @@ class UserOrdersScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.appBgColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          color: const Color(0xFF1D160E),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          'My Orders',
+          style: AppTypography.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1D160E),
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _TopBar(onBack: () => Get.back(), controller: c),
-            Expanded(
-              child: Obx(() {
-                if (c.isLoading && c.orders.isEmpty) {
-                  return const Center(
-                    child: ChakraLoadingIndicator(
-                      size: 32,
-                      color: AppColors.primary,
+        top: false,
+        child: Obx(() {
+          if (c.isLoading && c.orders.isEmpty) {
+            return const Center(
+              child: ChakraLoadingIndicator(
+                size: 32,
+                color: AppColors.primary,
+              ),
+            );
+          }
+
+          if (c.error != null && c.orders.isEmpty) {
+            return _EmptyState(
+              icon: Icons.error_outline_rounded,
+              title: 'Could not load orders',
+              message: c.error!,
+              actionLabel: 'Retry',
+              onAction: c.fetchOrders,
+            );
+          }
+
+          if (c.orders.isEmpty) {
+            return _EmptyState(
+              icon: Icons.shopping_bag_outlined,
+              title: 'No orders yet',
+              message:
+                  'Your puja kits and products orders will appear here.',
+              actionLabel: null,
+              onAction: null,
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: c.fetchOrders,
+            color: AppColors.primary,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+              itemCount:
+                  c.orders.length + (c.page < c.totalPages ? 1 : 0),
+              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                if (index == c.orders.length) {
+                  c.loadNextPage();
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: ChakraLoadingIndicator(
+                        size: 24,
+                        color: AppColors.primary,
+                      ),
                     ),
                   );
                 }
 
-                if (c.error != null && c.orders.isEmpty) {
-                  return _EmptyState(
-                    icon: Icons.error_outline_rounded,
-                    title: 'Could not load orders',
-                    message: c.error!,
-                    actionLabel: 'Retry',
-                    onAction: c.fetchOrders,
-                  );
-                }
-
-                if (c.orders.isEmpty) {
-                  return _EmptyState(
-                    icon: Icons.shopping_bag_outlined,
-                    title: 'No orders yet',
-                    message:
-                        'Your puja kits and products orders will appear here.',
-                    actionLabel: null,
-                    onAction: null,
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: c.fetchOrders,
-                  color: AppColors.primary,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-                    itemCount:
-                        c.orders.length + (c.page < c.totalPages ? 1 : 0),
-                    separatorBuilder: (_, _) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) {
-                      if (index == c.orders.length) {
-                        c.loadNextPage();
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: ChakraLoadingIndicator(
-                              size: 24,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        );
-                      }
-
-                      return _OrderCard(order: c.orders[index]);
-                    },
-                  ),
-                );
-              }),
+                return _OrderCard(order: c.orders[index]);
+              },
             ),
-          ],
-        ),
+          );
+        }),
       ),
     );
   }
@@ -472,71 +482,6 @@ class _ThumbFallback extends StatelessWidget {
             color: Color(0xFFBCAAA4),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onBack, required this.controller});
-
-  final VoidCallback onBack;
-  final UserOrdersController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: Row(
-        children: [
-          Material(
-            color: const Color(0xFFFCF7EF),
-            shape: const CircleBorder(),
-            elevation: 3,
-            shadowColor: const Color(0x1F000000),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onBack,
-              child: const SizedBox(
-                width: 40,
-                height: 40,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 20,
-                  color: Color(0xFF1C1917),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'My Orders',
-                  style: AppTypography.lora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF4A1C00),
-                  ),
-                ),
-                Obx(() {
-                  final count = controller.orders.length;
-                  if (count == 0) return const SizedBox.shrink();
-                  return Text(
-                    '$count ${count == 1 ? 'order' : 'orders'} placed',
-                    style: AppTypography.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF8C7A6B),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

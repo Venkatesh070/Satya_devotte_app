@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -20,7 +21,6 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  static const Color _bgColor = Color(0xFFF2EBDC);
   static const Color _fieldColor = Color(0xFFFFFBF3);
   static const Color _fieldBorder = Color(0xFFE0D6C2);
   static const Color _titleColor = Color(0xFF1F1F1F);
@@ -473,17 +473,68 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 18),
                 _buildLabel('Gender'),
                 const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField2<String>(
                   value: _selectedGender,
+                  isExpanded: true,
+                  decoration: _dropdownInputDecoration('Select gender'),
                   items: const [
-                    DropdownMenuItem(value: 'MALE', child: Text('Male')),
-                    DropdownMenuItem(value: 'FEMALE', child: Text('Female')),
-                    DropdownMenuItem(value: 'OTHER', child: Text('Other')),
+                    DropdownMenuItem(
+                      value: 'MALE',
+                      child: Text(
+                        'Male',
+                        style: TextStyle(
+                          color: Color(0xFF1F1F1F),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'FEMALE',
+                      child: Text(
+                        'Female',
+                        style: TextStyle(
+                          color: Color(0xFF1F1F1F),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'OTHER',
+                      child: Text(
+                        'Other',
+                        style: TextStyle(
+                          color: Color(0xFF1F1F1F),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ],
-                  decoration: _inputDecoration('Select gender'),
                   onChanged: isLoading
                       ? null
-                      : (v) => setState(() => _selectedGender = v!),
+                      : (v) {
+                          if (v != null) {
+                            setState(() => _selectedGender = v);
+                          }
+                        },
+                  buttonStyleData: const ButtonStyleData(
+                    height: 48,
+                    padding: EdgeInsets.zero,
+                  ),
+                  iconStyleData: const IconStyleData(
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xFF78716C),
+                      size: 20,
+                    ),
+                  ),
+                  dropdownStyleData: _dropdownStyleData(maxHeight: 180),
+                  menuItemStyleData: const MenuItemStyleData(
+                    height: 44,
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                  ),
                 ),
                 const SizedBox(height: 18),
                 _PickerField(
@@ -498,9 +549,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 18),
                 _PickerField(
                   label: 'Time of Birth',
-                  value: _timeOfBirth == null
-                      ? null
-                      : _timeOfBirth!.format(context),
+                  value: _timeOfBirth?.format(context),
                   icon: Icons.access_time,
                   onTap: isLoading ? null : _pickTob,
                 ),
@@ -527,21 +576,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         children: [
                           _buildLabel('Sun Sign'),
                           const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            value: _sunSign,
-                            hint: const Text('Select'),
+                          DropdownButtonFormField2<String>(
+                            value: _sunSign != null &&
+                                    _zodiacSigns.contains(_sunSign)
+                                ? _sunSign
+                                : null,
+                            isExpanded: true,
+                            hint: Text(
+                              'Select',
+                              style: AppTypography.inter(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                fontSize: 13,
+                              ),
+                            ),
                             items: _zodiacSigns
                                 .map(
                                   (s) => DropdownMenuItem(
                                     value: s,
-                                    child: Text(s),
+                                    child: Text(
+                                      s,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1F1F1F),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
                                 )
                                 .toList(),
-                            decoration: _inputDecoration('Select'),
+                            decoration: _dropdownInputDecoration('Select'),
                             onChanged: isLoading
                                 ? null
                                 : (v) => setState(() => _sunSign = v),
+                            buttonStyleData: const ButtonStyleData(
+                              height: 48,
+                              padding: EdgeInsets.zero,
+                            ),
+                            iconStyleData: const IconStyleData(
+                              icon: Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF78716C),
+                                size: 20,
+                              ),
+                            ),
+                            dropdownStyleData:
+                                _dropdownStyleData(maxHeight: 250),
+                            menuItemStyleData: const MenuItemStyleData(
+                              height: 44,
+                              padding: EdgeInsets.symmetric(horizontal: 14),
+                            ),
                           ),
                         ],
                       ),
@@ -553,21 +636,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         children: [
                           _buildLabel('Moon Sign'),
                           const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            value: _moonSign,
-                            hint: const Text('Select'),
+                          DropdownButtonFormField2<String>(
+                            value: _moonSign != null &&
+                                    _zodiacSigns.contains(_moonSign)
+                                ? _moonSign
+                                : null,
+                            isExpanded: true,
+                            hint: Text(
+                              'Select',
+                              style: AppTypography.inter(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                fontSize: 13,
+                              ),
+                            ),
                             items: _zodiacSigns
                                 .map(
                                   (s) => DropdownMenuItem(
                                     value: s,
-                                    child: Text(s),
+                                    child: Text(
+                                      s,
+                                      style: const TextStyle(
+                                        color: Color(0xFF1F1F1F),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
                                 )
                                 .toList(),
-                            decoration: _inputDecoration('Select'),
+                            decoration: _dropdownInputDecoration('Select'),
                             onChanged: isLoading
                                 ? null
                                 : (v) => setState(() => _moonSign = v),
+                            buttonStyleData: const ButtonStyleData(
+                              height: 48,
+                              padding: EdgeInsets.zero,
+                            ),
+                            iconStyleData: const IconStyleData(
+                              icon: Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF78716C),
+                                size: 20,
+                              ),
+                            ),
+                            dropdownStyleData:
+                                _dropdownStyleData(maxHeight: 250),
+                            menuItemStyleData: const MenuItemStyleData(
+                              height: 44,
+                              padding: EdgeInsets.symmetric(horizontal: 14),
+                            ),
                           ),
                         ],
                       ),
@@ -628,7 +745,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return InputDecoration(
       hintText: hint,
       hintStyle: AppTypography.inter(
-        color: Colors.black.withOpacity(0.25),
+        color: Colors.black.withValues(alpha: 0.25),
         fontSize: 13,
       ),
       isDense: true,
@@ -648,7 +765,62 @@ class _EditProfilePageState extends State<EditProfilePage> {
         borderSide: const BorderSide(color: AppColors.gradientStart),
         gapPadding: 8.0,
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+    );
+  }
+
+  InputDecoration _dropdownInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: AppTypography.inter(
+        color: Colors.black.withValues(alpha: 0.25),
+        fontSize: 13,
+      ),
+      isDense: true,
+      filled: true,
+      fillColor: _fieldColor,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.inputBorderColor),
+      ),
+      focusedBorder: GradientOutlineInputBorder(
+        gradient: AppColors.inputBorderGradient,
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.gradientStart),
+        gapPadding: 8.0,
+      ),
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  DropdownStyleData _dropdownStyleData({double maxHeight = 250}) {
+    return DropdownStyleData(
+      maxHeight: maxHeight,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFFFFBF3),
+        border: Border.all(
+          color: AppColors.inputBorderColor,
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      offset: const Offset(0, -4),
+      scrollbarTheme: ScrollbarThemeData(
+        radius: const Radius.circular(8),
+        thickness: WidgetStateProperty.all(4),
+        thumbVisibility: WidgetStateProperty.all(true),
+      ),
     );
   }
 }
@@ -686,7 +858,8 @@ class _PickerField extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 15),
             decoration: BoxDecoration(
               color: const Color(0xFFFFFBF3),
               borderRadius: BorderRadius.circular(10),
@@ -696,12 +869,14 @@ class _PickerField extends StatelessWidget {
                     : AppColors.inputBorderColor,
               ),
             ),
+            alignment: Alignment.centerLeft,
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     value ?? 'Select',
                     style: TextStyle(
+                      fontSize: 13,
                       color: value == null
                           ? Colors.black26
                           : const Color(0xFF1F1F1F),

@@ -29,7 +29,10 @@ class MixedWarehouseCartDialog {
             borderRadius: BorderRadius.circular(20),
             side: const BorderSide(color: Color(0xFFE8E0D6)),
           ),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
             child: Column(
@@ -95,7 +98,7 @@ class MixedWarehouseCartDialog {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'To order this item, you can clear your existing cart and proceed, or view your current cart to complete that order first.',
+                  mixedWarehouseDiscardPrompt(cartGroup),
                   style: AppTypography.inter(
                     fontSize: 12,
                     height: 1.4,
@@ -116,7 +119,10 @@ class MixedWarehouseCartDialog {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        colors: [
+                          AppColors.gradientStart,
+                          AppColors.gradientEnd,
+                        ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
