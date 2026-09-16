@@ -1139,12 +1139,16 @@ class _CmsDonationsAllContentState extends State<CmsDonationsAllContent> {
               );
             }
             if (_ctrl.isEmpty) {
-              return const CmsEmptyState(
+              return CmsEmptyState(
                 icon: Icons.volunteer_activism_outlined,
-                title: 'No contributions yet',
-                subtitle:
-                    'Once devotees start donating their contributions '
-                    'will appear here.',
+                title: _ctrl.search.trim().isEmpty
+                    ? 'No contributions yet'
+                    : 'No matching contributions',
+                subtitle: _ctrl.search.trim().isEmpty
+                    ? 'Once devotees start donating their contributions '
+                        'will appear here.'
+                    : 'Try another payment id, reference, name, email, or '
+                        'contribution id.',
               );
             }
             return RefreshIndicator(
@@ -1187,45 +1191,65 @@ class _AllDonationsFilterBar extends StatelessWidget {
         horizontal: isWide ? 24 : 12,
         vertical: 10,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Obx(() {
-          final active = ctrl.filter;
-          return Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              for (final f in CmsContributionsController.filters) ...[
-                _FilterChip(
-                  label: _filterLabel(f),
-                  isActive: f == active,
-                  onTap: () => ctrl.setFilter(f),
+              Expanded(
+                child: CmsSearchBar(
+                  hint:
+                      'Search by contribution id, payment id, reference, name or email…',
+                  onChanged: ctrl.setSearch,
                 ),
-                const SizedBox(width: 8),
-              ],
-              const SizedBox(width: 6),
-              IconButton(
-                tooltip: 'Reload',
-                onPressed: ctrl.isLoading ? null : ctrl.refreshContributions,
-                style: IconButton.styleFrom().copyWith(
-                  mouseCursor: _cmsButtonClickCursor,
-                ),
-                icon: ctrl.isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: CmsColors.orange,
+              ),
+              const SizedBox(width: 8),
+              Obx(
+                () => IconButton(
+                  tooltip: 'Reload',
+                  onPressed:
+                      ctrl.isLoading ? null : ctrl.refreshContributions,
+                  style: IconButton.styleFrom().copyWith(
+                    mouseCursor: _cmsButtonClickCursor,
+                  ),
+                  icon: ctrl.isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CmsColors.orange,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.refresh,
+                          size: 18,
+                          color: CmsColors.textSecond,
                         ),
-                      )
-                    : const Icon(
-                        Icons.refresh,
-                        size: 18,
-                        color: CmsColors.textSecond,
-                      ),
+                ),
               ),
             ],
-          );
-        }),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Obx(() {
+              final active = ctrl.filter;
+              return Row(
+                children: [
+                  for (final f in CmsContributionsController.filters) ...[
+                    _FilterChip(
+                      label: _filterLabel(f),
+                      isActive: f == active,
+                      onTap: () => ctrl.setFilter(f),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              );
+            }),
+          ),
+        ],
       ),
     );
   }

@@ -125,16 +125,21 @@ class DonationRemoteDataSource {
   //   • [page]          1-based page number
   //   • [limit]         items per page
   //   • [paymentStatus] optional filter (PAID | PENDING | FAILED)
+  //   • [search]        contribution id/number, payment id, reference,
+  //                     contributor name or email
   Future<AdminContributionsPage> getAllContributions({
     int page = 1,
     int limit = 20,
     String? paymentStatus,
+    String? search,
   }) async {
+    final q = search?.trim();
     final query = <String, dynamic>{
       'page': page,
       'limit': limit,
       if (paymentStatus != null && paymentStatus.isNotEmpty)
         'paymentStatus': paymentStatus,
+      if (q != null && q.isNotEmpty) 'search': q,
     };
     final res = await _apiClient.dio.get(
       ApiEndpoints.allContributions,

@@ -3,6 +3,7 @@
 //
 // Backed by GET /api/v1/donations/contributions/all
 // Filter (paymentStatus): ALL | PAID | PENDING | FAILED
+// Search: contribution id/number, payment id, reference, donor name/email
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 
@@ -23,7 +24,8 @@ class CmsContributionsController extends GetxController {
   final _limit = 10.obs;
   final _total = 0.obs;
   final _totalPages = 1.obs;
-  final _filter = 'ALL'.obs; // show every contribution by default
+  final _filter = 'ALL'.obs;
+  final _search = ''.obs;
 
   List<DonationContribution> get items => _items;
   bool get isLoading => _isLoading.value;
@@ -34,6 +36,7 @@ class CmsContributionsController extends GetxController {
   int get total => _total.value;
   int get totalPages => _totalPages.value;
   String get filter => _filter.value;
+  String get search => _search.value;
 
   bool get isEmpty =>
       !_isLoading.value && _error.value == null && _items.isEmpty;
@@ -66,8 +69,23 @@ class CmsContributionsController extends GetxController {
     refreshContributions();
   }
 
+  void setSearch(String v) {
+    if (_search.value == v) return;
+    _search.value = v;
+    refreshContributions();
+  }
+
+  void clearSearch() {
+    _search.value = '';
+  }
+
+  Future<void> resetSearchOnTabFocus() async {
+    _search.value = '';
+    await _load(page: 1);
+  }
+
   void setLimit(int v) {
-    if (v <= 0 || v == _limit.value) return;
+    if (v <= 0 || _limit.value == v) return;
     _limit.value = v;
     refreshContributions();
   }
@@ -76,10 +94,12 @@ class CmsContributionsController extends GetxController {
     _isLoading.value = true;
     _error.value = null;
     try {
+      final q = _search.value.trim();
       final res = await _ds.getAllContributions(
         page: page,
         limit: _limit.value,
         paymentStatus: _paymentStatusFilter,
+        search: q.isEmpty ? null : q,
       );
       _items.assignAll(res.items);
       _page.value = res.page;

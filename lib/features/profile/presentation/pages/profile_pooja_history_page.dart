@@ -190,7 +190,7 @@ class _HistoryList extends StatelessWidget {
         final isFinished = _isFinished(session);
         final statusText = isFinished ? 'Finished' : 'In Progress';
 
-        // Extract Puja Image URL first (with fallback to Deity image)
+        // Prefer the puja cover image (never the deity image).
         final imageUrl = _extractPujaImage(pooja);
         final description = (pooja['description'] ?? pooja['purpose'] ?? '').toString();
 
@@ -376,6 +376,13 @@ class _HistoryList extends StatelessWidget {
       return v.toString().trim();
     }
 
+    bool usable(String val) =>
+        val.isNotEmpty &&
+        (val.startsWith('http') ||
+            val.startsWith('/') ||
+            val.contains('amazonaws.com') ||
+            val.contains('s3.'));
+
     for (final key in [
       'imageUrl',
       'image',
@@ -387,44 +394,21 @@ class _HistoryList extends StatelessWidget {
       'pooja_image'
     ]) {
       final val = extract(pooja[key]);
-      if (val.isNotEmpty && val.startsWith('http')) return val;
+      if (usable(val)) return val;
     }
 
     final media = pooja['media'];
     if (media is Map) {
       for (final key in ['images', 'heroImage', 'bannerImage', 'image']) {
         final val = extract(media[key]);
-        if (val.isNotEmpty && val.startsWith('http')) return val;
+        if (usable(val)) return val;
       }
     } else if (media is List && media.isNotEmpty) {
       final val = extract(media.first);
-      if (val.isNotEmpty && val.startsWith('http')) return val;
+      if (usable(val)) return val;
     }
 
-    final deity = pooja['deity'];
-    if (deity is Map) {
-      for (final key in ['imageUrl', 'image', 'heroImage']) {
-        final val = extract(deity[key]);
-        if (val.isNotEmpty && val.startsWith('http')) return val;
-      }
-      final dMedia = deity['media'];
-      if (dMedia is Map) {
-        final val = extract(dMedia['images']);
-        if (val.isNotEmpty && val.startsWith('http')) return val;
-      }
-    }
-
-    for (final key in [
-      'imageUrl',
-      'image',
-      'heroImage',
-      'poojaImage',
-      'pooja_image'
-    ]) {
-      final val = extract(pooja[key]);
-      if (val.isNotEmpty) return val;
-    }
-
+    // Do not use deity image for puja history cards — only the puja cover.
     return null;
   }
 }

@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/features/admin_notifications/presentation/cont
 import 'package:satya_devotte_app/features/admin_notifications/presentation/controllers/cms_admin_notifications_controller.dart';
 import 'package:satya_devotte_app/features/admin_notifications/presentation/widgets/cms_activity_bell_button.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/admin_orders_controller.dart';
+import 'package:satya_devotte_app/features/cms/presentation/controllers/cms_contributions_controller.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/app_music_control_button.dart';
 import 'package:satya_devotte_app/features/cms/presentation/contents/cms_dashboard_content.dart';
@@ -156,6 +157,10 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
         Get.isRegistered<ProductController>()) {
       Get.find<ProductController>().clearSearch();
     }
+    if (index == _NavIds.donationsAll &&
+        Get.isRegistered<CmsContributionsController>()) {
+      Get.find<CmsContributionsController>().clearSearch();
+    }
   }
 
   void _onSelect(int index) {
@@ -194,6 +199,10 @@ class _CmsShellPageState extends State<CmsShellPage> with WidgetsBindingObserver
     if (index == _NavIds.poojaKitManage &&
         Get.isRegistered<ProductController>()) {
       unawaited(Get.find<ProductController>().resetSearchOnTabFocus());
+    }
+    if (index == _NavIds.donationsAll &&
+        Get.isRegistered<CmsContributionsController>()) {
+      unawaited(Get.find<CmsContributionsController>().resetSearchOnTabFocus());
     }
     if (index == _NavIds.deities && Get.isRegistered<DeityController>()) {
       unawaited(Get.find<DeityController>().resetSearchOnTabFocus());
