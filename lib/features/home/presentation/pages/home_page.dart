@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -52,6 +53,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final PageController _pageController;
+  final List<int> _tabHistory = [_HomeTabs.home];
   int _currentIndex = 0;
   bool _isAnimatingToTab = false;
   bool _isFetchingHome = false;
@@ -180,9 +182,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Future<void> _onTabSelected(int index) async {
+  Future<void> _onTabSelected(int index, {bool addToHistory = true}) async {
     if (_currentIndex == index) return;
     if (_isAnimatingToTab) return;
+
+    if (addToHistory) {
+      _tabHistory.remove(index);
+      _tabHistory.add(index);
+    }
+
     _isAnimatingToTab = true;
     await _pageController.animateToPage(
       index,
@@ -200,6 +208,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
     }
     _isAnimatingToTab = false;
+  }
+
+  void _handleBackNavigation() {
+    // Remove current index from the end of history if present
+    while (_tabHistory.isNotEmpty && _tabHistory.last == _currentIndex) {
+      _tabHistory.removeLast();
+    }
+
+    if (_tabHistory.isNotEmpty) {
+      final prevIndex = _tabHistory.removeLast();
+      _onTabSelected(prevIndex, addToHistory: false);
+    } else if (_currentIndex != _HomeTabs.home) {
+      _onTabSelected(_HomeTabs.home, addToHistory: false);
+    } else {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        SystemNavigator.pop();
+      }
+    }
   }
 
   Future<String> _deviceTimeZone() => deviceIanaTimeZone();
@@ -621,76 +649,83 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     const navHeight = 78.0;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2EBDC),
-      extendBody: true,
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _HomeTabContent(
-            onRefresh: _refreshHomeData,
-            onOpenTab: _onTabSelected,
-            todayDateAndTithi: _todayDateAndTithi,
-            dailySloka: _dailySloka,
-            slokaAuthor: _slokaAuthor,
-            slokaMeaning: _slokaMeaning,
-            slokaContemplation: _slokaContemplation,
-            slokaPrayer: _slokaPrayer,
-            poojas: _poojas,
-            festivals: _festivals,
-            featuredProducts: _featuredProducts,
-            poojasCompleted: _poojasCompleted,
-            ritualsCompleted: _ritualsCompleted,
-            dayStreak: _dayStreak,
-            onPoojasViewMore: _openPoojasTabFromViewMore,
-            onFestivalsViewMore: _openFestivalsCalendarTab,
-            onPujaTap: _onPujaItemTap,
-            onFestivalTap: _onFestivalItemTap,
-          ),
-          const UserPujasTabPage(),
-          const UserRitualsTabPage(),
-          const RitualListPage(),
-          const CalendarPage(),
-          const ProfilePage(),
-        ],
-      ),
-      bottomNavigationBar: MediaQuery.removePadding(
-        context: context,
-        removeBottom: true,
-        child: SafeArea(
-          child: SizedBox(
-            height: navHeight + 52 + bottomSafe,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                if (bottomSafe > 0)
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackNavigation();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2EBDC),
+        extendBody: true,
+        body: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _HomeTabContent(
+              onRefresh: _refreshHomeData,
+              onOpenTab: _onTabSelected,
+              todayDateAndTithi: _todayDateAndTithi,
+              dailySloka: _dailySloka,
+              slokaAuthor: _slokaAuthor,
+              slokaMeaning: _slokaMeaning,
+              slokaContemplation: _slokaContemplation,
+              slokaPrayer: _slokaPrayer,
+              poojas: _poojas,
+              festivals: _festivals,
+              featuredProducts: _featuredProducts,
+              poojasCompleted: _poojasCompleted,
+              ritualsCompleted: _ritualsCompleted,
+              dayStreak: _dayStreak,
+              onPoojasViewMore: _openPoojasTabFromViewMore,
+              onFestivalsViewMore: _openFestivalsCalendarTab,
+              onPujaTap: _onPujaItemTap,
+              onFestivalTap: _onFestivalItemTap,
+            ),
+            const UserPujasTabPage(),
+            const UserRitualsTabPage(),
+            const RitualListPage(),
+            const CalendarPage(),
+            const ProfilePage(),
+          ],
+        ),
+        bottomNavigationBar: MediaQuery.removePadding(
+          context: context,
+          removeBottom: true,
+          child: SafeArea(
+            child: SizedBox(
+              height: navHeight + 52 + bottomSafe,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  if (bottomSafe > 0)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: bottomSafe,
+                      child: const ColoredBox(color: Color(0xFFF8F1E2)),
+                    ),
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 0,
-                    height: bottomSafe,
-                    child: const ColoredBox(color: Color(0xFFF8F1E2)),
-                  ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: bottomSafe,
-                  height: navHeight,
-                  child: _BottomNavBar(
-                    currentIndex: _currentIndex,
-                    onTap: _onTabSelected,
-                  ),
-                ),
-                if (_currentIndex == _HomeTabs.home)
-                  Positioned(
-                    left: 0,
-                    bottom: bottomSafe + navHeight + 6,
-                    child: _StickyShopButton(
-                      onTap: () => Get.to(() => const PoojaKitPage()),
+                    bottom: bottomSafe,
+                    height: navHeight,
+                    child: _BottomNavBar(
+                      currentIndex: _currentIndex,
+                      onTap: _onTabSelected,
                     ),
                   ),
-              ],
+                  if (_currentIndex == _HomeTabs.home)
+                    Positioned(
+                      left: 0,
+                      bottom: bottomSafe + navHeight + 6,
+                      child: _StickyShopButton(
+                        onTap: () => Get.to(() => const PoojaKitPage()),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
