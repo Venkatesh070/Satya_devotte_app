@@ -202,7 +202,7 @@ class PoojaView {
   }
 
   String? get poojaImage {
-    // Get the pooja-specific image, NOT the deity's
+    // Get the pooja's own image only, never the deity's image.
     final media = _decodeMap(_raw['media']);
     final imgs = media['images'];
     if (imgs is List && imgs.isNotEmpty) {
@@ -214,21 +214,6 @@ class PoojaView {
       (_raw['imageUrl'] ?? _raw['image'] ?? '').toString(),
     );
     if (direct.isNotEmpty) return direct;
-
-    // Fallback to deity image if no pooja image
-    final dDoc = deityDoc;
-    if (dDoc != null) {
-      final dMedia = _decodeMap(dDoc['media']);
-      final dImgs = dMedia['images'];
-      if (dImgs is List && dImgs.isNotEmpty) {
-        final first = _cleanUrl(dImgs.first.toString());
-        if (first.isNotEmpty) return first;
-      }
-      final dDirect = _cleanUrl(
-        (dDoc['imageUrl'] ?? dDoc['image'] ?? '').toString(),
-      );
-      if (dDirect.isNotEmpty) return dDirect;
-    }
 
     return null;
   }

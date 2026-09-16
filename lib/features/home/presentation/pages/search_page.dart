@@ -28,18 +28,18 @@ class GlobalSearchResult {
   });
 
   factory GlobalSearchResult.fromJson(Map<String, dynamic> json) {
-    String _extractString(dynamic v) {
+    String extractString(dynamic v) {
       if (v == null) return '';
       if (v is String) return v.trim();
       if (v is List) {
         return v
-            .map((e) => _extractString(e))
+            .map((e) => extractString(e))
             .where((s) => s.isNotEmpty)
             .join(', ');
       }
       if (v is Map) {
         final name = v['name'] ?? v['title'] ?? '';
-        return _extractString(name);
+        return extractString(name);
       }
       return v.toString().trim();
     }
@@ -47,20 +47,45 @@ class GlobalSearchResult {
     String valueOf(List<String> keys) {
       for (final key in keys) {
         final value = json[key];
-        final text = _extractString(value);
+        final text = extractString(value);
         if (text.isNotEmpty) return text;
       }
       return '';
     }
+
+    String extractImage() {
+      for (final key in ['imageUrl', 'image', 'avatar', 'photo', 'thumbnail']) {
+        final text = extractString(json[key]);
+        if (text.isNotEmpty) return text;
+      }
+      final media = json['media'];
+      if (media is Map) {
+        final images = media['images'];
+        if (images is List && images.isNotEmpty) {
+          final first = images.first;
+          if (first is String && first.trim().isNotEmpty) return first.trim();
+        }
+      } else if (media is List && media.isNotEmpty) {
+        final first = media.first;
+        if (first is String && first.trim().isNotEmpty) return first.trim();
+        if (first is Map && first['url'] != null) return first['url'].toString().trim();
+      }
+      final images = json['images'];
+      if (images is List && images.isNotEmpty) {
+        final first = images.first;
+        if (first is String && first.trim().isNotEmpty) return first.trim();
+      }
+      return '';
+    }
+
+    final img = extractImage();
 
     return GlobalSearchResult(
       id: valueOf(['id', '_id']),
       type: valueOf(['type']).toLowerCase(),
       title: valueOf(['title', 'name']),
       description: valueOf(['description', 'about']),
-      imageUrl: valueOf(['imageUrl', 'image']).isEmpty
-          ? null
-          : valueOf(['imageUrl', 'image']),
+      imageUrl: img.isEmpty ? null : img,
       raw: Map<String, dynamic>.from(json),
     );
   }
@@ -113,15 +138,24 @@ class GlobalSearchResult {
         if (imageUrl != null) 'imageUrl': imageUrl,
       };
 
-  Map<String, dynamic> toDeityArgs() => {
-        'type': 'deity',
-        ...toDetailArgs(),
-        'name': title,
-        if (imageUrl != null)
-          'media': {
-            'images': [imageUrl],
-          },
-      };
+  Map<String, dynamic> toDeityArgs() {
+    final media = <String, dynamic>{
+      if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        'images': <String>[imageUrl!.trim()],
+    };
+    return {
+      ...raw,
+      'type': 'deity',
+      '_id': id,
+      'id': id,
+      'title': title,
+      'name': title,
+      'description': description,
+      if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        'imageUrl': imageUrl!.trim(),
+      if (media.isNotEmpty && !raw.containsKey('media')) 'media': media,
+    };
+  }
 }
 
 class SearchPage extends StatefulWidget {
@@ -269,6 +303,17 @@ class _SearchPageState extends State<SearchPage> {
     final type = result.type.toLowerCase().trim();
     final raw = result.raw;
 
+    // 1. Deity: Navigate directly to the Deity Detail screen (AppRoutes.ritualDetail with type: 'deity')
+    if (type == 'deity' || type == 'deities') {
+      if (result.id.isEmpty) return;
+      await Get.toNamed<dynamic>(
+        AppRoutes.ritualDetail,
+        arguments: result.toDeityArgs(),
+      );
+      return;
+    }
+
+    // 2. Pooja / Puja / Ritual: Open Puja preview sheet
     final isExplicitPoojaType = type == 'pooja' ||
         type == 'puja' ||
         type == 'pujas' ||
@@ -293,25 +338,6 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     switch (type) {
-      case 'deity':
-        if (result.id.isEmpty) return;
-        final hasDeityInfo = raw.containsKey('about') ||
-            raw.containsKey('stories') ||
-            raw.containsKey('media') ||
-            raw.containsKey('rituals');
-        if (!hasDeityInfo) {
-          await openPujaPreview(
-            context,
-            id: result.id,
-            initialData: result.toDetailArgs(),
-          );
-          return;
-        }
-        await Get.toNamed<dynamic>(
-          AppRoutes.ritualDetail,
-          arguments: result.toDeityArgs(),
-        );
-        return;
       case 'donation':
         if (result.id.isEmpty) return;
         await Get.toNamed<dynamic>(

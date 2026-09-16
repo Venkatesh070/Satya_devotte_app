@@ -1335,7 +1335,15 @@ class _DeityPortrait extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
+    return Container(
+      color: const Color(0xFFFAF4EA),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(10),
+      child: Image.asset(
+        'assets/images/appLogo.png',
+        fit: BoxFit.contain,
+      ),
+    );
   }
 }
 
@@ -2623,6 +2631,8 @@ class _CalendarThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final validUrl = imageUrl != null && imageUrl!.trim().isNotEmpty;
+
     return SizedBox(
       width: 78,
       height: 78,
@@ -2632,11 +2642,12 @@ class _CalendarThumb extends StatelessWidget {
           Positioned.fill(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? Image.network(
-                      imageUrl!,
+              child: validUrl
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl!.trim(),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fallback(),
+                      errorWidget: (_, __, ___) => _fallback(),
+                      placeholder: (_, __) => _fallback(),
                     )
                   : _fallback(),
             ),
@@ -2650,7 +2661,7 @@ class _CalendarThumb extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Color(0xFFFCF7EF),
+                  color: const Color(0xFFFCF7EF),
                   shape: BoxShape.circle,
                   boxShadow: const [
                     BoxShadow(
@@ -2670,7 +2681,7 @@ class _CalendarThumb extends StatelessWidget {
                   child: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
                     size: 20,
-                    color: Color(0xFFFCF7EF),
+                    color: const Color(0xFFFCF7EF),
                   ),
                 ),
               ),
@@ -2682,7 +2693,15 @@ class _CalendarThumb extends StatelessWidget {
   }
 
   Widget _fallback() {
-    return Image.asset('assets/images/default_img.png', fit: BoxFit.cover);
+    return Container(
+      color: const Color(0xFFFAF4EA),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(10),
+      child: Image.asset(
+        'assets/images/appLogo.png',
+        fit: BoxFit.contain,
+      ),
+    );
   }
 }
 
