@@ -65,6 +65,14 @@ class CartController extends GetxController {
         await MixedWarehouseCartDialog.show(
           message: conflict,
           cartGroup: cartGroup,
+          onClearAndProceed: () async {
+            await clearCart();
+            await addToCart(
+              productId,
+              quantity: quantity,
+              productCategory: productCategory,
+            );
+          },
         );
         return false;
       }
@@ -80,6 +88,14 @@ class CartController extends GetxController {
         await MixedWarehouseCartDialog.show(
           message: msg,
           cartGroup: cartWarehouseGroup(_cart.value?.items ?? []),
+          onClearAndProceed: () async {
+            await clearCart();
+            await addToCart(
+              productId,
+              quantity: quantity,
+              productCategory: productCategory,
+            );
+          },
         );
       } else {
         ToastUtil.showError(msg, title: title);

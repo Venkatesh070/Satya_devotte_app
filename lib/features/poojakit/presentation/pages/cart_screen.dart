@@ -503,6 +503,40 @@ class _CartItemTile extends StatelessWidget {
                       item.quantity + 1,
                     ),
             ),
+            const SizedBox(width: 12),
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              child: InkWell(
+                onTap: isBusy
+                    ? null
+                    : () => controller.removeFromCart(product.id),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color(0xFFD6CEC6),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Delete',
+                    style: AppTypography.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isBusy
+                          ? const Color(0xFFBDBDBD)
+                          : const Color(0xFF4A1C00),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ],

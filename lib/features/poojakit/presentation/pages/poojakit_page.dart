@@ -195,22 +195,45 @@ class _CategoryTabBar extends GetView<PoojaKitController> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 7,
+                    vertical: 7.5,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF183EA4)
-                        : Colors.transparent,
+                    gradient: isSelected
+                        ? const LinearGradient(
+                            colors: [
+                              AppColors.gradientStart,
+                              AppColors.gradientEnd,
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                        : null,
+                    color: isSelected ? null : const Color(0xFFFCF7EF),
                     borderRadius: BorderRadius.circular(20),
+                    border: isSelected
+                        ? null
+                        : Border.all(
+                            color: const Color(0xFFD6C4A8),
+                            width: 1,
+                          ),
+                    boxShadow: isSelected
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x33ED5A00),
+                              blurRadius: 8,
+                              offset: Offset(0, 3),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Text(
                     category,
                     style: AppTypography.inter(
                       fontSize: 12,
                       fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                          isSelected ? FontWeight.w700 : FontWeight.w600,
                       color: isSelected
-                          ? Colors.white
+                          ? const Color(0xFFFCF7EF)
                           : const Color(0xFF6B4A2B),
                     ),
                   ),
