@@ -698,21 +698,10 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
                 borderRadius: 24,
                 onTap: () {
                   Get.back();
-                  final rawPooja = pooja.raw;
-                  dynamic scheduleId =
-                      pooja.selectedScheduleId ??
-                      rawPooja['scheduleId'] ??
-                      rawPooja['selectedScheduleId'];
-                  if (scheduleId == null && pooja.schedules.isNotEmpty) {
-                    final firstSched = pooja.schedules.first;
-                    scheduleId = firstSched['_id'] ?? firstSched['id'];
-                  }
                   Get.toNamed(
                     AppRoutes.poojaWizard,
                     arguments: {
                       'pooja': pooja,
-                      if (scheduleId != null)
-                        'scheduleId': scheduleId.toString(),
                     },
                   );
                 },

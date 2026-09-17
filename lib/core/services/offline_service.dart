@@ -187,7 +187,6 @@ class OfflineService extends GetxService {
         case 'start_pooja':
           final res = await historyRepo.startPooja(
             payload['poojaId'],
-            scheduleId: payload['scheduleId'],
           );
           return res['data'];
         case 'update_pooja_progress':
@@ -202,7 +201,6 @@ class OfflineService extends GetxService {
           } else {
             await historyRepo.finishPooja(
               payload['poojaId'],
-              scheduleId: payload['scheduleId'],
             );
           }
           return true;
@@ -283,14 +281,10 @@ class OfflineService extends GetxService {
         debugPrint('OfflineService: Failed to cache all poojas: $e');
       }
 
-      // Cache All Rituals (Global)
+      // Cache All Rituals (Global). API caps `limit` at 100.
       try {
-        final ritualsResponse = await apiClient.dio.get<dynamic>(
-          ApiEndpoints.rituals,
-          queryParameters: {'limit': 1000},
-          options: Options(extra: {kSkipApiLoaderKey: true}),
-        );
-        await cacheData('all_rituals', ritualsResponse.data);
+        final cached = await _fetchAllRitualsForCache(apiClient);
+        await cacheData('all_rituals', cached);
         debugPrint('OfflineService: All rituals cached successfully');
       } catch (e) {
         debugPrint('OfflineService: Failed to cache all rituals: $e');
@@ -573,6 +567,34 @@ class OfflineService extends GetxService {
           }
         }
 
+        // Collect images from all rituals
+        final ritualsData = getCachedData('all_rituals');
+        if (ritualsData != null) {
+          List<dynamic> ritualList = [];
+          if (ritualsData is Map) {
+            final data = ritualsData['data'] as Map?;
+            if (data != null) {
+              ritualList =
+                  data['rituals'] ?? data['results'] ?? data['items'] ?? [];
+            }
+            if (ritualList.isEmpty) {
+              ritualList =
+                  ritualsData['rituals'] ??
+                  ritualsData['results'] ??
+                  ritualsData['items'] ??
+                  [];
+            }
+          } else if (ritualsData is List) {
+            ritualList = ritualsData;
+          }
+
+          for (final r in ritualList) {
+            if (r is Map) {
+              _collectImageUrls(r, imageUrls);
+            }
+          }
+        }
+
         // Pre-cache all collected images
         final cacheManager = DefaultCacheManager();
         int cachedCount = 0;
@@ -647,6 +669,67 @@ class OfflineService extends GetxService {
     if (dataMap['pagination'] is Map) {
       final pagination = Map<String, dynamic>.from(dataMap['pagination'] as Map);
       pagination['limit'] = allPoojas.length;
+      pagination['page'] = 1;
+      pagination['totalPages'] = 1;
+      dataMap['pagination'] = pagination;
+    }
+    lastBody['data'] = dataMap;
+    return lastBody;
+  }
+
+  Future<Map<String, dynamic>> _fetchAllRitualsForCache(ApiClient apiClient) async {
+    const pageLimit = 100;
+    const maxPages = 20;
+    final allRituals = <dynamic>[];
+    Map<String, dynamic> lastBody = <String, dynamic>{};
+
+    var page = 1;
+    var totalPages = 1;
+    while (page <= totalPages && page <= maxPages) {
+      final response = await apiClient.dio.get<dynamic>(
+        ApiEndpoints.rituals,
+        queryParameters: {'limit': pageLimit, 'page': page},
+        options: Options(extra: {kSkipApiLoaderKey: true}),
+      );
+      final raw = response.data;
+      if (raw is Map<String, dynamic>) {
+        lastBody = Map<String, dynamic>.from(raw);
+      } else if (raw is Map) {
+        lastBody = Map<String, dynamic>.from(raw);
+      }
+
+      final data = lastBody['data'];
+      List<dynamic> pageItems = const [];
+      Map<String, dynamic>? pagination;
+      if (data is Map) {
+        if (data['rituals'] is List) {
+          pageItems = List<dynamic>.from(data['rituals'] as List);
+        } else if (data['results'] is List) {
+          pageItems = List<dynamic>.from(data['results'] as List);
+        } else if (data['items'] is List) {
+          pageItems = List<dynamic>.from(data['items'] as List);
+        }
+        if (data['pagination'] is Map) {
+          pagination = Map<String, dynamic>.from(data['pagination'] as Map);
+        }
+      } else if (lastBody['rituals'] is List) {
+        pageItems = List<dynamic>.from(lastBody['rituals'] as List);
+      } else if (lastBody['data'] is List) {
+        pageItems = List<dynamic>.from(lastBody['data'] as List);
+      }
+      allRituals.addAll(pageItems);
+      totalPages = (pagination?['totalPages'] as num?)?.toInt() ?? 1;
+      if (totalPages < 1) totalPages = 1;
+      page++;
+    }
+
+    final dataMap = lastBody['data'] is Map
+        ? Map<String, dynamic>.from(lastBody['data'] as Map)
+        : <String, dynamic>{};
+    dataMap['rituals'] = allRituals;
+    if (dataMap['pagination'] is Map) {
+      final pagination = Map<String, dynamic>.from(dataMap['pagination'] as Map);
+      pagination['limit'] = allRituals.length;
       pagination['page'] = 1;
       pagination['totalPages'] = 1;
       dataMap['pagination'] = pagination;

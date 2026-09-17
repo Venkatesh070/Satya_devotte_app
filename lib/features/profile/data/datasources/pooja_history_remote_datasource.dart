@@ -45,10 +45,9 @@ class PoojaHistoryRemoteDataSource {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> startPooja(String poojaId, {String? scheduleId}) async {
+  Future<Map<String, dynamic>> startPooja(String poojaId) async {
     final response = await _apiClient.dio.post<dynamic>(
       ApiEndpoints.startUserPooja(poojaId),
-      queryParameters: scheduleId != null ? {'scheduleId': scheduleId} : null,
     );
     return response.data as Map<String, dynamic>;
   }
@@ -60,10 +59,9 @@ class PoojaHistoryRemoteDataSource {
     );
   }
 
-  Future<void> finishPooja(String poojaId, {String? scheduleId}) async {
+  Future<void> finishPooja(String poojaId) async {
     await _apiClient.dio.post<dynamic>(
       ApiEndpoints.finishUserPooja(poojaId),
-      queryParameters: scheduleId != null ? {'scheduleId': scheduleId} : null,
     );
   }
 

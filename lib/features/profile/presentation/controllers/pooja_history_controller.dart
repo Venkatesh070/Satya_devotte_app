@@ -177,7 +177,6 @@ class PoojaHistoryController extends GetxController {
   Future<Map<String, dynamic>?> startPooja(
     String poojaId, {
     String? scheduleDate,
-    String? scheduleId,
   }) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
@@ -186,7 +185,6 @@ class PoojaHistoryController extends GetxController {
       await offlineService.queueAction('start_pooja', {
         'poojaId': poojaId,
         'tempId': tempId,
-        if (scheduleId != null) 'scheduleId': scheduleId,
       });
       final data = {'_id': tempId, 'poojaId': poojaId, 'currentStep': 0};
       if (scheduleDate != null) {
@@ -196,10 +194,7 @@ class PoojaHistoryController extends GetxController {
       return data;
     }
     try {
-      final result = await _repository.startPooja(
-        poojaId,
-        scheduleId: scheduleId,
-      );
+      final result = await _repository.startPooja(poojaId);
       final data = result['data'] ?? result;
       debugPrint('[History Controller Debug] startPooja data = $data');
       if (data is Map && scheduleDate != null) {
@@ -236,18 +231,17 @@ class PoojaHistoryController extends GetxController {
     }
   }
 
-  Future<void> finishPooja(String poojaId, {String? scheduleId}) async {
+  Future<void> finishPooja(String poojaId) async {
     final offlineService = Get.find<OfflineService>();
     if (!offlineService.isOnline.value) {
       await offlineService.queueAction('finish_pooja', {
         'poojaId': poojaId,
-        if (scheduleId != null) 'scheduleId': scheduleId,
       });
       _markLocalPoojaFinished(poojaId);
       return;
     }
     try {
-      await _repository.finishPooja(poojaId, scheduleId: scheduleId);
+      await _repository.finishPooja(poojaId);
       fetchHistory();
     } catch (e) {
       print('Error finishing pooja: $e');

@@ -24,16 +24,16 @@ class PoojaHistoryRepository {
     return _remoteDataSource.getFinishedPoojas(page: page);
   }
 
-  Future<Map<String, dynamic>> startPooja(String poojaId, {String? scheduleId}) {
-    return _remoteDataSource.startPooja(poojaId, scheduleId: scheduleId);
+  Future<Map<String, dynamic>> startPooja(String poojaId) {
+    return _remoteDataSource.startPooja(poojaId);
   }
 
   Future<void> updateProgress(String sessionId, int currentStep) {
     return _remoteDataSource.updateProgress(sessionId, currentStep);
   }
 
-  Future<void> finishPooja(String poojaId, {String? scheduleId}) {
-    return _remoteDataSource.finishPooja(poojaId, scheduleId: scheduleId);
+  Future<void> finishPooja(String poojaId) {
+    return _remoteDataSource.finishPooja(poojaId);
   }
 
   Future<void> finishPoojaBySession(String sessionId) {

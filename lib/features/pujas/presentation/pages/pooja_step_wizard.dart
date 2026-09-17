@@ -47,7 +47,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   void initState() {
     super.initState();
     _currentPooja = widget.pooja;
-    _currentPage = _normaliseStep(widget.initialStep);
     _sessionId = widget.sessionId;
 
     final hasFull = _currentPooja.preparation.isNotEmpty &&
@@ -56,16 +55,33 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
             _currentPooja.mantra.isNotEmpty ||
             _currentPooja.steps.isNotEmpty);
 
+    _screens = _buildScreens();
+    _currentPage = _calcInitialPageIndex();
+
     if (!hasFull && _currentPooja.id.isNotEmpty) {
       _loadFullPooja();
-    } else {
-      _screens = _buildScreens();
-      _currentPage = _clampStep(_currentPage);
     }
     _pageController = PageController(initialPage: _currentPage);
-    if (_sessionId == null) {
-      _startSession();
+  }
+
+  int get _firstPujaStepPageIndex {
+    int idx = 2; // 0: Intro, 1: Before you begin
+    final personalPrep = _stringList(_currentPooja.preparation['personal']);
+    if (personalPrep.isNotEmpty) idx++;
+    final spacePrep = _stringList(_currentPooja.preparation['space']);
+    if (spacePrep.isNotEmpty) idx++;
+    final items = _stringList(_currentPooja.preparation['items']);
+    if (items.isNotEmpty) idx++;
+    idx++; // Let's Begin the Puja
+    return idx;
+  }
+
+  int _calcInitialPageIndex() {
+    if (widget.initialStep != null && widget.initialStep! > 0) {
+      final target = _firstPujaStepPageIndex + widget.initialStep! - 1;
+      return _clampStep(target);
     }
+    return 0;
   }
 
   Future<void> _loadFullPooja() async {
@@ -108,7 +124,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       if (mounted) {
         setState(() {
           _screens = _buildScreens();
-          _currentPage = _clampStep(_currentPage);
+          _currentPage = _calcInitialPageIndex();
           if (_pageController.hasClients) {
             _pageController.jumpToPage(_currentPage);
           }
@@ -152,7 +168,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       final result = await historyCtrl.startPooja(
         poojaId,
         scheduleDate: _currentPooja.date.isNotEmpty ? _currentPooja.date : widget.pooja.date,
-        scheduleId: widget.scheduleId,
       );
       if (result != null) {
         final extractedId = _extractIdFromMap(result);
@@ -160,13 +175,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
           setState(() {
             _sessionId = extractedId;
             debugPrint('[PoojaStepWizard] Session created & saved with ID: $_sessionId');
-            if (widget.initialStep == null) {
-              final step = result['currentStep'] as int? ?? 0;
-              if (step > 0 && step < _screens.length) {
-                _currentPage = step;
-                _pageController.jumpToPage(step);
-              }
-            }
           });
         }
       }
@@ -280,11 +288,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     return screens;
   }
 
-  int _normaliseStep(int? step) {
-    if (step == null || step < 0) return 0;
-    return step;
-  }
-
   int _clampStep(int step) {
     if (_screens.isEmpty) return 0;
     return step.clamp(0, _screens.length - 1).toInt();
@@ -299,9 +302,10 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   Future<void> _nextPage() async {
     if (_currentPage < _screens.length - 1) {
       final nextIdx = _currentPage + 1;
+      final stepOffset = _firstPujaStepPageIndex;
 
-      // Ensure session is started before advancing
-      if (_sessionId == null) {
+      // When starting the actual puja steps for the first time, ensure session is created
+      if (nextIdx >= stepOffset && _sessionId == null) {
         await _startSession();
       }
 
@@ -313,14 +317,21 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         setState(() => _currentPage = nextIdx);
       }
 
-      // Update progress if we have a session
-      if (_sessionId != null) {
-        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, nextIdx);
+      // Update progress if we have a session and the next page is an actual puja step
+      final totalPujaSteps = _currentPooja.steps.length;
+      if (_sessionId != null &&
+          nextIdx >= stepOffset &&
+          nextIdx < stepOffset + totalPujaSteps) {
+        final currentPujaStep = nextIdx - stepOffset + 1;
+        Get.find<PoojaHistoryController>().updateProgress(
+          _sessionId!,
+          currentPujaStep,
+        );
       }
     }
   }
 
-  // ← NEW: go to previous wizard page, or pop if on first page
+  // ← go to previous wizard page, or pop if on first page
   void _previousPage() {
     if (_currentPage > 0) {
       final prevIdx = _currentPage - 1;
@@ -330,9 +341,17 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       );
       setState(() => _currentPage = prevIdx);
 
-      if (_sessionId != null) {
-        print('DEBUG: Wizard updating progress to PREVIOUS index: $prevIdx');
-        Get.find<PoojaHistoryController>().updateProgress(_sessionId!, prevIdx);
+      final stepOffset = _firstPujaStepPageIndex;
+      final totalPujaSteps = _currentPooja.steps.length;
+      if (_sessionId != null &&
+          prevIdx >= stepOffset &&
+          prevIdx < stepOffset + totalPujaSteps) {
+        final currentPujaStep = prevIdx - stepOffset + 1;
+        debugPrint('DEBUG: Wizard updating progress to PREVIOUS puja step: $currentPujaStep');
+        Get.find<PoojaHistoryController>().updateProgress(
+          _sessionId!,
+          currentPujaStep,
+        );
       }
     } else {
       Get.back();
@@ -347,7 +366,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     } else {
       await Get.find<PoojaHistoryController>().finishPooja(
         widget.pooja.id,
-        scheduleId: widget.scheduleId,
       );
     }
     if (!mounted) return;
@@ -368,11 +386,13 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         animatePatterns: true,
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: _screens,
-          ),
+          body: _isLoadingFullPooja && _screens.isEmpty
+              ? const Center(child: ChakraLoadingIndicator())
+              : PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: _screens,
+                ),
         ),
       ),
     );

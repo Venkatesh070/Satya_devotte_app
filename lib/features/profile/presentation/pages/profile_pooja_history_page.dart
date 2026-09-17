@@ -122,14 +122,6 @@ class _HistoryList extends StatelessWidget {
   final List<dynamic> items;
   final String emptyMessage;
 
-  bool _hasData(dynamic data) {
-    if (data == null) return false;
-    if (data is Iterable) return data.isNotEmpty;
-    if (data is Map) return data.isNotEmpty;
-    if (data is String) return data.isNotEmpty;
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
@@ -159,34 +151,20 @@ class _HistoryList extends StatelessWidget {
           } catch (_) {}
         }
 
-        final currentStepIndex = _intValue(session['currentStep']);
+        final currentStep = _intValue(session['currentStep']);
         final poojaSteps = pooja['steps'] is List ? pooja['steps'] as List : [];
         final totalStepsFromPooja = poojaSteps.length;
         final totalStepsFromSession =
             session['totalSteps'] ?? totalStepsFromPooja;
 
-        // Calculate the offset to find the actual ritual step number
-        // Offset = 1 (Intro) + 1 (Before begin) + prepCount + 1 (Let's begin)
-        int offset = 3; // Intro, Before begin, Let's begin
-        final prep = pooja['preparation'];
-        if (prep is Map) {
-          if (_hasData(prep['personal'])) offset++;
-          if (_hasData(prep['space'])) offset++;
-          if (_hasData(prep['items'])) offset++;
-        }
-
         String stepLabel = '';
         if (_isInProgress(session)) {
-          if (currentStepIndex < offset) {
+          if (currentStep <= 0) {
             stepLabel = 'Preparation';
+          } else if (currentStep <= totalStepsFromSession) {
+            stepLabel = 'Step $currentStep/$totalStepsFromSession';
           } else {
-            final ritualStepIdx = currentStepIndex - offset;
-            if (ritualStepIdx < totalStepsFromSession) {
-              final stepNum = (ritualStepIdx + 1);
-              stepLabel = 'Step $stepNum/$totalStepsFromSession';
-            } else {
-              stepLabel = 'Completion';
-            }
+            stepLabel = 'Completion';
           }
         }
 
@@ -223,7 +201,7 @@ class _HistoryList extends StatelessWidget {
                 Get.to(
                   () => PoojaStepWizard(
                     pooja: PoojaView(poojaMap),
-                    initialStep: currentStepIndex,
+                    initialStep: currentStep > 0 ? currentStep : null,
                     sessionId: sessionId,
                   ),
                 );

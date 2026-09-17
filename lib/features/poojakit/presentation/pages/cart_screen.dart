@@ -27,6 +27,8 @@ class _CartScreenState extends State<CartScreen> {
   final _pickupNameCtrl = TextEditingController();
   final _pickupPhoneCtrl = TextEditingController();
   final _showLocationError = false.obs;
+  String? _collectorNameError;
+  String? _collectorPhoneError;
 
   @override
   void initState() {
@@ -78,6 +80,44 @@ class _CartScreenState extends State<CartScreen> {
         }
       }
     }
+  }
+
+  String? _validateSouthAfricanPhone(String? phone) {
+    final trimmed = phone?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Please enter phone number';
+    }
+    final cleaned = trimmed.replaceAll(RegExp(r'[\s\-().]'), '');
+    final saMobileRegex = RegExp(r'^(?:(?:\+27|0027|27)|0)?[6-8]\d{8}$');
+    if (!saMobileRegex.hasMatch(cleaned)) {
+      return 'Please enter a valid South African mobile number (e.g. 082 123 4567)';
+    }
+    return null;
+  }
+
+  String? _validateCollectorName(String? name) {
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Please enter collector name';
+    }
+    return null;
+  }
+
+  void _onPickupNameChanged(String val) {
+    if (_collectorNameError != null && val.trim().isNotEmpty) {
+      setState(() => _collectorNameError = null);
+    }
+    _syncPickupContactToCheckout();
+  }
+
+  void _onPickupPhoneChanged(String val) {
+    if (_collectorPhoneError != null) {
+      final phone = val.trim();
+      if (phone.isEmpty || _validateSouthAfricanPhone(phone) == null) {
+        setState(() => _collectorPhoneError = null);
+      }
+    }
+    _syncPickupContactToCheckout();
   }
 
   void _syncPickupContactToCheckout() {
@@ -175,6 +215,8 @@ class _CartScreenState extends State<CartScreen> {
                         checkoutCtrl: checkoutCtrl,
                         nameController: _pickupNameCtrl,
                         phoneController: _pickupPhoneCtrl,
+                        nameError: _collectorNameError,
+                        phoneError: _collectorPhoneError,
                         onMethodChanged: (method) {
                           _showLocationError.value = false;
                           final items = c.cart?.items
@@ -192,7 +234,8 @@ class _CartScreenState extends State<CartScreen> {
                                 items.isNotEmpty ? items : null,
                           );
                         },
-                        onSyncPickupContact: _syncPickupContactToCheckout,
+                        onPickupNameChanged: _onPickupNameChanged,
+                        onPickupPhoneChanged: _onPickupPhoneChanged,
                         onRetryPickup: () {
                           final items = c.cart?.items
                                   .map(
@@ -323,7 +366,9 @@ class _CartScreenState extends State<CartScreen> {
     PoojaKitCheckoutController checkoutCtrl,
   ) async {
     if (!checkoutCtrl.hasFulfillmentMethod) {
-      ToastUtil.showInfo('Please select a delivery option (Pick from Warehouse or Door Delivery).');
+      ToastUtil.showInfo(
+        'Please select a delivery option (Pick from Warehouse or Door Delivery).',
+      );
       return;
     }
     if (checkoutCtrl.isPickup) {
@@ -350,14 +395,23 @@ class _CartScreenState extends State<CartScreen> {
       }
       final name = _pickupNameCtrl.text.trim();
       final phone = _pickupPhoneCtrl.text.trim();
-      if (name.isEmpty || phone.isEmpty) {
-        ToastUtil.showInfo('Please enter collector name and phone for pickup.');
+      final nameErr = _validateCollectorName(name);
+      final phoneErr = _validateSouthAfricanPhone(phone);
+      if (nameErr != null || phoneErr != null) {
+        setState(() {
+          _collectorNameError = nameErr;
+          _collectorPhoneError = phoneErr;
+        });
+        ToastUtil.showInfo(
+          phoneErr ?? nameErr ?? 'Please enter valid collector details.',
+        );
         return;
       }
-      final cleanedPhone = phone.replaceAll(RegExp(r'[\s\-().]'), '');
-      if (!RegExp(r'^(?:(?:\+27|0027|27)|0)?[6-8]\d{8}$').hasMatch(cleanedPhone)) {
-        ToastUtil.showInfo('Please enter a valid South African mobile number (e.g. 082 123 4567).');
-        return;
+      if (_collectorNameError != null || _collectorPhoneError != null) {
+        setState(() {
+          _collectorNameError = null;
+          _collectorPhoneError = null;
+        });
       }
       _syncPickupContactToCheckout();
     } else {
@@ -712,8 +766,11 @@ class _DeliveryOptionsSection extends StatelessWidget {
     required this.checkoutCtrl,
     required this.nameController,
     required this.phoneController,
+    this.nameError,
+    this.phoneError,
     required this.onMethodChanged,
-    required this.onSyncPickupContact,
+    required this.onPickupNameChanged,
+    required this.onPickupPhoneChanged,
     required this.onRetryPickup,
     required this.onRetryQuote,
     required this.onChangeAddressTap,
@@ -722,8 +779,11 @@ class _DeliveryOptionsSection extends StatelessWidget {
   final PoojaKitCheckoutController checkoutCtrl;
   final TextEditingController nameController;
   final TextEditingController phoneController;
+  final String? nameError;
+  final String? phoneError;
   final ValueChanged<FulfillmentMethod> onMethodChanged;
-  final VoidCallback onSyncPickupContact;
+  final ValueChanged<String> onPickupNameChanged;
+  final ValueChanged<String> onPickupPhoneChanged;
   final VoidCallback onRetryPickup;
   final VoidCallback onRetryQuote;
   final VoidCallback onChangeAddressTap;
@@ -885,17 +945,20 @@ class _DeliveryOptionsSection extends StatelessWidget {
                       const SizedBox(height: 10),
                       _CartInputField(
                         controller: nameController,
-                        hint: 'Collector name',
+                        hint: 'Enter collector name',
                         icon: Icons.person_outline,
-                        onChanged: (_) => onSyncPickupContact(),
+                        errorText: nameError,
+                        onChanged: onPickupNameChanged,
                       ),
                       const SizedBox(height: 10),
                       _CartInputField(
                         controller: phoneController,
-                        hint: 'Collector phone number',
+                        hint:
+                            'Enter collector phone number (e.g. 082 123 4567)',
                         keyboardType: TextInputType.phone,
                         icon: Icons.phone_outlined,
-                        onChanged: (_) => onSyncPickupContact(),
+                        errorText: phoneError,
+                        onChanged: onPickupPhoneChanged,
                       ),
                     ],
                   ],
@@ -1198,6 +1261,7 @@ class _CartInputField extends StatefulWidget {
     required this.hint,
     this.keyboardType,
     this.icon,
+    this.errorText,
     this.onChanged,
   });
 
@@ -1205,6 +1269,7 @@ class _CartInputField extends StatefulWidget {
   final String hint;
   final TextInputType? keyboardType;
   final IconData? icon;
+  final String? errorText;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -1237,69 +1302,106 @@ class _CartInputFieldState extends State<_CartInputField> {
   @override
   Widget build(BuildContext context) {
     final hasFocus = _focusNode.hasFocus;
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
 
-    return TextField(
-      controller: widget.controller,
-      focusNode: _focusNode,
-      keyboardType: widget.keyboardType,
-      textInputAction: TextInputAction.done,
-      onEditingComplete: () => _focusNode.unfocus(),
-      onSubmitted: (_) => _focusNode.unfocus(),
-      onTapOutside: (_) => _focusNode.unfocus(),
-      onChanged: widget.onChanged,
-      style: AppTypography.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: const Color(0xFF4A1C00),
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: widget.hint,
-        hintStyle: AppTypography.inter(
-          fontSize: 11,
-          color: const Color(0xFFB7AAA0),
-        ),
-        prefixIcon: widget.icon == null
-            ? null
-            : Icon(widget.icon, size: 16, color: const Color(0xFF8B765D)),
-        prefixIconConstraints: const BoxConstraints(
-          minWidth: 32,
-          minHeight: 32,
-        ),
-        suffixIcon: hasFocus
-            ? null
-            : InkWell(
-                onTap: () => _focusNode.requestFocus(),
-                borderRadius: BorderRadius.circular(16),
-                child: const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Icon(
-                    Icons.edit_outlined,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          keyboardType: widget.keyboardType,
+          textInputAction: TextInputAction.done,
+          onEditingComplete: () => _focusNode.unfocus(),
+          onSubmitted: (_) => _focusNode.unfocus(),
+          onTapOutside: (_) => _focusNode.unfocus(),
+          onChanged: widget.onChanged,
+          style: AppTypography.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF4A1C00),
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: widget.hint,
+            hintStyle: AppTypography.inter(
+              fontSize: 11,
+              color: const Color(0xFFB7AAA0),
+            ),
+            prefixIcon: widget.icon == null
+                ? null
+                : Icon(
+                    widget.icon,
                     size: 16,
-                    color: Color(0xFF8B765D),
+                    color: hasError
+                        ? const Color(0xFFD32F2F)
+                        : const Color(0xFF8B765D),
                   ),
-                ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+            suffixIcon: hasFocus
+                ? null
+                : InkWell(
+                    onTap: () => _focusNode.requestFocus(),
+                    borderRadius: BorderRadius.circular(16),
+                    child: const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: Color(0xFF8B765D),
+                      ),
+                    ),
+                  ),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFFFF7E8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 11,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: hasError
+                    ? const Color(0xFFD32F2F)
+                    : const Color(0xFFE8E0D6),
+                width: hasError ? 1.4 : 1,
               ),
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: 32,
-          minHeight: 32,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: hasError
+                    ? const Color(0xFFD32F2F)
+                    : const Color(0xFFE95700),
+                width: 1.4,
+              ),
+            ),
+          ),
         ),
-        filled: true,
-        fillColor: const Color(0xFFFFF7E8),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 11,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE8E0D6)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE95700), width: 1.4),
-        ),
-      ),
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              widget.errorText!,
+              style: AppTypography.inter(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFD32F2F),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
