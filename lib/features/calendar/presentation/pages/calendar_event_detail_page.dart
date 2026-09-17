@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -7,12 +8,16 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/calendar/data/user_calendar_event.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
+import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/widgets/calendar_ui.dart';
+import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 /// Figma calendar event detail — bottom sheet with "Add to Google Calendar".
-class CalendarEventDetailPage extends StatelessWidget {
+class CalendarEventDetailPage extends StatefulWidget {
   const CalendarEventDetailPage({super.key, required this.event});
 
   final dynamic event;
@@ -34,11 +39,65 @@ class CalendarEventDetailPage extends StatelessWidget {
   }
 
   @override
+  State<CalendarEventDetailPage> createState() => _CalendarEventDetailPageState();
+}
+
+class _CalendarEventDetailPageState extends State<CalendarEventDetailPage> {
+  late dynamic _event;
+
+  @override
+  void initState() {
+    super.initState();
+    _event = widget.event;
+    _loadFullFestivalIfNeeded();
+  }
+
+  Future<void> _loadFullFestivalIfNeeded() async {
+    final e = _event;
+    if (e is FestivalModel && e.date.isNotEmpty) {
+      final d = _date(e);
+      if (d != null) {
+        try {
+          final res = await Get.find<ApiClient>().dio.get<dynamic>(
+            ApiEndpoints.calendar,
+            queryParameters: {'month': d.month, 'year': d.year},
+            options: Options(extra: {kSkipApiLoaderKey: true}),
+          );
+          final data = res.data;
+          if (data is Map && data['success'] == true && mounted) {
+            final body = data['data'];
+            if (body is Map && body['festivals'] is List) {
+              final list = (body['festivals'] as List).whereType<Map>();
+              final found = list.firstWhereOrNull(
+                (m) =>
+                    (m['_id']?.toString() == e.id ||
+                        m['id']?.toString() == e.id ||
+                        m['title']?.toString().toLowerCase().trim() ==
+                            e.title.toLowerCase().trim()),
+              );
+              if (found != null) {
+                final fullFest =
+                    FestivalModel.fromJson(Map<String, dynamic>.from(found));
+                if (fullFest.description.isNotEmpty &&
+                    fullFest.description.length > e.description.length) {
+                  setState(() {
+                    _event = fullFest;
+                  });
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final title = _title(event);
-    final description = _description(event);
-    final date = _date(event);
-    final imageUrl = _imageUrl(event);
+    final title = _title(_event);
+    final description = _description(_event);
+    final date = _date(_event);
+    final imageUrl = _imageUrl(_event);
     final dateLabel = date != null
         ? (date.hour != 0 || date.minute != 0
             ? '${DateFormat('EEEE, MMMM dd').format(date)} at ${DateFormat('HH:mm').format(date)}'
@@ -109,7 +168,7 @@ class CalendarEventDetailPage extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (event is PoojaView && (event as PoojaView).idealTime.trim().isNotEmpty) ...[
+                  if (_event is PoojaView && (_event as PoojaView).idealTime.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -121,7 +180,7 @@ class CalendarEventDetailPage extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Ideal Time: ${(event as PoojaView).idealTime}',
+                            'Ideal Time: ${(_event as PoojaView).idealTime}',
                             style: AppTypography.inter(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w500,
@@ -133,15 +192,7 @@ class CalendarEventDetailPage extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 14),
-                  RichTextDisplay(
-                    description.isNotEmpty ? description : null,
-                    style: AppTypography.inter(
-                      fontSize: 14,
-                      height: 1.55,
-                      fontWeight: FontWeight.w400,
-                      color: CalendarUi.textPrimary,
-                    ),
-                  ),
+                  _ExpandableDescription(description: description),
                 ],
               ),
             ),
@@ -150,7 +201,7 @@ class CalendarEventDetailPage extends StatelessWidget {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: _EventDetailActions(event: event),
+              child: _EventDetailActions(event: _event),
             ),
           ),
         ],
@@ -468,3 +519,81 @@ class _HeroImage extends StatelessWidget {
     );
   }
 }
+
+class _ExpandableDescription extends StatefulWidget {
+  const _ExpandableDescription({required this.description});
+
+  final String description;
+
+  @override
+  State<_ExpandableDescription> createState() => _ExpandableDescriptionState();
+}
+
+class _ExpandableDescriptionState extends State<_ExpandableDescription> {
+  bool _isExpanded = false;
+
+  bool get _canExpand {
+    final text = widget.description.trim();
+    return text.length > 120 || text.contains('\n');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.description.trim();
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        RichTextDisplay(
+          text,
+          maxLines: _isExpanded ? null : 4,
+          overflow: _isExpanded ? null : TextOverflow.ellipsis,
+          style: AppTypography.inter(
+            fontSize: 14,
+            height: 1.55,
+            fontWeight: FontWeight.w400,
+            color: CalendarUi.textPrimary,
+          ),
+        ),
+        if (_canExpand) ...[
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isExpanded ? 'See less' : 'See more',
+                    style: AppTypography.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: CalendarUi.headerOrange,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: CalendarUi.headerOrange,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+

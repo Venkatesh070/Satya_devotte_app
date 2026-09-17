@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -46,7 +46,7 @@ class _CalendarEventFields {
   final String reminderType;
 }
 
-class CalendarController extends GetxController {
+class CalendarController extends GetxController with WidgetsBindingObserver {
   final ApiClient _apiClient = Get.find<ApiClient>();
   final NotificationService _notificationService =
       Get.find<NotificationService>();
@@ -65,12 +65,16 @@ class CalendarController extends GetxController {
   final RxSet<String> remindedEventIds = <String>{}.obs;
   final RxSet<String> addedToCalendarIds = <String>{}.obs;
 
+  /// Tracks an event that was just launched into the device calendar app
+  String? _pendingCalendarEventId;
+
   /// Map of deity ID to their hex color string.
   final RxMap<String, String> deityColors = <String, String>{}.obs;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _loadReminders();
     _loadCalendarStatus();
     _loadUserEvents();
@@ -88,6 +92,29 @@ class CalendarController extends GetxController {
           fetchData(force: true);
         }
       });
+    }
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _pendingCalendarEventId != null) {
+      final id = _pendingCalendarEventId!;
+      _pendingCalendarEventId = null;
+      if (!addedToCalendarIds.contains(id)) {
+        addedToCalendarIds.add(id);
+        addedToCalendarIds.refresh();
+        _saveCalendarStatus();
+        ToastUtil.showSuccess(
+          'Event added to your calendar',
+          title: 'Google Calendar',
+        );
+      }
     }
   }
 
@@ -254,7 +281,10 @@ class CalendarController extends GetxController {
   Future<void> toggleReminder(dynamic event) async {
     final fields = _fieldsFor(event);
     if (fields == null) {
-      ToastUtil.showInfo('This event does not have a valid date.');
+      ToastUtil.showInfo(
+        'This event does not have a valid date.',
+        title: 'Reminder',
+      );
       return;
     }
 
@@ -269,6 +299,7 @@ class CalendarController extends GetxController {
       await _notificationService.unsubscribeFromEventNotification(id);
       ToastUtil.showInfo(
         'You will no longer receive notifications for ${fields.title}',
+        title: 'Reminder Cancelled',
       );
     } else {
       remindedEventIds.add(id);
@@ -280,11 +311,18 @@ class CalendarController extends GetxController {
           fields.reminderType,
           fields.date,
         );
+        ToastUtil.showSuccess(
+          'Reminder set successfully for ${fields.title}',
+          title: 'Reminder Set',
+        );
       } catch (e) {
         debugPrint('CalendarController: Failed to subscribe: $e');
         remindedEventIds.remove(id);
         remindedEventIds.refresh();
-        ToastUtil.showError('Failed to set reminder. Please try again.');
+        ToastUtil.showError(
+          'Failed to set reminder. Please try again.',
+          title: 'Reminder Error',
+        );
       }
     }
     await _saveReminders();
@@ -319,10 +357,11 @@ class CalendarController extends GetxController {
         endDate: end,
       );
       if (success) {
-        addedToCalendarIds.add(fields.id);
-        addedToCalendarIds.refresh();
-        await _saveCalendarStatus();
-        ToastUtil.showInfo('Confirm save in your calendar app');
+        _pendingCalendarEventId = fields.id;
+        ToastUtil.showInfo(
+          'Please save the event in your calendar',
+          title: 'Google Calendar',
+        );
       } else {
         ToastUtil.showError(
           'Could not open your calendar app. Please try again.',
@@ -336,22 +375,32 @@ class CalendarController extends GetxController {
 
   _CalendarEventFields? _fieldsFor(dynamic event) {
     if (event is FestivalModel) {
-      final date = _parseDate(event.date);
-      if (date == null || event.id.isEmpty) return null;
+      DateTime? date = _parseDate(event.date);
+      date ??= _parseDate(event.endDate ?? '') ??
+          _parseDate(event.createdAt ?? '') ??
+          DateTime.now();
+      final id = event.id.isNotEmpty
+          ? event.id
+          : (event.title.isNotEmpty
+              ? 'fest_${event.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}'
+              : 'fest_${DateTime.now().millisecondsSinceEpoch}');
       return _CalendarEventFields(
-        id: event.id,
-        title: event.title,
+        id: id,
+        title: event.title.isNotEmpty ? event.title : 'Festival',
         description: event.description,
         date: DateTime(date.year, date.month, date.day),
         reminderType: 'festival',
       );
     }
     if (event is PoojaView) {
-      final date = _parseDate(event.date);
-      if (date == null || event.title.isEmpty) return null;
+      DateTime? date = _parseDate(event.date);
+      date ??= DateTime.now();
+      final id = event.id.isNotEmpty
+          ? event.id
+          : 'pooja_${event.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
       return _CalendarEventFields(
-        id: 'pooja_${event.title}_${event.date}',
-        title: event.title,
+        id: id,
+        title: event.title.isNotEmpty ? event.title : 'Puja',
         description: event.description,
         date: date,
         reminderType: 'pooja',
@@ -367,8 +416,8 @@ class CalendarController extends GetxController {
       );
     }
     if (event is MoonPhaseModel) {
-      final date = _parseDate(event.date);
-      if (date == null) return null;
+      DateTime? date = _parseDate(event.date);
+      date ??= DateTime.now();
       final isFull = event.type.toUpperCase().contains('FULL');
       return _CalendarEventFields(
         id: 'moon_${event.type}_${event.date}',

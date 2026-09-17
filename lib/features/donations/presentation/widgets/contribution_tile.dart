@@ -14,11 +14,7 @@ class ContributionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return RecordDonationTile(
       contribution: contribution,
-      onTap:
-          contribution.status == ContributionStatus.paid &&
-              contribution.contributionNumber.isNotEmpty
-          ? () => _showReceiptSheet(context, contribution)
-          : null,
+      onTap: () => _showReceiptSheet(context, contribution),
     );
   }
 
@@ -26,6 +22,7 @@ class ContributionTile extends StatelessWidget {
     BuildContext context,
     DonationContribution contribution,
   ) {
+    final isPaid = contribution.status == ContributionStatus.paid;
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
@@ -50,7 +47,7 @@ class ContributionTile extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Receipt',
+              isPaid ? 'Receipt' : 'Donation Details',
               style: AppTypography.lora(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -67,6 +64,9 @@ class ContributionTile extends StatelessWidget {
               _ReceiptRow('Receipt #', contribution.contributionNumber),
             if ((contribution.payfastPaymentId ?? '').trim().isNotEmpty)
               _ReceiptRow('PayFast Ref', contribution.payfastPaymentId!.trim()),
+            if (contribution.note != null &&
+                contribution.note!.trim().isNotEmpty)
+              _ReceiptRow('Note', contribution.note!.trim()),
             const SizedBox(height: 20),
             DonationOrangeButton(label: 'Close', onPressed: Get.back),
           ],

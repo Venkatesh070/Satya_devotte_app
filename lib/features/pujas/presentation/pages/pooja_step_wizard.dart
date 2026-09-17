@@ -15,6 +15,8 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/utils/rich_text_util.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 import 'package:satya_devotte_app/shared/widgets/step_rich_text_display.dart';
+import 'package:dio/dio.dart';
+import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class PoojaStepWizard extends StatefulWidget {
@@ -35,13 +37,15 @@ class PoojaStepWizard extends StatefulWidget {
 }
 
 class _PoojaStepWizardState extends State<PoojaStepWizard> {
-  late final PageController _pageController;
+  PageController? _pageController;
   late int _currentPage;
   List<Widget> _screens = [];
   String? _sessionId;
   bool _isLoadingFullPooja = false;
   bool _isStartingSession = false;
   late PoojaView _currentPooja;
+
+  bool get _isResuming => widget.initialStep != null && widget.initialStep! > 0;
 
   @override
   void initState() {
@@ -55,31 +59,47 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
             _currentPooja.mantra.isNotEmpty ||
             _currentPooja.steps.isNotEmpty);
 
-    _screens = _buildScreens();
-    _currentPage = _calcInitialPageIndex();
-
     if (!hasFull && _currentPooja.id.isNotEmpty) {
+      _isLoadingFullPooja = true;
+      _screens = [];
+      _currentPage = 0;
       _loadFullPooja();
+    } else {
+      _screens = _buildScreens();
+      _currentPage = _calcInitialPageIndex();
+      _pageController = PageController(initialPage: _currentPage);
     }
-    _pageController = PageController(initialPage: _currentPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
   }
 
   int get _firstPujaStepPageIndex {
-    int idx = 2; // 0: Intro, 1: Before you begin
+    if (_isResuming) return 0;
+    final idx = _screens.indexWhere((w) => w is _PujaStepScreen);
+    if (idx != -1) return idx;
+    // Fallback if _screens not yet built
+    int count = 2; // 0: Intro, 1: Before you begin
     final personalPrep = _stringList(_currentPooja.preparation['personal']);
-    if (personalPrep.isNotEmpty) idx++;
+    if (personalPrep.isNotEmpty) count++;
     final spacePrep = _stringList(_currentPooja.preparation['space']);
-    if (spacePrep.isNotEmpty) idx++;
+    if (spacePrep.isNotEmpty) count++;
     final items = _stringList(_currentPooja.preparation['items']);
-    if (items.isNotEmpty) idx++;
-    idx++; // Let's Begin the Puja
-    return idx;
+    if (items.isNotEmpty) count++;
+    count++; // Let's Begin the Puja
+    return count;
   }
 
   int _calcInitialPageIndex() {
-    if (widget.initialStep != null && widget.initialStep! > 0) {
-      final target = _firstPujaStepPageIndex + widget.initialStep! - 1;
-      return _clampStep(target);
+    if (_isResuming) {
+      final stepIndex = widget.initialStep! - 1;
+      final maxStepIndex = _currentPooja.steps.isNotEmpty
+          ? _currentPooja.steps.length - 1
+          : 0;
+      return stepIndex.clamp(0, maxStepIndex);
     }
     return 0;
   }
@@ -94,6 +114,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       if (offlineService.isOnline.value) {
         final res = await Get.find<ApiClient>().dio.get<dynamic>(
           ApiEndpoints.pooja(_currentPooja.id),
+          options: Options(extra: {kSkipApiLoaderKey: true}),
         );
         final payload = res.data;
         if (payload is Map) {
@@ -114,9 +135,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       }
 
       if (detail != null && mounted) {
-        setState(() {
-          _currentPooja = PoojaView({..._currentPooja.raw, ...detail!});
-        });
+        _currentPooja = PoojaView({..._currentPooja.raw, ...detail});
       }
     } catch (e) {
       debugPrint('Error loading full pooja: $e');
@@ -125,9 +144,8 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         setState(() {
           _screens = _buildScreens();
           _currentPage = _calcInitialPageIndex();
-          if (_pageController.hasClients) {
-            _pageController.jumpToPage(_currentPage);
-          }
+          _pageController?.dispose();
+          _pageController = PageController(initialPage: _currentPage);
           _isLoadingFullPooja = false;
         });
       }
@@ -161,7 +179,7 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
       debugPrint('[PoojaStepWizard Error] Cannot start session: poojaId is empty');
       return;
     }
-    _isStartingSession = true;
+    setState(() => _isStartingSession = true);
 
     try {
       final historyCtrl = Get.find<PoojaHistoryController>();
@@ -169,99 +187,99 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         poojaId,
         scheduleDate: _currentPooja.date.isNotEmpty ? _currentPooja.date : widget.pooja.date,
       );
-      if (result != null) {
-        final extractedId = _extractIdFromMap(result);
-        if (mounted && extractedId.isNotEmpty) {
-          setState(() {
-            _sessionId = extractedId;
-            debugPrint('[PoojaStepWizard] Session created & saved with ID: $_sessionId');
-          });
-        }
-      }
-    } finally {
-      _isStartingSession = false;
-    }
-  }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+      final sessionData = result?['session'] ?? result?['data'] ?? result;
+      final extractedId = _extractIdFromMap(sessionData);
+
+      if (extractedId.isNotEmpty && mounted) {
+        _sessionId = extractedId;
+        debugPrint('[PoojaStepWizard] Session created successfully on puja start: $_sessionId');
+      }
+    } catch (e) {
+      debugPrint('[PoojaStepWizard Error] Failed to start session on puja start: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isStartingSession = false);
+      }
+    }
   }
 
   List<Widget> _buildScreens() {
     final List<Widget> screens = [];
 
-    // 1. Intro Screen
-    screens.add(
-      _IntroScreen(
-        pooja: _currentPooja,
-        onNext: _nextPage,
-        onBack: _previousPage,
-      ),
-    );
-
-    // 2. Before you begin
-    screens.add(
-      _SimpleInfoScreen(
-        title: 'Before you begin',
-        subtitle: 'Let\'s get started with the preparation for puja',
-        buttonLabel: 'Start Preparation',
-        onNext: _nextPage,
-        onBack: _previousPage,
-      ),
-    );
-
-    // 3. Personal Preparation
-    final personalPrep = _stringList(_currentPooja.preparation['personal']);
-    if (personalPrep.isNotEmpty) {
+    if (!_isResuming) {
+      // 1. Intro Screen
       screens.add(
-        _ListScreen(
-          title: 'Personal Preparation',
-          items: personalPrep,
+        _IntroScreen(
+          pooja: _currentPooja,
+          onNext: _nextPage,
+          onBack: _previousPage,
+        ),
+      );
+
+      // 2. Before you begin
+      screens.add(
+        _SimpleInfoScreen(
+          title: 'Before you begin',
+          subtitle: 'Let\'s get started with the preparation for puja',
+          buttonLabel: 'Start Preparation',
+          onNext: _nextPage,
+          onBack: _previousPage,
+        ),
+      );
+
+      // 3. Personal Preparation
+      final personalPrep = _stringList(_currentPooja.preparation['personal']);
+      if (personalPrep.isNotEmpty) {
+        screens.add(
+          _ListScreen(
+            title: 'Personal Preparation',
+            items: personalPrep,
+            onNext: _nextPage,
+            onBack: _previousPage,
+          ),
+        );
+      }
+
+      // 4. Space Preparation
+      final spacePrep = _stringList(_currentPooja.preparation['space']);
+      if (spacePrep.isNotEmpty) {
+        screens.add(
+          _ListScreen(
+            title: 'Space Preparation',
+            items: spacePrep,
+            onNext: _nextPage,
+            onBack: _previousPage,
+          ),
+        );
+      }
+
+      // 5. Ingredients
+      final items = _stringList(_currentPooja.preparation['items']);
+      if (items.isNotEmpty) {
+        screens.add(
+          _IngredientsScreen(
+            title: 'Prayer items / Ingredients Required:',
+            items: items,
+            onNext: _nextPage,
+            onBack: _previousPage,
+          ),
+        );
+      }
+
+      // 6. Let's Begin
+      screens.add(
+        _SimpleInfoScreen(
+          title: 'Let\'s Begin the Puja',
+          subtitle:
+              'Since you have done all the prerequisites for performing the puja, now you can start your puja with peace and no distractions.',
+          buttonLabel: 'Start Puja',
+          isLoading: _isStartingSession,
           onNext: _nextPage,
           onBack: _previousPage,
         ),
       );
     }
-
-    // 4. Space Preparation
-    final spacePrep = _stringList(_currentPooja.preparation['space']);
-    if (spacePrep.isNotEmpty) {
-      screens.add(
-        _ListScreen(
-          title: 'Space Preparation',
-          items: spacePrep,
-          onNext: _nextPage,
-          onBack: _previousPage,
-        ),
-      );
-    }
-
-    // 5. Ingredients
-    final items = _stringList(_currentPooja.preparation['items']);
-    if (items.isNotEmpty) {
-      screens.add(
-        _IngredientsScreen(
-          title: 'Prayer items / Ingredients Required:',
-          items: items,
-          onNext: _nextPage,
-          onBack: _previousPage,
-        ),
-      );
-    }
-
-    // 6. Let's Begin
-    screens.add(
-      _SimpleInfoScreen(
-        title: 'Let\'s Begin the Puja',
-        subtitle:
-            'Since you have done all the prerequisites for performing the puja, now you can start your puja with peace and no distractions.',
-        buttonLabel: 'Start Puja',
-        onNext: _nextPage,
-        onBack: _previousPage,
-      ),
-    );
 
     // 7. Puja Steps
     for (int i = 0; i < _currentPooja.steps.length; i++) {
@@ -288,11 +306,6 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
     return screens;
   }
 
-  int _clampStep(int step) {
-    if (_screens.isEmpty) return 0;
-    return step.clamp(0, _screens.length - 1).toInt();
-  }
-
   List<String> _stringList(dynamic raw) {
     if (raw is List) return raw.map((e) => e.toString()).toList();
     if (raw is String && raw.isNotEmpty) return [raw];
@@ -300,58 +313,94 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
   }
 
   Future<void> _nextPage() async {
+    if (_pageController == null || _isStartingSession) return;
     if (_currentPage < _screens.length - 1) {
       final nextIdx = _currentPage + 1;
-      final stepOffset = _firstPujaStepPageIndex;
 
-      // When starting the actual puja steps for the first time, ensure session is created
-      if (nextIdx >= stepOffset && _sessionId == null) {
-        await _startSession();
-      }
+      if (!_isResuming) {
+        final stepOffset = _firstPujaStepPageIndex;
 
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-      if (mounted) {
-        setState(() => _currentPage = nextIdx);
-      }
+        // When starting the actual puja steps for the first time, ensure session is created
+        if (nextIdx >= stepOffset && _sessionId == null) {
+          await _startSession();
+        }
 
-      // Update progress if we have a session and the next page is an actual puja step
-      final totalPujaSteps = _currentPooja.steps.length;
-      if (_sessionId != null &&
-          nextIdx >= stepOffset &&
-          nextIdx < stepOffset + totalPujaSteps) {
-        final currentPujaStep = nextIdx - stepOffset + 1;
-        Get.find<PoojaHistoryController>().updateProgress(
-          _sessionId!,
-          currentPujaStep,
+        _pageController!.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
         );
+        if (mounted) {
+          setState(() => _currentPage = nextIdx);
+        }
+
+        // Update progress if we have a session and the next page is an actual puja step
+        final totalPujaSteps = _currentPooja.steps.length;
+        if (_sessionId != null &&
+            nextIdx >= stepOffset &&
+            nextIdx < stepOffset + totalPujaSteps) {
+          final currentPujaStep = nextIdx - stepOffset + 1;
+          Get.find<PoojaHistoryController>().updateProgress(
+            _sessionId!,
+            currentPujaStep,
+          );
+        }
+      } else {
+        _pageController!.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+        if (mounted) {
+          setState(() => _currentPage = nextIdx);
+        }
+
+        final totalPujaSteps = _currentPooja.steps.length;
+        if (_sessionId != null && nextIdx < totalPujaSteps) {
+          final currentPujaStep = nextIdx + 1;
+          Get.find<PoojaHistoryController>().updateProgress(
+            _sessionId!,
+            currentPujaStep,
+          );
+        }
       }
     }
   }
 
   // ← go to previous wizard page, or pop if on first page
   void _previousPage() {
+    if (_pageController == null || _isStartingSession) {
+      if (_pageController == null) Get.back();
+      return;
+    }
     if (_currentPage > 0) {
       final prevIdx = _currentPage - 1;
-      _pageController.previousPage(
+      _pageController!.previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
       setState(() => _currentPage = prevIdx);
 
-      final stepOffset = _firstPujaStepPageIndex;
-      final totalPujaSteps = _currentPooja.steps.length;
-      if (_sessionId != null &&
-          prevIdx >= stepOffset &&
-          prevIdx < stepOffset + totalPujaSteps) {
-        final currentPujaStep = prevIdx - stepOffset + 1;
-        debugPrint('DEBUG: Wizard updating progress to PREVIOUS puja step: $currentPujaStep');
-        Get.find<PoojaHistoryController>().updateProgress(
-          _sessionId!,
-          currentPujaStep,
-        );
+      if (!_isResuming) {
+        final stepOffset = _firstPujaStepPageIndex;
+        final totalPujaSteps = _currentPooja.steps.length;
+        if (_sessionId != null &&
+            prevIdx >= stepOffset &&
+            prevIdx < stepOffset + totalPujaSteps) {
+          final currentPujaStep = prevIdx - stepOffset + 1;
+          debugPrint('DEBUG: Wizard updating progress to PREVIOUS puja step: $currentPujaStep');
+          Get.find<PoojaHistoryController>().updateProgress(
+            _sessionId!,
+            currentPujaStep,
+          );
+        }
+      } else {
+        final totalPujaSteps = _currentPooja.steps.length;
+        if (_sessionId != null && prevIdx < totalPujaSteps) {
+          final currentPujaStep = prevIdx + 1;
+          Get.find<PoojaHistoryController>().updateProgress(
+            _sessionId!,
+            currentPujaStep,
+          );
+        }
       }
     } else {
       Get.back();
@@ -386,12 +435,12 @@ class _PoojaStepWizardState extends State<PoojaStepWizard> {
         animatePatterns: true,
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: _isLoadingFullPooja && _screens.isEmpty
+          body: (_isLoadingFullPooja || _pageController == null)
               ? const Center(child: ChakraLoadingIndicator())
               : PageView(
-                  controller: _pageController,
+                  controller: _pageController!,
                   physics: const NeverScrollableScrollPhysics(),
-                  children: _screens,
+                  children: _buildScreens(),
                 ),
         ),
       ),
@@ -1408,13 +1457,15 @@ class _SimpleInfoScreen extends StatelessWidget {
     required this.subtitle,
     required this.buttonLabel,
     required this.onNext,
-    required this.onBack, // ← NEW
+    required this.onBack,
+    this.isLoading = false,
   });
   final String title;
   final String subtitle;
   final String buttonLabel;
   final VoidCallback onNext;
-  final VoidCallback onBack; // ← NEW
+  final VoidCallback onBack;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1449,6 +1500,7 @@ class _SimpleInfoScreen extends StatelessWidget {
               delay: const Duration(milliseconds: 240),
               child: _WizardButton(
                 label: buttonLabel,
+                isLoading: isLoading,
                 onTap: onNext,
                 onBack: onBack,
               ),
@@ -2433,19 +2485,21 @@ class _WizardButton extends StatelessWidget {
     required this.onTap,
     this.onBack,
     this.showBack = true,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback onTap;
   final VoidCallback? onBack;
   final bool showBack;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final backBtn = SizedBox(
       height: 56,
       child: OutlinedButton(
-        onPressed: onBack ?? () => Get.back(),
+        onPressed: isLoading ? null : (onBack ?? () => Get.back()),
         style: OutlinedButton.styleFrom(
           padding: EdgeInsets.zero,
           foregroundColor: const Color(0xFFFCF7EF),
@@ -2467,20 +2521,33 @@ class _WizardButton extends StatelessWidget {
     final proceedBtn = SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: onTap,
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.zero,
           backgroundColor: const Color(0xFFFCF7EF),
           foregroundColor: const Color(0xFF255AE2),
+          disabledBackgroundColor: const Color(0xFFFCF7EF).withValues(alpha: 0.8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
           elevation: 0,
         ),
-        child: Text(
-          label,
-          style: AppTypography.inter(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF255AE2)),
+                ),
+              )
+            : Text(
+                label,
+                style: AppTypography.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
 

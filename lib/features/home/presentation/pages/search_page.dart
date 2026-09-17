@@ -355,10 +355,6 @@ class _SearchPageState extends State<SearchPage> {
             ? Get.find<CalendarController>()
             : Get.put(CalendarController());
 
-        if (controller.festivals.isEmpty && !controller.isLoading.value) {
-          await controller.fetchData();
-        }
-
         final match = controller.festivals.firstWhereOrNull(
           (f) =>
               (f.id.isNotEmpty && f.id == result.id) ||
@@ -367,7 +363,7 @@ class _SearchPageState extends State<SearchPage> {
         );
 
         FestivalModel festival;
-        if (match != null) {
+        if (match != null && match.description.length >= result.description.length) {
           festival = match;
         } else {
           var dateStr = result.raw['date']?.toString() ??
@@ -382,7 +378,11 @@ class _SearchPageState extends State<SearchPage> {
           }
           final fullDesc = (result.raw['description'] ??
                   result.raw['about'] ??
+                  result.raw['details'] ??
                   result.raw['summary'] ??
+                  result.raw['significance'] ??
+                  result.raw['desc'] ??
+                  result.raw['festivalDescription'] ??
                   result.description)
               ?.toString()
               .trim() ??

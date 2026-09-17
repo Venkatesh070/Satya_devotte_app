@@ -604,6 +604,20 @@ class RecordDonationTile extends StatelessWidget {
                               ),
                             ),
                           ],
+                          if (contribution.note != null &&
+                              contribution.note!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Note: ${contribution.note!.trim()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.inter(
+                                fontSize: 11.5,
+                                fontStyle: FontStyle.italic,
+                                color: DonationUi.text,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

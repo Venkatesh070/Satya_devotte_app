@@ -7,8 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -413,8 +411,13 @@ class NotificationService with WidgetsBindingObserver {
   ) async {
     try {
       final cleanTopic = eventId.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_');
-
-      await _fcm.subscribeToTopic(cleanTopic);
+      if (cleanTopic.isNotEmpty) {
+        try {
+          await _fcm.subscribeToTopic(cleanTopic);
+        } catch (e) {
+          debugPrint('NotificationService: FCM topic subscription skipped: $e');
+        }
+      }
 
       final now = DateTime.now();
       DateTime scheduledDateTime = eventDate;
@@ -447,17 +450,6 @@ class NotificationService with WidgetsBindingObserver {
           );
         }
       }
-
-      final dateFormatted = DateFormat(
-        'MMM dd \'at\' hh:mm a',
-      ).format(scheduledDateTime);
-      Get.snackbar(
-        'Reminder Set',
-        'We will notify you on $dateFormatted',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withValues(alpha: 0.8),
-        colorText: const Color(0xFFFCF7EF),
-      );
 
       if (kDebugMode) {
         debugPrint('Notifications: Scheduled for $scheduledDateTime');
@@ -516,12 +508,6 @@ class NotificationService with WidgetsBindingObserver {
       final cleanTopic = eventId.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_');
       await _fcm.unsubscribeFromTopic(cleanTopic);
       await _localNotifications.cancel(eventId.hashCode);
-
-      Get.snackbar(
-        'Reminder Cancelled',
-        'Notification has been removed.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
     } catch (e) {
       debugPrint('Error unsubscribing: $e');
     }

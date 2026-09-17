@@ -96,20 +96,19 @@ class _ProfilePoojaHistoryPageState extends State<ProfilePoojaHistoryPage> {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: c.fetchHistory,
-            child: TabBarView(
-              children: [
-                _HistoryList(
-                  items: c.finishedPoojas,
-                  emptyMessage: 'No finished pujas yet',
-                ),
-                _HistoryList(
-                  items: c.pendingPoojas,
-                  emptyMessage: 'No pujas in progress',
-                ),
-              ],
-            ),
+          return TabBarView(
+            children: [
+              _HistoryList(
+                items: c.finishedPoojas,
+                emptyMessage: 'No finished pujas yet',
+                onRefresh: c.fetchHistory,
+              ),
+              _HistoryList(
+                items: c.pendingPoojas,
+                emptyMessage: 'No pujas in progress',
+                onRefresh: c.fetchHistory,
+              ),
+            ],
           );
         }),
       ),
@@ -118,26 +117,47 @@ class _ProfilePoojaHistoryPageState extends State<ProfilePoojaHistoryPage> {
 }
 
 class _HistoryList extends StatelessWidget {
-  const _HistoryList({required this.items, required this.emptyMessage});
+  const _HistoryList({
+    required this.items,
+    required this.emptyMessage,
+    required this.onRefresh,
+  });
   final List<dynamic> items;
   final String emptyMessage;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
-        child: Text(
-          emptyMessage,
-          style: AppTypography.inter(color: DonationUi.textMuted),
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Text(
+                    emptyMessage,
+                    style: AppTypography.inter(color: DonationUi.textMuted),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, i) {
         final session = items[i];
         final pooja = session['pooja'] ?? {};
         final title = pooja['title'] ?? 'Puja';
@@ -159,13 +179,11 @@ class _HistoryList extends StatelessWidget {
 
         String stepLabel = '';
         if (_isInProgress(session)) {
-          if (currentStep <= 0) {
-            stepLabel = 'Preparation';
-          } else if (currentStep <= totalStepsFromSession) {
-            stepLabel = 'Step $currentStep/$totalStepsFromSession';
-          } else {
-            stepLabel = 'Completion';
-          }
+          final stepNum = currentStep > 0 ? currentStep : 1;
+          final totalNum = (totalStepsFromSession is int && totalStepsFromSession > 0)
+              ? totalStepsFromSession
+              : (totalStepsFromPooja > 0 ? totalStepsFromPooja : 1);
+          stepLabel = 'Step $stepNum/$totalNum';
         }
 
         final isFinished = _isFinished(session);
@@ -201,9 +219,10 @@ class _HistoryList extends StatelessWidget {
                 Get.to(
                   () => PoojaStepWizard(
                     pooja: PoojaView(poojaMap),
-                    initialStep: currentStep > 0 ? currentStep : null,
+                    initialStep: currentStep > 0 ? currentStep : 1,
                     sessionId: sessionId,
                   ),
+                  preventDuplicates: true,
                 );
               } else {
                 openPujaPreview(context, id: poojaId, initialData: poojaMap);
@@ -332,8 +351,9 @@ class _HistoryList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   bool _isInProgress(Map session) {
     final status = session['status']?.toString().toUpperCase().trim();

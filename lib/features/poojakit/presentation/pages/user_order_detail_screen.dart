@@ -367,6 +367,106 @@ class _DeliveryCard extends StatelessWidget {
                 ),
               ),
             ],
+            if ((order.pickupLocation?.hours ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBF4E8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFEADBCE)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 1.5),
+                      child: Icon(
+                        Icons.access_time_filled_rounded,
+                        size: 16,
+                        color: Color(0xFFED5A00),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Operating Hours',
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C1917),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.pickupLocation!.hours.trim(),
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: const Color(0xFF57534E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if ((order.pickupLocation?.instructions ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F6FB),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD6DFFA)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 1.5),
+                      child: Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: Color(0xFF2255D4),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pickup Instructions',
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C1917),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.pickupLocation!.instructions.trim(),
+                            style: AppTypography.inter(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: const Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (showOtp) ...[
               const SizedBox(height: 18),
               Text(

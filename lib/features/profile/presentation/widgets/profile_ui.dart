@@ -390,16 +390,105 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 ),
                 const SizedBox(height: 24),
                 CustomButton(
-                  label: 'Yes, Delete',
+                  label: 'Delete Account',
                   textColor: Color(0xFFFCF7EF),
-                  gradientColors: kFigmaActionGradient,
+                  gradientColors: _canDelete
+                      ? const [Color(0xFFB10F1A), Color(0xFFED5A00)]
+                      : [Colors.grey.shade400, Colors.grey.shade400],
                   borderRadius: 14,
                   enabled: _canDelete,
                   onTap: () async {
                     final comment = _ctrl.text.trim();
                     if (comment.isEmpty) return;
-                    Get.back();
-                    await widget.onConfirm(comment);
+
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: const Color(0xFFFEF9F3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: Text(
+                          'Delete Account Permanently?',
+                          style: AppTypography.lora(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFB10F1A),
+                          ),
+                        ),
+                        content: Text(
+                          'Are you sure you want to permanently delete your account? All your profile information, puja history, and preferences will be permanently removed. This action cannot be undone.',
+                          style: AppTypography.inter(
+                            fontSize: 13.5,
+                            height: 1.45,
+                            color: DonationUi.textPrimary,
+                          ),
+                        ),
+                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        actions: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: DonationUi.textPrimary,
+                                    side: const BorderSide(
+                                      color: DonationUi.cardBorder,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: AppTypography.inter(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: DonationUi.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFB10F1A),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    'Delete Permanently',
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true && mounted) {
+                      Get.back();
+                      await widget.onConfirm(comment);
+                    }
                   },
                 ),
               ],

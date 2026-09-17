@@ -98,22 +98,21 @@ class _ProfileRitualHistoryPageState extends State<ProfileRitualHistoryPage> {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: c.fetchHistory,
-            child: TabBarView(
-              children: [
-                _RitualHistoryList(
-                  items: c.finishedRituals,
-                  emptyMessage: 'No finished rituals yet',
-                  controller: c,
-                ),
-                _RitualHistoryList(
-                  items: c.pendingRituals,
-                  emptyMessage: 'No rituals in progress',
-                  controller: c,
-                ),
-              ],
-            ),
+          return TabBarView(
+            children: [
+              _RitualHistoryList(
+                items: c.finishedRituals,
+                emptyMessage: 'No finished rituals yet',
+                controller: c,
+                onRefresh: c.fetchHistory,
+              ),
+              _RitualHistoryList(
+                items: c.pendingRituals,
+                emptyMessage: 'No rituals in progress',
+                controller: c,
+                onRefresh: c.fetchHistory,
+              ),
+            ],
           );
         }),
       ),
@@ -126,28 +125,46 @@ class _RitualHistoryList extends StatelessWidget {
     required this.items,
     required this.emptyMessage,
     required this.controller,
+    required this.onRefresh,
   });
 
   final List<dynamic> items;
   final String emptyMessage;
   final RitualHistoryController controller;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
-        child: Text(
-          emptyMessage,
-          style: AppTypography.inter(color: DonationUi.textMuted),
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Text(
+                    emptyMessage,
+                    style: AppTypography.inter(color: DonationUi.textMuted),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, i) {
         final session = items[i];
         final ritual = session['ritual'] is Map
             ? session['ritual'] as Map
@@ -392,8 +409,9 @@ class _RitualHistoryList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   bool _isInProgress(Map session) {
     final status = session['status']?.toString().toUpperCase().trim();

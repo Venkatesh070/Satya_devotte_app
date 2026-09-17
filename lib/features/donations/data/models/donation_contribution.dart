@@ -107,7 +107,13 @@ class DonationContribution {
         final s = _str(json['createdAt']);
         return s.isEmpty ? null : DateTime.tryParse(s);
       }(),
-      note: _nullableStr(json['note']),
+      note: _nullableStr(
+        json['note'] ??
+            json['notes'] ??
+            json['userNote'] ??
+            json['message'] ??
+            json['remarks'],
+      ),
       // Admin-only fields. Tolerate either a flat string id (`user: "abc"`)
       // or a populated object, and accept multiple common name keys.
       donorId: user is String

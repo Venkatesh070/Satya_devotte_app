@@ -195,8 +195,16 @@ class FestivalModel {
     return FestivalModel(
       id: _str(json, ['_id', 'id']),
       title: _str(json, ['title', 'name']),
-      description: _str(json, ['description']),
-      date: _str(json, ['date', 'startDate']),
+      description: _str(json, [
+        'description',
+        'about',
+        'details',
+        'summary',
+        'significance',
+        'desc',
+        'festivalDescription',
+      ]),
+      date: _str(json, ['date', 'startDate', 'festivalDate', 'scheduledDate']),
       endDate: json['endDate'] as String?,
       category: _str(json, ['category'], 'MAJOR'),
       isGlobal: json['isGlobal'] as bool? ?? false,
