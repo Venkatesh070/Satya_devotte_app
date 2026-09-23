@@ -13,6 +13,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/pages/profile_about_page.dart';
+import 'package:satya_devotte_app/features/profile/presentation/pages/profile_spiritual_disclaimer_page.dart';
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
@@ -177,6 +178,12 @@ class ProfilePage extends StatelessWidget {
                             icon: Icons.info_outline,
                             label: 'About the app',
                             onTap: () => Get.to(() => const ProfileAboutPage()),
+                          ),
+                          ProfileLinkTile(
+                            icon: Icons.auto_awesome_outlined,
+                            label: 'Our Spiritual Disclaimer',
+                            onTap: () =>
+                                Get.to(() => const ProfileSpiritualDisclaimerPage()),
                           ),
                           ProfileLinkTile(
                             icon: Icons.logout_outlined,
