@@ -1023,8 +1023,6 @@ class _RitualDetailPageState extends State<RitualDetailPage>
                       pooja: p,
                       poojas: _deityPoojas,
                       festivalNames: _festivalNames,
-                      favoriteDeityIds: _favoriteDeityIds,
-                      onToggleFavoriteDeity: _toggleFavorite,
                       statusForPooja: (pooja) =>
                           _statusForPooja(pooja, pending, finished),
                       onSelectPooja: (pooja) {
@@ -2281,8 +2279,6 @@ class _CalendarTab extends StatelessWidget {
     required this.festivalNames,
     required this.statusForPooja,
     required this.onSelectPooja,
-    required this.favoriteDeityIds,
-    required this.onToggleFavoriteDeity,
   });
 
   final PoojaView pooja;
@@ -2290,8 +2286,6 @@ class _CalendarTab extends StatelessWidget {
   final Map<String, String> festivalNames;
   final String? Function(Map<String, dynamic> pooja) statusForPooja;
   final ValueChanged<Map<String, dynamic>> onSelectPooja;
-  final Set<String> favoriteDeityIds;
-  final ValueChanged<String> onToggleFavoriteDeity;
 
   @override
   Widget build(BuildContext context) {
@@ -2379,10 +2373,6 @@ class _CalendarTab extends StatelessWidget {
           Builder(
             builder: (context) {
               final pView = PoojaView(raw);
-              final dDoc = pView.deityDoc;
-              final dId = dDoc != null
-                  ? (dDoc['_id'] ?? dDoc['id'] ?? '').toString()
-                  : '';
 
               return _CalendarPujaCard(
                 pooja: pView,
@@ -2393,10 +2383,6 @@ class _CalendarTab extends StatelessWidget {
                 selected: _samePooja(raw, pooja.raw),
                 statusLabel: statusForPooja(raw),
                 onTap: () => onSelectPooja(raw),
-                isFavorite: dId.isNotEmpty && favoriteDeityIds.contains(dId),
-                onFavoriteTap: dId.isNotEmpty
-                    ? () => onToggleFavoriteDeity(dId)
-                    : null,
               );
             },
           ),
@@ -2437,8 +2423,6 @@ class _CalendarPujaCard extends StatelessWidget {
     required this.selected,
     this.statusLabel,
     required this.onTap,
-    this.isFavorite = false,
-    this.onFavoriteTap,
   });
 
   final PoojaView pooja;
@@ -2446,8 +2430,6 @@ class _CalendarPujaCard extends StatelessWidget {
   final bool selected;
   final String? statusLabel;
   final VoidCallback onTap;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2481,8 +2463,6 @@ class _CalendarPujaCard extends StatelessWidget {
               children: [
                 _CalendarThumb(
                   imageUrl: pooja.poojaImage,
-                  isFavorite: isFavorite,
-                  onFavoriteTap: onFavoriteTap,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -2640,12 +2620,8 @@ class _CalendarPujaCard extends StatelessWidget {
 class _CalendarThumb extends StatelessWidget {
   const _CalendarThumb({
     required this.imageUrl,
-    this.isFavorite = false,
-    this.onFavoriteTap,
   });
   final String? imageUrl;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2654,58 +2630,16 @@ class _CalendarThumb extends StatelessWidget {
     return SizedBox(
       width: 78,
       height: 78,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: validUrl
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl!.trim(),
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _fallback(),
-                      placeholder: (_, __) => _fallback(),
-                    )
-                  : _fallback(),
-            ),
-          ),
-          Positioned(
-            right: -10,
-            bottom: -6,
-            child: GestureDetector(
-              onTap: onFavoriteTap,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFCF7EF),
-                  shape: BoxShape.circle,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x22000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(color: const Color(0xFFEAD9BC), width: 1),
-                ),
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                  ).createShader(bounds),
-                  child: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
-                    size: 20,
-                    color: const Color(0xFFFCF7EF),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: validUrl
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!.trim(),
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _fallback(),
+                placeholder: (_, __) => _fallback(),
+              )
+            : _fallback(),
       ),
     );
   }

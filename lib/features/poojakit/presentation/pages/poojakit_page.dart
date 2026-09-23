@@ -442,29 +442,6 @@ class _ProductListTile extends StatelessWidget {
                             color: Color(0xFFE95700),
                           ),
                         )
-                      else if (isOutOfStock)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                              color: const Color(0xFFFFCDD2),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            'Out of stock',
-                            style: AppTypography.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFFC62828),
-                            ),
-                          ),
-                        )
                       else if (isClosed)
                         Container(
                           padding: const EdgeInsets.symmetric(

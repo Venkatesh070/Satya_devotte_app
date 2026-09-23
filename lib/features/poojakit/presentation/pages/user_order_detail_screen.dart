@@ -896,10 +896,14 @@ class _ActionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isProcessing = order.orderStatus == OrderStatus.processing;
     final canCancel =
         order.orderStatus.canUserCancel ||
         (order.orderStatus == OrderStatus.unknown &&
             !order.orderStatus.isShippedOrBeyond);
+    final showCancel = canCancel || isProcessing;
+    final isCancelDisabled = isProcessing;
+
     final canConfirm = order.canUserConfirmFulfillment;
     final canReturn = kOrderReturnReplaceEnabled && order.needsUserReturn;
     final canReplace = canUserRequestReturnOrReplace(
@@ -907,7 +911,7 @@ class _ActionSection extends StatelessWidget {
       refundRequest: refundRequest,
     );
 
-    if (!canCancel && !canConfirm && !canReplace && !canReturn) {
+    if (!showCancel && !canConfirm && !canReplace && !canReturn) {
       return const SizedBox.shrink();
     }
 
@@ -989,13 +993,16 @@ class _ActionSection extends StatelessWidget {
                 );
               },
             ),
-          if (canCancel)
+          if (showCancel)
             _ActionButton(
               label: 'Cancel Order',
               icon: Icons.cancel_outlined,
               loading: loading,
-              destructive: true,
-              onTap: () => _showCancelDialog(order, controller, onRefresh),
+              destructive: !isCancelDisabled,
+              disabled: isCancelDisabled,
+              onTap: isCancelDisabled
+                  ? null
+                  : () => _showCancelDialog(order, controller, onRefresh),
             ),
         ],
       );
@@ -1206,23 +1213,26 @@ class _ActionButton extends StatelessWidget {
     required this.loading,
     required this.onTap,
     this.destructive = false,
+    this.disabled = false,
   });
 
   final String label;
   final IconData icon;
   final bool loading;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool destructive;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
+    final isDisabled = disabled || loading;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: SizedBox(
         width: double.infinity,
         height: 44,
         child: OutlinedButton.icon(
-          onPressed: loading ? null : onTap,
+          onPressed: isDisabled ? null : onTap,
           icon: loading
               ? const SizedBox(
                   width: 16,
@@ -1232,11 +1242,18 @@ class _ActionButton extends StatelessWidget {
               : Icon(icon, size: 17),
           label: Text(label),
           style: OutlinedButton.styleFrom(
-            foregroundColor: destructive
-                ? Colors.redAccent
-                : const Color(0xFFE95700),
+            foregroundColor: isDisabled
+                ? const Color(0xFFA8A29E)
+                : destructive
+                    ? Colors.redAccent
+                    : const Color(0xFFE95700),
+            disabledForegroundColor: const Color(0xFFA8A29E),
             side: BorderSide(
-              color: destructive ? Colors.redAccent : const Color(0xFFE95700),
+              color: isDisabled
+                  ? const Color(0xFFE7E5E4)
+                  : destructive
+                      ? Colors.redAccent
+                      : const Color(0xFFE95700),
             ),
             textStyle: const TextStyle(
               fontSize: 11,

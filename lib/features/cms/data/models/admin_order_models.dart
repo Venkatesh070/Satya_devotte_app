@@ -104,11 +104,9 @@ extension OrderStatusX on OrderStatus {
       this == OrderStatus.fulfilled ||
       this == OrderStatus.cancelled;
 
-  /// Devotee may cancel only before the order ships / is ready for pickup.
+  /// Devotee may cancel only before the order starts processing.
   bool get canUserCancel =>
-      this == OrderStatus.placed ||
-      this == OrderStatus.processing ||
-      this == OrderStatus.packed;
+      this == OrderStatus.placed;
 
   static OrderStatus parse(dynamic v) {
     final s = (v ?? '').toString().toUpperCase().trim();
