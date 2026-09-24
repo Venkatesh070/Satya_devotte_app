@@ -1688,7 +1688,7 @@ class _QuoteCardState extends State<_QuoteCard> {
   static const double _flowerSize = 100;
   static const double _horizontalAttach = 22;
   static const double _tabHeight = 35;
-  static const double _contentHeight = 120;
+  static const double _contentHeight = 130;
 
   String get _tabText {
     switch (_selectedTab) {

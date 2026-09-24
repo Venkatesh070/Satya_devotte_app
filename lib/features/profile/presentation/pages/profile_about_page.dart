@@ -20,7 +20,7 @@ Experience Spiritual Alignment Every Day with the Sathya Application.
 
 Sathya is your personal digital sanctuary, designed to bridge ancient Vedic traditions with modern convenience. Whether you are seeking to maintain a consistent daily ritual practice, track significant astronomical shifts, or easily source authentic spiritual items, Sathya provides a streamlined, secure ecosystem to guide your journey.
 
-Operated under RedIn Consulting, our platform offers verified, end-to-end solutions for contemporary devotees seeking structure, precision, and authenticity in their spiritual lifestyles.
+Operated under RedIn Consulting X WolfpackEnergies, our platform offers verified, end-to-end solutions for contemporary devotees seeking structure, precision, and authenticity in their spiritual lifestyles.
 
 Key Features Built for Your Practice:
 
@@ -112,7 +112,7 @@ Step into a more organized, deeply connected spiritual routine. Download the Sat
             ),
             const SizedBox(height: 8),
             Text(
-              'Operated under RedIn Consulting, our platform offers verified, end-to-end solutions for contemporary devotees seeking structure, precision, and authenticity in their spiritual lifestyles.',
+              'Operated under RedIn Consulting X WolfpackEnergies, our platform offers verified, end-to-end solutions for contemporary devotees seeking structure, precision, and authenticity in their spiritual lifestyles.',
               style: AppTypography.inter(
                 fontSize: 14,
                 height: 1.6,

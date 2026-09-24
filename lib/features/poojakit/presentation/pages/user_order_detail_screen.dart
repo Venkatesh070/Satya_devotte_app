@@ -145,10 +145,16 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    UserOrderStatusChips(
-                      order: _order,
-                      request: _replacementRequest,
-                      refundRequest: _refundRequest,
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: UserOrderStatusChips(
+                          order: _order,
+                          request: _replacementRequest,
+                          refundRequest: _refundRequest,
+                        ),
+                      ),
                     ),
                   ],
                 ),
