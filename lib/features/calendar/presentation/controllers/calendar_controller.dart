@@ -358,10 +358,6 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
       );
       if (success) {
         _pendingCalendarEventId = fields.id;
-        ToastUtil.showInfo(
-          'Please save the event in your calendar',
-          title: 'Google Calendar',
-        );
       } else {
         ToastUtil.showError(
           'Could not open your calendar app. Please try again.',

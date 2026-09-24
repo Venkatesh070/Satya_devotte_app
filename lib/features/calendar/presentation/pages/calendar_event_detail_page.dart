@@ -303,7 +303,7 @@ class _EventDetailActions extends StatelessWidget {
                     children: [
                       Icon(
                         isAdded ? Icons.check_circle_outline : Icons.event,
-                        color: Color(0xFFFCF7EF),
+                        color: const Color(0xFFFCF7EF),
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -317,7 +317,7 @@ class _EventDetailActions extends StatelessWidget {
                           style: AppTypography.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFFFCF7EF),
+                            color: const Color(0xFFFCF7EF),
                           ),
                         ),
                       ),
