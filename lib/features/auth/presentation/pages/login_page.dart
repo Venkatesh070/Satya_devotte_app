@@ -112,15 +112,18 @@ class _LoginPageState extends State<LoginPage>
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Obx(() {
-                  final isLoading = controller.isGoogleSignInLoading;
+                  final isGoogleLoading = controller.isGoogleSignInLoading;
+                  final isAppleLoading = controller.isAppleSignInLoading;
                   final isEmailLoading = controller.isEmailSignInLoading;
+                  final isAnyLoading =
+                      isGoogleLoading || isAppleLoading || isEmailLoading;
 
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _SocialButton(
                         label: 'Continue with Google',
-                        backgroundColor: Color(0xFFFCF7EF),
+                        backgroundColor: const Color(0xFFFCF7EF),
                         textColor: const Color(0xFF1F1F1F),
                         hasBorder: true,
                         leading: SvgPicture.asset(
@@ -128,8 +131,8 @@ class _LoginPageState extends State<LoginPage>
                           width: 18,
                           height: 18,
                         ),
-                        isLoading: isLoading,
-                        isEnabled: !isLoading && !isEmailLoading,
+                        isLoading: isGoogleLoading,
+                        isEnabled: !isAnyLoading,
                         onTap: () async {
                           final offlineService = Get.find<OfflineService>();
                           if (!offlineService.checkAndShowDialog()) return;
@@ -150,19 +153,28 @@ class _LoginPageState extends State<LoginPage>
                       _SocialButton(
                         label: 'Continue with Apple',
                         backgroundColor: Colors.black,
-                        textColor: Color(0xFFFCF7EF),
+                        textColor: const Color(0xFFFCF7EF),
                         leading: SvgPicture.asset(
                           'assets/svgs/apple.svg',
                           width: 18,
                           height: 18,
                         ),
-                        isEnabled: !isLoading && !isEmailLoading,
+                        isLoading: isAppleLoading,
+                        isEnabled: !isAnyLoading,
                         onTap: () async {
                           final offlineService = Get.find<OfflineService>();
                           if (!offlineService.checkAndShowDialog()) return;
 
-                          await controller.signInWithApple();
-                          _navigateAfterLogin();
+                          final isSuccess = await controller.signInWithApple();
+                          if (isSuccess) {
+                            _navigateAfterLogin();
+                          } else if (controller.lastAuthError != null) {
+                            showAppSnackbar(
+                              title: 'Login Failed',
+                              message: controller.lastAuthError!,
+                              isError: true,
+                            );
+                          }
                         },
                       ),
                       const SizedBox(height: 12),
@@ -183,7 +195,7 @@ class _LoginPageState extends State<LoginPage>
                         ],
                         textColor: Color(0xFFFCF7EF),
                         isLoading: isEmailLoading,
-                        enabled: !isEmailLoading && !isLoading,
+                        enabled: !isAnyLoading,
                         borderRadius: 14,
                         onTap: () {
                           final offlineService = Get.find<OfflineService>();

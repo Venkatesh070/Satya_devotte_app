@@ -126,7 +126,46 @@ class FirebaseService {
     };
   }
 
-  Future<void> signInWithApple() async {}
+  Future<void> signInWithApple() async {
+    try {
+      final appleProvider = AppleAuthProvider();
+      appleProvider.addScope('email');
+      appleProvider.addScope('name');
+
+      final UserCredential userCredential;
+      if (kIsWeb) {
+        userCredential = await _firebaseAuth.signInWithPopup(appleProvider);
+      } else {
+        userCredential = await _firebaseAuth.signInWithProvider(appleProvider);
+      }
+
+      final User? user = userCredential.user;
+      if (user != null && kDebugMode) {
+        print("======= APPLE SIGN IN SUCCESS =======");
+        print("UID:            ${user.uid}");
+        print("Name:           ${user.displayName}");
+        print("Email:          ${user.email}");
+        print("Phone:          ${user.phoneNumber}");
+        print("Photo URL:      ${user.photoURL}");
+        print("Email Verified: ${user.emailVerified}");
+        print(
+          "Is New User:    ${userCredential.additionalUserInfo?.isNewUser}",
+        );
+        print(
+          "Provider ID:    ${userCredential.additionalUserInfo?.providerId}",
+        );
+        print("Profile Data:   ${userCredential.additionalUserInfo?.profile}");
+        print("======================================");
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print("======= APPLE SIGN IN ERROR =======");
+        print(error);
+        print("===================================");
+      }
+      rethrow;
+    }
+  }
 
   Future<void> signInWithEmailAndPassword({
     required String email,

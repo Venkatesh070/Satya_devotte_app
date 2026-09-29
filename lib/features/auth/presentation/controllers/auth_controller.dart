@@ -36,6 +36,7 @@ class AuthController extends GetxController {
 
   final _isAuthenticated = false.obs;
   final _isGoogleSignInLoading = false.obs;
+  final _isAppleSignInLoading = false.obs;
   final _isEmailSignInLoading = false.obs;
   final _lastAuthError = RxnString();
   final _userRole = RxString('user');
@@ -45,6 +46,7 @@ class AuthController extends GetxController {
 
   bool get isAuthenticated => _isAuthenticated.value;
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
+  bool get isAppleSignInLoading => _isAppleSignInLoading.value;
   bool get isEmailSignInLoading => _isEmailSignInLoading.value;
   bool get isAuthLoading => _isAuthLoading.value;
   String? get lastAuthError => _lastAuthError.value;
@@ -698,10 +700,44 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> signInWithApple() async {
-    await _firebaseService.signInWithApple();
-    _isAuthenticated.value = true;
-    await _registerDeviceForPush();
+  // ─── Apple Sign-In ───────────────────────────────────────────
+  Future<bool> signInWithApple() async {
+    if (_authApiInFlight ||
+        _isGoogleSignInLoading.value ||
+        _isAppleSignInLoading.value ||
+        _isEmailSignInLoading.value) {
+      _lastAuthError.value = 'Login is already in progress. Please wait.';
+      return false;
+    }
+    _authApiInFlight = true;
+    _isAppleSignInLoading.value = true;
+    _lastAuthError.value = null;
+    try {
+      await _firebaseService.signInWithApple();
+      final firebaseIdToken = await _firebaseService.getIdToken(
+        forceRefresh: true,
+      );
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Firebase ID token is missing after Apple sign in.');
+      }
+      final appleProfile = _firebaseService.getCurrentUserProfileDetails();
+      final loginResult = await _authRepository.loginWithFirebaseToken(
+        firebaseIdToken,
+        userProfile: appleProfile,
+      );
+      await persistLoginResult(loginResult);
+      return true;
+    } catch (error) {
+      await _clearAuthSession();
+      _clearProfileControllerCache();
+      await _firebaseService.signOut();
+      _isAuthenticated.value = false;
+      _lastAuthError.value = _mapAppleSignInError(error);
+      return false;
+    } finally {
+      _isAppleSignInLoading.value = false;
+      _authApiInFlight = false;
+    }
   }
 
   Future<void> signOut() async {
@@ -859,6 +895,56 @@ class AuthController extends GetxController {
       return 'Login API failed. Please try again.';
     }
     return 'Google sign in failed. Please try again.';
+  }
+
+  String? _mapAppleSignInError(Object error) {
+    final message = error.toString();
+
+    // User cancelled authentication
+    if (message.contains('1001') ||
+        message.toLowerCase().contains('canceled') ||
+        message.toLowerCase().contains('cancelled') ||
+        message.contains('popup_closed') ||
+        message.contains('popup_closed_by_user') ||
+        message.toLowerCase().contains('user cancelled') ||
+        message.toLowerCase().contains('user canceled')) {
+      return null;
+    }
+
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with the same email using a different sign-in method.';
+        case 'invalid-credential':
+          return 'Invalid Apple credentials. Please try again.';
+        case 'operation-not-allowed':
+          return 'Apple Sign In is not enabled in Firebase Authentication.';
+        default:
+          return error.message ?? 'Apple sign in failed. Please try again.';
+      }
+    }
+
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach login server. Please check server and network.';
+      }
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
+      if (statusCode == 401 || statusCode == 403) {
+        return 'Login verification failed by server.';
+      }
+      if (statusCode != null && statusCode >= 500) {
+        return 'Server error during login. Please try again.';
+      }
+      return 'Login API failed. Please try again.';
+    }
+
+    return 'Apple sign in failed. Please try again.';
   }
 
   String _mapEmailSignInError(Object error) {
