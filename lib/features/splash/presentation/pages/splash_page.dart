@@ -51,14 +51,15 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _navigate() async {
-    // Wait for splash to show
-    await Future<void>.delayed(const Duration(seconds: 5));
-    if (!mounted) return;
-
     final auth = Get.find<AuthController>();
 
-    // Restore saved session from SharedPreferences
-    await auth.loadSavedSession();
+    // Run session restoration in parallel with a clean 2-second splash
+    await Future.wait([
+      Future<void>.delayed(const Duration(seconds: 2)),
+      auth.loadSavedSession().catchError((e) {
+        debugPrint('[splash] loadSavedSession error: $e');
+      }),
+    ]);
 
     if (!mounted) return;
 
@@ -68,22 +69,29 @@ class _SplashPageState extends State<SplashPage>
       return;
     }
 
-    // Cold-start notification tap — replace splash with notifications
-    // instead of home, so the user lands on the notification screen.
-    final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMsg != null) {
-      if (kDebugMode) {
-        debugPrint('[splash cold] type=${initialMsg.data['type']}');
+    // Cold-start notification tap with safety timeout so it never hangs
+    try {
+      final initialMsg = await FirebaseMessaging.instance
+          .getInitialMessage()
+          .timeout(
+            const Duration(milliseconds: 1500),
+            onTimeout: () => null,
+          );
+      if (initialMsg != null) {
+        if (kDebugMode) {
+          debugPrint('[splash cold] type=${initialMsg.data['type']}');
+        }
+        if (!AdminNotificationRouter.isOperationalType(
+          initialMsg.data['type']?.toString(),
+        )) {
+          Get.offAllNamed(AppRoutes.notifications, arguments: initialMsg.data);
+        }
+        await Get.find<NotificationService>().processPendingNotifications();
+        return;
       }
-      if (!AdminNotificationRouter.isOperationalType(
-        initialMsg.data['type']?.toString(),
-      )) {
-        Get.offAllNamed(AppRoutes.notifications, arguments: initialMsg.data);
-      }
-      await Get.find<NotificationService>().processPendingNotifications();
-      return;
-    }
+    } catch (_) {}
 
+    if (!mounted) return;
     auth.navigateAfterLogin();
   }
 

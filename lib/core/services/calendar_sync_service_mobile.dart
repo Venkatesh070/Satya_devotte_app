@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:android_intent_plus/android_intent.dart';
+
+const _calendarChannel = MethodChannel('com.sathya.app/calendar');
 
 Future<bool> addEventToCalendarImpl({
   required String title,
@@ -10,7 +13,26 @@ Future<bool> addEventToCalendarImpl({
   required DateTime endDate,
 }) async {
   try {
-    // Editor flow: opens native calendar screen where user confirms Save.
+    if (Platform.isIOS) {
+      try {
+        print('[Dart Calendar] Invoking native channel com.sathya.app/calendar addEvent: $title');
+        final res = await _calendarChannel.invokeMethod<bool>('addEvent', {
+          'title': title,
+          'description': description?.trim() ?? '',
+          'location': 'Sathya App',
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+          'allDay': true,
+        });
+        print('[Dart Calendar] Native channel returned result: $res');
+        return res ?? true;
+      } catch (e) {
+        print('[Dart Calendar] Native iOS calendar channel ERROR: $e');
+        return false;
+      }
+    }
+
+    // Android / fallback flow: opens native calendar screen where user confirms Save.
     final event = Event(
       title: title,
       description: description?.trim() ?? '',

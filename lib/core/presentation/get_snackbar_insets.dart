@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 
 /// GetX snackbars stretch to the full viewport width on web. This helper
 /// supplies a max width and asymmetric margins so the bar sits in the
@@ -42,30 +43,10 @@ void showAppSnackbar({
   required String message,
   bool isError = false,
 }) {
-  final inset = GetSnackbarInsets.platformDefault();
-
-  Get.snackbar(
-    title,
-    message,
-    snackPosition: SnackPosition.TOP,
-    maxWidth: inset.maxWidth,
-    backgroundColor: isError
-        ? const Color(0xFFF44336)
-        : const Color(0xFF4CAF50),
-    colorText: Color(0xFFFCF7EF),
-    margin: inset.margin,
-    borderRadius: 10,
-    icon: Icon(
-      isError ? Icons.error_outline : Icons.check_circle_outline,
-      color: Color(0xFFFCF7EF),
-    ),
-    duration: const Duration(seconds: 3),
-    boxShadows: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.2),
-        blurRadius: 8,
-        offset: const Offset(0, 3),
-      ),
-    ],
-  );
+  if (isError) {
+    ToastUtil.showError(message, title: title.isNotEmpty ? title : 'Error');
+  } else {
+    ToastUtil.showSuccess(message, title: title.isNotEmpty ? title : 'Success');
+  }
 }
+

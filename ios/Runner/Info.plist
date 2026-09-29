@@ -49,12 +49,29 @@
 	<true/>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to add events to your calendar</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>This app needs access to add pooja and festival events to your calendar</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>This app needs access to add pooja and festival events to your calendar</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>This app needs access to reminders for calendar events</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>This app needs access to reminders for calendar events</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Required to take profile photos</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Satya uses your current location to fill your delivery address.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Required to pick images</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs access to contacts for calendar location support</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

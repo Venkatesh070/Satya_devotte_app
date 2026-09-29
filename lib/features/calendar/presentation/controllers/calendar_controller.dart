@@ -359,23 +359,32 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
         start.month,
         start.day,
       ).add(const Duration(days: 1));
+      print('[CalendarController] addToDeviceCalendar calling addEventToCalendar for: ${fields.title} ($start to $end)');
       final success = await addEventToCalendar(
         title: fields.title,
         description: fields.description,
         startDate: start,
         endDate: end,
       );
+      print('[CalendarController] addEventToCalendar completed with success=$success');
       if (success) {
-        _pendingCalendarEventId = fields.id;
-        _pendingCalendarEventTitle = fields.title;
+        if (!addedToCalendarIds.contains(fields.id)) {
+          addedToCalendarIds.add(fields.id);
+          addedToCalendarIds.refresh();
+          _saveCalendarStatus();
+          ToastUtil.showSuccess(
+            '${fields.title} has been added to your calendar.',
+            title: 'Added to Calendar',
+          );
+        }
       } else {
         ToastUtil.showError(
-          'Could not open your device calendar app. Please try again.',
+          'Could not add ${fields.title} to your calendar. Please try again.',
           title: 'Calendar Error',
         );
       }
-    } catch (e) {
-      debugPrint('CalendarController: addToDeviceCalendar failed: $e');
+    } catch (e, stack) {
+      debugPrint('CalendarController: addToDeviceCalendar failed: $e\n$stack');
       ToastUtil.showError(
         'Could not add ${fields.title} to your calendar. Please try again.',
         title: 'Calendar Error',

@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com</string>
+	<string>460042314237-b5m7e901dveu15js03niu4qilje9bp8l.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn</string>
+	<string>com.googleusercontent.apps.460042314237-b5m7e901dveu15js03niu4qilje9bp8l</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>460042314237-5t9kmkfc520ls0v614vsq3li4khmn7p8.apps.googleusercontent.com</string>
+	<string>460042314237-69jmnt4fbqsjg3ovo4b1krcpvfgn0i19.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyBV-UG1q4LkNW4MT-w5XER5hgIChVr6C3w</string>
 	<key>GCM_SENDER_ID</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.sathyaApp</string>
+	<string>com.sathya.app</string>
 	<key>PROJECT_ID</key>
 	<string>sathyatest-4b2b1</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:460042314237:ios:9af2f73207cf26e5847994</string>
+	<string>1:460042314237:ios:eff0327af7386050847994</string>
 	<key>DATABASE_URL</key>
 	<string>https://sathyatest-4b2b1-default-rtdb.firebaseio.com</string>
 </dict>

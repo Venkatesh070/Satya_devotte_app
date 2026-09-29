@@ -646,8 +646,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
-    const navHeight = 78.0;
+    final bottomSafe = MediaQuery.paddingOf(context).bottom;
+    final navHeight = 70.0 + (bottomSafe > 0 ? (bottomSafe * 0.5) : 0.0);
 
     return PopScope(
       canPop: false,
@@ -689,44 +689,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             const ProfilePage(),
           ],
         ),
-        bottomNavigationBar: MediaQuery.removePadding(
-          context: context,
-          removeBottom: true,
-          child: SafeArea(
-            child: SizedBox(
-              height: navHeight + 52 + bottomSafe,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  if (bottomSafe > 0)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: bottomSafe,
-                      child: const ColoredBox(color: Color(0xFFF8F1E2)),
-                    ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: bottomSafe,
-                    height: navHeight,
-                    child: _BottomNavBar(
-                      currentIndex: _currentIndex,
-                      onTap: _onTabSelected,
-                    ),
-                  ),
-                  if (_currentIndex == _HomeTabs.home)
-                    Positioned(
-                      left: 0,
-                      bottom: bottomSafe + navHeight + 6,
-                      child: _StickyShopButton(
-                        onTap: () => Get.to(() => const PoojaKitPage()),
-                      ),
-                    ),
-                ],
+        bottomNavigationBar: SizedBox(
+          height: navHeight + 52,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: navHeight,
+                child: _BottomNavBar(
+                  currentIndex: _currentIndex,
+                  onTap: _onTabSelected,
+                  bottomSafe: bottomSafe,
+                ),
               ),
-            ),
+              if (_currentIndex == _HomeTabs.home)
+                Positioned(
+                  left: 0,
+                  bottom: navHeight + 6,
+                  child: _StickyShopButton(
+                    onTap: () => Get.to(() => const PoojaKitPage()),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -1049,60 +1036,62 @@ class _HomeCircleSection extends StatelessWidget {
 }
 
 class _BottomNavBar extends StatelessWidget {
-  const _BottomNavBar({required this.currentIndex, required this.onTap});
+  const _BottomNavBar({
+    required this.currentIndex,
+    required this.onTap,
+    this.bottomSafe = 0.0,
+  });
 
   final int currentIndex;
   final Future<void> Function(int) onTap;
+  final double bottomSafe;
   static const int lastTabIndex = _HomeTabs.last;
 
   static const Color navBarColor = Color(0xFFF8F1E2);
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 78,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final totalWidth = constraints.maxWidth;
-          final slotWidth = totalWidth / 6;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        final slotWidth = totalWidth / 6;
 
-          return TweenAnimationBuilder<double>(
-            tween: Tween<double>(
-              begin: currentIndex.toDouble(),
-              end: currentIndex.toDouble(),
-            ),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            builder: (context, animProgress, _) {
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Fluid elevated hump background with flat side edges
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _FluidHumpPainter(
-                        animProgress: animProgress,
-                        totalTabs: 6,
-                        color: navBarColor,
-                      ),
+        return TweenAnimationBuilder<double>(
+          tween: Tween<double>(
+            begin: currentIndex.toDouble(),
+            end: currentIndex.toDouble(),
+          ),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          builder: (context, animProgress, _) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Fluid elevated hump background with flat side edges
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _FluidHumpPainter(
+                      animProgress: animProgress,
+                      totalTabs: 6,
+                      color: navBarColor,
                     ),
                   ),
+                ),
 
-                  // 6 Navigation Tab Items
-                  for (int i = 0; i < 6; i++)
-                    Positioned(
-                      left: i * slotWidth,
-                      width: slotWidth,
-                      top: 0,
-                      bottom: 0,
-                      child: _buildNavItem(i, animProgress),
-                    ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+                // 6 Navigation Tab Items
+                for (int i = 0; i < 6; i++)
+                  Positioned(
+                    left: i * slotWidth,
+                    width: slotWidth,
+                    top: 0,
+                    bottom: bottomSafe > 0 ? (bottomSafe * 0.4) : 0,
+                    child: _buildNavItem(i, animProgress),
+                  ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

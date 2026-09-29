@@ -101,8 +101,7 @@ class AuthController extends GetxController {
 
   void _syncSessionUser() {
     final data = _authSessionService.userData;
-    _sessionUser.value =
-        data == null ? null : Map<String, dynamic>.from(data);
+    _sessionUser.value = data == null ? null : Map<String, dynamic>.from(data);
   }
 
   Future<void> _clearAuthSession() async {
@@ -163,8 +162,9 @@ class AuthController extends GetxController {
       if (payload is Map && payload.containsKey('exp')) {
         final exp = payload['exp'];
         if (exp is num) {
-          final expiryDate =
-              DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+          final expiryDate = DateTime.fromMillisecondsSinceEpoch(
+            exp.toInt() * 1000,
+          );
           return DateTime.now().isAfter(expiryDate);
         }
       }

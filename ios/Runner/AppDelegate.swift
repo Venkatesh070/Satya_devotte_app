@@ -3,6 +3,146 @@ import FirebaseMessaging
 import UIKit
 import UserNotifications
 import FirebaseCore
+import EventKit
+import EventKitUI
+
+class CalendarHandler: NSObject, EKEventEditViewDelegate {
+  static let shared = CalendarHandler()
+  let eventStore = EKEventStore()
+  var pendingResult: FlutterResult?
+
+  func addEvent(
+    title: String,
+    description: String,
+    location: String,
+    startDate: Date,
+    endDate: Date,
+    allDay: Bool,
+    result: @escaping FlutterResult
+  ) {
+    print("[iOS Calendar] addEvent requested: title='\(title)', start=\(startDate), end=\(endDate), allDay=\(allDay)")
+    self.pendingResult = result
+
+    let performAdd = {
+      DispatchQueue.main.async {
+        let event = EKEvent(eventStore: self.eventStore)
+        event.title = title
+        event.notes = description
+        event.location = location
+        event.startDate = startDate
+        event.endDate = endDate > startDate ? endDate : startDate.addingTimeInterval(86400)
+        event.isAllDay = allDay
+        event.calendar = self.eventStore.defaultCalendarForNewEvents
+
+        let editController = EKEventEditViewController()
+        editController.eventStore = self.eventStore
+        editController.event = event
+        editController.editViewDelegate = self
+        editController.modalPresentationStyle = .pageSheet
+
+        guard let windowScene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first(where: { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }) ?? UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+              let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
+              let rootVC = keyWindow.rootViewController else {
+          print("[iOS Calendar] ERROR: Could not find keyWindow or rootViewController!")
+          result(false)
+          return
+        }
+
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController, !presented.isBeingDismissed {
+          topVC = presented
+        }
+
+        print("[iOS Calendar] Presenting EKEventEditViewController on \(type(of: topVC))...")
+        topVC.present(editController, animated: true) {
+          print("[iOS Calendar] EKEventEditViewController presentation completed successfully.")
+        }
+      }
+    }
+
+    if #available(iOS 17.0, *) {
+      print("[iOS Calendar] Requesting full access to events (iOS 17+)...")
+      eventStore.requestFullAccessToEvents { granted, error in
+        print("[iOS Calendar] Permission response: granted=\(granted), error=\(String(describing: error))")
+        if granted && error == nil {
+          performAdd()
+        } else {
+          DispatchQueue.main.async { result(false) }
+        }
+      }
+    } else {
+      print("[iOS Calendar] Requesting access to events (iOS <17)...")
+      eventStore.requestAccess(to: .event) { granted, error in
+        print("[iOS Calendar] Permission response: granted=\(granted), error=\(String(describing: error))")
+        if granted && error == nil {
+          performAdd()
+        } else {
+          DispatchQueue.main.async { result(false) }
+        }
+      }
+    }
+  }
+
+  func eventEditViewController(
+    _ controller: EKEventEditViewController,
+    didCompleteWith action: EKEventEditViewAction
+  ) {
+    let actionName: String
+    switch action {
+    case .saved: actionName = "saved"
+    case .canceled: actionName = "canceled"
+    case .deleted: actionName = "deleted"
+    @unknown default: actionName = "unknown"
+    }
+    print("[iOS Calendar] eventEditViewController didCompleteWith action: \(actionName)")
+
+    controller.dismiss(animated: true) { [weak self] in
+      print("[iOS Calendar] EKEventEditViewController dismissed, returning result to Flutter: \(action == .saved)")
+      let success = (action == .saved)
+      self?.pendingResult?(success)
+      self?.pendingResult = nil
+    }
+  }
+}
+
+class NativeCalendarPlugin: NSObject, FlutterPlugin {
+  static func register(with registrar: FlutterPluginRegistrar) {
+    print("[iOS Calendar] NativeCalendarPlugin registered on method channel 'com.sathya.app/calendar'")
+    let channel = FlutterMethodChannel(
+      name: "com.sathya.app/calendar",
+      binaryMessenger: registrar.messenger()
+    )
+    let instance = NativeCalendarPlugin()
+    registrar.addMethodCallDelegate(instance, channel: channel)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    print("[iOS Calendar] NativeCalendarPlugin handle: method='\(call.method)'")
+    if call.method == "addEvent", let args = call.arguments as? [String: Any] {
+      let title = args["title"] as? String ?? ""
+      let desc = args["description"] as? String ?? ""
+      let loc = args["location"] as? String ?? ""
+      let startMs = args["startDate"] as? Double ?? Double(args["startDate"] as? Int64 ?? 0)
+      let endMs = args["endDate"] as? Double ?? Double(args["endDate"] as? Int64 ?? 0)
+      let allDay = args["allDay"] as? Bool ?? true
+
+      let start = Date(timeIntervalSince1970: startMs / 1000.0)
+      let end = Date(timeIntervalSince1970: endMs / 1000.0)
+
+      CalendarHandler.shared.addEvent(
+        title: title,
+        description: desc,
+        location: loc,
+        startDate: start,
+        endDate: end,
+        allDay: allDay,
+        result: result
+      )
+    } else {
+      result(FlutterMethodNotImplemented)
+    }
+  }
+}
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -16,6 +156,10 @@ import FirebaseCore
     }
     UNUserNotificationCenter.current().delegate = self
     application.registerForRemoteNotifications()
+
+    if !self.hasPlugin("NativeCalendarPlugin"), let registrar = self.registrar(forPlugin: "NativeCalendarPlugin") {
+      NativeCalendarPlugin.register(with: registrar)
+    }
 
     return super.application(
       application,
@@ -55,5 +199,9 @@ import FirebaseCore
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if !engineBridge.pluginRegistry.hasPlugin("NativeCalendarPlugin"),
+       let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NativeCalendarPlugin") {
+      NativeCalendarPlugin.register(with: registrar)
+    }
   }
 }

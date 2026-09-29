@@ -1,5 +1,4 @@
-// lib/features/poojakit/presentation/pages/user_order_detail_screen.dart
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/config/order_return_replace_config.dart';
@@ -285,7 +284,12 @@ class _DeliveryCard extends StatelessWidget {
   Future<void> _openMapDirections(String address) async {
     if (address.trim().isEmpty) return;
     final encoded = Uri.encodeComponent(address.trim());
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=$encoded';
+    final String url;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      url = 'https://maps.apple.com/?daddr=$encoded';
+    } else {
+      url = 'https://www.google.com/maps/dir/?api=1&destination=$encoded';
+    }
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

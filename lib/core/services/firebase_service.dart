@@ -106,7 +106,9 @@ class FirebaseService {
         ? const <String>[]
         : fullName.split(RegExp(r'\s+'));
     final firstName = nameParts.isEmpty ? '' : nameParts.first;
-    final lastName = nameParts.length <= 1 ? '' : nameParts.sublist(1).join(' ');
+    final lastName = nameParts.length <= 1
+        ? ''
+        : nameParts.sublist(1).join(' ');
     final providerIds = user.providerData
         .map((p) => p.providerId)
         .where((p) => p.trim().isNotEmpty)
@@ -170,6 +172,7 @@ class FirebaseService {
   Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
+
     /// When `false`, only Firebase email/password sign-in runs — no
     /// `fetchSignInMethodsForEmail` pre-check and no Google popup / linking.
     /// Used by the Flutter **web** admin login (`signInAsAdmin`).
@@ -235,18 +238,26 @@ class FirebaseService {
     required String password,
     bool autoSendVerificationEmail = false,
   }) async {
-    print("FirebaseService.createUserWithEmailAndPassword: Starting for email: ${email.trim()}");
+    print(
+      "FirebaseService.createUserWithEmailAndPassword: Starting for email: ${email.trim()}",
+    );
     try {
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      print("FirebaseService.createUserWithEmailAndPassword: User created! UID: ${userCredential.user?.uid}");
+      print(
+        "FirebaseService.createUserWithEmailAndPassword: User created! UID: ${userCredential.user?.uid}",
+      );
 
       if (autoSendVerificationEmail && userCredential.user != null) {
-        print("FirebaseService.createUserWithEmailAndPassword: Sending verification email...");
+        print(
+          "FirebaseService.createUserWithEmailAndPassword: Sending verification email...",
+        );
         await userCredential.user!.sendEmailVerification();
-        print("FirebaseService.createUserWithEmailAndPassword: Verification email sent successfully!");
+        print(
+          "FirebaseService.createUserWithEmailAndPassword: Verification email sent successfully!",
+        );
       }
     } catch (e) {
       print("FirebaseService.createUserWithEmailAndPassword: ERROR: $e");
@@ -257,16 +268,22 @@ class FirebaseService {
   Future<void> reloadCurrentUser() async {
     print("FirebaseService.reloadCurrentUser: Reloading user...");
     await _firebaseAuth.currentUser?.reload();
-    print("FirebaseService.reloadCurrentUser: User reloaded! emailVerified: ${_firebaseAuth.currentUser?.emailVerified}");
+    print(
+      "FirebaseService.reloadCurrentUser: User reloaded! emailVerified: ${_firebaseAuth.currentUser?.emailVerified}",
+    );
   }
 
   bool get isEmailVerified => _firebaseAuth.currentUser?.emailVerified ?? false;
 
   Future<void> sendEmailVerification() async {
-    print("FirebaseService.sendEmailVerification: Sending verification email...");
+    print(
+      "FirebaseService.sendEmailVerification: Sending verification email...",
+    );
     try {
       await _firebaseAuth.currentUser?.sendEmailVerification();
-      print("FirebaseService.sendEmailVerification: Verification email sent successfully!");
+      print(
+        "FirebaseService.sendEmailVerification: Verification email sent successfully!",
+      );
     } catch (e) {
       print("FirebaseService.sendEmailVerification: ERROR: $e");
       rethrow;
