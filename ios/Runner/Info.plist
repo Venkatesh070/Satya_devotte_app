@@ -4,8 +4,6 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>FirebaseAutomaticInitializationEnabled</key>
-	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -35,6 +33,7 @@
 			<array>
 				<string>com.googleusercontent.apps.460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn</string>
 				<string>com.googleusercontent.apps.1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj</string>
+				<string>com.googleusercontent.apps.1053803605697-dtvqed649pf4ue6qkgpamc1b8u10co9v</string>
 			</array>
 		</dict>
 		<dict>
@@ -44,22 +43,14 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>NSCameraUsageDescription</key>
-    <string>Required to take profile photos</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-    <string>Required to pick images</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Satya uses your current location to fill your delivery address.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>This app needs access to add events to your calendar</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
+	<key>FirebaseAutomaticInitializationEnabled</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app needs access to add events to your calendar</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Required to take profile photos</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Satya uses your current location to fill your delivery address.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -87,6 +78,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

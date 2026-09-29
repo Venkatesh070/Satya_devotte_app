@@ -2,6 +2,7 @@ import Flutter
 import FirebaseMessaging
 import UIKit
 import UserNotifications
+import FirebaseCore
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -10,16 +11,28 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    if FirebaseApp.app() == nil {
+      FirebaseApp.configure()
+    }
     UNUserNotificationCenter.current().delegate = self
-    // Do not call registerForRemoteNotifications() here. That can deliver an
-    // APNs token before Dart runs Firebase.initializeApp(), which auto-inits
-    // Firebase from GoogleService-Info.plist and causes [core/duplicate-app].
-    // FCM registers after Dart init via NotificationService.
+    application.registerForRemoteNotifications()
 
     return super.application(
       application,
       didFinishLaunchingWithOptions: launchOptions
     )
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    if #available(iOS 14.0, *) {
+      completionHandler([.banner, .badge, .sound, .list])
+    } else {
+      completionHandler([.alert, .badge, .sound])
+    }
   }
 
   override func application(

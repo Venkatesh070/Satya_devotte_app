@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj.apps.googleusercontent.com</string>
+	<string>1053803605697-dtvqed649pf4ue6qkgpamc1b8u10co9v.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj</string>
+	<string>com.googleusercontent.apps.1053803605697-dtvqed649pf4ue6qkgpamc1b8u10co9v</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>1053803605697-08ffqoh0298iim8r0s9j1v8e1jcqdgem.apps.googleusercontent.com</string>
+	<string>1053803605697-0egmismnl4bjgk8h605q30p428fsnoff.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyBOXwi8rDmeDc0OhUxuvjOFqSWnsdzeh34</string>
 	<key>GCM_SENDER_ID</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.sathyaApp</string>
+	<string>com.sathya.app</string>
 	<key>PROJECT_ID</key>
 	<string>satya-devotte-app</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:1053803605697:ios:564a9932a15f0c9a2a6e40</string>
+	<string>1:1053803605697:ios:af0b3b762dd726932a6e40</string>
 </dict>
 </plist>

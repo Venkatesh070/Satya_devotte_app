@@ -67,6 +67,7 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
 
   /// Tracks an event that was just launched into the device calendar app
   String? _pendingCalendarEventId;
+  String? _pendingCalendarEventTitle;
 
   /// Map of deity ID to their hex color string.
   final RxMap<String, String> deityColors = <String, String>{}.obs;
@@ -105,14 +106,16 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _pendingCalendarEventId != null) {
       final id = _pendingCalendarEventId!;
+      final title = _pendingCalendarEventTitle ?? 'Event';
       _pendingCalendarEventId = null;
+      _pendingCalendarEventTitle = null;
       if (!addedToCalendarIds.contains(id)) {
         addedToCalendarIds.add(id);
         addedToCalendarIds.refresh();
         _saveCalendarStatus();
         ToastUtil.showSuccess(
-          'Event added to your calendar',
-          title: 'Google Calendar',
+          '$title has been added to your calendar.',
+          title: 'Added to Calendar',
         );
       }
     }
@@ -331,7 +334,10 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
   Future<void> addToDeviceCalendar(dynamic event) async {
     final fields = _fieldsFor(event);
     if (fields == null) {
-      ToastUtil.showInfo('This event does not have a valid date.');
+      ToastUtil.showInfo(
+        'This event does not have a valid date.',
+        title: 'Calendar',
+      );
       return;
     }
 
@@ -339,7 +345,10 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
       addedToCalendarIds.remove(fields.id);
       addedToCalendarIds.refresh();
       await _saveCalendarStatus();
-      ToastUtil.showInfo('Removed from your saved calendar list');
+      ToastUtil.showInfo(
+        '${fields.title} has been removed from your saved calendar.',
+        title: 'Removed from Calendar',
+      );
       return;
     }
 
@@ -358,14 +367,19 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
       );
       if (success) {
         _pendingCalendarEventId = fields.id;
+        _pendingCalendarEventTitle = fields.title;
       } else {
         ToastUtil.showError(
-          'Could not open your calendar app. Please try again.',
+          'Could not open your device calendar app. Please try again.',
+          title: 'Calendar Error',
         );
       }
     } catch (e) {
       debugPrint('CalendarController: addToDeviceCalendar failed: $e');
-      ToastUtil.showError('Could not add this event. Please try again.');
+      ToastUtil.showError(
+        'Could not add ${fields.title} to your calendar. Please try again.',
+        title: 'Calendar Error',
+      );
     }
   }
 

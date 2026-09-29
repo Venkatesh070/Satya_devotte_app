@@ -10,9 +10,11 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/admin_notification_router.dart';
 import 'package:satya_devotte_app/core/notifications/push_router.dart';
 import 'package:satya_devotte_app/core/services/notification_platform.dart';
+import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
 
 /// Temp file shared between background handler and main isolate.
 /// `dart:io` works in any isolate — no platform channels needed.
@@ -108,9 +110,9 @@ class NotificationService with WidgetsBindingObserver {
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosSettings =
           DarwinInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false,
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
           );
       const InitializationSettings initSettings = InitializationSettings(
         android: androidSettings,
@@ -168,12 +170,10 @@ class NotificationService with WidgetsBindingObserver {
       // 5. iOS / macOS notification permission.
       if (notificationPlatformIsIOS || notificationPlatformIsMacOS) {
         await _fcm.requestPermission(alert: true, badge: true, sound: true);
-        // Make sure foreground pushes don't sneak past us silently on
-        // iOS — disable native presentation since we render ourselves.
         await _fcm.setForegroundNotificationPresentationOptions(
-          alert: false,
-          badge: false,
-          sound: false,
+          alert: true,
+          badge: true,
+          sound: true,
         );
         // FCM getToken() needs the APNs token first on iOS.
         await _waitForApnsToken();
@@ -192,13 +192,20 @@ class NotificationService with WidgetsBindingObserver {
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
       if (kDebugMode) {
-        final token = await _fcm.getToken();
-        if (token != null && token.length >= 12) {
-          debugPrint('[fcm] device token: ${token.substring(0, 12)}…');
-        } else if (notificationPlatformIsIOS || notificationPlatformIsMacOS) {
-          debugPrint(
-            '[fcm] device token not ready yet (APNs may still be registering)',
-          );
+        try {
+          if (!notificationPlatformIsIOS && !notificationPlatformIsMacOS ||
+              await _fcm.getAPNSToken() != null) {
+            final token = await _fcm.getToken();
+            if (token != null && token.length >= 12) {
+              debugPrint('[fcm] device token: ${token.substring(0, 12)}…');
+            }
+          } else {
+            debugPrint(
+              '[fcm] device token not ready yet (APNs may still be registering or running on simulator)',
+            );
+          }
+        } catch (e) {
+          debugPrint('[fcm] device token check skipped: $e');
         }
       }
     } catch (e) {
@@ -345,6 +352,16 @@ class NotificationService with WidgetsBindingObserver {
       details,
       payload: payload,
     );
+
+    if (Get.isRegistered<UserNotificationsBadgeController>()) {
+      Get.find<UserNotificationsBadgeController>().refreshUnreadBadge();
+    }
+  }
+
+  Future<void> clearBadge() async {
+    try {
+      await _localNotifications.cancelAll();
+    } catch (_) {}
   }
 
   void _onMessageOpenedApp(RemoteMessage message) {

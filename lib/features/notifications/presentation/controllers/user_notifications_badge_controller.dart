@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/features/notifications/data/user_notifications_repository.dart';
 
+import 'package:satya_devotte_app/core/services/notification_service.dart';
+
 class UserNotificationsBadgeController extends GetxController {
   UserNotificationsBadgeController(this._repo);
   final UserNotificationsRepository _repo;
@@ -24,6 +26,9 @@ class UserNotificationsBadgeController extends GetxController {
 
   void clearBadge() {
     hasUnread.value = false;
+    if (Get.isRegistered<NotificationService>()) {
+      Get.find<NotificationService>().clearBadge();
+    }
   }
 
   @override

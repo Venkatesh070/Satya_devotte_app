@@ -113,54 +113,8 @@ class FcmBootstrap {
   Future<void> _registerMobile() async {
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
-    if (np.notificationPlatformIsIOS || np.notificationPlatformIsMacOS) {
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      debugPrint('[FCM] iOS permission status: ${settings.authorizationStatus}');
-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        debugPrint('[FCM] permission denied — skipping register.');
-        return;
-      }
-      // iOS can return null FCM token until APNs token is available.
-      final apnsToken = await _waitForApnsToken();
-      if (apnsToken == null) {
-        debugPrint('[FCM] APNs token unavailable — skipping register for now.');
-        return;
-      }
-    }
-
-    final token = await FirebaseMessaging.instance.getToken().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () => null,
-    );
-    if (token == null || token.length < 20) {
-      debugPrint('[FCM] getToken() returned no token; skipping register.');
-      return;
-    }
-    debugPrint('[FCM] getToken() success (${token.substring(0, 12)}…).');
-
     final platform = _platformLabel();
     final deviceId = await _deviceId();
-    try {
-      await _api.registerToken(
-        token: token,
-        platform: platform,
-        deviceId: deviceId,
-      );
-      _lastRegisteredToken = token;
-      debugPrint('[FCM] registered token (${token.substring(0, 12)}…).');
-      try {
-        final count = await _api.registeredCount();
-        debugPrint('[FCM] backend token count: $count');
-      } catch (e) {
-        debugPrint('[FCM] count check failed: $e');
-      }
-    } on FcmException catch (e) {
-      debugPrint('[FCM] register failed: $e');
-    }
 
     await _refreshSub?.cancel();
     _refreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((
@@ -179,6 +133,60 @@ class FcmBootstrap {
         debugPrint('[FCM] refresh register failed: $e');
       }
     }, onError: (e) => debugPrint('[FCM] onTokenRefresh error: $e'));
+
+    if (np.notificationPlatformIsIOS || np.notificationPlatformIsMacOS) {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('[FCM] iOS permission status: ${settings.authorizationStatus}');
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('[FCM] permission denied — skipping register.');
+        return;
+      }
+      // iOS can return null FCM token until APNs token is available.
+      final apnsToken = await _waitForApnsToken();
+      if (apnsToken == null) {
+        debugPrint('[FCM] APNs token unavailable — push will register once APNs is assigned.');
+        return;
+      }
+    }
+
+    String? token;
+    try {
+      token = await FirebaseMessaging.instance.getToken().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => null,
+      );
+    } catch (e) {
+      debugPrint('[FCM] getToken skipped: $e');
+      return;
+    }
+
+    if (token == null || token.length < 20) {
+      debugPrint('[FCM] getToken() returned no token; skipping register.');
+      return;
+    }
+    debugPrint('[FCM] getToken() success (${token.substring(0, 12)}…).');
+
+    try {
+      await _api.registerToken(
+        token: token,
+        platform: platform,
+        deviceId: deviceId,
+      );
+      _lastRegisteredToken = token;
+      debugPrint('[FCM] registered token (${token.substring(0, 12)}…).');
+      try {
+        final count = await _api.registeredCount();
+        debugPrint('[FCM] backend token count: $count');
+      } catch (e) {
+        debugPrint('[FCM] count check failed: $e');
+      }
+    } on FcmException catch (e) {
+      debugPrint('[FCM] register failed: $e');
+    }
   }
 
   Future<String?> _waitForApnsToken() async {
