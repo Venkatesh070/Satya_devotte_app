@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
@@ -192,13 +193,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     _isAnimatingToTab = true;
+    setState(() => _currentIndex = index);
     await _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );
     if (!mounted) return;
-    setState(() => _currentIndex = index);
     if (index == 0) {
       _recordUserStreak();
       _fetchHomeDataIfNeeded();
@@ -647,7 +648,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
-    final navHeight = 70.0 + (bottomSafe > 0 ? (bottomSafe * 0.5) : 0.0);
+    final isIOS = Platform.isIOS;
+    final navHeight = isIOS
+        ? (56.0 + (bottomSafe > 0 ? bottomSafe : 16.0))
+        : (82.0 + (bottomSafe > 0 ? bottomSafe : 0.0));
 
     return PopScope(
       canPop: false,
@@ -703,6 +707,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   currentIndex: _currentIndex,
                   onTap: _onTabSelected,
                   bottomSafe: bottomSafe,
+                  navHeight: navHeight,
                 ),
               ),
               if (_currentIndex == _HomeTabs.home)
@@ -1035,19 +1040,121 @@ class _HomeCircleSection extends StatelessWidget {
   }
 }
 
-class _BottomNavBar extends StatelessWidget {
+class _BottomNavBar extends StatefulWidget {
   const _BottomNavBar({
     required this.currentIndex,
     required this.onTap,
     this.bottomSafe = 0.0,
+    required this.navHeight,
   });
 
   final int currentIndex;
   final Future<void> Function(int) onTap;
   final double bottomSafe;
-  static const int lastTabIndex = _HomeTabs.last;
-
+  final double navHeight;
   static const Color navBarColor = Color(0xFFF8F1E2);
+
+  @override
+  State<_BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<_BottomNavBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _humpAnimation;
+  double _currentProgress = 0.0;
+  bool _isDragging = false;
+  int _lastHapticIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentProgress = widget.currentIndex.toDouble();
+    _lastHapticIndex = widget.currentIndex;
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _humpAnimation = Tween<double>(
+      begin: _currentProgress,
+      end: _currentProgress,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
+  }
+
+  @override
+  void didUpdateWidget(covariant _BottomNavBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex && !_isDragging) {
+      _animateTo(widget.currentIndex.toDouble());
+    }
+  }
+
+  void _animateTo(double target) {
+    _animController.stop();
+    _humpAnimation = Tween<double>(
+      begin: _currentProgress,
+      end: target,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
+    _animController.forward(from: 0.0).then((_) {
+      if (mounted && !_isDragging) {
+        setState(() {
+          _currentProgress = target;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _handleDragStart(DragStartDetails details, double slotWidth) {
+    _isDragging = true;
+    _animController.stop();
+    final pos = (details.localPosition.dx / slotWidth - 0.5).clamp(0.0, 5.0);
+    setState(() {
+      _currentProgress = pos;
+    });
+    final nearest = pos.round().clamp(0, 5);
+    if (nearest != _lastHapticIndex) {
+      _lastHapticIndex = nearest;
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details, double slotWidth) {
+    final pos = (details.localPosition.dx / slotWidth - 0.5).clamp(0.0, 5.0);
+    setState(() {
+      _currentProgress = pos;
+    });
+    final nearest = pos.round().clamp(0, 5);
+    if (nearest != _lastHapticIndex) {
+      _lastHapticIndex = nearest;
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  void _handleDragEnd(DragEndDetails details, double slotWidth) {
+    _isDragging = false;
+    final nearest = _currentProgress.round().clamp(0, 5);
+    _animateTo(nearest.toDouble());
+    if (nearest != widget.currentIndex) {
+      widget.onTap(nearest);
+    }
+  }
+
+  void _handleDragCancel() {
+    _isDragging = false;
+    _animateTo(widget.currentIndex.toDouble());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1056,38 +1163,50 @@ class _BottomNavBar extends StatelessWidget {
         final totalWidth = constraints.maxWidth;
         final slotWidth = totalWidth / 6;
 
-        return TweenAnimationBuilder<double>(
-          tween: Tween<double>(
-            begin: currentIndex.toDouble(),
-            end: currentIndex.toDouble(),
-          ),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          builder: (context, animProgress, _) {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Fluid elevated hump background with flat side edges
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _FluidHumpPainter(
-                      animProgress: animProgress,
-                      totalTabs: 6,
-                      color: navBarColor,
+        return AnimatedBuilder(
+          animation: _animController,
+          builder: (context, _) {
+            final activeProgress =
+                _isDragging ? _currentProgress : _humpAnimation.value;
+
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: (d) => _handleDragStart(d, slotWidth),
+              onHorizontalDragUpdate: (d) => _handleDragUpdate(d, slotWidth),
+              onHorizontalDragEnd: (d) => _handleDragEnd(d, slotWidth),
+              onHorizontalDragCancel: _handleDragCancel,
+              onTapUp: (details) {
+                final clickedIndex =
+                    (details.localPosition.dx / slotWidth).floor().clamp(0, 5);
+                HapticFeedback.selectionClick();
+                _animateTo(clickedIndex.toDouble());
+                widget.onTap(clickedIndex);
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Fluid elevated hump background with flat side edges
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _FluidHumpPainter(
+                        animProgress: activeProgress,
+                        totalTabs: 6,
+                        color: _BottomNavBar.navBarColor,
+                      ),
                     ),
                   ),
-                ),
 
-                // 6 Navigation Tab Items
-                for (int i = 0; i < 6; i++)
-                  Positioned(
-                    left: i * slotWidth,
-                    width: slotWidth,
-                    top: 0,
-                    bottom: bottomSafe > 0 ? (bottomSafe * 0.4) : 0,
-                    child: _buildNavItem(i, animProgress),
-                  ),
-              ],
+                  // 6 Navigation Tab Items
+                  for (int i = 0; i < 6; i++)
+                    Positioned(
+                      left: i * slotWidth,
+                      width: slotWidth,
+                      top: 0,
+                      bottom: 0,
+                      child: _buildNavItem(i, activeProgress),
+                    ),
+                ],
+              ),
             );
           },
         );
@@ -1097,8 +1216,10 @@ class _BottomNavBar extends StatelessWidget {
 
   Widget _buildNavItem(int index, double animProgress) {
     final dist = (animProgress - index).abs().clamp(0.0, 1.0);
-    final isSelected = index == currentIndex;
-    final itemTop = 14.0 + (dist * 10.0);
+    final isSelected = dist < 0.45;
+    final isIOS = Platform.isIOS;
+    // Clean space above the icons on both OSes
+    final itemTop = isIOS ? (18.0 + dist * 5.0) : (20.0 + dist * 5.0);
 
     final IconData? icon;
     final String? assetIcon;
@@ -1155,68 +1276,64 @@ class _BottomNavBar extends StatelessWidget {
       return Icon(icon ?? Icons.circle_outlined, size: size, color: color);
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onTap(index),
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          Positioned(
-            top: itemTop,
-            child: AnimatedScale(
-              scale: isSelected ? 1.05 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  isSelected
-                      ? ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ).createShader(bounds),
-                          blendMode: BlendMode.srcIn,
-                          child: buildIcon(24, const Color(0xFFFCF7EF)),
-                        )
-                      : buildIcon(22, unselectedColor),
-                  const SizedBox(height: 3),
-                  isSelected
-                      ? ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF183EA4), Color(0xFFE35600)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ).createShader(bounds),
-                          blendMode: BlendMode.srcIn,
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.visible,
-                            style: AppTypography.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFFFCF7EF),
-                            ),
-                          ),
-                        )
-                      : Text(
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Positioned(
+          top: itemTop,
+          child: AnimatedScale(
+            scale: isSelected ? 1.06 : 1.0,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                isSelected
+                    ? ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        blendMode: BlendMode.srcIn,
+                        child: buildIcon(26.5, const Color(0xFFFCF7EF)),
+                      )
+                    : buildIcon(24.0, unselectedColor),
+                const SizedBox(height: 3),
+                isSelected
+                    ? ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF183EA4), Color(0xFFE35600)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds),
+                        blendMode: BlendMode.srcIn,
+                        child: Text(
                           label,
                           maxLines: 1,
                           overflow: TextOverflow.visible,
                           style: AppTypography.inter(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: unselectedColor,
+                            fontSize: 11.2,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFFCF7EF),
                           ),
                         ),
-                ],
-              ),
+                      )
+                    : Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        style: AppTypography.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: unselectedColor,
+                        ),
+                      ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1236,7 +1353,7 @@ class _FluidHumpPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final slotWidth = size.width / totalTabs;
     final cx = (animProgress + 0.5) * slotWidth;
-    const topY = 16.0;
+    const topY = 18.0;
     const humpSpan = 38.0;
 
     final path = Path();

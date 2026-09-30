@@ -31,6 +31,7 @@
 			<string>Google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>com.googleusercontent.apps.460042314237-b5m7e901dveu15js03niu4qilje9bp8l</string>
 				<string>com.googleusercontent.apps.460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn</string>
 				<string>com.googleusercontent.apps.1053803605697-p8su6oi2dh403quf4a7o71f3e32k6rfj</string>
 				<string>com.googleusercontent.apps.1053803605697-dtvqed649pf4ue6qkgpamc1b8u10co9v</string>
@@ -60,7 +61,11 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Required to take profile photos</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Satya uses your current location to fill your delivery address.</string>
+	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Required to pick images</string>
 	<key>NSContactsUsageDescription</key>

@@ -72,10 +72,10 @@
               "client_type": 3
             },
             {
-              "client_id": "460042314237-faoet5blb0v41rb06gtu9trqhmgd3ggn.apps.googleusercontent.com",
+              "client_id": "460042314237-b5m7e901dveu15js03niu4qilje9bp8l.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.sathyaApp"
+                "bundle_id": "com.sathya.app"
               }
             }
           ]

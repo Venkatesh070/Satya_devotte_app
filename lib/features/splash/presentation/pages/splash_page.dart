@@ -160,75 +160,74 @@ class _SplashPageState extends State<SplashPage>
                     alignment: Alignment.center,
                     child: Transform.translate(
                       offset: const Offset(0, -55),
-                      child: AnimatedBuilder(
-                        animation: _rotationController,
-                        builder: (context, child) {
-                          final spin = _rotationController.value * 2 * math.pi;
-                          return Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Transform.rotate(
-                                angle: spin,
-                                child: Image.asset(
-                                  'assets/images/chakra1.png',
-                                  gaplessPlayback: true,
-                                ),
-                              ),
-                              Transform.rotate(
-                                angle: -spin,
-                                child: Transform.scale(
-                                  scale: 0.90,
-                                  child: Image.asset(
-                                    'assets/images/chakra2.png',
-                                    gaplessPlayback: true,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AnimatedBuilder(
+                            animation: _rotationController,
+                            builder: (context, child) {
+                              final spin = _rotationController.value * 2 * math.pi;
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Transform.rotate(
+                                    angle: spin,
+                                    child: Image.asset(
+                                      'assets/images/chakra1.png',
+                                      gaplessPlayback: true,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Transform.rotate(
-                                angle: spin,
-                                child: Transform.scale(
-                                  scale: 0.80,
-                                  child: Image.asset(
-                                    'assets/images/chakra3.png',
-                                    gaplessPlayback: true,
+                                  Transform.rotate(
+                                    angle: -spin,
+                                    child: Transform.scale(
+                                      scale: 0.90,
+                                      child: Image.asset(
+                                        'assets/images/chakra2.png',
+                                        gaplessPlayback: true,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Transform.rotate(
-                                angle: -spin,
-                                child: Transform.scale(
-                                  scale: 0.53,
-                                  child: Image.asset(
-                                    'assets/images/chakra4.png',
-                                    gaplessPlayback: true,
+                                  Transform.rotate(
+                                    angle: spin,
+                                    child: Transform.scale(
+                                      scale: 0.80,
+                                      child: Image.asset(
+                                        'assets/images/chakra3.png',
+                                        gaplessPlayback: true,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Opacity(
-                                opacity: 0.8,
-                                child: Image.asset(
-                                  'assets/images/onBoardBgOverlay.png',
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+                                  Transform.rotate(
+                                    angle: -spin,
+                                    child: Transform.scale(
+                                      scale: 0.53,
+                                      child: Image.asset(
+                                        'assets/images/chakra4.png',
+                                        gaplessPlayback: true,
+                                      ),
+                                    ),
+                                  ),
+                                  Opacity(
+                                    opacity: 0.8,
+                                    child: Image.asset(
+                                      'assets/images/onBoardBgOverlay.png',
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          // Static White Logo locked permanently to the exact center of the chakra
+                          SvgPicture.asset(
+                            'assets/svgs/whiteLogo.svg',
+                            width: 93,
+                            height: 112,
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.365,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/svgs/whiteLogo.svg',
-                  width: 93,
-                  height: 112,
-                ),
               ),
             ),
             Positioned(
