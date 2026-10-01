@@ -87,7 +87,14 @@ class _OnboardingPageState extends State<OnboardingPage>
         backgroundColor: const Color(0xFF17191E),
         body: Stack(
           children: [
-            OnboardingStyleBackground(rotationController: _rotationController),
+            OnboardingStyleBackground(
+              rotationController: _rotationController,
+              centerChild: SvgPicture.asset(
+                'assets/svgs/whiteLogo.svg',
+                width: 93,
+                height: 112,
+              ),
+            ),
             Positioned(
               top: topInset + 14,
               left: 14,
@@ -130,18 +137,6 @@ class _OnboardingPageState extends State<OnboardingPage>
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.365,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/svgs/whiteLogo.svg',
-                  width: 93,
-                  height: 112,
                 ),
               ),
             ),

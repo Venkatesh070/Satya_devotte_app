@@ -3160,7 +3160,7 @@ class _StepTile extends StatelessWidget {
                             ),
                           ),
                           Expanded(
-                            child: Text(
+                            child: RichTextDisplay(
                               s,
                               style: AppTypography.inter(
                                 fontSize: 12.5,

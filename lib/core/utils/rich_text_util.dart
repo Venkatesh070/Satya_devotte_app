@@ -2,29 +2,183 @@ import 'dart:convert';
 
 import 'package:flutter_quill/flutter_quill.dart';
 
+/// Parses and returns the list of Quill Delta operations from a string, if valid.
+/// Handles double-encoded JSON, unescaped control characters, auto-repair of broken JSON,
+/// and Delta object formats (e.g. `{"ops": [...]}`).
+List<dynamic>? parseDeltaOps(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  var s = value.trim();
+
+  // If outer-quoted string like `"[{\"insert\":...}]"`, unwrap outer string layer
+  if ((s.startsWith('"') && s.endsWith('"')) ||
+      (s.startsWith("'") && s.endsWith("'"))) {
+    try {
+      final decodedString = jsonDecode(s);
+      if (decodedString is String) {
+        s = decodedString.trim();
+      }
+    } catch (_) {
+      if (s.length > 2) {
+        s = s.substring(1, s.length - 1).trim();
+      }
+    }
+  }
+
+  if (!s.startsWith('[') && !s.startsWith('{')) return null;
+
+  // Sanitize unescaped newlines/tabs inside string literals for jsonDecode
+  final sanitized = _sanitizeUnescapedJsonControlChars(s);
+
+  try {
+    final decoded = jsonDecode(sanitized);
+    if (decoded is List) return decoded;
+    if (decoded is Map && decoded['ops'] is List) return decoded['ops'] as List;
+  } catch (_) {
+    // Try auto-fixing unclosed brackets/quotes
+    final repaired = _tryRepairJson(sanitized);
+    if (repaired != null) {
+      try {
+        final decoded = jsonDecode(repaired);
+        if (decoded is List) return decoded;
+        if (decoded is Map && decoded['ops'] is List) {
+          return decoded['ops'] as List;
+        }
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+String _sanitizeUnescapedJsonControlChars(String jsonStr) {
+  final sb = StringBuffer();
+  bool inString = false;
+  bool isEscaped = false;
+
+  for (int i = 0; i < jsonStr.length; i++) {
+    final char = jsonStr[i];
+    final code = jsonStr.codeUnitAt(i);
+
+    if (char == '"' && !isEscaped) {
+      inString = !inString;
+      sb.write(char);
+    } else if (inString) {
+      if (char == '\\' && !isEscaped) {
+        isEscaped = true;
+        sb.write(char);
+      } else {
+        if (isEscaped) {
+          isEscaped = false;
+          sb.write(char);
+        } else {
+          if (code == 10) {
+            sb.write(r'\n');
+          } else if (code == 13) {
+            sb.write(r'\r');
+          } else if (code == 9) {
+            sb.write(r'\t');
+          } else {
+            sb.write(char);
+          }
+        }
+      }
+    } else {
+      isEscaped = false;
+      sb.write(char);
+    }
+  }
+  return sb.toString();
+}
+
+String? _tryRepairJson(String s) {
+  var trimmed = s.trim();
+  if (trimmed.isEmpty) return null;
+  int quoteCount = 0;
+  for (int i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] == '"' && (i == 0 || trimmed[i - 1] != '\\')) {
+      quoteCount++;
+    }
+  }
+  if (quoteCount % 2 != 0) {
+    trimmed += '"';
+  }
+  int openBrackets = 0;
+  int openBraces = 0;
+  bool inStr = false;
+  for (int i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] == '"' && (i == 0 || trimmed[i - 1] != '\\')) {
+      inStr = !inStr;
+    } else if (!inStr) {
+      if (trimmed[i] == '[') {
+        openBrackets++;
+      } else if (trimmed[i] == ']') {
+        openBrackets--;
+      } else if (trimmed[i] == '{') {
+        openBraces++;
+      } else if (trimmed[i] == '}') {
+        openBraces--;
+      }
+    }
+  }
+  while (openBraces > 0) {
+    trimmed += '}';
+    openBraces--;
+  }
+  while (openBrackets > 0) {
+    trimmed += ']';
+    openBrackets--;
+  }
+  return trimmed;
+}
+
+/// Fallback helper to extract plain text from insert fields when JSON is malformed
+String extractPlainTextFromDeltaString(String raw) {
+  final regExp = RegExp(r'"insert"\s*:\s*"((?:[^"\\]|\\.)*)"');
+  final matches = regExp.allMatches(raw);
+  if (matches.isEmpty) return raw;
+
+  final sb = StringBuffer();
+  for (final m in matches) {
+    final captured = m.group(1);
+    if (captured != null && captured.isNotEmpty) {
+      final text = captured
+          .replaceAll(r'\n', '\n')
+          .replaceAll(r'\r', '\r')
+          .replaceAll(r'\t', '\t')
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\\', '\\');
+      sb.write(text);
+    }
+  }
+  return sb.toString();
+}
+
 bool isDeltaJson(String? value) {
   if (value == null || value.isEmpty) return false;
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) return false;
-  final first = trimmed.codeUnitAt(0);
-  if (first != 0x5B && first != 0x7B) return false;
-  try {
-    final decoded = jsonDecode(trimmed);
-    return decoded is List;
-  } catch (_) {
-    return false;
-  }
+  return parseDeltaOps(value) != null || value.trim().contains('"insert"');
 }
 
 Document documentFromValue(String? value) {
-  if (isDeltaJson(value)) {
+  if (value == null || value.trim().isEmpty) return Document();
+  final ops = parseDeltaOps(value);
+  if (ops != null) {
     try {
-      return Document.fromJson(jsonDecode(value!.trim()) as List<dynamic>);
+      return Document.fromJson(ops);
     } catch (_) {}
   }
+
+  final trimmed = value.trim();
+  if (trimmed.contains('"insert"')) {
+    final extracted = extractPlainTextFromDeltaString(trimmed);
+    if (extracted.isNotEmpty) {
+      final doc = Document();
+      doc.insert(0, extracted);
+      return doc;
+    }
+  }
+
   final doc = Document();
-  if (value != null && value.trim().isNotEmpty) {
-    doc.insert(0, value.trim());
+  if (trimmed.isNotEmpty) {
+    doc.insert(0, trimmed);
   }
   return doc;
 }
@@ -144,24 +298,23 @@ bool _isReciteAttrValue(dynamic v) {
 }
 
 bool deltaHasRecite(String? value) {
-  if (!isDeltaJson(value)) return false;
-  try {
-    final ops = jsonDecode(value!.trim()) as List<dynamic>;
-    for (final op in ops) {
-      if (op is! Map) continue;
-      final insert = op['insert'];
-      // Ignore attribute-only / empty newline ops for "has recite" checks —
-      // Quill can leave a leftover recite attr on a trailing `\n`.
-      if (insert is String && insert.trim().isEmpty) continue;
-      final attrs = op['attributes'];
-      if (attrs is Map && _isReciteAttrValue(attrs['recite'])) return true;
-    }
-  } catch (_) {}
+  final ops = parseDeltaOps(value);
+  if (ops == null) return false;
+  for (final op in ops) {
+    if (op is! Map) continue;
+    final insert = op['insert'];
+    // Ignore attribute-only / empty newline ops for "has recite" checks —
+    // Quill can leave a leftover recite attr on a trailing `\n`.
+    if (insert is String && insert.trim().isEmpty) continue;
+    final attrs = op['attributes'];
+    if (attrs is Map && _isReciteAttrValue(attrs['recite'])) return true;
+  }
   return false;
 }
 
 List<RichTextSegment> parseDeltaSegments(String deltaJson) {
-  final ops = jsonDecode(deltaJson.trim()) as List<dynamic>;
+  final ops = parseDeltaOps(deltaJson);
+  if (ops == null) return const [];
   final segments = <RichTextSegment>[];
   var buffer = <Map<String, dynamic>>[];
   bool? currentRecite;
@@ -239,8 +392,8 @@ List<RichTextSegment> _mergeAdjacentSegments(List<RichTextSegment> segments) {
     final prev = merged.last;
     final cur = segments[i];
     if (prev.isRecite == cur.isRecite) {
-      final prevOps = jsonDecode(prev.deltaJson) as List<dynamic>;
-      final curOps = jsonDecode(cur.deltaJson) as List<dynamic>;
+      final prevOps = parseDeltaOps(prev.deltaJson) ?? [];
+      final curOps = parseDeltaOps(cur.deltaJson) ?? [];
       merged[merged.length - 1] = RichTextSegment(
         deltaJson: jsonEncode([...prevOps, ...curOps]),
         isRecite: prev.isRecite,

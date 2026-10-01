@@ -12,6 +12,9 @@ class OnboardingStyleBackground extends StatelessWidget {
     this.wrapInPositioned = true,
     this.backgroundImage = 'assets/images/onBoardBg3.png',
     this.chakraScale = 1.0,
+    this.backgroundFit = BoxFit.cover,
+    this.backgroundAlignment = Alignment.center,
+    this.centerChild,
   });
 
   final AnimationController rotationController;
@@ -19,13 +22,22 @@ class OnboardingStyleBackground extends StatelessWidget {
   final bool wrapInPositioned;
   final String backgroundImage;
   final double chakraScale;
+  final BoxFit backgroundFit;
+  final AlignmentGeometry backgroundAlignment;
+  final Widget? centerChild;
 
   @override
   Widget build(BuildContext context) {
     final stack = Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(child: Image.asset(backgroundImage, fit: BoxFit.cover)),
+        Positioned.fill(
+          child: Image.asset(
+            backgroundImage,
+            fit: backgroundFit,
+            alignment: backgroundAlignment,
+          ),
+        ),
         Positioned(
           top: -200,
           left: 0,
@@ -61,68 +73,74 @@ class OnboardingStyleBackground extends StatelessWidget {
           alignment: Alignment.center,
           child: Transform.translate(
             offset: Offset(0, chakraVerticalOffset),
-            child: Transform.scale(
-              scale: chakraScale,
-              child: AnimatedBuilder(
-                animation: rotationController,
-                builder: (context, child) {
-                  final spin = rotationController.value * 2 * math.pi;
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Transform.rotate(
-                        angle: spin,
-                        child: Image.asset(
-                          'assets/images/chakra1.png',
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: -spin,
-                        child: Transform.scale(
-                          scale: 0.90,
-                          child: Image.asset(
-                            'assets/images/chakra2.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.scale(
+                  scale: chakraScale,
+                  child: AnimatedBuilder(
+                    animation: rotationController,
+                    builder: (context, child) {
+                      final spin = rotationController.value * 2 * math.pi;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Transform.rotate(
+                            angle: spin,
+                            child: Image.asset(
+                              'assets/images/chakra1.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
                           ),
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: spin,
-                        child: Transform.scale(
-                          scale: 0.80,
-                          child: Image.asset(
-                            'assets/images/chakra3.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+                          Transform.rotate(
+                            angle: -spin,
+                            child: Transform.scale(
+                              scale: 0.90,
+                              child: Image.asset(
+                                'assets/images/chakra2.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: -spin,
-                        child: Transform.scale(
-                          scale: 0.53,
-                          child: Image.asset(
-                            'assets/images/chakra4.png',
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+                          Transform.rotate(
+                            angle: spin,
+                            child: Transform.scale(
+                              scale: 0.80,
+                              child: Image.asset(
+                                'assets/images/chakra3.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Opacity(
-                        opacity: 0.8,
-                        child: Image.asset(
-                          'assets/images/onBoardBgOverlay.png',
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                          Transform.rotate(
+                            angle: -spin,
+                            child: Transform.scale(
+                              scale: 0.53,
+                              child: Image.asset(
+                                'assets/images/chakra4.png',
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
+                              ),
+                            ),
+                          ),
+                          Opacity(
+                            opacity: 0.8,
+                            child: Image.asset(
+                              'assets/images/onBoardBgOverlay.png',
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                if (centerChild != null) centerChild!,
+              ],
             ),
           ),
         ),

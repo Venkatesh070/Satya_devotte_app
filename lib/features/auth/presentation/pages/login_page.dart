@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -51,7 +50,6 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
     final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
@@ -70,34 +68,11 @@ class _LoginPageState extends State<LoginPage>
               rotationController: _rotationController,
               wrapInPositioned: false,
               backgroundImage: 'assets/images/home/login_bg.png',
+              backgroundFit: BoxFit.cover,
+              backgroundAlignment: Alignment.bottomCenter,
               chakraVerticalOffset: -20, // Move mandala down to align with logo
               chakraScale: 0.85, // Reduced mandala width/scale for login screen
-            ),
-          ),
-
-          // Positioned(
-          //   top: topInset + 20,
-          //   right: 20,
-          //   child: GestureDetector(
-          //     onTap: () => Get.offAllNamed(AppRoutes.login),
-          //     child: const Text(
-          //       'Skip >>',
-          //       style: TextStyle(
-          //         color: Color(0xFFFCF7EF),
-          //         fontWeight: FontWeight.w700,
-          //         fontSize: 14,
-          //       ),
-          //     ),
-          //   ),
-          // ),
-          Positioned(
-            top:
-                screenHeight *
-                0.22, // Adjusted logo position to be inside mandala
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SvgPicture.asset(
+              centerChild: SvgPicture.asset(
                 'assets/svgs/whiteLogo.svg',
                 width: 65,
                 height: 100,

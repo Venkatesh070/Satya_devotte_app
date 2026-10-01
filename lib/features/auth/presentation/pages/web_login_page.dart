@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/controllers/forgot_password_controller.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
@@ -117,8 +116,14 @@ class _WebLoginPageState extends State<WebLoginPage>
                   rotationController: _rotationController,
                   wrapInPositioned: false,
                   backgroundImage: 'assets/images/home/login_bg.png',
+                  backgroundAlignment: Alignment.bottomCenter,
                   chakraVerticalOffset: 0,
                   chakraScale: 0.95,
+                  centerChild: SvgPicture.asset(
+                    'assets/svgs/whiteLogo.svg',
+                    width: 65,
+                    height: 100,
+                  ),
                 ),
               ),
             ],
@@ -136,8 +141,14 @@ class _WebLoginPageState extends State<WebLoginPage>
             rotationController: _rotationController,
             wrapInPositioned: true,
             backgroundImage: 'assets/images/home/login_bg.png',
+            backgroundAlignment: Alignment.bottomCenter,
             chakraVerticalOffset: -80,
             chakraScale: 0.7,
+            centerChild: SvgPicture.asset(
+              'assets/svgs/whiteLogo.svg',
+              width: 65,
+              height: 100,
+            ),
           ),
           SafeArea(
             child: Center(

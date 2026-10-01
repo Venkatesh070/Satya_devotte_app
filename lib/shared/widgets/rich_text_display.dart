@@ -39,8 +39,12 @@ class RichTextDisplay extends StatelessWidget {
           overflow: overflow,
         );
       }
+      final content = block.content;
+      final displayContent = content.contains('"insert"')
+          ? extractPlainTextFromDeltaString(content)
+          : content;
       return Text(
-        block.content,
+        displayContent,
         style: style,
         textAlign: textAlign,
         maxLines: maxLines,
@@ -69,9 +73,11 @@ class RichTextDisplay extends StatelessWidget {
               maxLines: maxLines,
               overflow: overflow,
             )
-          else
+          else ...[
             Text(
-              blocks[i].content,
+              blocks[i].content.contains('"insert"')
+                  ? extractPlainTextFromDeltaString(blocks[i].content)
+                  : blocks[i].content,
               style:
                   style?.copyWith(fontWeight: FontWeight.w600) ??
                   const TextStyle(fontWeight: FontWeight.w600),
@@ -79,6 +85,7 @@ class RichTextDisplay extends StatelessWidget {
               maxLines: maxLines,
               overflow: overflow,
             ),
+          ],
         ],
       ],
     );
