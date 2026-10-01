@@ -264,9 +264,14 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
+    final isTablet = MediaQuery.sizeOf(context).width >= 600;
+
+    final headerHeight = isTablet ? topPadding + 240.0 : topPadding + 178.0;
+    final bgImageHeight = isTablet ? topPadding + 210.0 : topPadding + 150.0;
+    final avatarTop = isTablet ? topPadding + 140.0 : topPadding + 112.0;
 
     return SizedBox(
-      height: topPadding + 178,
+      height: headerHeight,
       child: Stack(
         alignment: Alignment.topCenter,
         clipBehavior: Clip.none,
@@ -275,7 +280,7 @@ class _ProfileHeader extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            height: topPadding + 150,
+            height: bgImageHeight,
             child: const Image(
               image: AssetImage('assets/images/pooja/pujaHeaderImg.png'),
               fit: BoxFit.fill,
@@ -295,7 +300,7 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: topPadding + 112,
+            top: avatarTop,
             child: Column(
               children: [
                 _ProfileAvatar(initials: initials, imageUrl: imageUrl),

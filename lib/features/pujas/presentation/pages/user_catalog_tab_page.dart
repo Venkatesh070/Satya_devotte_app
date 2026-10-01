@@ -325,8 +325,11 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
 
   Widget _buildHeader() {
     final topInset = MediaQuery.paddingOf(context).top;
+    final isTablet = MediaQuery.sizeOf(context).width >= 600;
+    final headerHeight = isTablet ? topInset + 225.0 : topInset + 168.0;
+    final imgHeight = isTablet ? topInset + 240.0 : topInset + 180.0;
     return SizedBox(
-      height: topInset + 168,
+      height: headerHeight,
       child: Stack(
         children: [
           Positioned.fill(
@@ -334,7 +337,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width,
-                height: topInset + 180,
+                height: imgHeight,
                 child: Image.asset(
                   'assets/images/pooja/pujaHeaderImg.png',
                   fit: BoxFit.fill,

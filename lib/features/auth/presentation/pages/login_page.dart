@@ -124,34 +124,36 @@ class _LoginPageState extends State<LoginPage>
                           }
                         },
                       ),
-                      const SizedBox(height: 12),
-                      _SocialButton(
-                        label: 'Continue with Apple',
-                        backgroundColor: Colors.black,
-                        textColor: const Color(0xFFFCF7EF),
-                        leading: SvgPicture.asset(
-                          'assets/svgs/apple.svg',
-                          width: 18,
-                          height: 18,
-                        ),
-                        isLoading: isAppleLoading,
-                        isEnabled: !isAnyLoading,
-                        onTap: () async {
-                          final offlineService = Get.find<OfflineService>();
-                          if (!offlineService.checkAndShowDialog()) return;
+                      if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                        const SizedBox(height: 12),
+                        _SocialButton(
+                          label: 'Continue with Apple',
+                          backgroundColor: Colors.black,
+                          textColor: const Color(0xFFFCF7EF),
+                          leading: SvgPicture.asset(
+                            'assets/svgs/apple.svg',
+                            width: 18,
+                            height: 18,
+                          ),
+                          isLoading: isAppleLoading,
+                          isEnabled: !isAnyLoading,
+                          onTap: () async {
+                            final offlineService = Get.find<OfflineService>();
+                            if (!offlineService.checkAndShowDialog()) return;
 
-                          final isSuccess = await controller.signInWithApple();
-                          if (isSuccess) {
-                            _navigateAfterLogin();
-                          } else if (controller.lastAuthError != null) {
-                            showAppSnackbar(
-                              title: 'Login Failed',
-                              message: controller.lastAuthError!,
-                              isError: true,
-                            );
-                          }
-                        },
-                      ),
+                            final isSuccess = await controller.signInWithApple();
+                            if (isSuccess) {
+                              _navigateAfterLogin();
+                            } else if (controller.lastAuthError != null) {
+                              showAppSnackbar(
+                                title: 'Login Failed',
+                                message: controller.lastAuthError!,
+                                isError: true,
+                              );
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Text(
                         'Or',

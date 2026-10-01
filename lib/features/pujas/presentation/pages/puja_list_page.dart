@@ -465,8 +465,12 @@ class _RitualListPageState extends State<RitualListPage> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _FixedHeaderDelegate(
-                  minExtentHeight: MediaQuery.paddingOf(context).top + 168,
-                  maxExtentHeight: MediaQuery.paddingOf(context).top + 168,
+                  minExtentHeight: MediaQuery.sizeOf(context).width >= 600
+                      ? MediaQuery.paddingOf(context).top + 225.0
+                      : MediaQuery.paddingOf(context).top + 168.0,
+                  maxExtentHeight: MediaQuery.sizeOf(context).width >= 600
+                      ? MediaQuery.paddingOf(context).top + 225.0
+                      : MediaQuery.paddingOf(context).top + 168.0,
                   child: _buildHeader(),
                 ),
               ),
@@ -489,8 +493,11 @@ class _RitualListPageState extends State<RitualListPage> {
   // ─── Header (gradient + search) ──────────────────
   Widget _buildHeader() {
     final topInset = MediaQuery.paddingOf(context).top;
+    final isTablet = MediaQuery.sizeOf(context).width >= 600;
+    final headerHeight = isTablet ? topInset + 225.0 : topInset + 168.0;
+    final imgHeight = isTablet ? topInset + 240.0 : topInset + 180.0;
     return SizedBox(
-      height: topInset + 168,
+      height: headerHeight,
       child: Stack(
         children: [
           Positioned.fill(
@@ -498,7 +505,7 @@ class _RitualListPageState extends State<RitualListPage> {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width,
-                height: topInset + 180,
+                height: imgHeight,
                 child: Image.asset(
                   'assets/images/pooja/pujaHeaderImg.png',
                   fit: BoxFit.fill,
