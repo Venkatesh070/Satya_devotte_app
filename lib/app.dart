@@ -106,56 +106,74 @@ class SathyaApp extends StatelessWidget {
       },
       builder: (context, child) {
         _precacheChakraImages(context);
-        if (kIsWeb || child == null) return child ?? const SizedBox.shrink();
-        return Stack(
-          children: [
-            ApiLoadingOverlay(
-              child: Column(
-                children: [
-                  const ConnectivityStatusBanner(),
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        child,
-                        Obx(() {
-                          // Hide FAB if there's an active dialog/picker
-                          if (_dialogObserver.hasActiveDialog.value)
-                            return const SizedBox.shrink();
-                          return const AppMusicFloatingButton();
-                        }),
-                      ],
+        final mediaQueryData = MediaQuery.of(context);
+        // Clamp text scaler to prevent breaking UI with extreme accessibility font sizes
+        final scaledMediaQuery = mediaQueryData.copyWith(
+          textScaler: mediaQueryData.textScaler.clamp(
+            minScaleFactor: 0.85,
+            maxScaleFactor: 1.15,
+          ),
+        );
+
+        final Widget appContent;
+        if (kIsWeb || child == null) {
+          appContent = child ?? const SizedBox.shrink();
+        } else {
+          appContent = Stack(
+            children: [
+              ApiLoadingOverlay(
+                child: Column(
+                  children: [
+                    const ConnectivityStatusBanner(),
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          child,
+                          Obx(() {
+                            // Hide FAB if there's an active dialog/picker
+                            if (_dialogObserver.hasActiveDialog.value)
+                              return const SizedBox.shrink();
+                            return const AppMusicFloatingButton();
+                          }),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Obx(() {
-              final offlineService = Get.find<OfflineService>();
-              final showNoInternet = offlineService.showNoInternetScreen.value;
+              Obx(() {
+                final offlineService = Get.find<OfflineService>();
+                final showNoInternet = offlineService.showNoInternetScreen.value;
 
-              if (showNoInternet) {
-                // Check if current route is offline-supported
-                final currentRoute = Get.currentRoute;
-                final offlineSupportedRoutes = [
-                  AppRoutes.home,
-                  AppRoutes.rituals,
-                  AppRoutes.ritualDetail,
-                  AppRoutes.poojaHistory,
-                  AppRoutes.ritualHistory,
-                  AppRoutes.poojaWizard,
-                  AppRoutes.splash, // Usually okay to keep splash
-                ];
+                if (showNoInternet) {
+                  // Check if current route is offline-supported
+                  final currentRoute = Get.currentRoute;
+                  final offlineSupportedRoutes = [
+                    AppRoutes.home,
+                    AppRoutes.rituals,
+                    AppRoutes.ritualDetail,
+                    AppRoutes.poojaHistory,
+                    AppRoutes.ritualHistory,
+                    AppRoutes.poojaWizard,
+                    AppRoutes.splash, // Usually okay to keep splash
+                  ];
 
-                if (offlineSupportedRoutes.contains(currentRoute)) {
-                  return const SizedBox.shrink();
+                  if (offlineSupportedRoutes.contains(currentRoute)) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return const NoInternetScreen();
                 }
+                return const SizedBox.shrink();
+              }),
+            ],
+          );
+        }
 
-                return const NoInternetScreen();
-              }
-              return const SizedBox.shrink();
-            }),
-          ],
+        return MediaQuery(
+          data: scaledMediaQuery,
+          child: appContent,
         );
       },
     );

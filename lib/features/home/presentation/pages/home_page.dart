@@ -911,26 +911,29 @@ class _AchievementsSection extends StatelessWidget {
       children: [
         const _SectionTitle(title: 'My Achievements'),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _AchievementCard(
-                value: poojasCompleted,
-                label: 'Pujas Completed',
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _AchievementCard(
+                  value: poojasCompleted,
+                  label: 'Pujas Completed',
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _AchievementCard(
-                value: ritualsCompleted,
-                label: 'Rituals Completed',
+              const SizedBox(width: 8),
+              Expanded(
+                child: _AchievementCard(
+                  value: ritualsCompleted,
+                  label: 'Rituals Completed',
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _AchievementCard(value: dayStreak, label: 'Day Streak 🔥'),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _AchievementCard(value: dayStreak, label: 'Day Streak 🔥'),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -946,8 +949,8 @@ class _AchievementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      constraints: const BoxConstraints(minHeight: 72),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xF8FCF7EF),
         borderRadius: BorderRadius.circular(10),
@@ -962,17 +965,22 @@ class _AchievementCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$value',
-            style: AppTypography.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF252525),
-              height: 1,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '$value',
+              style: AppTypography.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF252525),
+                height: 1.1,
+              ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             label,
             maxLines: 2,
@@ -981,7 +989,7 @@ class _AchievementCard extends StatelessWidget {
               fontSize: 10.5,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF7A746D),
-              height: 1.1,
+              height: 1.15,
             ),
           ),
         ],
