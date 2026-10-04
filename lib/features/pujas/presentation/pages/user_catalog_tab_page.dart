@@ -291,6 +291,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
           onRefresh: () => _load(reset: true),
           child: CustomScrollView(
             controller: _scrollController,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(child: _buildHeader()),

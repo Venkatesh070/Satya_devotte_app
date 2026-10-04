@@ -460,6 +460,7 @@ class _RitualListPageState extends State<RitualListPage> {
           },
           child: CustomScrollView(
             controller: _scrollController,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPersistentHeader(
@@ -1255,6 +1256,7 @@ class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
               ),
             )
           : ListView.separated(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(
                 16,
                 10,

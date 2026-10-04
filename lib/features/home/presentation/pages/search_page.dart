@@ -664,6 +664,7 @@ class _SearchResultsSection extends StatelessWidget {
           ),
           Expanded(
             child: ListView.separated(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.zero,
               itemCount: results.length,
               separatorBuilder: (context, index) => const SizedBox(height: 6),

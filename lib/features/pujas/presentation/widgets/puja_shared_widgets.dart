@@ -524,16 +524,17 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
   final screenHeight = MediaQuery.sizeOf(context).height;
 
   Get.bottomSheet(
-    SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFCF7EF),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
+    Container(
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.85),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFCF7EF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -755,9 +756,10 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
         ),
       ),
     ),
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-  );
+  ),
+  isScrollControlled: true,
+  backgroundColor: Colors.transparent,
+);
 }
 
 Widget _previewChip(IconData icon, String label) {

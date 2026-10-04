@@ -396,6 +396,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final existingImageUrl = user?['imageUrl'] ?? user?['profileImageUrl'];
 
         return SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,

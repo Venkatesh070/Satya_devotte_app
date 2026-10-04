@@ -782,6 +782,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
       color: AppColors.primary,
       onRefresh: widget.onRefresh,
       child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 20),
         child: Column(
