@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
+import 'package:satya_devotte_app/core/utils/phone_validator.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
@@ -157,10 +158,13 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     Map<String, dynamic>? profilePayload;
 
     if (!skipProfile) {
+      final phone = _phoneController.text.trim();
       profilePayload = {
         'fullName': _fullNameController.text.trim(),
         'gender': _selectedGender,
-        'countryCode': '+91',
+        'countryCode': phone.isNotEmpty
+            ? PhoneValidator.getCountryCode(phone)
+            : '+27',
         'timeZone': DateTime.now().timeZoneName,
         'preferredLanguage': 'en',
       };
@@ -177,7 +181,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         profilePayload['timeOfBirth'] = '$hh:$mm';
       }
 
-      final phone = _phoneController.text.trim();
       if (phone.isNotEmpty) {
         profilePayload['phone'] = phone;
       }
@@ -570,16 +573,13 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       fontSize: 13,
                                     ),
                                     decoration: _inputDecoration(
-                                      'Enter mobile number',
+                                      'Enter mobile number (e.g. 082 123 4567 or +27 82 123 4567)',
                                     ),
-                                    validator: (v) {
-                                      final value = v?.trim() ?? '';
-                                      if (value.isEmpty) return null;
-                                      if (value.length < 10) {
-                                        return 'Phone must be at least 10 digits';
-                                      }
-                                      return null;
-                                    },
+                                    validator: (v) =>
+                                        PhoneValidator.validateSouthAfricanMobile(
+                                      v,
+                                      isRequired: false,
+                                    ),
                                   ),
                                 ],
                               ),

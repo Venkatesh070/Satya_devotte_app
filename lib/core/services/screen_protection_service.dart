@@ -5,6 +5,13 @@ import 'package:screen_protector/screen_protector.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 
 class ScreenProtectionService extends GetxService {
+  /// =========================================================================
+  /// 🛡️ TOGGLE SCREEN PROTECTION HERE
+  /// Set to [false] for screen recording, demo videos, and internal testing.
+  /// Set to [true] for production release.
+  /// =========================================================================
+  static const bool isProtectionEnabled = false;
+
   bool _isProtected = false;
   DateTime? _lastWarningTime;
 
@@ -12,6 +19,18 @@ class ScreenProtectionService extends GetxService {
 
   Future<void> initialize() async {
     if (kIsWeb) return;
+
+    // If disabled via toggle, ensure any existing native flag is turned off
+    if (!isProtectionEnabled) {
+      try {
+        await ScreenProtector.preventScreenshotOff();
+        await ScreenProtector.protectDataLeakageOff();
+        debugPrint('[ScreenProtectionService] 🟢 Screen protection is currently DISABLED (Recording / Testing Mode).');
+      } catch (e) {
+        debugPrint('[ScreenProtectionService] Failed to turn off protection: $e');
+      }
+      return;
+    }
 
     try {
       // Hardware-level prevent screenshots on Android (FLAG_SECURE) and iOS
@@ -42,7 +61,7 @@ class ScreenProtectionService extends GetxService {
       );
 
       _isProtected = true;
-      debugPrint('[ScreenProtectionService] Screenshot protection enabled.');
+      debugPrint('[ScreenProtectionService] 🔒 Screenshot protection enabled.');
     } catch (e) {
       debugPrint('[ScreenProtectionService] Failed to enable protection: $e');
     }

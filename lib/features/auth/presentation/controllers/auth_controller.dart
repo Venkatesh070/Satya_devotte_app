@@ -195,11 +195,11 @@ class AuthController extends GetxController {
       await _firebaseService.signOut();
     } catch (_) {}
 
-    ToastUtil.showInfo(
-      reason ?? 'Your session has expired. Please sign in again.',
-    );
-
-    Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.key.currentState != null) {
+        Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
+      }
+    });
   }
 
   /// Call this from SplashPage to restore session on app start.

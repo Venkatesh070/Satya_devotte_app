@@ -59,8 +59,8 @@ class DefaultFirebaseOptions {
     projectId: 'sathyatest-4b2b1',
     storageBucket: 'sathyatest-4b2b1.firebasestorage.app',
     messagingSenderId: '460042314237',
-    appId: '1:460042314237:ios:9af2f73207cf26e5847994',
-    iosBundleId: 'com.sathyaApp',
+    appId: '1:460042314237:ios:eff0327af7386050847994',
+    iosBundleId: 'com.sathya.app',
   );
 
   static bool get _isProd => AppEnv.environment == 'prod';

@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/core/utils/phone_validator.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
@@ -326,12 +327,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
 
+    final phone = _phoneController.text.trim();
     final payload = <String, dynamic>{
       'fullName': _fullNameController.text.trim(),
       'gender': _selectedGender,
-      'phone': _phoneController.text.trim(),
+      'phone': phone,
       'placeOfBirth': _birthPlaceController.text.trim(),
-      'countryCode': '+91',
+      'countryCode': phone.isNotEmpty
+          ? PhoneValidator.getCountryCode(phone)
+          : '+27',
     };
 
     if (_sunSign != null) payload['sunSign'] = _sunSign?.toLowerCase();
@@ -710,10 +714,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     color: Color(0xFF1F1F1F),
                     fontSize: 13,
                   ),
-                  decoration: _inputDecoration('Enter phone number'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Phone number is required'
-                      : null,
+                  decoration: _inputDecoration(
+                    'Enter phone number (e.g. 082 123 4567 or +27 82 123 4567)',
+                  ),
+                  validator: (v) => PhoneValidator.validateSouthAfricanMobile(
+                    v,
+                    isRequired: true,
+                    requiredMessage: 'Phone number is required',
+                  ),
                 ),
                 const SizedBox(height: 40),
                 CustomButton(

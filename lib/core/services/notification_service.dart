@@ -12,6 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/notifications/admin_notification_router.dart';
+import 'package:satya_devotte_app/core/notifications/fcm_bootstrap.dart';
 import 'package:satya_devotte_app/core/notifications/push_router.dart';
 import 'package:satya_devotte_app/core/services/notification_platform.dart';
 import 'package:satya_devotte_app/features/notifications/presentation/controllers/user_notifications_badge_controller.dart';
@@ -190,6 +191,11 @@ class NotificationService with WidgetsBindingObserver {
       // 7. FCM listeners — foreground display, background tap, cold-start.
       FirebaseMessaging.onMessage.listen(_onForegroundMessage);
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
+
+      // 8. Register device token with backend registry.
+      if (Get.isRegistered<FcmBootstrap>()) {
+        Get.find<FcmBootstrap>().registerWithBackend();
+      }
 
       if (kDebugMode) {
         try {

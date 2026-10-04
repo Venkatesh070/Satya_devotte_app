@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/core/services/location_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/core/utils/phone_validator.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/data/models/address_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_controller.dart';
@@ -128,16 +129,11 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   }
 
   String? _validateSouthAfricanPhone(String? phone) {
-    final trimmed = phone?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return 'Please enter phone number';
-    }
-    final cleaned = trimmed.replaceAll(RegExp(r'[\s\-().]'), '');
-    final saMobileRegex = RegExp(r'^(?:(?:\+27|0027|27)|0)?[6-8]\d{8}$');
-    if (!saMobileRegex.hasMatch(cleaned)) {
-      return 'Please enter a valid South African mobile number (e.g. 082 123 4567)';
-    }
-    return null;
+    return PhoneValidator.validateSouthAfricanMobile(
+      phone,
+      isRequired: true,
+      requiredMessage: 'Please enter phone number',
+    );
   }
 
   void _onFieldChanged() {
@@ -2083,7 +2079,8 @@ class _ReceiverCard extends StatelessWidget {
             label: 'Phone number',
             child: _AddressInput(
               controller: phoneCtrl,
-              hint: 'Enter receiver phone number (e.g. 082 123 4567)',
+              hint:
+                  'Enter receiver phone number (e.g. 082 123 4567 or +27 82 123 4567)',
               keyboardType: TextInputType.phone,
               errorText: phoneError,
             ),

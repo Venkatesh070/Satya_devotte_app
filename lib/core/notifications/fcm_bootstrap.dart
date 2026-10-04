@@ -148,7 +148,12 @@ class FcmBootstrap {
       // iOS can return null FCM token until APNs token is available.
       final apnsToken = await _waitForApnsToken();
       if (apnsToken == null) {
-        debugPrint('[FCM] APNs token unavailable — push will register once APNs is assigned.');
+        debugPrint(
+          '[FCM] APNs token still pending — scheduling retry in 3s...',
+        );
+        Future.delayed(const Duration(seconds: 3), () {
+          registerWithBackend();
+        });
         return;
       }
     }
