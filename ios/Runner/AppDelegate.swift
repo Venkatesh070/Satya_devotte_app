@@ -167,16 +167,44 @@ class NativeCalendarPlugin: NSObject, FlutterPlugin {
     )
   }
 
+  // Remote pushes always show as a banner in the foreground; super still runs so
+  // firebase_messaging delivers Dart onMessage. Local notifications are left to
+  // flutter_local_notifications via super.
   override func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .badge, .sound, .list])
-    } else {
-      completionHandler([.alert, .badge, .sound])
+    guard notification.request.trigger is UNPushNotificationTrigger else {
+      super.userNotificationCenter(center, willPresent: notification, withCompletionHandler: completionHandler)
+      return
     }
+
+    let options: UNNotificationPresentationOptions
+    if #available(iOS 14.0, *) {
+      options = [.banner, .list, .sound, .badge]
+    } else {
+      options = [.alert, .sound, .badge]
+    }
+    var completed = false
+    let finish: (UNNotificationPresentationOptions) -> Void = { _ in
+      DispatchQueue.main.async {
+        guard !completed else { return }
+        completed = true
+        completionHandler(options)
+      }
+    }
+    super.userNotificationCenter(center, willPresent: notification, withCompletionHandler: finish)
+    // Plugins may not call back at all; never leave the banner pending.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { finish(options) }
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
   }
 
   override func application(

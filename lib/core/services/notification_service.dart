@@ -171,6 +171,8 @@ class NotificationService with WidgetsBindingObserver {
       // 5. iOS / macOS notification permission.
       if (notificationPlatformIsIOS || notificationPlatformIsMacOS) {
         await _fcm.requestPermission(alert: true, badge: true, sound: true);
+        // iOS shows foreground pushes natively (see AppDelegate willPresent);
+        // [_onForegroundMessage] skips the local copy on iOS.
         await _fcm.setForegroundNotificationPresentationOptions(
           alert: true,
           badge: true,
@@ -203,9 +205,9 @@ class NotificationService with WidgetsBindingObserver {
               await _fcm.getAPNSToken() != null) {
             final token = await _fcm.getToken();
             if (token != null && token.length >= 12) {
-              debugPrint('[fcm] device token: ${token.substring(0, 12)}…');
+              debugPrint('[fcm] device token: ${token}');
             }
-          } else {
+          } else {  
             debugPrint(
               '[fcm] device token not ready yet (APNs may still be registering or running on simulator)',
             );
@@ -334,6 +336,11 @@ class NotificationService with WidgetsBindingObserver {
     if (kDebugMode) {
       debugPrint('[fcm fg] type=${message.data['type']} title=$displayTitle');
     }
+    // iOS already shows the banner natively when the push has a notification block.
+    if ((notificationPlatformIsIOS || notificationPlatformIsMacOS) &&
+        notification != null) {
+      return;
+    }
     final payload = jsonEncode(_dataAsMap(message.data));
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -409,7 +416,7 @@ class NotificationService with WidgetsBindingObserver {
       final token = await _fcm.getAPNSToken();
       if (token != null && token.isNotEmpty) {
         if (kDebugMode) {
-          debugPrint('[fcm] APNs token ready (${token.substring(0, 10)}…)');
+          debugPrint('[fcm] APNs token ready (${token})');
         }
         return;
       }
