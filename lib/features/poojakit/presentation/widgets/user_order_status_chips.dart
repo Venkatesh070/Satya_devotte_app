@@ -49,7 +49,19 @@ Color replacementStatusToneColor(String tone) {
   }
 }
 
-String primaryOrderStatusLabel(AdminOrder order) {
+Color primaryOrderStatusColor(AdminOrder order) {
+  if (order.paymentStatus == PaymentStatus.pending ||
+      order.paymentStatus == PaymentStatus.failed) {
+    return const Color(0xFFD14343);
+  }
+  return userOrderStatusColor(order.orderStatus);
+}
+
+String primaryOrderStatusLabel(AdminOrder order, {bool isDetail = false}) {
+  if (order.paymentStatus == PaymentStatus.pending ||
+      order.paymentStatus == PaymentStatus.failed) {
+    return isDetail ? 'Payment Failed' : 'Failed';
+  }
   if (order.orderStatus == OrderStatus.cancelled &&
       order.paymentStatus == PaymentStatus.refundInitiated) {
     return 'Cancelled - refund initiated';
@@ -240,17 +252,31 @@ class UserOrderStatusChips extends StatelessWidget {
     this.request,
     this.refundRequest,
     this.compact = false,
+    this.isDetail = false,
   });
 
   final AdminOrder order;
   final OrderRequest? request;
   final OrderRequest? refundRequest;
   final bool compact;
+  final bool isDetail;
 
   @override
   Widget build(BuildContext context) {
-    final primary = primaryOrderStatusLabel(order);
-    final primaryColor = userOrderStatusColor(order.orderStatus);
+    final primary = primaryOrderStatusLabel(order, isDetail: isDetail);
+    final primaryColor = primaryOrderStatusColor(order);
+    final isPendingOrFailed =
+        order.paymentStatus == PaymentStatus.pending ||
+        order.paymentStatus == PaymentStatus.failed;
+
+    if (isPendingOrFailed) {
+      return _StatusChip(
+        label: primary,
+        color: primaryColor,
+        compact: compact,
+      );
+    }
+
     final itemLevel = shouldShowItemLevelReturnReplaceTags(
       order,
       request: request,

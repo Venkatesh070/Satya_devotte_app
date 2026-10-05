@@ -115,10 +115,14 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<UserOrdersController>();
     final itemCount = order.items.length;
-    final isDelivered =
-        order.orderStatus == OrderStatus.delivered ||
-        order.orderStatus == OrderStatus.fulfilled;
-    final isCancelled = order.orderStatus == OrderStatus.cancelled;
+    final isPendingOrFailed =
+        order.paymentStatus == PaymentStatus.pending ||
+        order.paymentStatus == PaymentStatus.failed;
+    final isDelivered = !isPendingOrFailed &&
+        (order.orderStatus == OrderStatus.delivered ||
+        order.orderStatus == OrderStatus.fulfilled);
+    final isCancelled = !isPendingOrFailed &&
+        order.orderStatus == OrderStatus.cancelled;
     // final canConfirmFulfillment = order.canUserConfirmFulfillment;
     final refundRequest = controller.refundRequestFor(order.id);
     final replacementRequest = controller.replacementRequestFor(order.id);
@@ -199,6 +203,7 @@ class _OrderCard extends StatelessWidget {
                       date: order.formattedDate,
                       isDelivered: isDelivered,
                       isCancelled: isCancelled,
+                      isFailed: isPendingOrFailed,
                     ),
                     UserOrderStatusChips(
                       order: order,
@@ -301,7 +306,9 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (kOrderReturnReplaceEnabled && order.needsUserReturn) ...[
+                if (!isPendingOrFailed &&
+                    kOrderReturnReplaceEnabled &&
+                    order.needsUserReturn) ...[
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 36,
@@ -326,10 +333,11 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (canUserRequestReturnOrReplace(
-                  order,
-                  refundRequest: refundRequest,
-                )) ...[
+                if (!isPendingOrFailed &&
+                    canUserRequestReturnOrReplace(
+                      order,
+                      refundRequest: refundRequest,
+                    )) ...[
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 36,
@@ -577,16 +585,20 @@ class _OrderDateBadge extends StatelessWidget {
     required this.date,
     required this.isDelivered,
     required this.isCancelled,
+    this.isFailed = false,
   });
 
   final String label;
   final String date;
   final bool isDelivered;
   final bool isCancelled;
+  final bool isFailed;
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isDelivered
+    final statusColor = isFailed
+        ? const Color(0xFFD14343)
+        : isDelivered
         ? const Color(0xFF088B56)
         : isCancelled
         ? const Color(0xFFD14343)
@@ -606,7 +618,9 @@ class _OrderDateBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isDelivered
+            isFailed
+                ? Icons.error_outline_rounded
+                : isDelivered
                 ? Icons.check_circle_outline_rounded
                 : isCancelled
                 ? Icons.cancel_outlined

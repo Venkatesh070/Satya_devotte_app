@@ -152,6 +152,7 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                           order: _order,
                           request: _replacementRequest,
                           refundRequest: _refundRequest,
+                          isDetail: true,
                         ),
                       ),
                     ),
@@ -197,8 +198,11 @@ class _UserOrderDetailScreenState extends State<UserOrderDetailScreen> {
                     request: _refundRequest,
                   ),
                 ],
-                const SizedBox(height: 12),
-                _BillSummaryCard(order: _order),
+                if (_order.paymentStatus != PaymentStatus.pending &&
+                    _order.paymentStatus != PaymentStatus.failed) ...[
+                  const SizedBox(height: 12),
+                  _BillSummaryCard(order: _order),
+                ],
                 const SizedBox(height: 12),
                 _TransactionCard(order: _order),
                 if (_order.canUserConfirmFulfillment) ...[
@@ -308,7 +312,9 @@ class _DeliveryCard extends StatelessWidget {
       final showOtp =
           code.isNotEmpty &&
           order.orderStatus != OrderStatus.fulfilled &&
-          order.orderStatus != OrderStatus.cancelled;
+          order.orderStatus != OrderStatus.cancelled &&
+          order.paymentStatus != PaymentStatus.pending &&
+          order.paymentStatus != PaymentStatus.failed;
 
       return _SummaryCard(
         title: 'Pick from Warehouse',
@@ -655,6 +661,10 @@ class _TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPendingOrFailed =
+        order.paymentStatus == PaymentStatus.pending ||
+        order.paymentStatus == PaymentStatus.failed;
+
     return _SummaryCard(
       title: 'Transaction Summary',
       child: Column(
@@ -667,10 +677,18 @@ class _TransactionCard extends StatelessWidget {
               label: 'PayFast txn ID',
               value: order.resolvedPayfastPaymentId,
             ),
-          _RowLine(label: 'Order Status', value: order.orderStatus.label),
+          _RowLine(
+            label: 'Order Status',
+            value: isPendingOrFailed ? 'Payment Failed' : order.orderStatus.label,
+          ),
           if (order.paymentStatus != PaymentStatus.paid)
-            _RowLine(label: 'Payment Status', value: order.paymentStatus.label),
-          if (order.invoice?.url.isNotEmpty == true) ...[
+            _RowLine(
+              label: 'Payment Status',
+              value: isPendingOrFailed
+                  ? 'Payment Failed'
+                  : order.paymentStatus.label,
+            ),
+          if (order.invoice?.url.isNotEmpty == true && !isPendingOrFailed) ...[
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -906,6 +924,14 @@ class _ActionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPendingOrFailed =
+        order.paymentStatus == PaymentStatus.pending ||
+        order.paymentStatus == PaymentStatus.failed;
+
+    if (isPendingOrFailed) {
+      return const SizedBox.shrink();
+    }
+
     final isProcessing = order.orderStatus == OrderStatus.processing;
     final canCancel =
         order.orderStatus.canUserCancel ||
