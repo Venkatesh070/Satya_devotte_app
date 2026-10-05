@@ -5,12 +5,10 @@ import 'package:screen_protector/screen_protector.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 
 class ScreenProtectionService extends GetxService {
-  /// =========================================================================
   /// 🛡️ TOGGLE SCREEN PROTECTION HERE
   /// Set to [false] for screen recording, demo videos, and internal testing.
   /// Set to [true] for production release.
-  /// =========================================================================
-  static const bool isProtectionEnabled = false;
+  static const bool isProtectionEnabled = true;
 
   bool _isProtected = false;
   DateTime? _lastWarningTime;
@@ -25,9 +23,13 @@ class ScreenProtectionService extends GetxService {
       try {
         await ScreenProtector.preventScreenshotOff();
         await ScreenProtector.protectDataLeakageOff();
-        debugPrint('[ScreenProtectionService] 🟢 Screen protection is currently DISABLED (Recording / Testing Mode).');
+        debugPrint(
+          '[ScreenProtectionService] 🟢 Screen protection is currently DISABLED (Recording / Testing Mode).',
+        );
       } catch (e) {
-        debugPrint('[ScreenProtectionService] Failed to turn off protection: $e');
+        debugPrint(
+          '[ScreenProtectionService] Failed to turn off protection: $e',
+        );
       }
       return;
     }
