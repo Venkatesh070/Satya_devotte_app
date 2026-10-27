@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
@@ -33,9 +33,9 @@ import 'package:satya_devotte_app/features/pujas/presentation/pages/user_catalog
 import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
-import 'package:satya_devotte_app/shared/widgets/app_update_popup.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
+import 'package:satya_devotte_app/core/services/app_update_service.dart';
 
 class _HomeTabs {
   static const home = 0;
@@ -72,7 +72,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _poojasCompleted = 0;
   int _ritualsCompleted = 0;
   int _dayStreak = 0;
-  bool _isUpdateDialogShowing = false;
 
   @override
   void initState() {
@@ -91,7 +90,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // _triggerUpdatePopupIfNeeded();
+      if (!kIsWeb && Platform.isIOS) {
+        AppUpdateService.checkAndPromptIfAvailable(context, isMandatory: true);
+      }
     });
   }
 
@@ -100,84 +101,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // _triggerUpdatePopupIfNeeded();
+        if (!kIsWeb && Platform.isIOS) {
+          AppUpdateService.checkAndPromptIfAvailable(context, isMandatory: true);
+        }
       });
     }
-  }
-
-  void _triggerUpdatePopupIfNeeded() {
-    if (!mounted) return;
-    _logAppVersions();
-    _promptAppUpdateIfAvailable(
-      appName: 'Sathya',
-      appSize: '182 MB',
-      isMandatory: true,
-    );
-  }
-
-  Future<void> _logAppVersions() async {
-    try {
-      final info = await PackageInfo.fromPlatform();
-      final currentVersion = '${info.version}+${info.buildNumber}';
-      debugPrint(
-        '[AppVersionCheck] Current Installed App Version: $currentVersion (Version: ${info.version}, Build: ${info.buildNumber})',
-      );
-
-      try {
-        final response = await Get.find<ApiClient>().dio.get<String>(
-          'https://play.google.com/store/apps/details?id=com.satya_devotte_app',
-          options: dio.Options(
-            responseType: dio.ResponseType.plain,
-            extra: {kSkipApiLoaderKey: true},
-          ),
-        );
-        final html = response.data ?? '';
-        final patterns = [
-          RegExp(r'\[\[\["([0-9]+\.[0-9]+\.[0-9]+[^"]*)"\]\]'),
-          RegExp(r'HTl26[^>]*>([0-9]+\.[0-9]+\.[0-9]+)<'),
-          RegExp(r'"([0-9]+\.[0-9]+\.[0-9]+)"'),
-        ];
-        String? foundVersion;
-        for (final p in patterns) {
-          final m = p.firstMatch(html);
-          if (m != null && m.group(1) != null) {
-            foundVersion = m.group(1);
-            break;
-          }
-        }
-        debugPrint(
-          '[AppVersionCheck] Play Store Public Version: ${foundVersion ?? "Not published on Public Store yet (Closed Testing Track Active)"}',
-        );
-      } catch (_) {
-        debugPrint(
-          '[AppVersionCheck] Play Store Status: App is currently in Closed Testing / Beta track (Not public web listing)',
-        );
-      }
-    } catch (e) {
-      debugPrint('[AppVersionCheck] Error fetching package info: $e');
-    }
-  }
-
-  /// Triggers the Google Play style centered update pop-up dialog over the app screen.
-  void _promptAppUpdateIfAvailable({
-    String? appName,
-    String? releaseNotes,
-    String? appSize,
-    String? storeUrl,
-    bool isMandatory = false,
-  }) {
-    if (!mounted || _isUpdateDialogShowing) return;
-    _isUpdateDialogShowing = true;
-    showAppUpdateDialog(
-      context,
-      appName: appName,
-      appSize: appSize,
-      releaseNotes: releaseNotes,
-      storeUrl: storeUrl,
-      isMandatory: isMandatory,
-    ).then((_) {
-      _isUpdateDialogShowing = false;
-    });
   }
 
   @override

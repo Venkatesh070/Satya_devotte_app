@@ -21,19 +21,18 @@ class UpdateManager(private val activity: Activity) {
         }
     }
 
-    // Check for flexible update on app start (pops up floating update dialog)
+    // Check for update on app start (prioritizes immediate mandatory update)
     fun checkForFlexibleUpdate() {
         appUpdateManager.registerListener(installStateUpdatedListener)
         appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            ) {
+                startImmediateUpdate(appUpdateInfo)
+            } else if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                 && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
             ) {
                 startFlexibleUpdate(appUpdateInfo)
-            } else if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
-                && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
-            ) {
-                // Fallback to immediate if flexible is not allowed
-                startImmediateUpdate(appUpdateInfo)
             }
         }
     }
@@ -44,7 +43,7 @@ class UpdateManager(private val activity: Activity) {
             if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
                 showUpdateCompleteDialog()
             } else if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                startFlexibleUpdate(appUpdateInfo)
+                startImmediateUpdate(appUpdateInfo)
             }
         }
     }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,7 +12,7 @@ Future<void> showAppUpdateDialog(
   String? contentRating,
   String? releaseNotes,
   String? storeUrl,
-  bool isMandatory = false,
+  bool isMandatory = true,
 }) {
   return showDialog<void>(
     context: context,
@@ -45,7 +46,7 @@ class AppUpdatePopupDialog extends StatefulWidget {
     this.contentRating,
     this.releaseNotes,
     this.storeUrl,
-    this.isMandatory = false,
+    this.isMandatory = true,
   });
 
   @override
@@ -86,11 +87,16 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
   }
 
   Future<void> _handleUpdate() async {
-    final defaultUrl = Uri.parse(
-      widget.storeUrl ?? 'market://details?id=com.satya_devotte_app',
-    );
+    final isIos = defaultTargetPlatform == TargetPlatform.iOS;
+    final defaultUrlString = widget.storeUrl ??
+        (isIos
+            ? 'https://apps.apple.com/app/com.sathya.app'
+            : 'market://details?id=com.satya_devotte_app');
+    final defaultUrl = Uri.parse(defaultUrlString);
     final webFallback = Uri.parse(
-      'https://play.google.com/store/apps/details?id=com.satya_devotte_app',
+      isIos
+          ? 'https://apps.apple.com/app/com.sathya.app'
+          : 'https://play.google.com/store/apps/details?id=com.satya_devotte_app',
     );
 
     try {
@@ -105,9 +111,12 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
   }
 
   Future<void> _handleLearnMore() async {
+    final isIos = defaultTargetPlatform == TargetPlatform.iOS;
     final webUrl = Uri.parse(
       widget.storeUrl ??
-          'https://play.google.com/store/apps/details?id=com.satya_devotte_app',
+          (isIos
+              ? 'https://apps.apple.com/app/com.sathya.app'
+              : 'https://play.google.com/store/apps/details?id=com.satya_devotte_app'),
     );
     try {
       if (await canLaunchUrl(webUrl)) {
@@ -120,6 +129,7 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isIos = defaultTargetPlatform == TargetPlatform.iOS;
     final displayAppName = _resolvedAppName.isNotEmpty
         ? _resolvedAppName
         : (widget.appName ?? 'Sathya');
@@ -130,12 +140,12 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
     final displaySize =
         (widget.appSize != null && widget.appSize!.trim().isNotEmpty)
         ? widget.appSize!
-        : '182 MB';
+        : (isIos ? '110 MB' : '182 MB');
     final displayRating =
         (widget.contentRating != null &&
             widget.contentRating!.trim().isNotEmpty)
         ? widget.contentRating!
-        : 'Rated for 3+';
+        : (isIos ? 'Rated 4+' : 'Rated for 3+');
 
     return PopScope(
       canPop: !widget.isMandatory,
@@ -162,25 +172,54 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Row: Google Play header + Close 'X' button
+                  // Top Row: Platform Store header + Close 'X' button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
-                          _buildGooglePlayLogo(),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Google Play',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF5F6368),
-                              fontFamily: 'Roboto',
+                          if (isIos) ...[
+                            const Icon(
+                              Icons.apple,
+                              size: 24,
+                              color: Color(0xFF1D1D1F),
                             ),
-                          ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'App Store',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1D1D1F),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ] else ...[
+                            _buildGooglePlayLogo(),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Google Play',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF5F6368),
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                          ],
                         ],
                       ),
+                      if (!widget.isMandatory)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 20,
+                            color: Color(0xFF747775),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                     ],
                   ),
 
@@ -197,9 +236,11 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'To use this app, download the latest version.',
-                    style: TextStyle(
+                  Text(
+                    isIos
+                        ? 'A new version of $displayAppName is available on the App Store.'
+                        : 'To use this app, download the latest version.',
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF444746),
                       height: 1.3,
@@ -286,9 +327,9 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
                                       ),
                                       borderRadius: BorderRadius.circular(3),
                                     ),
-                                    child: const Text(
-                                      '3+',
-                                      style: TextStyle(
+                                    child: Text(
+                                      isIos ? '4+' : '3+',
+                                      style: const TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF1F1F1F),
@@ -367,52 +408,109 @@ class _AppUpdatePopupDialogState extends State<AppUpdatePopupDialog> {
                   const SizedBox(height: 24),
 
                   // Action Buttons Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _handleLearnMore,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF0B57D0),
-                            side: const BorderSide(color: Color(0xFF747775)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                  if (isIos) ...[
+                    Row(
+                      children: [
+                        if (!widget.isMandatory) ...[
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF5F6368),
+                                side: const BorderSide(
+                                  color: Color(0xFFD0D5DD),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text(
+                                'Later',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text(
-                            'Learn more',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _handleUpdate,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0071E3),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Update Now',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _handleUpdate,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0B57D0),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                      ],
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        if (!widget.isMandatory) ...[
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _handleLearnMore,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0B57D0),
+                                side: const BorderSide(color: Color(0xFF747775)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text(
+                                'Learn more',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text(
-                            'Update',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _handleUpdate,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0B57D0),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Update',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
