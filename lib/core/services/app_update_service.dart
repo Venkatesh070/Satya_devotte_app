@@ -52,17 +52,24 @@ class AppUpdateService {
   static bool _isDialogShowing = false;
 
   /// Checks if [storeVersion] is strictly newer than [currentVersion].
-  /// Handles semantic versioning like:
+  ///
+  /// iOS App Store Lookup only exposes the marketing / sub-version
+  /// (`CFBundleShortVersionString`, e.g. `1.0.1`). Compare those segments
+  /// numerically. Build numbers (`+23`) are ignored here — Apple does not
+  /// publish CFBundleVersion via the Lookup API.
+  ///
+  /// Examples:
   /// - `1.0.1` > `1.0.0` -> true
   /// - `1.1.0` > `1.0.9` -> true
   /// - `2.0.0` > `1.9.9` -> true
   /// - `1.0.0` == `1.0.0` -> false
-  /// - `1.0.0+24` > `1.0.0+23` -> true
+  /// - `1.2` vs `1.2.1` -> true
   static bool isVersionNewer(String currentVersion, String storeVersion) {
     if (storeVersion.trim().isEmpty) return false;
     if (currentVersion.trim().isEmpty) return true;
 
     try {
+      // Strip any Flutter-style `+build` suffix; App Store never returns it.
       final cleanCurrent = currentVersion.split('+').first.trim();
       final cleanStore = storeVersion.split('+').first.trim();
 
@@ -87,13 +94,6 @@ class AppUpdateService {
         }
       }
 
-      // If semantic versions match, compare build numbers if present (e.g. 1.0.0+24 vs 1.0.0+23)
-      final currentBuild = _extractBuildNumber(currentVersion);
-      final storeBuild = _extractBuildNumber(storeVersion);
-      if (currentBuild != null && storeBuild != null && storeBuild > currentBuild) {
-        return true;
-      }
-
       return false;
     } catch (e) {
       debugPrint('[AppUpdateService] Error comparing versions ($currentVersion vs $storeVersion): $e');
@@ -101,13 +101,11 @@ class AppUpdateService {
     }
   }
 
-  static int? _extractBuildNumber(String fullVersion) {
-    if (!fullVersion.contains('+')) return null;
-    final part = fullVersion.split('+').last.trim();
-    return int.tryParse(part);
-  }
-
   /// Queries the Apple iTunes Lookup API for the latest approved App Store version.
+  ///
+  /// Compares installed marketing / sub-version (`packageInfo.version`) against
+  /// `results[0].version`. Build number is logged only; it is not part of the
+  /// App Store update decision.
   ///
   /// Set [simulatedStoreVersion] for debugging/testing the update prompt.
   static Future<AppUpdateInfo?> checkIosUpdate({
@@ -120,14 +118,13 @@ class AppUpdateService {
           ? packageInfo.version.trim()
           : '1.0.0';
       final buildNumber = packageInfo.buildNumber.trim();
-      final fullCurrent = buildNumber.isNotEmpty ? '$currentVersion+$buildNumber' : currentVersion;
 
       // Testing override
       if (simulatedStoreVersion != null && simulatedStoreVersion.isNotEmpty) {
-        final isNewer = isVersionNewer(fullCurrent, simulatedStoreVersion);
+        final isNewer = isVersionNewer(currentVersion, simulatedStoreVersion);
         return AppUpdateInfo(
           isUpdateAvailable: isNewer,
-          currentVersion: fullCurrent,
+          currentVersion: currentVersion,
           storeVersion: simulatedStoreVersion,
           releaseNotes:
               'New features, performance enhancements, and bug fixes for the best experience.',
@@ -165,14 +162,15 @@ class AppUpdateService {
       final trackViewUrl = storeData['trackViewUrl']?.toString() ??
           'https://apps.apple.com/app/sathya/id${storeData["trackId"]}';
 
-      final isNewer = isVersionNewer(fullCurrent, storeVersion);
+      final isNewer = isVersionNewer(currentVersion, storeVersion);
       debugPrint(
-        '[AppUpdateService] iOS Check: Installed=$fullCurrent, AppStore=$storeVersion, UpdateAvailable=$isNewer',
+        '[AppUpdateService] iOS Check: Installed=$currentVersion (build $buildNumber), '
+        'AppStore=$storeVersion, UpdateAvailable=$isNewer',
       );
 
       return AppUpdateInfo(
         isUpdateAvailable: isNewer,
-        currentVersion: fullCurrent,
+        currentVersion: currentVersion,
         storeVersion: storeVersion,
         releaseNotes: releaseNotes,
         storeUrl: trackViewUrl,
