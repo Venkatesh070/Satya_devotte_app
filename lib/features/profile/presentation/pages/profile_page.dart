@@ -25,9 +25,17 @@ const _termsConditionsUrl = 'https://sathya-terms-and-conditions.netlify.app/';
 
 Future<void> _openUrl(String url) async {
   final uri = Uri.parse(url);
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched) {
-    ToastUtil.showInfo('Could not open the link. Please try again.');
+  try {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+  } catch (e) {
+    try {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (_) {
+      ToastUtil.showInfo('Could not open the link. Please try again.');
+    }
   }
 }
 
@@ -204,6 +212,11 @@ class ProfilePage extends StatelessWidget {
                           ProfileLinkTile(
                             icon: Icons.privacy_tip_outlined,
                             label: 'Privacy Policy',
+                            onTap: () => _openUrl(_privacyPolicyUrl),
+                          ),
+                          ProfileLinkTile(
+                            icon: Icons.verified_user_outlined,
+                            label: 'POPIA Compliance',
                             onTap: () => _openUrl(_privacyPolicyUrl),
                           ),
                           ProfileLinkTile(

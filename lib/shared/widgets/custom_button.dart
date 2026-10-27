@@ -41,41 +41,47 @@ class _CustomButtonState extends State<CustomButton> {
         onTapUp: canTap ? (_) => setState(() => _isPressed = false) : null,
         onTapCancel: canTap ? () => setState(() => _isPressed = false) : null,
         onTap: canTap ? widget.onTap : null,
-        child: AnimatedScale(
-          scale: _isPressed ? 0.96 : 1,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          child: Container(
-            height: 50,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              gradient: LinearGradient(
-                begin: widget.gradientBegin,
-                end: widget.gradientEnd,
-                colors: widget.gradientColors,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 4),
+        child: AnimatedOpacity(
+          opacity: canTap ? 1.0 : 0.45,
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedScale(
+            scale: _isPressed ? 0.96 : 1,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                gradient: LinearGradient(
+                  begin: widget.gradientBegin,
+                  end: widget.gradientEnd,
+                  colors: widget.gradientColors,
                 ),
-              ],
-            ),
-            child: Center(
-              child: widget.isLoading
-                  ? const CircularProgressIndicator(
-                      color: Color(0xFFFCF7EF),
-                      strokeWidth: 2,
-                    )
-                  : Text(
-                      widget.label,
-                      style: TextStyle(
-                        color: widget.textColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                boxShadow: canTap
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 20,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: widget.isLoading
+                    ? const CircularProgressIndicator(
+                        color: Color(0xFFFCF7EF),
+                        strokeWidth: 2,
+                      )
+                    : Text(
+                        widget.label,
+                        style: TextStyle(
+                          color: widget.textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         ),

@@ -17,16 +17,21 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class UserRitualDetailPage extends StatefulWidget {
-  const UserRitualDetailPage({super.key, required this.ritualId});
+  const UserRitualDetailPage({
+    super.key,
+    required this.ritualId,
+    this.initialRitual,
+  });
 
   final String ritualId;
+  final RitualModel? initialRitual;
 
   @override
   State<UserRitualDetailPage> createState() => _UserRitualDetailPageState();
 }
 
 class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
-  bool _isLoading = true;
+  late bool _isLoading;
   String? _error;
   RitualModel? _ritual;
 
@@ -35,6 +40,8 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   @override
   void initState() {
     super.initState();
+    _ritual = widget.initialRitual;
+    _isLoading = widget.initialRitual == null;
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Get.isRegistered<RitualHistoryController>()) {
@@ -44,10 +51,12 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (_ritual == null) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final ritual = await Get.find<RitualRemoteDataSource>().getRitualById(
         widget.ritualId,
@@ -56,13 +65,17 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
       setState(() {
         _ritual = ritual;
         _isLoading = false;
+        _error = null;
       });
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('UserRitualDetailPage._load error for ${widget.ritualId}: $e\n$stack');
       if (!mounted) return;
-      setState(() {
-        _error = 'Could not load this ritual.';
-        _isLoading = false;
-      });
+      if (_ritual == null) {
+        setState(() {
+          _error = 'Could not load this ritual.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -82,13 +95,11 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   Future<void> _openDay(RitualModel ritual, int dayNumber) async {
     final authCtrl = Get.find<AuthController>();
     if (authCtrl.isGuest) {
-      final loggedIn = await showGuestAuthDialog(
+      showGuestAuthDialog(
         context,
         title: 'Please sign in or sign up to begin ritual',
       );
-      if (loggedIn != true && authCtrl.isGuest) {
-        return;
-      }
+      return;
     }
     final session = _pendingSession(ritual);
     final sessionId = session != null

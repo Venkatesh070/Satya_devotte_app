@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/poojakit/state/poojakit_controller.dart';
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 
 class PoojaKitPage extends GetView<PoojaKitController> {
   const PoojaKitPage({super.key, this.onBack});
@@ -16,6 +17,12 @@ class PoojaKitPage extends GetView<PoojaKitController> {
   @override
   Widget build(BuildContext context) {
     final cartCtrl = Get.find<CartController>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.products.isEmpty && !controller.isLoading) {
+        controller.fetchProducts();
+      }
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAECD2),
@@ -48,7 +55,11 @@ class PoojaKitPage extends GetView<PoojaKitController> {
         top: false,
         child: Obx(() {
           if (controller.isLoading && controller.products.isEmpty) {
-            return const SizedBox.shrink();
+            return _ShopScaffold(
+              child: const Center(
+                child: ChakraLoadingIndicator(size: 32),
+              ),
+            );
           }
 
           if (controller.error != null && controller.products.isEmpty) {
@@ -62,18 +73,9 @@ class PoojaKitPage extends GetView<PoojaKitController> {
             );
           }
 
-          if (controller.products.isEmpty) {
-            return _ShopScaffold(
-              child: Image.asset(
-                'assets/images/default_img.png',
-                fit: BoxFit.cover,
-              ),
-            );
-          }
-
           final filtered = controller.filteredProducts;
 
-          if (filtered.isEmpty) {
+          if (controller.products.isEmpty || filtered.isEmpty) {
             return _ShopScaffold(
               child: RefreshIndicator(
                 color: AppColors.primary,
@@ -85,7 +87,8 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                     alignment: Alignment.center,
                     child: _StateMessage(
                       icon: Icons.inventory_2_outlined,
-                      title: 'No products in ${controller.selectedCategory}',
+                      title:
+                          'No products in ${controller.selectedCategory.toLowerCase()}',
                     ),
                   ),
                 ),

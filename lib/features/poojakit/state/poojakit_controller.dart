@@ -18,12 +18,12 @@ class PoojaKitController extends GetxController {
   final _searchQuery = ''.obs;
 
   static const List<String> categories = [
+    'Ayurvedic Products',
     'Puja Kits',
     'Sathya Books',
-    'Ayurvedic Products',
   ];
 
-  final _selectedCategory = 'Puja Kits'.obs;
+  final _selectedCategory = 'Ayurvedic Products'.obs;
 
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading.value;
@@ -45,15 +45,15 @@ class PoojaKitController extends GetxController {
       final pCat = p.category.toLowerCase().trim();
       final pTitle = p.title.toLowerCase().trim();
 
-      if (cat.contains('puja') || cat.contains('kit')) {
+      if (cat.contains('ayurvedic')) {
+        return pCat.contains('ayurved') || pTitle.contains('ayurved');
+      } else if (cat.contains('puja') || cat.contains('kit')) {
         return pCat.contains('puja') ||
             pCat.contains('kit') ||
             pCat.isEmpty ||
             pCat == 'pujakit';
       } else if (cat.contains('book')) {
         return pCat.contains('book') || pTitle.contains('book');
-      } else if (cat.contains('ayurvedic')) {
-        return pCat.contains('ayurved') || pTitle.contains('ayurved');
       }
       return true;
     }).toList();

@@ -7,29 +7,34 @@ const String kPrivacyPolicyUrl = 'https://sathya-app-privacy.netlify.app/';
 const String kTermsConditionsUrl =
     'https://sathya-terms-and-conditions.netlify.app/';
 
-Future<void> launchPrivacyPolicy() async {
-  final uri = Uri.parse(kPrivacyPolicyUrl);
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched) {
-    ToastUtil.showInfo('Could not open Privacy Policy link.');
+Future<void> _safeLaunchUrl(String url, String label) async {
+  final uri = Uri.parse(url);
+  try {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+  } catch (e) {
+    debugPrint('Could not open $label link ($url): $e');
+    try {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (_) {
+      ToastUtil.showInfo('Could not open $label link.');
+    }
   }
 }
 
+Future<void> launchPrivacyPolicy() async {
+  await _safeLaunchUrl(kPrivacyPolicyUrl, 'Privacy Policy');
+}
+
 Future<void> launchTermsAndConditions() async {
-  final uri = Uri.parse(kTermsConditionsUrl);
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched) {
-    ToastUtil.showInfo('Could not open Terms & Conditions link.');
-  }
+  await _safeLaunchUrl(kTermsConditionsUrl, 'Terms & Conditions');
 }
 
 Future<void> launchPopiaCompliance() async {
   // POPIA compliance information is incorporated into the Sathya Privacy Policy.
-  final uri = Uri.parse(kPrivacyPolicyUrl);
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched) {
-    ToastUtil.showInfo('Could not open POPIA Compliance link.');
-  }
+  await launchPrivacyPolicy();
 }
 
 /// Reusable disclaimer text with clickable underlined links for
@@ -41,12 +46,16 @@ class TermsAndPrivacyPolicyText extends StatelessWidget {
     this.linkColor,
     this.fontSize = 11.0,
     this.textAlign = TextAlign.center,
+    this.prefixWidget,
+    this.onNonLinkTap,
   });
 
   final Color? textColor;
   final Color? linkColor;
   final double fontSize;
   final TextAlign textAlign;
+  final Widget? prefixWidget;
+  final VoidCallback? onNonLinkTap;
 
   @override
   Widget build(BuildContext context) {
@@ -69,33 +78,54 @@ class TermsAndPrivacyPolicyText extends StatelessWidget {
       height: 1.35,
     );
 
+    final nonLinkRecognizer = onNonLinkTap != null
+        ? (TapGestureRecognizer()..onTap = onNonLinkTap)
+        : null;
+
     return RichText(
       textAlign: textAlign,
       text: TextSpan(
         style: baseStyle,
         children: [
-          const TextSpan(text: 'By signing up you are accepting our '),
+          if (prefixWidget != null)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: prefixWidget!,
+            ),
+          TextSpan(
+            text: 'By signing up you are accepting our ',
+            recognizer: nonLinkRecognizer,
+          ),
           TextSpan(
             text: 'terms and conditions',
             style: linkStyle,
             recognizer: TapGestureRecognizer()
               ..onTap = () => launchTermsAndConditions(),
           ),
-          const TextSpan(text: ', '),
+          TextSpan(
+            text: ', ',
+            recognizer: nonLinkRecognizer,
+          ),
           TextSpan(
             text: 'privacy policy',
             style: linkStyle,
             recognizer: TapGestureRecognizer()
               ..onTap = () => launchPrivacyPolicy(),
           ),
-          const TextSpan(text: ', and '),
+          TextSpan(
+            text: ' and ',
+            recognizer: nonLinkRecognizer,
+          ),
           TextSpan(
             text: 'POPIA compliance',
             style: linkStyle,
             recognizer: TapGestureRecognizer()
               ..onTap = () => launchPopiaCompliance(),
           ),
-          const TextSpan(text: '.'),
+          TextSpan(
+            text: '.',
+            recognizer: nonLinkRecognizer,
+          ),
         ],
       ),
     );

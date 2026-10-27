@@ -273,7 +273,12 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
       await openPujaPreview(context, id: item.id, initialData: item.rawPooja);
       return;
     }
-    await Get.to<void>(() => UserRitualDetailPage(ritualId: item.id));
+    await Get.to<void>(
+      () => UserRitualDetailPage(
+        ritualId: item.id,
+        initialRitual: item.ritualModel,
+      ),
+    );
     if (Get.isRegistered<RitualHistoryController>()) {
       Get.find<RitualHistoryController>().fetchHistory(skipLoader: true);
     }

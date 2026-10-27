@@ -234,12 +234,15 @@ class _RitualHistoryList extends StatelessWidget {
               final ritualId =
                   (ritualMap['_id'] ?? ritualMap['id'] ?? '').toString();
 
+              RitualModel? ritualModel;
+              if (ritualMap['days'] is List &&
+                  (ritualMap['days'] as List).isNotEmpty) {
+                ritualModel = RitualModel.fromJson(ritualMap);
+              }
+
               if (_isInProgress(session)) {
-                RitualModel? ritualModel;
-                if (ritualMap['days'] is List &&
-                    (ritualMap['days'] as List).isNotEmpty) {
-                  ritualModel = RitualModel.fromJson(ritualMap);
-                } else if (Get.isRegistered<RitualRemoteDataSource>()) {
+                if (ritualModel == null &&
+                    Get.isRegistered<RitualRemoteDataSource>()) {
                   try {
                     ritualModel = await Get.find<RitualRemoteDataSource>()
                         .getRitualById(ritualId);
@@ -278,7 +281,10 @@ class _RitualHistoryList extends StatelessWidget {
                 controller.fetchHistory(skipLoader: true);
               } else {
                 await Get.to(
-                  () => UserRitualDetailPage(ritualId: ritualId),
+                  () => UserRitualDetailPage(
+                    ritualId: ritualId,
+                    initialRitual: ritualModel,
+                  ),
                 );
                 controller.fetchHistory(skipLoader: true);
               }

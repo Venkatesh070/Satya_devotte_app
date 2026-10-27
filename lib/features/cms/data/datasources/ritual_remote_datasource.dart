@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -227,17 +228,28 @@ class RitualRemoteDataSource {
     if (offlineService != null && offlineService.isOnline.value) {
       try {
         final response = await _apiClient.dio.get(ApiEndpoints.ritual(id));
-        final payload = response.data as Map<String, dynamic>;
-        await offlineService.cacheData('ritual_detail_$id', payload);
-        return RitualModel.fromJson(_extractSingle(payload));
-      } catch (_) {}
+        final body = response.data;
+        if (body is Map) {
+          final payload = Map<String, dynamic>.from(body);
+          await offlineService.cacheData('ritual_detail_$id', payload);
+          final extracted = _extractSingle(payload);
+          if (extracted.isNotEmpty) {
+            return RitualModel.fromJson(extracted);
+          }
+        }
+      } catch (e) {
+        debugPrint('RitualRemoteDataSource.getRitualById online error: $e');
+      }
     }
 
     if (offlineService != null) {
       final cached = offlineService.getCachedData('ritual_detail_$id');
       if (cached is Map) {
         final map = Map<String, dynamic>.from(cached);
-        return RitualModel.fromJson(_extractSingle(map));
+        final extracted = _extractSingle(map);
+        if (extracted.isNotEmpty) {
+          return RitualModel.fromJson(extracted);
+        }
       }
       final allCached = offlineService.getCachedData('all_rituals');
       if (allCached is Map) {
@@ -251,9 +263,7 @@ class RitualRemoteDataSource {
     }
 
     final response = await _apiClient.dio.get(ApiEndpoints.ritual(id));
-    return RitualModel.fromJson(
-      _extractSingle(response.data as Map<String, dynamic>),
-    );
+    return RitualModel.fromJson(_extractSingle(response.data));
   }
 
   Future<RitualModel> createRitual(
@@ -390,18 +400,21 @@ class RitualRemoteDataSource {
     return const [];
   }
 
-  Map<String, dynamic> _extractSingle(Map<String, dynamic> body) {
-    final d = body['data'];
-    if (d is Map<String, dynamic>) {
-      if (d['ritual'] is Map) {
-        return Map<String, dynamic>.from(d['ritual'] as Map);
+  Map<String, dynamic> _extractSingle(dynamic body) {
+    if (body is! Map) return const {};
+    final map = Map<String, dynamic>.from(body);
+    final d = map['data'];
+    if (d is Map) {
+      final dMap = Map<String, dynamic>.from(d);
+      if (dMap['ritual'] is Map) {
+        return Map<String, dynamic>.from(dMap['ritual'] as Map);
       }
-      return d;
+      return dMap;
     }
-    if (body['ritual'] is Map) {
-      return Map<String, dynamic>.from(body['ritual'] as Map);
+    if (map['ritual'] is Map) {
+      return Map<String, dynamic>.from(map['ritual'] as Map);
     }
-    return body;
+    return map;
   }
 
   Map<String, dynamic> _toMultipartFields(Map<String, dynamic> source) {

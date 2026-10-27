@@ -412,13 +412,11 @@ class _CartScreenState extends State<CartScreen> {
   ) async {
     final authController = Get.find<AuthController>();
     if (authController.isGuest) {
-      final loggedIn = await showGuestAuthDialog(
+      showGuestAuthDialog(
         context,
         title: 'Please sign in or sign up to purchase',
       );
-      if (loggedIn != true && authController.isGuest) {
-        return;
-      }
+      return;
     }
 
     if (!checkoutCtrl.hasFulfillmentMethod) {

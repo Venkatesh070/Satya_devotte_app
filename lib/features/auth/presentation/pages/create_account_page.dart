@@ -44,6 +44,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   int _step = 0;
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
+  bool _isTermsAccepted = false;
 
   AuthController get _authController => Get.find<AuthController>();
 
@@ -589,15 +590,55 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const TermsAndPrivacyPolicyText(
+                  TermsAndPrivacyPolicyText(
                     fontSize: 11.0,
-                    textColor: Color(0xFF57534E),
+                    textColor: const Color(0xFF57534E),
+                    textAlign: TextAlign.center,
+                    prefixWidget: Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Checkbox(
+                          value: _isTermsAccepted,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: const VisualDensity(
+                            horizontal: -4,
+                            vertical: -4,
+                          ),
+                          activeColor: AppColors.primary,
+                          checkColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          side: const BorderSide(
+                            color: Color(0xFF78716C),
+                            width: 1.5,
+                          ),
+                          onChanged: isLoading
+                              ? null
+                              : (val) {
+                                  setState(() {
+                                    _isTermsAccepted = val ?? false;
+                                  });
+                                },
+                        ),
+                      ),
+                    ),
+                    onNonLinkTap: isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _isTermsAccepted = !_isTermsAccepted;
+                            });
+                          },
                   ),
                   const SizedBox(height: 12),
                   CustomButton(
                     label: _step == 0 ? 'Next' : 'Get Started',
                     isLoading: isLoading,
-                    enabled: !isLoading,
+                    enabled: !isLoading && (_step == 0 || _isTermsAccepted),
                     borderRadius: 22,
                     gradientColors: const [
                       AppColors.gradientStart,
@@ -607,6 +648,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     onTap: _step == 0
                         ? _goNext
                         : () async {
+                            if (!_isTermsAccepted) return;
                             final offlineService = Get.find<OfflineService>();
                             if (!offlineService.checkAndShowDialog()) return;
                             await _submit();
