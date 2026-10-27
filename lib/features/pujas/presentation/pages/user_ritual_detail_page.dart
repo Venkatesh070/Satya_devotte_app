@@ -13,6 +13,8 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/ritu
 import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class UserRitualDetailPage extends StatefulWidget {
   const UserRitualDetailPage({super.key, required this.ritualId});
@@ -78,6 +80,16 @@ class _UserRitualDetailPageState extends State<UserRitualDetailPage> {
   }
 
   Future<void> _openDay(RitualModel ritual, int dayNumber) async {
+    final authCtrl = Get.find<AuthController>();
+    if (authCtrl.isGuest) {
+      final loggedIn = await showGuestAuthDialog(
+        context,
+        title: 'Please sign in or sign up to begin ritual',
+      );
+      if (loggedIn != true && authCtrl.isGuest) {
+        return;
+      }
+    }
     final session = _pendingSession(ritual);
     final sessionId = session != null
         ? (session['_id'] ?? session['id'])?.toString()

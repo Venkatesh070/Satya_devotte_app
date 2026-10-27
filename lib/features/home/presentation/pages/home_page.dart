@@ -34,6 +34,8 @@ import 'package:satya_devotte_app/shared/components/section_title.dart';
 import 'package:satya_devotte_app/shared/widgets/product_card.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/shared/widgets/app_update_popup.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class _HomeTabs {
   static const home = 0;
@@ -81,9 +83,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _recordUserStreak();
     _fetchHomeDataIfNeeded();
     if (Get.isRegistered<UserNotificationsBadgeController>()) {
-      unawaited(
-        Get.find<UserNotificationsBadgeController>().refreshUnreadBadge(),
-      );
+      if (!Get.find<AuthController>().isGuest) {
+        unawaited(
+          Get.find<UserNotificationsBadgeController>().refreshUnreadBadge(),
+        );
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -235,6 +239,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   /// `POST /user/streak` with device IANA timezone for daily streak tracking.
   Future<void> _recordUserStreak() async {
+    if (Get.find<AuthController>().isGuest) return;
     final offlineService = Get.find<OfflineService>();
     try {
       final apiClient = Get.find<ApiClient>();
@@ -1593,7 +1598,18 @@ class _HomeHeader extends StatelessWidget {
                           final badgeCtrl =
                               Get.find<UserNotificationsBadgeController>();
                           return GestureDetector(
-                            onTap: () => Get.toNamed(AppRoutes.notifications),
+                            onTap: () {
+                              final authCtrl = Get.find<AuthController>();
+                              if (authCtrl.isGuest) {
+                                showGuestAuthDialog(
+                                  context,
+                                  title:
+                                      'Please sign in or sign up to view notifications',
+                                );
+                                return;
+                              }
+                              Get.toNamed(AppRoutes.notifications);
+                            },
                             child: Stack(
                               clipBehavior: Clip.none,
                               children: [
@@ -2430,10 +2446,13 @@ class _FeaturedProductsSection extends StatelessWidget {
                     AppRoutes.poojaKitDetails,
                     arguments: product,
                   ),
-                  onAddToCartTap: () => cartCtrl.addToCart(
-                    product.id,
-                    productCategory: product.category,
-                  ),
+                  onAddToCartTap: () {
+                    cartCtrl.addToCart(
+                      product.id,
+                      productCategory: product.category,
+                      product: product,
+                    );
+                  },
                 ),
               );
             },

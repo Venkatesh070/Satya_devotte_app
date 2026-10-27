@@ -64,8 +64,8 @@ class _SplashPageState extends State<SplashPage>
     if (!mounted) return;
 
     if (!auth.isAuthenticated) {
-      // Web/CMS skips onboarding and goes straight to login.
-      Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
+      // Land unauthenticated users directly on home with Guest User role
+      Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.home);
       return;
     }
 

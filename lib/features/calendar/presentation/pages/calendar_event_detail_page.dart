@@ -15,6 +15,8 @@ import 'package:satya_devotte_app/features/calendar/presentation/widgets/calenda
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 /// Figma calendar event detail — bottom sheet with "Add to Google Calendar".
 class CalendarEventDetailPage extends StatefulWidget {
@@ -23,6 +25,19 @@ class CalendarEventDetailPage extends StatefulWidget {
   final dynamic event;
 
   static Future<void> show(BuildContext context, {required dynamic event}) {
+    final authCtrl = Get.find<AuthController>();
+    if (authCtrl.isGuest) {
+      String title = 'Please sign in or sign up to view event details';
+      if (event is FestivalModel) {
+        title = 'Please sign in or sign up to view festival details';
+      } else if (event is MoonPhaseModel) {
+        title = 'Please sign in or sign up to view lunar event details';
+      }
+      return showGuestAuthDialog(
+        context,
+        title: title,
+      );
+    }
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

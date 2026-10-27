@@ -28,7 +28,7 @@ class ProfileController extends GetxController {
 
   /// Best-effort display name from login/session user or GET /profile payload.
   static String displayNameFromUserMap(Map<String, dynamic>? u) {
-    if (u == null || u.isEmpty) return 'User';
+    if (u == null || u.isEmpty) return 'Guest User';
     String? t(dynamic v) {
       final s = v?.toString().trim();
       if (s == null || s.isEmpty) return null;
@@ -66,7 +66,7 @@ class ProfileController extends GetxController {
         fromNestedMap(u['details']) ??
         fromFirstLast() ??
         fromEmail() ??
-        'User';
+        'Guest User';
   }
 
   /// Session user merged with GET /profile user (profile wins on duplicate keys).

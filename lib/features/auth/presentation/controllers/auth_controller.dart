@@ -51,23 +51,27 @@ class AuthController extends GetxController {
   bool get isAuthLoading => _isAuthLoading.value;
   String? get lastAuthError => _lastAuthError.value;
 
+  bool get isGuest => !_isAuthenticated.value;
+
   // ─── Role getters ─────────────────────────────────────────────
-  String get userRole => _userRole.value;
-  bool get isSuperAdmin => _userRole.value == 'superadmin';
-  bool get isAdmin => _userRole.value == 'admin' || isSuperAdmin;
-  bool get isRegularUser => _userRole.value == 'user';
+  String get userRole => isGuest ? 'guest' : _userRole.value;
+  bool get isSuperAdmin => !isGuest && _userRole.value == 'superadmin';
+  bool get isAdmin => !isGuest && (_userRole.value == 'admin' || isSuperAdmin);
+  bool get isRegularUser => !isGuest && _userRole.value == 'user';
 
   /// Backend user payload from the latest login / restored session.
   Map<String, dynamic>? get sessionUser => _sessionUser.value;
 
   /// Display name from admin login response (`fullName`, `name`, etc.).
-  String get displayName =>
-      ProfileController.displayNameFromUserMap(sessionUser);
+  String get displayName => isGuest
+      ? 'Guest User'
+      : ProfileController.displayNameFromUserMap(sessionUser);
 
   /// First letter for avatar chips in CMS chrome.
   String get displayInitial {
+    if (isGuest) return 'GU';
     final name = displayName;
-    if (name.isNotEmpty && name != 'User') {
+    if (name.isNotEmpty && name != 'User' && name != 'Guest User') {
       return name[0].toUpperCase();
     }
     return isSuperAdmin ? 'S' : 'A';

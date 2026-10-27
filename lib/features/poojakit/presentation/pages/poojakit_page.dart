@@ -125,10 +125,13 @@ class PoojaKitPage extends GetView<PoojaKitController> {
                       AppRoutes.poojaKitDetails,
                       arguments: product,
                     ),
-                    onAddToCartTap: () => cartCtrl.addToCart(
-                      product.id,
-                      productCategory: product.category,
-                    ),
+                    onAddToCartTap: () {
+                      cartCtrl.addToCart(
+                        product.id,
+                        productCategory: product.category,
+                        product: product,
+                      );
+                    },
                   );
                 },
               ),

@@ -10,6 +10,8 @@ import 'package:satya_devotte_app/features/auth/presentation/widgets/inline_forg
 import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:satya_devotte_app/shared/widgets/terms_and_privacy_text.dart';
+import 'package:satya_devotte_app/shared/widgets/continue_as_guest_button.dart';
 
 class EmailLoginPage extends StatefulWidget {
   const EmailLoginPage({super.key});
@@ -89,7 +91,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                         Text(
                           'New User?',
                           style: TextStyle(
-                            color: Colors.black.withOpacity(0.58),
+                            color: Colors.black.withValues(alpha: 0.58),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
                           ),
@@ -159,6 +161,11 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      const SizedBox(height: 8),
+                      const TermsAndPrivacyPolicyText(
+                        fontSize: 11.0,
+                        textColor: Color(0xFF57534E),
+                      ),
                       const SizedBox(height: 12),
                       CustomButton(
                         label: 'Login',
@@ -169,7 +176,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           AppColors.gradientStart,
                           AppColors.gradientEnd,
                         ],
-                        textColor: Color(0xFFFCF7EF),
+                        textColor: const Color(0xFFFCF7EF),
                         onTap: () async {
                           final offlineService = Get.find<OfflineService>();
                           if (!offlineService.checkAndShowDialog()) return;
@@ -200,6 +207,10 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             }
                           }
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      ContinueAsGuestButton(
+                        enabled: !isLoading,
                       ),
                     ],
                   );
@@ -300,7 +311,8 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.black.withOpacity(0.25), fontSize: 13),
+      hintStyle:
+          TextStyle(color: Colors.black.withValues(alpha: 0.25), fontSize: 13),
       isDense: true,
       filled: true,
       fillColor: _fieldColor,

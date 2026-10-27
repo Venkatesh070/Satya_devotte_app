@@ -18,6 +18,7 @@ import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
 import 'package:satya_devotte_app/core/services/offline_service.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 const _privacyPolicyUrl = 'https://sathya-app-privacy.netlify.app/';
 const _termsConditionsUrl = 'https://sathya-terms-and-conditions.netlify.app/';
@@ -39,6 +40,42 @@ class ProfilePage extends StatelessWidget {
     final authController = Get.find<AuthController>();
 
     return Obx(() {
+      if (authController.isGuest) {
+        return Scaffold(
+          backgroundColor: AppColors.appBgColor,
+          body: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _ProfileHeader(
+                  name: 'Guest User',
+                  initials: 'GU',
+                  imageUrl: null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 95),
+                      const GuestAuthPromptCard(
+                        title: 'Sign in to view your profile',
+                        showCloseButton: false,
+                        isCard: true,
+                        backgroundColor: Color(0xFFFCF7EF),
+                      ),
+                      const SizedBox(height: 48),
+                      _Footer(),
+                      const SizedBox(height: 120),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       final userData = profileController.resolvedUser;
 
       String? t(dynamic v) {
@@ -660,7 +697,7 @@ class _Footer extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Made with devotion for spirits',
+            'Made with devotion for spiritual seekers by',
             style: AppTypography.lora(
               fontSize: 12,
               fontStyle: FontStyle.italic,

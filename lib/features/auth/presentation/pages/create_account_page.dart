@@ -11,6 +11,8 @@ import 'package:satya_devotte_app/core/utils/phone_validator.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
+import 'package:satya_devotte_app/shared/widgets/terms_and_privacy_text.dart';
+import 'package:satya_devotte_app/shared/widgets/continue_as_guest_button.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key, this.completeProfileOnly = false});
@@ -586,6 +588,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  const TermsAndPrivacyPolicyText(
+                    fontSize: 11.0,
+                    textColor: Color(0xFF57534E),
+                  ),
                   const SizedBox(height: 12),
                   CustomButton(
                     label: _step == 0 ? 'Next' : 'Get Started',
@@ -596,7 +603,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       AppColors.gradientStart,
                       AppColors.gradientEnd,
                     ],
-                    textColor: Color(0xFFFCF7EF),
+                    textColor: const Color(0xFFFCF7EF),
                     onTap: _step == 0
                         ? _goNext
                         : () async {
@@ -605,6 +612,12 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                             await _submit();
                           },
                   ),
+                  if (!widget.completeProfileOnly) ...[
+                    const SizedBox(height: 12),
+                    ContinueAsGuestButton(
+                      enabled: !isLoading,
+                    ),
+                  ],
                 ],
               ),
             );

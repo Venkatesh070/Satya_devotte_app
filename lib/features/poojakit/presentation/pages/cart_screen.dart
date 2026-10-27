@@ -16,6 +16,8 @@ import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_cont
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/poojakit_page.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -44,6 +46,23 @@ class _CartScreenState extends State<CartScreen> {
     if (checkout.pickupLocation == null && !checkout.isLoadingPickup) {
       checkout.fetchPickupLocation();
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authCtrl = Get.find<AuthController>();
+      if (authCtrl.isGuest) {
+        showGuestAuthDialog(
+          context,
+          title: 'Please sign in or sign up to complete your order',
+          onSuccess: () {
+            if (mounted) {
+              c.fetchCart();
+              _initCollectorDetails(checkout);
+            }
+          },
+        );
+      }
+    });
   }
 
   void _initCollectorDetails(PoojaKitCheckoutController checkout) {
@@ -214,6 +233,20 @@ class _CartScreenState extends State<CartScreen> {
                         nameError: _collectorNameError,
                         phoneError: _collectorPhoneError,
                         onMethodChanged: (method) {
+                          final authCtrl = Get.find<AuthController>();
+                          if (authCtrl.isGuest) {
+                            showGuestAuthDialog(
+                              context,
+                              title: 'Please sign in or sign up to select a delivery option',
+                              onSuccess: () {
+                                if (mounted) {
+                                  c.fetchCart();
+                                  _initCollectorDetails(checkoutCtrl);
+                                }
+                              },
+                            );
+                            return;
+                          }
                           _showLocationError.value = false;
                           final items = c.cart?.items
                                   .map(
@@ -264,10 +297,26 @@ class _CartScreenState extends State<CartScreen> {
                             );
                           }
                         },
-                        onChangeAddressTap: () => Get.toNamed(
-                          AppRoutes.poojaKitCheckout,
-                          arguments: null,
-                        ),
+                        onChangeAddressTap: () {
+                          final authCtrl = Get.find<AuthController>();
+                          if (authCtrl.isGuest) {
+                            showGuestAuthDialog(
+                              context,
+                              title: 'Please sign in or sign up to set delivery location',
+                              onSuccess: () {
+                                if (mounted) {
+                                  c.fetchCart();
+                                  _initCollectorDetails(checkoutCtrl);
+                                }
+                              },
+                            );
+                            return;
+                          }
+                          Get.toNamed(
+                            AppRoutes.poojaKitCheckout,
+                            arguments: null,
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
                       _BillSummarySection(
@@ -361,6 +410,17 @@ class _CartScreenState extends State<CartScreen> {
     CartController cartCtrl,
     PoojaKitCheckoutController checkoutCtrl,
   ) async {
+    final authController = Get.find<AuthController>();
+    if (authController.isGuest) {
+      final loggedIn = await showGuestAuthDialog(
+        context,
+        title: 'Please sign in or sign up to purchase',
+      );
+      if (loggedIn != true && authController.isGuest) {
+        return;
+      }
+    }
+
     if (!checkoutCtrl.hasFulfillmentMethod) {
       ToastUtil.showInfo(
         'Please select a delivery option (Pick from Warehouse or Door Delivery).',

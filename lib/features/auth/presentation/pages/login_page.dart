@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/presentation/get_snackbar_insets.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
@@ -11,6 +12,7 @@ import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_p
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/login_footer.dart';
+import 'package:satya_devotte_app/shared/widgets/terms_and_privacy_text.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -61,9 +63,7 @@ class _LoginPageState extends State<LoginPage>
             top: 0,
             left: 0,
             right: 0,
-            height:
-                screenHeight *
-                0.62, // Slightly reduced height to match Figma density
+            height: screenHeight * 0.46,
             child: OnboardingStyleBackground(
               rotationController: _rotationController,
               wrapInPositioned: false,
@@ -84,64 +84,38 @@ class _LoginPageState extends State<LoginPage>
           Align(
             alignment: Alignment.bottomCenter,
             child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: Obx(() {
-                  final isGoogleLoading = controller.isGoogleSignInLoading;
-                  final isAppleLoading = controller.isAppleSignInLoading;
-                  final isEmailLoading = controller.isEmailSignInLoading;
-                  final isAnyLoading =
-                      isGoogleLoading || isAppleLoading || isEmailLoading;
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                  child: Obx(() {
+                    final isGoogleLoading = controller.isGoogleSignInLoading;
+                    final isAppleLoading = controller.isAppleSignInLoading;
+                    final isEmailLoading = controller.isEmailSignInLoading;
+                    final isAnyLoading =
+                        isGoogleLoading || isAppleLoading || isEmailLoading;
 
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _SocialButton(
-                        label: 'Continue with Google',
-                        backgroundColor: const Color(0xFFFCF7EF),
-                        textColor: const Color(0xFF1F1F1F),
-                        hasBorder: true,
-                        leading: SvgPicture.asset(
-                          'assets/svgs/google.svg',
-                          width: 18,
-                          height: 18,
-                        ),
-                        isLoading: isGoogleLoading,
-                        isEnabled: !isAnyLoading,
-                        onTap: () async {
-                          final offlineService = Get.find<OfflineService>();
-                          if (!offlineService.checkAndShowDialog()) return;
-
-                          final isSuccess = await controller.signInWithGoogle();
-                          if (isSuccess) {
-                            _navigateAfterLogin();
-                          } else if (controller.lastAuthError != null) {
-                            showAppSnackbar(
-                              title: 'Login Failed',
-                              message: controller.lastAuthError!,
-                              isError: true,
-                            );
-                          }
-                        },
-                      ),
-                      if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                        const SizedBox(height: 12),
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         _SocialButton(
-                          label: 'Continue with Apple',
-                          backgroundColor: Colors.black,
-                          textColor: const Color(0xFFFCF7EF),
+                          label: 'Continue with Google',
+                          backgroundColor: const Color(0xFFFCF7EF),
+                          textColor: const Color(0xFF1F1F1F),
+                          hasBorder: true,
                           leading: SvgPicture.asset(
-                            'assets/svgs/apple.svg',
+                            'assets/svgs/google.svg',
                             width: 18,
                             height: 18,
                           ),
-                          isLoading: isAppleLoading,
+                          isLoading: isGoogleLoading,
                           isEnabled: !isAnyLoading,
                           onTap: () async {
                             final offlineService = Get.find<OfflineService>();
                             if (!offlineService.checkAndShowDialog()) return;
 
-                            final isSuccess = await controller.signInWithApple();
+                            final isSuccess =
+                                await controller.signInWithGoogle();
                             if (isSuccess) {
                               _navigateAfterLogin();
                             } else if (controller.lastAuthError != null) {
@@ -153,39 +127,112 @@ class _LoginPageState extends State<LoginPage>
                             }
                           },
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      Text(
-                        'Or',
-                        style: TextStyle(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      CustomButton(
-                        label: 'Continue with Email',
-                        gradientColors: const [
-                          AppColors.gradientStart,
-                          AppColors.gradientEnd,
-                        ],
-                        textColor: Color(0xFFFCF7EF),
-                        isLoading: isEmailLoading,
-                        enabled: !isAnyLoading,
-                        borderRadius: 14,
-                        onTap: () {
-                          final offlineService = Get.find<OfflineService>();
-                          if (!offlineService.checkAndShowDialog()) return;
+                        if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                          const SizedBox(height: 12),
+                          _SocialButton(
+                            label: 'Continue with Apple',
+                            backgroundColor: Colors.black,
+                            textColor: const Color(0xFFFCF7EF),
+                            leading: SvgPicture.asset(
+                              'assets/svgs/apple.svg',
+                              width: 18,
+                              height: 18,
+                            ),
+                            isLoading: isAppleLoading,
+                            isEnabled: !isAnyLoading,
+                            onTap: () async {
+                              final offlineService = Get.find<OfflineService>();
+                              if (!offlineService.checkAndShowDialog()) return;
 
-                          Get.to(() => const EmailLoginPage());
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      const LoginFooter(),
-                    ],
-                  );
-                }),
+                              final isSuccess =
+                                  await controller.signInWithApple();
+                              if (isSuccess) {
+                                _navigateAfterLogin();
+                              } else if (controller.lastAuthError != null) {
+                                showAppSnackbar(
+                                  title: 'Login Failed',
+                                  message: controller.lastAuthError!,
+                                  isError: true,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Divider(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                thickness: 1,
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text(
+                                'Or',
+                                style: TextStyle(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Divider(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                thickness: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        CustomButton(
+                          label: 'Continue with Email',
+                          gradientColors: const [
+                            AppColors.gradientStart,
+                            AppColors.gradientEnd,
+                          ],
+                          textColor: const Color(0xFFFCF7EF),
+                          isLoading: isEmailLoading,
+                          enabled: !isAnyLoading,
+                          borderRadius: 14,
+                          onTap: () {
+                            final offlineService = Get.find<OfflineService>();
+                            if (!offlineService.checkAndShowDialog()) return;
+
+                            Get.to(() => const EmailLoginPage());
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _SocialButton(
+                          label: 'Continue as Guest',
+                          backgroundColor: const Color(0xFFFCF7EF),
+                          textColor: const Color(0xFF1F1F1F),
+                          hasBorder: true,
+                          leading: const Icon(
+                            Icons.person_outline_rounded,
+                            size: 20,
+                            color: Color(0xFF1F1F1F),
+                          ),
+                          isLoading: false,
+                          isEnabled: !isAnyLoading,
+                          onTap: () {
+                            Get.offAllNamed(AppRoutes.home);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        const TermsAndPrivacyPolicyText(
+                          fontSize: 11.0,
+                          textColor: Color(0xFF57534E),
+                        ),
+                        const SizedBox(height: 12),
+                        const LoginFooter(),
+                      ],
+                    );
+                  }),
+                ),
               ),
             ),
           ),

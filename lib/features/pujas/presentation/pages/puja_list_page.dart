@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -18,7 +17,8 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 import 'package:satya_devotte_app/shared/widgets/shimmer_skeleton.dart';
-import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class RitualListPage extends StatefulWidget {
   const RitualListPage({super.key});
@@ -60,9 +60,12 @@ class _RitualListPageState extends State<RitualListPage> {
     _favoriteDeitiesApi = FavoriteDeitiesRemoteDataSource(
       Get.find<ApiClient>(),
     );
+    final authCtrl = Get.find<AuthController>();
     _poojaHistoryController = Get.find<PoojaHistoryController>();
-    _poojaHistoryController.fetchHistory();
-    _loadFavoritesFromApi();
+    if (!authCtrl.isGuest) {
+      _poojaHistoryController.fetchHistory();
+      _loadFavoritesFromApi();
+    }
     _loadDeities(reset: true);
   }
 
@@ -307,6 +310,14 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   Future<void> _toggleFavorite(DeityListItem item) async {
+    final authCtrl = Get.find<AuthController>();
+    if (authCtrl.isGuest) {
+      showGuestAuthDialog(
+        context,
+        title: 'Please sign in or sign up to save favorites',
+      );
+      return;
+    }
     final id = item.id.trim();
     if (id.isEmpty) return;
 
@@ -388,6 +399,14 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   void _openDeityDetail(DeityListItem item) {
+    final authCtrl = Get.find<AuthController>();
+    if (authCtrl.isGuest) {
+      showGuestAuthDialog(
+        context,
+        title: 'Please sign in or sign up to view deity details',
+      );
+      return;
+    }
     Get.toNamed<dynamic>(
       AppRoutes.ritualDetail,
       arguments: item.toRitualDetailArgs(),
@@ -1332,10 +1351,20 @@ class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
                     isFavorite: _favoriteIds.contains(item.id),
                     statusLabel: label,
                     onFavoriteTap: () => _toggleFavorite(item),
-                    onTap: () => Get.toNamed<dynamic>(
-                      AppRoutes.ritualDetail,
-                      arguments: item.toRitualDetailArgs(),
-                    ),
+                    onTap: () {
+                      final authCtrl = Get.find<AuthController>();
+                      if (authCtrl.isGuest) {
+                        showGuestAuthDialog(
+                          context,
+                          title: 'Please sign in or sign up to view deity details',
+                        );
+                        return;
+                      }
+                      Get.toNamed<dynamic>(
+                        AppRoutes.ritualDetail,
+                        arguments: item.toRitualDetailArgs(),
+                      );
+                    },
                   );
                 });
               },

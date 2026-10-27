@@ -7,6 +7,8 @@ import 'package:satya_devotte_app/features/poojakit/data/models/cart_model.dart'
 import 'package:satya_devotte_app/features/poojakit/data/repositories/poojakit_repository.dart';
 import 'package:satya_devotte_app/features/poojakit/domain/warehouse_cart_rules.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/widgets/mixed_warehouse_cart_dialog.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 
 class CartController extends GetxController {
   CartController(this._repo);
@@ -37,12 +39,21 @@ class CartController extends GetxController {
   }
 
   Future<void> fetchCart() async {
+    final isGuest = Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isGuest;
+    if (isGuest && (_cart.value?.items.isNotEmpty ?? false)) {
+      return;
+    }
     _isLoading.value = true;
     _error.value = null;
     try {
       _cart.value = await _repo.getCart();
     } catch (e) {
-      _error.value = e.toString();
+      if (isGuest) {
+        _cart.value ??= const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
+      } else {
+        _error.value = e.toString();
+      }
     } finally {
       _isLoading.value = false;
     }
@@ -52,6 +63,7 @@ class CartController extends GetxController {
     String productId, {
     int quantity = 1,
     String? productCategory,
+    ProductModel? product,
   }) async {
     if (_busyProductIds.contains(productId)) return false;
 
@@ -71,6 +83,7 @@ class CartController extends GetxController {
               productId,
               quantity: quantity,
               productCategory: productCategory,
+              product: product,
             );
           },
         );
@@ -79,10 +92,17 @@ class CartController extends GetxController {
     }
 
     _busyProductIds.add(productId);
+    final isGuest = Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isGuest;
     try {
       _cart.value = await _repo.addToCart(productId, quantity);
       return true;
     } catch (e) {
+      if (isGuest && product != null) {
+        _addLocalItem(product, quantity);
+        ToastUtil.showSuccess('Added to cart');
+        return true;
+      }
       final (title, msg) = _formatCartError(e);
       if (isMixedWarehouseCartError(msg)) {
         await MixedWarehouseCartDialog.show(
@@ -94,6 +114,7 @@ class CartController extends GetxController {
               productId,
               quantity: quantity,
               productCategory: productCategory,
+              product: product,
             );
           },
         );
@@ -182,9 +203,14 @@ class CartController extends GetxController {
     final previousCart = _cart.value;
     _busyProductIds.add(productId);
     _updateLocalQuantity(productId, quantity);
+    final isGuest = Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isGuest;
     try {
       _cart.value = await _repo.updateCartQuantity(productId, quantity);
     } catch (e) {
+      if (isGuest) {
+        return;
+      }
       _cart.value = previousCart;
       final (title, msg) = _formatCartError(e);
       ToastUtil.showError(msg, title: title);
@@ -198,15 +224,51 @@ class CartController extends GetxController {
     final previousCart = _cart.value;
     _busyProductIds.add(productId);
     _removeLocalItem(productId);
+    final isGuest = Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isGuest;
     try {
       _cart.value = await _repo.removeFromCart(productId);
     } catch (e) {
+      if (isGuest) {
+        return;
+      }
       _cart.value = previousCart;
       final (title, msg) = _formatCartError(e);
       ToastUtil.showError(msg, title: title);
     } finally {
       _busyProductIds.remove(productId);
     }
+  }
+
+  void _addLocalItem(ProductModel product, int quantity) {
+    final current = _cart.value ??
+        const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
+    final items = List<CartItemModel>.from(current.items);
+    final existingIndex = items.indexWhere((i) => i.product.id == product.id);
+
+    if (existingIndex >= 0) {
+      final existing = items[existingIndex];
+      final newQty = existing.quantity + quantity;
+      items[existingIndex] = existing.copyWith(
+        quantity: newQty,
+        lineTotal: product.effectivePrice * newQty,
+      );
+    } else {
+      items.add(
+        CartItemModel(
+          product: product,
+          quantity: quantity,
+          lineTotal: product.effectivePrice * quantity,
+        ),
+      );
+    }
+
+    final total = _calculateTotal(items);
+    _cart.value = current.copyWith(
+      items: items,
+      totalAmount: total,
+      subtotal: total,
+    );
   }
 
   Future<void> clearCart() async {

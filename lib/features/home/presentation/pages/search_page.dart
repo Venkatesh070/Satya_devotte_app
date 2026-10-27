@@ -16,6 +16,8 @@ import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_share
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class GlobalSearchResult {
   const GlobalSearchResult({
@@ -306,6 +308,14 @@ class _SearchPageState extends State<SearchPage> {
     // 1. Deity: Navigate directly to the Deity Detail screen (AppRoutes.ritualDetail with type: 'deity')
     if (type == 'deity' || type == 'deities') {
       if (result.id.isEmpty) return;
+      final authCtrl = Get.find<AuthController>();
+      if (authCtrl.isGuest) {
+        showGuestAuthDialog(
+          context,
+          title: 'Please sign in or sign up to view deity details',
+        );
+        return;
+      }
       await Get.toNamed<dynamic>(
         AppRoutes.ritualDetail,
         arguments: result.toDeityArgs(),

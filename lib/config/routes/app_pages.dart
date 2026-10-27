@@ -60,7 +60,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.home,
       page: BottomTabPage.new,
-      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.notifications,
@@ -76,13 +75,11 @@ class AppPages {
       name: AppRoutes.rituals,
       page: RitualListPage.new,
       binding: RitualBinding(),
-      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.ritualDetail,
       page: RitualDetailPage.new,
       binding: RitualBinding(),
-      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaHistory,
@@ -141,7 +138,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.poojaKitDetails,
       page: ProductDetailsPage.new,
-      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitCheckout,
@@ -151,7 +147,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.poojaKitCart,
       page: () => const CartScreen(),
-      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitPayment,

@@ -15,6 +15,8 @@ import 'package:satya_devotte_app/features/pujas/presentation/pages/pooja_step_w
 import 'package:satya_devotte_app/features/pujas/presentation/pages/ritual_step_wizard.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class SectionCard extends StatelessWidget {
   const SectionCard({
@@ -698,6 +700,14 @@ void showPujaPreviewModal(BuildContext context, PoojaView pooja) {
                 label: 'Begin Puja',
                 borderRadius: 24,
                 onTap: () {
+                  final authCtrl = Get.find<AuthController>();
+                  if (authCtrl.isGuest) {
+                    showGuestAuthDialog(
+                      context,
+                      title: 'Please sign in or sign up to begin puja',
+                    );
+                    return;
+                  }
                   Get.back();
                   Get.toNamed(
                     AppRoutes.poojaWizard,

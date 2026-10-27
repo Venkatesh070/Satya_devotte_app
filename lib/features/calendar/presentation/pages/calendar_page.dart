@@ -12,6 +12,8 @@ import 'package:satya_devotte_app/features/calendar/presentation/widgets/calenda
 import 'package:satya_devotte_app/features/pujas/presentation/models/pooja_view_model.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 import 'package:satya_devotte_app/shared/widgets/chakra_loading_indicator.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -188,8 +190,17 @@ class _CalendarOrangeHeader extends StatelessWidget {
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: () =>
-                          Get.to(() => const CalendarAddEventPage()),
+                      onPressed: () {
+                        final authCtrl = Get.find<AuthController>();
+                        if (authCtrl.isGuest) {
+                          showGuestAuthDialog(
+                            context,
+                            title: 'Please sign in or sign up to add events',
+                          );
+                          return;
+                        }
+                        Get.to(() => const CalendarAddEventPage());
+                      },
                       icon: ShaderMask(
                         shaderCallback: (bounds) => const LinearGradient(
                           colors: [Color(0xFF183EA4), Color(0xFFE35600)],
@@ -481,6 +492,15 @@ class _MonthGrid extends StatelessWidget {
     controller.onDateSelected(date, date);
     if (events.isEmpty) return;
 
+    final authCtrl = Get.find<AuthController>();
+    if (authCtrl.isGuest) {
+      showGuestAuthDialog(
+        context,
+        title: 'Please sign in or sign up to view event details',
+      );
+      return;
+    }
+
     if (events.length == 1) {
       CalendarEventDetailPage.show(context, event: events.first);
       return;
@@ -573,6 +593,14 @@ class _CalendarDayEventsSheet extends StatelessWidget {
                 return _DayEventListTile(
                   event: event,
                   onTap: () {
+                    final authCtrl = Get.find<AuthController>();
+                    if (authCtrl.isGuest) {
+                      showGuestAuthDialog(
+                        context,
+                        title: 'Please sign in or sign up to view event details',
+                      );
+                      return;
+                    }
                     Navigator.of(context).pop();
                     CalendarEventDetailPage.show(context, event: event);
                   },
@@ -662,7 +690,17 @@ class _FestivalsList extends StatelessWidget {
         }
         return _FestivalCard(
           festival: list[i],
-          onTap: () => CalendarEventDetailPage.show(context, event: list[i]),
+          onTap: () {
+            final authCtrl = Get.find<AuthController>();
+            if (authCtrl.isGuest) {
+              showGuestAuthDialog(
+                context,
+                title: 'Please sign in or sign up to view festival details',
+              );
+              return;
+            }
+            CalendarEventDetailPage.show(context, event: list[i]);
+          },
         );
       },
     );
@@ -825,7 +863,17 @@ class _LunarList extends StatelessWidget {
           title: isFull ? 'Full moon' : 'New moon',
           subtitle: isFull ? 'Purnima' : 'Amavasya',
           date: m.date,
-          onTap: () => CalendarEventDetailPage.show(context, event: m),
+          onTap: () {
+            final authCtrl = Get.find<AuthController>();
+            if (authCtrl.isGuest) {
+              showGuestAuthDialog(
+                context,
+                title: 'Please sign in or sign up to view lunar event details',
+              );
+              return;
+            }
+            CalendarEventDetailPage.show(context, event: m);
+          },
         );
       },
     );
@@ -896,7 +944,17 @@ class _EventsList extends StatelessWidget {
             title: e.name,
             description: e.description,
             date: e.date,
-            onTap: () => CalendarEventDetailPage.show(context, event: e),
+            onTap: () {
+              final authCtrl = Get.find<AuthController>();
+              if (authCtrl.isGuest) {
+                showGuestAuthDialog(
+                  context,
+                  title: 'Please sign in or sign up to view event details',
+                );
+                return;
+              }
+              CalendarEventDetailPage.show(context, event: e);
+            },
           );
         }
         if (e is PoojaView) {
@@ -905,7 +963,17 @@ class _EventsList extends StatelessWidget {
             description: e.description,
             date: _parseDate(e.date),
             dateLabel: e.daily ? e.dailyTimeText : null,
-            onTap: () => CalendarEventDetailPage.show(context, event: e),
+            onTap: () {
+              final authCtrl = Get.find<AuthController>();
+              if (authCtrl.isGuest) {
+                showGuestAuthDialog(
+                  context,
+                  title: 'Please sign in or sign up to view event details',
+                );
+                return;
+              }
+              CalendarEventDetailPage.show(context, event: e);
+            },
           );
         }
         return const SizedBox.shrink();

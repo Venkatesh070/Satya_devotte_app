@@ -39,6 +39,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       _product.id,
       quantity: 1,
       productCategory: _product.category,
+      product: _product,
     );
     if (!mounted || !added) return;
     Get.toNamed(AppRoutes.poojaKitCart);
