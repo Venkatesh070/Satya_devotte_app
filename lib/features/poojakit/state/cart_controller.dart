@@ -41,7 +41,8 @@ class CartController extends GetxController {
   Future<void> fetchCart() async {
     final isGuest = Get.isRegistered<AuthController>() &&
         Get.find<AuthController>().isGuest;
-    if (isGuest && (_cart.value?.items.isNotEmpty ?? false)) {
+    if (isGuest) {
+      _cart.value ??= const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
       return;
     }
     _isLoading.value = true;
@@ -49,11 +50,7 @@ class CartController extends GetxController {
     try {
       _cart.value = await _repo.getCart();
     } catch (e) {
-      if (isGuest) {
-        _cart.value ??= const CartModel(items: [], totalAmount: 0, currency: 'ZAR');
-      } else {
-        _error.value = e.toString();
-      }
+      _error.value = e.toString();
     } finally {
       _isLoading.value = false;
     }

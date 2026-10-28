@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dar
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -52,9 +53,16 @@ class _OnboardingPageState extends State<OnboardingPage>
     // Don't start music here — wait until user logs in!
   }
 
+  Future<void> _goToLogin() async {
+    if (Get.isRegistered<AuthController>()) {
+      await Get.find<AuthController>().signOutSilently();
+    }
+    Get.offAllNamed(AppRoutes.login);
+  }
+
   void _goNext() {
     if (_currentIndex == _slides.length - 1) {
-      Get.offAllNamed(AppRoutes.login);
+      _goToLogin();
       return;
     }
     _pageController.nextPage(
@@ -129,7 +137,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               top: topInset + 24,
               right: 22,
               child: GestureDetector(
-                onTap: () => Get.offAllNamed(AppRoutes.login),
+                onTap: _goToLogin,
                 child: const Text(
                   'Skip >>',
                   style: TextStyle(

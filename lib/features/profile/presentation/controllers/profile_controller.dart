@@ -119,7 +119,16 @@ class ProfileController extends GetxController {
   }
 
   /// Admin/superadmin CMS on web uses login session data only — not `/auth/profile`.
+  /// Unauthenticated guests also skip `/auth/profile`.
   Future<bool> _shouldSkipProfileApi() async {
+    final token = await _authSessionService.getAccessToken();
+    if (token == null || token.isEmpty) return true;
+
+    if (Get.isRegistered<AuthController>() &&
+        Get.find<AuthController>().isGuest) {
+      return true;
+    }
+
     if (!kIsWeb) return false;
 
     await _authSessionService.getUserData();

@@ -72,13 +72,6 @@ class ProfilePage extends StatelessWidget {
                         isCard: true,
                         backgroundColor: Color(0xFFFCF7EF),
                       ),
-                      const SizedBox(height: 22),
-                      const ProfileSectionHeading('Support'),
-                      ProfileLinkTile(
-                        icon: Icons.volunteer_activism_outlined,
-                        label: 'Donate',
-                        onTap: () => Get.toNamed(AppRoutes.userDonations),
-                      ),
                       const SizedBox(height: 48),
                       _Footer(),
                       const SizedBox(height: 120),
@@ -86,6 +79,17 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        );
+      }
+
+      if (!authController.isProfileRegistrationComplete) {
+        return const Scaffold(
+          backgroundColor: AppColors.appBgColor,
+          body: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.gradientEnd,
             ),
           ),
         );

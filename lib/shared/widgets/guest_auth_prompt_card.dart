@@ -11,6 +11,8 @@ import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_p
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/terms_and_privacy_text.dart';
 
+import 'package:satya_devotte_app/features/auth/presentation/pages/create_account_page.dart';
+
 /// Reusable auth prompt card used both in the guest popup dialog
 /// and on the guest Profile screen.
 class GuestAuthPromptCard extends StatelessWidget {
@@ -36,11 +38,33 @@ class GuestAuthPromptCard extends StatelessWidget {
   AuthController get _controller => Get.find<AuthController>();
 
   void _handleSuccess(BuildContext context) {
-    onSuccess?.call();
-    if (context.mounted && Navigator.of(context, rootNavigator: true).canPop()) {
-      Navigator.of(context, rootNavigator: true).pop(true);
+    final hasCompletedProfile = _controller.isProfileRegistrationComplete;
+
+    // Pop the dialog if one is open
+    if (showCloseButton) {
+      if (context.mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop(true);
+      } else if (Get.isDialogOpen == true) {
+        Get.back(result: true);
+      }
     }
-    _controller.navigateAfterLogin();
+
+    // 1. If user does NOT have an account yet, route to CreateAccountPage
+    // (exact same behavior as LoginPage when selecting Google/Apple account)
+    if (!hasCompletedProfile) {
+      Get.offAll(() => const CreateAccountPage(completeProfileOnly: true));
+      return;
+    }
+
+    // 2. User already has an account
+    if (_controller.isAdmin) {
+      _controller.navigateAfterLogin();
+      return;
+    }
+
+    // If on embedded Profile card, the profile view updates in place.
+    // In other views (or dialogs), trigger the success callback.
+    onSuccess?.call();
   }
 
   @override
@@ -114,7 +138,7 @@ class GuestAuthPromptCard extends StatelessWidget {
               if (!offlineService.checkAndShowDialog()) return;
 
               final isSuccess = await _controller.signInWithGoogle();
-              if (isSuccess && context.mounted) {
+              if (isSuccess) {
                 _handleSuccess(context);
               } else if (_controller.lastAuthError != null) {
                 showAppSnackbar(
@@ -147,7 +171,7 @@ class GuestAuthPromptCard extends StatelessWidget {
                 if (!offlineService.checkAndShowDialog()) return;
 
                 final isSuccess = await _controller.signInWithApple();
-                if (isSuccess && context.mounted) {
+                if (isSuccess) {
                   _handleSuccess(context);
                 } else if (_controller.lastAuthError != null) {
                   showAppSnackbar(

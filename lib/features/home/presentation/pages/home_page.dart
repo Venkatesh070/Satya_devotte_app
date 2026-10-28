@@ -812,15 +812,21 @@ class _HomeBodySections extends StatelessWidget {
             onViewMoreTap: onFestivalsViewMore,
           ),
         ),
-        const SizedBox(height: 28),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-          child: _AchievementsSection(
-            poojasCompleted: poojasCompleted,
-            ritualsCompleted: ritualsCompleted,
-            dayStreak: dayStreak,
-          ),
-        ),
+        Obx(() {
+          final isGuest = Get.isRegistered<AuthController>() &&
+              Get.find<AuthController>().isGuest;
+          if (isGuest) {
+            return const SizedBox.shrink();
+          }
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(14, 28, 14, 0),
+            child: _AchievementsSection(
+              poojasCompleted: poojasCompleted,
+              ritualsCompleted: ritualsCompleted,
+              dayStreak: dayStreak,
+            ),
+          );
+        }),
         // Donation section removed from Home screen as per updated design.
       ],
     );

@@ -201,7 +201,7 @@ class AuthController extends GetxController {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Get.key.currentState != null) {
-        Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.onboarding);
+        Get.offAllNamed(AppRoutes.login);
       }
     });
   }
@@ -771,6 +771,29 @@ class AuthController extends GetxController {
 
     // Continue best-effort server cleanup in background if still running.
     unawaited(remoteCleanup);
+  }
+
+  /// Clears any cached/stale session without triggering UI navigation.
+  Future<void> signOutSilently() async {
+    _isAuthenticated.value = false;
+    _userRole.value = 'user';
+    await _clearAuthSession();
+    _clearProfileControllerCache();
+    _clearCartOnLogout();
+    try {
+      await _firebaseService.signOut();
+    } catch (_) {}
+  }
+
+  /// Clears any active/stale authenticated session, signs out of Firebase & Google,
+  /// resets role and profile cache, and navigates to [AppRoutes.home] cleanly as guest.
+  Future<void> continueAsGuest() async {
+    _stopCmsBackgroundMusicIfNeeded();
+    _stopRegularUserBackgroundMusic();
+
+    await signOutSilently();
+
+    Get.offAllNamed(AppRoutes.home);
   }
 
   Future<void> _runBestEffortSignOutCleanup({String? refreshToken}) async {

@@ -134,8 +134,18 @@ class ApiErrorInterceptor extends Interceptor {
     final statusCode = err.response?.statusCode;
     final path = err.requestOptions.path.toLowerCase();
 
-    // Auto-logout user if server returns 401 Unauthorized on protected calls
+    // Auto-logout user if server returns 401 Unauthorized on protected calls that had an auth token
+    final authHeader = err.requestOptions.headers.entries
+        .firstWhere(
+          (e) => e.key.toLowerCase() == 'authorization',
+          orElse: () => const MapEntry('', null),
+        )
+        .value;
+    final hadAuthHeader =
+        authHeader != null && authHeader.toString().trim().isNotEmpty;
+
     if (statusCode == 401 &&
+        hadAuthHeader &&
         !path.contains('/login') &&
         !path.contains('/register') &&
         !path.contains('/auth/firebase-login')) {

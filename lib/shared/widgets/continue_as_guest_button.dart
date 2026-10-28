@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 /// A centered, prominently clickable button for continuing as a guest.
 /// Designed with a tactile pill container, visible border, subtle elevation,
@@ -28,7 +29,15 @@ class ContinueAsGuestButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(22),
           onTap: enabled
-              ? (onTap ?? () => Get.offAllNamed(AppRoutes.home))
+              ? () async {
+                  if (onTap != null) {
+                    onTap!();
+                  } else if (Get.isRegistered<AuthController>()) {
+                    await Get.find<AuthController>().continueAsGuest();
+                  } else {
+                    Get.offAllNamed(AppRoutes.home);
+                  }
+                }
               : null,
           child: Container(
             height: 44,

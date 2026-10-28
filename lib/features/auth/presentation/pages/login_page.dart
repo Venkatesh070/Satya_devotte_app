@@ -218,8 +218,8 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           isLoading: false,
                           isEnabled: !isAnyLoading,
-                          onTap: () {
-                            Get.offAllNamed(AppRoutes.home);
+                          onTap: () async {
+                            await controller.continueAsGuest();
                           },
                         ),
                         const SizedBox(height: 12),
