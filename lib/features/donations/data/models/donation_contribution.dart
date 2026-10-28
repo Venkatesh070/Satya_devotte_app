@@ -108,23 +108,26 @@ class DonationContribution {
         return s.isEmpty ? null : DateTime.tryParse(s);
       }(),
       note: _nullableStr(json['note']),
-      // Admin-only fields. Tolerate either a flat string id (`user: "abc"`)
-      // or a populated object, and accept multiple common name keys.
+      // Prefer linked account details when present; otherwise fall back to
+      // website anonymous donor fields (`donorName` / `donorEmail`).
       donorId: user is String
           ? _nullableStr(user)
           : _nullableStr(userMap['_id'] ?? userMap['id'] ?? json['userId']),
       donorName: _nullableStr(
-        userMap['displayName'] ??
-            userMap['name'] ??
-            userMap['fullName'] ??
-            (() {
-              final fn = _str(userMap['firstName']);
-              final ln = _str(userMap['lastName']);
-              final joined = [fn, ln].where((s) => s.isNotEmpty).join(' ');
-              return joined.isEmpty ? null : joined;
-            }()),
-      ),
-      donorEmail: _nullableStr(userMap['email']),
+            userMap['displayName'] ??
+                userMap['name'] ??
+                userMap['fullName'] ??
+                (() {
+                  final fn = _str(userMap['firstName']);
+                  final ln = _str(userMap['lastName']);
+                  final joined =
+                      [fn, ln].where((s) => s.isNotEmpty).join(' ');
+                  return joined.isEmpty ? null : joined;
+                }()),
+          ) ??
+          _nullableStr(json['donorName']),
+      donorEmail: _nullableStr(userMap['email']) ??
+          _nullableStr(json['donorEmail']),
     );
   }
 
