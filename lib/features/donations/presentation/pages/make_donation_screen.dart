@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/external_donation_launcher.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
@@ -12,7 +14,8 @@ import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.d
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
-/// Figma "Make a Donation" bottom sheet.
+/// Legacy in-app amount sheet. User-facing entry points now open the external
+/// Sathya website via [show] / [open] — the WebView checkout is no longer used.
 class MakeDonationScreen extends StatefulWidget {
   const MakeDonationScreen({super.key, this.donation});
 
@@ -20,29 +23,23 @@ class MakeDonationScreen extends StatefulWidget {
 
   static const _presetAmounts = <int>[100, 250, 500, 1000, 2000, 5000];
 
-  static Future<void> show(BuildContext context, {Donation? donation}) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final viewInsets = MediaQuery.viewInsetsOf(sheetContext).bottom;
-        final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.88;
-        return Padding(
-          padding: EdgeInsets.only(bottom: viewInsets),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: MakeDonationScreen(donation: donation),
-          ),
-        );
-      },
-    );
+  /// Opens the public donation page in Safari / Chrome (not an in-app WebView).
+  static Future<void> show(BuildContext context, {Donation? donation}) async {
+    final opened = await ExternalDonationLauncher.openDonationPage();
+    if (!opened && context.mounted) {
+      ToastUtil.showError(
+        'Could not open the donation website. Please try again.',
+        title: 'Donate',
+      );
+    }
   }
 
   /// Back-compat for call sites that used navigation.
   static Future<void> open({Donation? donation, BuildContext? context}) {
     final ctx = context ?? Get.context;
-    if (ctx == null) return Future.value();
+    if (ctx == null) {
+      return ExternalDonationLauncher.openDonationPage().then((_) {});
+    }
     return show(ctx, donation: donation);
   }
 

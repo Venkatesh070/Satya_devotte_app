@@ -492,15 +492,8 @@ class _MonthGrid extends StatelessWidget {
     controller.onDateSelected(date, date);
     if (events.isEmpty) return;
 
-    final authCtrl = Get.find<AuthController>();
-    if (authCtrl.isGuest) {
-      showGuestAuthDialog(
-        context,
-        title: 'Please sign in or sign up to view event details',
-      );
-      return;
-    }
-
+    // Festival / lunar guidance is guest-browsable. Personal events are gated
+    // inside CalendarEventDetailPage.show.
     if (events.length == 1) {
       CalendarEventDetailPage.show(context, event: events.first);
       return;
@@ -593,14 +586,6 @@ class _CalendarDayEventsSheet extends StatelessWidget {
                 return _DayEventListTile(
                   event: event,
                   onTap: () {
-                    final authCtrl = Get.find<AuthController>();
-                    if (authCtrl.isGuest) {
-                      showGuestAuthDialog(
-                        context,
-                        title: 'Please sign in or sign up to view event details',
-                      );
-                      return;
-                    }
                     Navigator.of(context).pop();
                     CalendarEventDetailPage.show(context, event: event);
                   },
@@ -691,14 +676,6 @@ class _FestivalsList extends StatelessWidget {
         return _FestivalCard(
           festival: list[i],
           onTap: () {
-            final authCtrl = Get.find<AuthController>();
-            if (authCtrl.isGuest) {
-              showGuestAuthDialog(
-                context,
-                title: 'Please sign in or sign up to view festival details',
-              );
-              return;
-            }
             CalendarEventDetailPage.show(context, event: list[i]);
           },
         );
@@ -864,14 +841,6 @@ class _LunarList extends StatelessWidget {
           subtitle: isFull ? 'Purnima' : 'Amavasya',
           date: m.date,
           onTap: () {
-            final authCtrl = Get.find<AuthController>();
-            if (authCtrl.isGuest) {
-              showGuestAuthDialog(
-                context,
-                title: 'Please sign in or sign up to view lunar event details',
-              );
-              return;
-            }
             CalendarEventDetailPage.show(context, event: m);
           },
         );
@@ -945,14 +914,7 @@ class _EventsList extends StatelessWidget {
             description: e.description,
             date: e.date,
             onTap: () {
-              final authCtrl = Get.find<AuthController>();
-              if (authCtrl.isGuest) {
-                showGuestAuthDialog(
-                  context,
-                  title: 'Please sign in or sign up to view event details',
-                );
-                return;
-              }
+              // Personal calendar events remain auth-gated in detail sheet.
               CalendarEventDetailPage.show(context, event: e);
             },
           );
@@ -964,14 +926,8 @@ class _EventsList extends StatelessWidget {
             date: _parseDate(e.date),
             dateLabel: e.daily ? e.dailyTimeText : null,
             onTap: () {
-              final authCtrl = Get.find<AuthController>();
-              if (authCtrl.isGuest) {
-                showGuestAuthDialog(
-                  context,
-                  title: 'Please sign in or sign up to view event details',
-                );
-                return;
-              }
+              // Ambiguous: scheduled puja cards. Detail sheet still requires
+              // login unless/until classified as public guidance.
               CalendarEventDetailPage.show(context, event: e);
             },
           );

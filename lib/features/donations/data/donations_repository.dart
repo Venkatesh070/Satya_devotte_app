@@ -114,9 +114,9 @@ class DonationsRepository {
         },
       );
       final body = res.data;
-      final list = _extractList(body)
-          .map((e) => DonationContribution.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = _extractList(body).map(_asStringKeyedMap).map((e) {
+        return DonationContribution.fromJson(e);
+      }).toList();
       final total = _readInt(body, ['total'], fallback: list.length);
       final totalPages = _readInt(
         body,
@@ -133,26 +133,36 @@ class DonationsRepository {
   }
 
   // ── helpers ─────────────────────────────────────────────────
+  static Map<String, dynamic> _asStringKeyedMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    throw const DonationException('Unexpected contribution payload.');
+  }
+
   List<dynamic> _extractList(dynamic body) {
+    if (body is List) return body;
     if (body is! Map) return const [];
+
+    // Prefer the current API shape: { data: { items|donations: [...], pagination } }
+    final data = body['data'];
+    if (data is Map) {
+      final items = data['items'] ??
+          data['donations'] ??
+          data['contributions'] ??
+          data['results'];
+      if (items is List) return items;
+    }
+    if (data is List) return data;
+
     final keys = const [
-      'donations',
-      'contributions',
       'items',
+      'contributions',
+      'donations',
       'results',
-      'data',
     ];
     for (final k in keys) {
       final v = body[k];
       if (v is List) return v;
-    }
-    final data = body['data'];
-    if (data is List) return data;
-    if (data is Map) {
-      for (final k in keys) {
-        final v = data[k];
-        if (v is List) return v;
-      }
     }
     return const [];
   }

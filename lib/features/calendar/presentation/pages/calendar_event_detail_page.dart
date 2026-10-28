@@ -26,16 +26,14 @@ class CalendarEventDetailPage extends StatefulWidget {
 
   static Future<void> show(BuildContext context, {required dynamic event}) {
     final authCtrl = Get.find<AuthController>();
-    if (authCtrl.isGuest) {
-      String title = 'Please sign in or sign up to view event details';
-      if (event is FestivalModel) {
-        title = 'Please sign in or sign up to view festival details';
-      } else if (event is MoonPhaseModel) {
-        title = 'Please sign in or sign up to view lunar event details';
-      }
+    final isPublicGuidance =
+        event is FestivalModel || event is MoonPhaseModel;
+    // Festival / lunar informational content is guest-browsable. Personal
+    // calendar events and account actions still require sign-in.
+    if (authCtrl.isGuest && !isPublicGuidance) {
       return showGuestAuthDialog(
         context,
-        title: title,
+        title: 'Please sign in or sign up to view event details',
       );
     }
     return showModalBottomSheet<void>(

@@ -24,6 +24,11 @@ class _MyContributionsScreenState extends State<MyContributionsScreen> {
     super.initState();
     _ctrl = Get.find<MyContributionsController>();
     _scrollCtrl.addListener(_onScroll);
+    // Controller is a long-lived GetX singleton — always reload when opening History
+    // so newly linked / completed website donations appear without a cold restart.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ctrl.refreshContributions();
+    });
   }
 
   @override

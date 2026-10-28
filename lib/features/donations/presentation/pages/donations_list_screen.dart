@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
-import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_card.dart';
-import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
-import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_summary_card.dart';
+import 'package:satya_devotte_app/core/services/external_donation_launcher.dart';
+import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
-import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
 
 class DonationsListScreen extends StatelessWidget {
   const DonationsListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = Get.find<DonationsListController>();
-
     return Scaffold(
       backgroundColor: DonationUi.background,
       appBar: DonationSimpleAppBar(
@@ -36,7 +31,16 @@ class DonationsListScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _GeneralDonationCard(
-              onDonate: () => MakeDonationScreen.show(context),
+              onDonate: () async {
+                final opened =
+                    await ExternalDonationLauncher.openDonationPage();
+                if (!opened && context.mounted) {
+                  ToastUtil.showError(
+                    'Could not open the donation website. Please try again.',
+                    title: 'Donate',
+                  );
+                }
+              },
             ),
           ],
         ),

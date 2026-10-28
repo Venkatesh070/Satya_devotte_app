@@ -308,14 +308,7 @@ class _SearchPageState extends State<SearchPage> {
     // 1. Deity: Navigate directly to the Deity Detail screen (AppRoutes.ritualDetail with type: 'deity')
     if (type == 'deity' || type == 'deities') {
       if (result.id.isEmpty) return;
-      final authCtrl = Get.find<AuthController>();
-      if (authCtrl.isGuest) {
-        showGuestAuthDialog(
-          context,
-          title: 'Please sign in or sign up to view deity details',
-        );
-        return;
-      }
+      // Deity informational content is available to guests.
       await Get.toNamed<dynamic>(
         AppRoutes.ritualDetail,
         arguments: result.toDeityArgs(),

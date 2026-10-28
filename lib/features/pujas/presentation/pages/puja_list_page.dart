@@ -399,20 +399,16 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   void _openDeityDetail(DeityListItem item) {
-    final authCtrl = Get.find<AuthController>();
-    if (authCtrl.isGuest) {
-      showGuestAuthDialog(
-        context,
-        title: 'Please sign in or sign up to view deity details',
-      );
-      return;
-    }
+    // General spiritual / deity guidance is browsable without login.
+    // Beginning a puja/ritual and favourites still require authentication.
     Get.toNamed<dynamic>(
       AppRoutes.ritualDetail,
       arguments: item.toRitualDetailArgs(),
     )?.then((_) {
-      _poojaHistoryController.fetchHistory();
-      _loadFavoritesFromApi();
+      if (!Get.find<AuthController>().isGuest) {
+        _poojaHistoryController.fetchHistory();
+        _loadFavoritesFromApi();
+      }
     });
   }
 
@@ -1352,14 +1348,7 @@ class _FavoriteDeitiesPageState extends State<_FavoriteDeitiesPage> {
                     statusLabel: label,
                     onFavoriteTap: () => _toggleFavorite(item),
                     onTap: () {
-                      final authCtrl = Get.find<AuthController>();
-                      if (authCtrl.isGuest) {
-                        showGuestAuthDialog(
-                          context,
-                          title: 'Please sign in or sign up to view deity details',
-                        );
-                        return;
-                      }
+                      // Guest-browsable deity detail (same as main list).
                       Get.toNamed<dynamic>(
                         AppRoutes.ritualDetail,
                         arguments: item.toRitualDetailArgs(),
