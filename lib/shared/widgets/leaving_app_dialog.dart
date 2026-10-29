@@ -11,8 +11,8 @@ class LeavingAppDialog extends StatelessWidget {
     this.targetUrl,
     this.title = 'Support Sathya',
     this.subtitle =
-        'Your generous contribution helps sustain our sacred pujas, rituals, and services for devotees. You will be directed to the official Sathya website to complete your donation securely.',
-    this.continueLabel = 'Proceed to Donate',
+        'You will be directed to the official Sathya website to complete your donation.',
+    this.continueLabel = 'Proceeed to Donate',
     this.cancelLabel = 'Maybe Later',
   });
 
@@ -28,7 +28,7 @@ class LeavingAppDialog extends StatelessWidget {
     String? targetUrl,
     String title = 'Support Sathya',
     String subtitle =
-        'Your generous contribution helps sustain our sacred pujas, rituals, and services for devotees. You will be directed to the official Sathya website to complete your donation securely.',
+        'You will be directed to the official Sathya website to complete your donation.',
     String continueLabel = 'Proceed to Donate',
     String cancelLabel = 'Maybe Later',
   }) {
