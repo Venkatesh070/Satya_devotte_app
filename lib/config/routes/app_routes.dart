@@ -22,12 +22,8 @@ class AppRoutes {
   /// Single donation details. Pass `DonationModel` via `arguments`.
   static const String userDonationDetails = '/donations/details';
 
-  /// Post-PayFast confirming screen. Pass `DonationInitData`.
-  static const String userDonationConfirming = '/donations/confirming';
-
-  /// Terminal screens. Pass `VerifyResult` (success) or
-  /// `DonationFailedArgs` (failed).
-  static const String userDonationSuccess = '/donations/success';
+  /// Puja Kit PayFast failure screen. Pass `DonationFailedArgs`.
+  /// (Voluntary donations are website-only; no in-app donation checkout.)
   static const String userDonationFailed = '/donations/failed';
 
   /// Authenticated user's contribution history.

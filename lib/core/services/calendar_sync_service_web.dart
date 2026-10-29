@@ -1,5 +1,7 @@
 import 'dart:html' as html;
 
+import 'package:satya_devotte_app/core/services/calendar_add_outcome.dart';
+
 String _toGoogleCalendarDate(DateTime dateTime) {
   final utc = dateTime.toUtc();
   final y = utc.year.toString().padLeft(4, '0');
@@ -11,7 +13,7 @@ String _toGoogleCalendarDate(DateTime dateTime) {
   return '$y$m${d}T$hh$mm${ss}Z';
 }
 
-Future<bool> addEventToCalendarImpl({
+Future<CalendarAddOutcome> addEventToCalendarImpl({
   required String title,
   String? description,
   required DateTime startDate,
@@ -27,5 +29,6 @@ Future<bool> addEventToCalendarImpl({
   });
 
   html.window.open(uri.toString(), '_blank');
-  return true;
+  // Browser tab opened — save is not confirmed until the user returns.
+  return CalendarAddOutcome.opened;
 }

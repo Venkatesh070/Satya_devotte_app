@@ -1,9 +1,7 @@
-// Failure / abandoned state for a donation reference.
+// Failure / abandoned state for in-app product (Puja Kit) PayFast checkout.
 //
-// Args are passed via `Get.arguments` as [DonationFailedArgs]. The screen
-// is a dead-end on its own — the user can retry the same donation (which
-// re-opens the amount sheet for it), re-verify the same reference (safe
-// because backend is idempotent), or go back to the donations list.
+// Args are passed via `Get.arguments` as [DonationFailedArgs]. Voluntary
+// donations do not use this screen — they complete on the website only.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -11,7 +9,6 @@ import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/donations/data/models/verify_result.dart';
-import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 
 class DonationFailedArgs {
   const DonationFailedArgs({
@@ -68,28 +65,10 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
             'You can try again any time.';
       case VerifyStatus.unknown:
         return _args.message ??
-            'Your payment may still be processing. You can verify again '
-                'safely — duplicates are prevented.';
+            'Your payment may still be processing. Check your orders '
+                'shortly, or try checkout again.';
       case VerifyStatus.success:
         return 'Please reach out to support if you see anything unexpected.';
-    }
-  }
-
-  Future<void> _retryVerify() async {
-    if (_args.reference.isEmpty) return;
-    final ctrl = Get.find<DonateController>();
-    final result = await ctrl.verify(_args.reference);
-    if (!mounted) return;
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ctrl.lastError ?? 'Could not verify yet.')),
-      );
-      return;
-    }
-    if (result.isPaid) {
-      Get.offNamed(AppRoutes.userDonationSuccess, arguments: result);
-    } else {
-      setState(() {}); // refresh subtitle / status label
     }
   }
 
@@ -152,47 +131,31 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
                 ),
               ],
               const Spacer(),
-              Obx(() {
-                final ctrl = Get.find<DonateController>();
-                final loading = ctrl.isVerifying;
-                return SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed:
-                        (loading || _args.reference.isEmpty) ? null : _retryVerify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB10F33),
-                      foregroundColor: Color(0xFFFCF7EF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 0,
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => Get.offNamed(AppRoutes.poojaKitCart),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB10F33),
+                    foregroundColor: const Color(0xFFFCF7EF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: loading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Color(0xFFFCF7EF),
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Try again',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w700),
-                          ),
+                    elevation: 0,
                   ),
-                );
-              }),
+                  child: const Text(
+                    'Back to cart',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton(
-                  onPressed: () =>
-                      Get.offAllNamed(AppRoutes.userDonations),
+                  onPressed: () => Get.offAllNamed(AppRoutes.userOrders),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textColor,
                     side: const BorderSide(color: Color(0xFFE3D9C2)),
@@ -201,9 +164,8 @@ class _DonationFailedScreenState extends State<DonationFailedScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Back to donations',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                    'View my orders',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

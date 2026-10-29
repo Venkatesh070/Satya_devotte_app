@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
@@ -46,7 +46,7 @@ class _CalendarEventFields {
   final String reminderType;
 }
 
-class CalendarController extends GetxController with WidgetsBindingObserver {
+class CalendarController extends GetxController {
   final ApiClient _apiClient = Get.find<ApiClient>();
   final NotificationService _notificationService =
       Get.find<NotificationService>();
@@ -65,17 +65,12 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
   final RxSet<String> remindedEventIds = <String>{}.obs;
   final RxSet<String> addedToCalendarIds = <String>{}.obs;
 
-  /// Tracks an event that was just launched into the device calendar app
-  String? _pendingCalendarEventId;
-  String? _pendingCalendarEventTitle;
-
   /// Map of deity ID to their hex color string.
   final RxMap<String, String> deityColors = <String, String>{}.obs;
 
   @override
   void onInit() {
     super.onInit();
-    WidgetsBinding.instance.addObserver(this);
     _loadReminders();
     _loadCalendarStatus();
     _loadUserEvents();
@@ -96,29 +91,15 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  @override
-  void onClose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.onClose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _pendingCalendarEventId != null) {
-      final id = _pendingCalendarEventId!;
-      final title = _pendingCalendarEventTitle ?? 'Event';
-      _pendingCalendarEventId = null;
-      _pendingCalendarEventTitle = null;
-      if (!addedToCalendarIds.contains(id)) {
-        addedToCalendarIds.add(id);
-        addedToCalendarIds.refresh();
-        _saveCalendarStatus();
-        ToastUtil.showSuccess(
-          '$title has been added to your calendar.',
-          title: 'Added to Calendar',
-        );
-      }
-    }
+  void _markAddedToCalendar(String id, String title) {
+    if (addedToCalendarIds.contains(id)) return;
+    addedToCalendarIds.add(id);
+    addedToCalendarIds.refresh();
+    _saveCalendarStatus();
+    ToastUtil.showSuccess(
+      '$title has been added to your calendar.',
+      title: 'Added to Calendar',
+    );
   }
 
   Future<void> _fetchDeityColors() async {
@@ -359,29 +340,26 @@ class CalendarController extends GetxController with WidgetsBindingObserver {
         start.month,
         start.day,
       ).add(const Duration(days: 1));
-      print('[CalendarController] addToDeviceCalendar calling addEventToCalendar for: ${fields.title} ($start to $end)');
-      final success = await addEventToCalendar(
+      final outcome = await addEventToCalendar(
         title: fields.title,
         description: fields.description,
         startDate: start,
         endDate: end,
       );
-      print('[CalendarController] addEventToCalendar completed with success=$success');
-      if (success) {
-        if (!addedToCalendarIds.contains(fields.id)) {
-          addedToCalendarIds.add(fields.id);
-          addedToCalendarIds.refresh();
-          _saveCalendarStatus();
-          ToastUtil.showSuccess(
-            '${fields.title} has been added to your calendar.',
-            title: 'Added to Calendar',
+      switch (outcome) {
+        case CalendarAddOutcome.saved:
+          _markAddedToCalendar(fields.id, fields.title);
+        case CalendarAddOutcome.cancelled:
+          // User dismissed the calendar editor without saving — no toast.
+          break;
+        case CalendarAddOutcome.opened:
+          // Web / unknown: calendar opened but save was not confirmed.
+          break;
+        case CalendarAddOutcome.failed:
+          ToastUtil.showError(
+            'Could not add ${fields.title} to your calendar. Please try again.',
+            title: 'Calendar Error',
           );
-        }
-      } else {
-        ToastUtil.showError(
-          'Could not add ${fields.title} to your calendar. Please try again.',
-          title: 'Calendar Error',
-        );
       }
     } catch (e, stack) {
       debugPrint('CalendarController: addToDeviceCalendar failed: $e\n$stack');

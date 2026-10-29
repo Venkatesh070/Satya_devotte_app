@@ -57,7 +57,6 @@ import 'package:satya_devotte_app/features/poojakit/state/poojakit_checkout_cont
 
 import 'package:satya_devotte_app/features/poojakit/state/cart_controller.dart';
 import 'package:satya_devotte_app/features/donations/data/donations_repository.dart';
-import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/donations_list_controller.dart';
 import 'package:satya_devotte_app/features/donations/state/my_contributions_controller.dart';
 import 'package:satya_devotte_app/features/profile/data/datasources/profile_remote_data_source.dart';
@@ -291,10 +290,6 @@ class InitialBinding extends Bindings {
     );
     Get.lazyPut<DonationsListController>(
       () => DonationsListController(Get.find<DonationsRepository>()),
-      fenix: true,
-    );
-    Get.lazyPut<DonateController>(
-      () => DonateController(Get.find<DonationsRepository>()),
       fenix: true,
     );
     Get.lazyPut<MyContributionsController>(

@@ -7,9 +7,7 @@ import 'package:satya_devotte_app/features/auth/presentation/pages/web_login_pag
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_verification_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_details_screen.dart';
-import 'package:satya_devotte_app/features/donations/presentation/pages/donation_paystack_webview_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donation_failed_screen.dart';
-import 'package:satya_devotte_app/features/donations/presentation/pages/donation_success_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/donations_list_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/pages/my_contributions_screen.dart';
 import 'package:satya_devotte_app/features/poojakit/presentation/pages/product_details_page.dart';
@@ -113,16 +111,7 @@ class AppPages {
       page: DonationDetailsScreen.new,
       middlewares: [AuthGuard()],
     ),
-    GetPage(
-      name: AppRoutes.userDonationConfirming,
-      page: DonationPaystackWebViewScreen.new,
-      middlewares: [AuthGuard()],
-    ),
-    GetPage(
-      name: AppRoutes.userDonationSuccess,
-      page: DonationSuccessScreen.new,
-      middlewares: [AuthGuard()],
-    ),
+    // Puja Kit payment failure reuses this route (not donation checkout).
     GetPage(
       name: AppRoutes.userDonationFailed,
       page: DonationFailedScreen.new,

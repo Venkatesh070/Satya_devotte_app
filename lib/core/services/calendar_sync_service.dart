@@ -1,12 +1,15 @@
+import 'package:satya_devotte_app/core/services/calendar_add_outcome.dart';
 import 'package:satya_devotte_app/core/services/calendar_sync_service_mobile.dart'
     if (dart.library.html)
     'package:satya_devotte_app/core/services/calendar_sync_service_web.dart'
     as impl;
 
+export 'package:satya_devotte_app/core/services/calendar_add_outcome.dart';
+
 /// Opens device calendar flow to add an event (user-triggered action only).
 ///
 /// Works with Android/iOS calendar providers through the native calendar UI.
-Future<bool> addEventToCalendar({
+Future<CalendarAddOutcome> addEventToCalendar({
   required String title,
   String? description,
   required DateTime startDate,
@@ -22,7 +25,7 @@ Future<bool> addEventToCalendar({
     throw ArgumentError('endDate must be after startDate.');
   }
 
-  // Web uses browser calendar URL; Android/iOS uses add_2_calendar.
+  // Web uses browser calendar URL; Android/iOS uses native calendar UI.
   return impl.addEventToCalendarImpl(
     title: safeTitle,
     description: description,

@@ -4,15 +4,12 @@
 // the project-wide auth interceptor (Firebase ID / session token), so
 // nothing extra is needed for authorisation here.
 import 'package:dio/dio.dart';
-import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 
 import 'donation_exception.dart';
 import 'models/donation.dart';
 import 'models/donation_contribution.dart';
-import 'models/donation_init_data.dart';
-import 'models/verify_result.dart';
 
 class DonationsRepository {
   DonationsRepository(this._apiClient);
@@ -33,68 +30,8 @@ class DonationsRepository {
     }
   }
 
-  // ── Initiate PayFast payment for a single donation ─────────
-  Future<DonationInitData> initiateDonation({
-    String? donationId,
-    required num amount,
-    String currency = 'ZAR',
-    String? note,
-    String? callbackUrl,
-  }) async {
-    if (amount < 10) {
-      throw const DonationException('Minimum donation amount is ₹ 10.');
-    }
-    if (note != null && note.length > 280) {
-      throw const DonationException('Note must be 280 characters or fewer.');
-    }
-    try {
-      final body = <String, dynamic>{
-        'amount': amount,
-        'currency': currency,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-        if (callbackUrl != null && callbackUrl.trim().isNotEmpty)
-          'callbackUrl': callbackUrl.trim(),
-      };
-      final url = donationId != null && donationId.trim().isNotEmpty
-          ? ApiEndpoints.donate(donationId)
-          : ApiEndpoints.generalDonate;
-
-      final res = await _apiClient.dio.post<dynamic>(url, data: body);
-      final data = res.data;
-      if (data is! Map<String, dynamic>) {
-        throw const DonationException('Unexpected response from server.');
-      }
-      return DonationInitData.fromJson(data);
-    } on DioException catch (e) {
-      throw DonationException.fromDio(
-        e,
-        fallback: 'Could not start the donation.',
-      );
-    }
-  }
-
-  // ── Verify a payment reference (idempotent) ────────────────
-  Future<VerifyResult> verifyPayment(String reference) async {
-    if (reference.trim().isEmpty) {
-      throw const DonationException('Missing payment reference.');
-    }
-    try {
-      final res = await _apiClient.dio.get<dynamic>(
-        ApiEndpoints.verifyPayment(reference),
-        options: Options(extra: {kSkipApiLoaderKey: true}),
-      );
-      final data = res.data;
-      if (data is! Map<String, dynamic>) {
-        throw const DonationException('Unexpected response from server.');
-      }
-      return VerifyResult.fromJson(data, fallbackReference: reference);
-    } on DioException catch (e) {
-      throw DonationException.fromDio(
-        e,
-        fallback: 'Could not verify the payment.',
-      );
-    }
-  }
+  // In-app donation initiate / verify intentionally omitted — voluntary
+  // donations complete only on the public website (Guideline 3.2.2(iv)).
 
   // ── Paginated contribution history ──────────────────────────
   Future<({List<DonationContribution> items, int total, int totalPages})>

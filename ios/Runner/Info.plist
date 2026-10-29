@@ -48,20 +48,13 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Pre-iOS 17 EventKit authorization only. iOS 17+ uses EKEventEditViewController without a permission prompt (TN3152). -->
 	<key>NSCalendarsUsageDescription</key>
-	<string>This app needs access to add events to your calendar</string>
-	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>This app needs access to add pooja and festival events to your calendar</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>This app needs access to add pooja and festival events to your calendar</string>
-	<key>NSRemindersUsageDescription</key>
-	<string>This app needs access to reminders for calendar events</string>
-	<key>NSRemindersFullAccessUsageDescription</key>
-	<string>This app needs access to reminders for calendar events</string>
+	<string>Sathya needs calendar access so you can save pooja, festival, and ritual dates to your device calendar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Sathya requires camera access to take and update your profile photo.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
+	<string>Sathya uses your location only while you use the app, to help fill your delivery address for Pooja Kit orders.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sathya requires access to your photo library to select and upload your profile photo.</string>
 	<key>LSApplicationQueriesSchemes</key>

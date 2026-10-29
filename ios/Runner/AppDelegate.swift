@@ -60,16 +60,13 @@ class CalendarHandler: NSObject, EKEventEditViewDelegate {
       }
     }
 
+    // Apple TN3152: presenting EKEventEditViewController does not require
+    // calendar permission on iOS 17+. Requesting full access here is over-
+    // permissioning and is a Guideline 5.1.1 risk. Pre-iOS 17 still needs
+    // the legacy EventKit authorization prompt.
     if #available(iOS 17.0, *) {
-      print("[iOS Calendar] Requesting full access to events (iOS 17+)...")
-      eventStore.requestFullAccessToEvents { granted, error in
-        print("[iOS Calendar] Permission response: granted=\(granted), error=\(String(describing: error))")
-        if granted && error == nil {
-          performAdd()
-        } else {
-          DispatchQueue.main.async { result(false) }
-        }
-      }
+      print("[iOS Calendar] iOS 17+: presenting EKEventEditViewController without calendar permission request")
+      performAdd()
     } else {
       print("[iOS Calendar] Requesting access to events (iOS <17)...")
       eventStore.requestAccess(to: .event) { granted, error in

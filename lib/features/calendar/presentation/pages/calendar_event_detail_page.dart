@@ -324,7 +324,7 @@ class _EventDetailActions extends StatelessWidget {
                         child: Text(
                           isAdded
                               ? 'Added to Calendar'
-                              : 'Add to Google Calendar',
+                              : 'Add to Calendar',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.inter(
