@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/notifications/admin_notification_router.dart';
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
+import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -64,8 +65,21 @@ class _SplashPageState extends State<SplashPage>
     if (!mounted) return;
 
     if (!auth.isAuthenticated) {
-      // Land unauthenticated users directly on home with Guest User role
-      Get.offAllNamed(kIsWeb ? AppRoutes.login : AppRoutes.home);
+      if (kIsWeb) {
+        Get.offAllNamed(AppRoutes.login);
+        return;
+      }
+      final session = Get.isRegistered<AuthSessionService>()
+          ? Get.find<AuthSessionService>()
+          : null;
+      final hasSeenOnboarding = session?.hasSeenOnboarding ??
+          await session?.checkHasSeenOnboarding() ??
+          false;
+      if (!hasSeenOnboarding) {
+        Get.offAllNamed(AppRoutes.onboarding);
+      } else {
+        Get.offAllNamed(AppRoutes.home);
+      }
       return;
     }
 

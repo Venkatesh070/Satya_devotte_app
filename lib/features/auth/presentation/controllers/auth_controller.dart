@@ -44,14 +44,18 @@ class AuthController extends GetxController {
   final _sessionUser = Rxn<Map<String, dynamic>>();
   bool _authApiInFlight = false;
 
-  bool get isAuthenticated => _isAuthenticated.value;
+  bool get isAuthenticated {
+    final token = _authSessionService.accessToken;
+    return _isAuthenticated.value && token != null && token.trim().isNotEmpty;
+  }
+
   bool get isGoogleSignInLoading => _isGoogleSignInLoading.value;
   bool get isAppleSignInLoading => _isAppleSignInLoading.value;
   bool get isEmailSignInLoading => _isEmailSignInLoading.value;
   bool get isAuthLoading => _isAuthLoading.value;
   String? get lastAuthError => _lastAuthError.value;
 
-  bool get isGuest => !_isAuthenticated.value;
+  bool get isGuest => !isAuthenticated;
 
   // ─── Role getters ─────────────────────────────────────────────
   String get userRole => isGuest ? 'guest' : _userRole.value;
@@ -151,7 +155,12 @@ class AuthController extends GetxController {
     // Web skips splash, so restore persisted session/role here as well.
     Future.microtask(loadSavedSession);
     _firebaseService.authStateChanges.listen((state) {
-      _isAuthenticated.value = state;
+      if (!state) {
+        _isAuthenticated.value = false;
+      } else if (_authSessionService.accessToken != null &&
+          _authSessionService.accessToken!.trim().isNotEmpty) {
+        _isAuthenticated.value = true;
+      }
     });
   }
 
@@ -233,6 +242,14 @@ class AuthController extends GetxController {
       // Start music if user is regular user
       if (isRegularUser) {
         _startRegularUserBackgroundMusic();
+      }
+    } else {
+      _isAuthenticated.value = false;
+      _userRole.value = 'user';
+      if (_firebaseService.currentUser != null) {
+        try {
+          await _firebaseService.signOut();
+        } catch (_) {}
       }
     }
   }
@@ -792,6 +809,7 @@ class AuthController extends GetxController {
     _stopRegularUserBackgroundMusic();
 
     await signOutSilently();
+    await _authSessionService.setHasSeenOnboarding(true);
 
     Get.offAllNamed(AppRoutes.home);
   }
@@ -817,11 +835,9 @@ class AuthController extends GetxController {
       _stopCmsBackgroundMusicIfNeeded();
       _stopRegularUserBackgroundMusic();
 
-      final normalizedComment = comment.trim();
-      if (normalizedComment.isEmpty) {
-        _lastAuthError.value = 'Please provide a deletion comment.';
-        return false;
-      }
+      final normalizedComment = comment.trim().isEmpty
+          ? 'User requested account deletion'
+          : comment.trim();
 
       await _unregisterDeviceFromPush();
       await _authRepository.deleteAccount(normalizedComment);

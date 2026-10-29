@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
-import 'package:satya_devotte_app/core/services/external_donation_launcher.dart';
-import 'package:satya_devotte_app/core/utils/toast_util.dart';
+import 'package:satya_devotte_app/features/donations/presentation/pages/make_donation_screen.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 
 class DonationsListScreen extends StatelessWidget {
@@ -31,16 +30,7 @@ class DonationsListScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _GeneralDonationCard(
-              onDonate: () async {
-                final opened =
-                    await ExternalDonationLauncher.openDonationPage();
-                if (!opened && context.mounted) {
-                  ToastUtil.showError(
-                    'Could not open the donation website. Please try again.',
-                    title: 'Donate',
-                  );
-                }
-              },
+              onDonate: () => MakeDonationScreen.show(context),
             ),
           ],
         ),

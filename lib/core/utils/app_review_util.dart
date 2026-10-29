@@ -79,14 +79,12 @@ class AppReviewUtil {
           await launchUrl(webUri, mode: LaunchMode.externalApplication);
         }
       } else if (Platform.isIOS) {
-        final id = appStoreId ?? '';
-        final iosUri = id.isNotEmpty
-            ? Uri.parse(
-                'itms-apps://itunes.apple.com/app/id$id?action=write-review',
-              )
-            : Uri.parse(
-                'https://apps.apple.com/app',
-              );
+        final id = (appStoreId != null && appStoreId.isNotEmpty)
+            ? appStoreId
+            : '6815970877';
+        final iosUri = Uri.parse(
+          'itms-apps://itunes.apple.com/app/id$id?action=write-review',
+        );
         if (await canLaunchUrl(iosUri)) {
           await launchUrl(iosUri, mode: LaunchMode.externalApplication);
         } else {

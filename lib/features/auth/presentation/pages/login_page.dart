@@ -11,6 +11,7 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/features/auth/presentation/pages/email_login_page.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
 import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
+import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/features/auth/presentation/widgets/login_footer.dart';
 import 'package:satya_devotte_app/shared/widgets/terms_and_privacy_text.dart';
 
@@ -114,8 +115,8 @@ class _LoginPageState extends State<LoginPage>
                             final offlineService = Get.find<OfflineService>();
                             if (!offlineService.checkAndShowDialog()) return;
 
-                            final isSuccess =
-                                await controller.signInWithGoogle();
+                            final isSuccess = await controller
+                                .signInWithGoogle();
                             if (isSuccess) {
                               _navigateAfterLogin();
                             } else if (controller.lastAuthError != null) {
@@ -144,8 +145,8 @@ class _LoginPageState extends State<LoginPage>
                               final offlineService = Get.find<OfflineService>();
                               if (!offlineService.checkAndShowDialog()) return;
 
-                              final isSuccess =
-                                  await controller.signInWithApple();
+                              final isSuccess = await controller
+                                  .signInWithApple();
                               if (isSuccess) {
                                 _navigateAfterLogin();
                               } else if (controller.lastAuthError != null) {
@@ -168,8 +169,9 @@ class _LoginPageState extends State<LoginPage>
                               ),
                             ),
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
                               child: Text(
                                 'Or',
                                 style: TextStyle(
@@ -206,21 +208,33 @@ class _LoginPageState extends State<LoginPage>
                           },
                         ),
                         const SizedBox(height: 12),
-                        _SocialButton(
-                          label: 'Continue as Guest',
-                          backgroundColor: const Color(0xFFFCF7EF),
-                          textColor: const Color(0xFF1F1F1F),
-                          hasBorder: true,
-                          leading: const Icon(
-                            Icons.person_outline_rounded,
-                            size: 20,
-                            color: Color(0xFF1F1F1F),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: !isAnyLoading
+                                ? () async {
+                                    await controller.continueAsGuest();
+                                  }
+                                : null,
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF4A1C00),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            label: Text(
+                              'Continue as Guest',
+                              style: AppTypography.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF4A1C00),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
                           ),
-                          isLoading: false,
-                          isEnabled: !isAnyLoading,
-                          onTap: () async {
-                            await controller.continueAsGuest();
-                          },
                         ),
                         const SizedBox(height: 12),
                         const TermsAndPrivacyPolicyText(

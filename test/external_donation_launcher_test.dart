@@ -7,13 +7,13 @@ void main() {
       final uri = Uri.parse(ExternalDonationLauncher.donationPageUrl);
       expect(uri.scheme, 'https');
       expect(uri.host, anyOf('www.sathya.co.za', 'sathya.co.za'));
-      expect(uri.fragment, contains('donate'));
+      expect('${uri.path}#${uri.fragment}', contains('donate'));
     });
 
     test('validateDonationUrl accepts canonical donate URL', () {
       expect(
         ExternalDonationLauncher.validateDonationUrl(
-          'https://www.sathya.co.za/#/donate',
+          'https://www.sathya.co.za/donate',
         ),
         isNull,
       );
@@ -22,13 +22,13 @@ void main() {
     test('validateDonationUrl rejects http and foreign hosts', () {
       expect(
         ExternalDonationLauncher.validateDonationUrl(
-          'http://www.sathya.co.za/#/donate',
+          'http://www.sathya.co.za/donate',
         ),
         isNotNull,
       );
       expect(
         ExternalDonationLauncher.validateDonationUrl(
-          'https://evil.example/#/donate',
+          'https://evil.example/donate',
         ),
         isNotNull,
       );
@@ -49,21 +49,26 @@ void main() {
         nameFirst: 'Ada',
         nameLast: 'Lovelace',
       );
-      expect(url.startsWith('https://www.sathya.co.za/#/donate?'), isTrue);
+      expect(
+        url.startsWith('https://www.sathya.co.za/donate?') ||
+            url.startsWith('https://www.sathya.co.za/donate?'),
+        isTrue,
+      );
       expect(url, contains('email=ada%40example.com'));
       expect(url, contains('nameFirst=Ada'));
       expect(url, contains('nameLast=Lovelace'));
-      expect(
-        ExternalDonationLauncher.validateDonationUrl(url),
-        isNull,
-      );
+      expect(ExternalDonationLauncher.validateDonationUrl(url), isNull);
     });
 
-    test('buildDonationPageUrl omits empty donor fields', () {
-      expect(
-        ExternalDonationLauncher.buildDonationPageUrl(),
-        ExternalDonationLauncher.donationPageUrl,
-      );
-    });
+    test(
+      'buildDonationPageUrl always includes from=app and omits empty donor fields',
+      () {
+        final url = ExternalDonationLauncher.buildDonationPageUrl();
+        expect(url, contains('from=app'));
+        expect(url, isNot(contains('email=')));
+        expect(url, isNot(contains('nameFirst=')));
+        expect(url, isNot(contains('nameLast=')));
+      },
+    );
   });
 }

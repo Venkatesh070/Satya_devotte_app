@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/features/donations/presentation/widgets/donati
 import 'package:satya_devotte_app/features/donations/state/donate_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/gradient_outline_input_border.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
+import 'package:satya_devotte_app/shared/widgets/leaving_app_dialog.dart';
 import 'package:satya_devotte_app/shared/widgets/rich_text_display.dart';
 
 /// Legacy in-app amount sheet. User-facing entry points now open the external
@@ -23,8 +24,16 @@ class MakeDonationScreen extends StatefulWidget {
 
   static const _presetAmounts = <int>[100, 250, 500, 1000, 2000, 5000];
 
-  /// Opens the public donation page in Safari / Chrome (not an in-app WebView).
+  /// Displays the "You're leaving the Sathya app" confirmation dialog before
+  /// opening the public donation page in Safari / Chrome.
   static Future<void> show(BuildContext context, {Donation? donation}) async {
+    final targetUrl = ExternalDonationLauncher.buildDonationPageUrl();
+    final confirmed = await LeavingAppDialog.show(
+      context,
+      targetUrl: targetUrl,
+    );
+    if (confirmed != true) return;
+
     final opened = await ExternalDonationLauncher.openDonationPage();
     if (!opened && context.mounted) {
       ToastUtil.showError(

@@ -128,7 +128,7 @@ class AppUpdateService {
           storeVersion: simulatedStoreVersion,
           releaseNotes:
               'New features, performance enhancements, and bug fixes for the best experience.',
-          storeUrl: 'https://apps.apple.com/app/sathya/id123456789',
+          storeUrl: 'https://apps.apple.com/app/id6815970877',
         );
       }
 

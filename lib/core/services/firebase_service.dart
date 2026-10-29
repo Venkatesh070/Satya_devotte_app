@@ -28,6 +28,8 @@ class FirebaseService {
   Stream<bool> get authStateChanges =>
       _firebaseAuth.authStateChanges().map((user) => user != null);
 
+  User? get currentUser => _firebaseAuth.currentUser;
+
   Future<void> signInWithGoogle() async {
     // On web, force signOut/disconnect right before signIn can destabilize
     // popup flow and increase popup_closed errors.

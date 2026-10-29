@@ -13,18 +13,15 @@ import 'package:satya_devotte_app/features/profile/presentation/controllers/prof
 class ExternalDonationLauncher {
   ExternalDonationLauncher._();
 
-  /// Override with `--dart-define=DONATION_WEBSITE_URL=https://www.sathya.co.za/#/donate`
+  /// Override with `--dart-define=DONATION_WEBSITE_URL=https://www.sathya.co.za/donate`
   static const String _configuredUrl = String.fromEnvironment(
     'DONATION_WEBSITE_URL',
     defaultValue: '',
   );
 
-  static const String _defaultProdUrl = 'https://www.sathya.co.za/#/donate';
+  static const String _defaultProdUrl = 'https://www.sathya.co.za/donate';
 
-  static const Set<String> _allowedHosts = {
-    'www.sathya.co.za',
-    'sathya.co.za',
-  };
+  static const Set<String> _allowedHosts = {'www.sathya.co.za', 'sathya.co.za'};
 
   static String get donationPageUrl {
     final raw = _configuredUrl.trim().isNotEmpty
@@ -34,20 +31,20 @@ class ExternalDonationLauncher {
   }
 
   /// Prefill query keys understood by the landing `/donate` page.
+  /// Always sets `from=app` so the website can show the return-to-app prompt.
   static String buildDonationPageUrl({
     String? email,
     String? nameFirst,
     String? nameLast,
   }) {
     final base = donationPageUrl;
-    final params = <String, String>{};
+    final params = <String, String>{'from': 'app'};
     final e = email?.trim() ?? '';
     final first = nameFirst?.trim() ?? '';
     final last = nameLast?.trim() ?? '';
     if (e.isNotEmpty) params['email'] = e;
     if (first.isNotEmpty) params['nameFirst'] = first;
     if (last.isNotEmpty) params['nameLast'] = last;
-    if (params.isEmpty) return base;
 
     final query = params.entries
         .map(
@@ -66,15 +63,14 @@ class ExternalDonationLauncher {
     }
 
     final uri = Uri.parse(base);
-    return uri.replace(queryParameters: {
-      ...uri.queryParameters,
-      ...params,
-    }).toString();
+    return uri
+        .replace(queryParameters: {...uri.queryParameters, ...params})
+        .toString();
   }
 
   /// Pulls email / name from the signed-in session when available.
   static ({String? email, String? nameFirst, String? nameLast})
-      donorDetailsFromAppSession() {
+  donorDetailsFromAppSession() {
     if (!Get.isRegistered<AuthController>()) {
       return (email: null, nameFirst: null, nameLast: null);
     }
@@ -99,7 +95,9 @@ class ExternalDonationLauncher {
         (lastName != null && lastName.isNotEmpty)) {
       return (
         email: (email != null && email.isNotEmpty) ? email : null,
-        nameFirst: (firstName != null && firstName.isNotEmpty) ? firstName : null,
+        nameFirst: (firstName != null && firstName.isNotEmpty)
+            ? firstName
+            : null,
         nameLast: (lastName != null && lastName.isNotEmpty) ? lastName : null,
       );
     }
@@ -158,7 +156,8 @@ class ExternalDonationLauncher {
     }
 
     final pathAndFragment = '${uri.path}#${uri.fragment}'.toLowerCase();
-    final looksLikeDonate = pathAndFragment.contains('donate') ||
+    final looksLikeDonate =
+        pathAndFragment.contains('donate') ||
         uri.path.toLowerCase().contains('donate') ||
         uri.fragment.toLowerCase().contains('donate');
     if (!looksLikeDonate && AppEnv.isProduction) {
@@ -201,9 +200,7 @@ class ExternalDonationLauncher {
       if (launched) return true;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint(
-          '[ExternalDonationLauncher] externalApplication failed: $e',
-        );
+        debugPrint('[ExternalDonationLauncher] externalApplication failed: $e');
       }
     }
 

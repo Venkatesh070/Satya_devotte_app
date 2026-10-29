@@ -1007,8 +1007,7 @@ class _DeliveryOptionsSection extends StatelessWidget {
                       const SizedBox(height: 10),
                       _CartInputField(
                         controller: phoneController,
-                        hint:
-                            'Enter collector phone number (e.g. 082 123 4567 or +27 82 123 4567)',
+                        hint: 'Enter collector phone number',
                         keyboardType: TextInputType.phone,
                         icon: Icons.phone_outlined,
                         errorText: phoneError,

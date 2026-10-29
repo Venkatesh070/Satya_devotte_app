@@ -25,7 +25,6 @@ class CreateAccountPage extends StatefulWidget {
 
 class _CreateAccountPageState extends State<CreateAccountPage> {
   static const Color _fieldColor = Color(0xFFFFFBF3);
-  static const Color _fieldBorder = Color(0xFFE0D6C2);
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -576,10 +575,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                                       fontSize: 13,
                                     ),
                                     decoration: _inputDecoration(
-                                      'Enter mobile number (e.g. 082 123 4567 or +27 82 123 4567)',
+                                      'Enter mobile number',
                                     ),
                                     validator: (v) =>
-                                        PhoneValidator.validateSouthAfricanMobile(
+                                        PhoneValidator.validatePhone(
                                       v,
                                       isRequired: false,
                                     ),

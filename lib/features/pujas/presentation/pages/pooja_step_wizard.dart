@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -591,10 +592,12 @@ class _BaseWizardScreen extends StatelessWidget {
                           child: InkWell(
                             onTap: () {
                               debugPrint('Share button tapped');
-                              const shareText =
-                                  'Check out this Puja/App on Sathya! \n\n'
-                                  'Download for Android: https://play.google.com/store/apps/details?id=com.satya_devotte_app \n'
-                                  'Download for iOS: https://apps.apple.com/app/sathya-devotee/id123456789';
+                              final String shareText =
+                                  defaultTargetPlatform == TargetPlatform.iOS
+                                      ? 'Check out this Puja on Sathya!\n\n'
+                                        'Download on the App Store: https://apps.apple.com/app/id6815970877'
+                                      : 'Check out this Puja on Sathya!\n\n'
+                                        'Download on Google Play: https://play.google.com/store/apps/details?id=com.satya_devotte_app';
                               Share.share(shareText).catchError((e) {
                                 debugPrint('Share error: $e');
                                 return const ShareResult(

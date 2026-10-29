@@ -715,9 +715,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     fontSize: 13,
                   ),
                   decoration: _inputDecoration(
-                    'Enter phone number (e.g. 082 123 4567 or +27 82 123 4567)',
+                    'Enter phone number',
                   ),
-                  validator: (v) => PhoneValidator.validateSouthAfricanMobile(
+                  validator: (v) => PhoneValidator.validatePhone(
                     v,
                     isRequired: true,
                     requiredMessage: 'Phone number is required',

@@ -6,14 +6,33 @@ class AuthSessionService {
   static const _accessTokenKey = 'auth.accessToken';
   static const _refreshTokenKey = 'auth.refreshToken';
   static const _userDataKey = 'auth.userData';
+  static const _hasSeenOnboardingKey = 'app.hasSeenOnboarding';
 
   String? _accessToken;
   String? _refreshToken;
   Map<String, dynamic>? _userData;
+  bool _hasSeenOnboarding = false;
 
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   Map<String, dynamic>? get userData => _userData;
+  bool get hasSeenOnboarding => _hasSeenOnboarding;
+
+  Future<bool> checkHasSeenOnboarding() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _hasSeenOnboarding = prefs.getBool(_hasSeenOnboardingKey) ?? false;
+    } catch (_) {}
+    return _hasSeenOnboarding;
+  }
+
+  Future<void> setHasSeenOnboarding([bool seen = true]) async {
+    _hasSeenOnboarding = seen;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_hasSeenOnboardingKey, seen);
+    } catch (_) {}
+  }
 
   // ─── Role helpers ─────────────────────────────────────────────
   String get userRole {
@@ -55,11 +74,13 @@ class AuthSessionService {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
     _userData = userData;
+    _hasSeenOnboarding = true;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_accessTokenKey, accessToken);
       await prefs.setString(_refreshTokenKey, refreshToken);
       await prefs.setString(_userDataKey, jsonEncode(userData));
+      await prefs.setBool(_hasSeenOnboardingKey, true);
     } catch (_) {
       // Keep in-memory values if SharedPreferences is temporarily unavailable.
     }
@@ -115,6 +136,7 @@ class AuthSessionService {
   Future<bool> loadPersistedSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _hasSeenOnboarding = prefs.getBool(_hasSeenOnboardingKey) ?? false;
       final token = prefs.getString(_accessTokenKey);
       final raw = prefs.getString(_userDataKey);
       if (token == null || token.isEmpty || raw == null || raw.isEmpty) {

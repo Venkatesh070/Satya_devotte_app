@@ -14,10 +14,11 @@ class PhoneValidator {
     return phone.trim().replaceAll(RegExp(r'[\s\-().]'), '');
   }
 
-  /// Validates a South African mobile number.
+  /// Validates a phone number.
   ///
+  /// Accepts any non-empty number (including sequences like 123456789, 9876543210, etc.).
   /// If [isRequired] is `false`, empty or null strings are considered valid (returns `null`).
-  /// Otherwise, returns an error message if empty or if the format is invalid.
+  /// Otherwise, returns an error message only if empty.
   static String? validateSouthAfricanMobile(
     String? phone, {
     bool isRequired = true,
@@ -30,20 +31,36 @@ class PhoneValidator {
       return requiredMessage ?? 'Please enter phone number';
     }
 
-    final cleaned = clean(trimmed);
-    if (!_saMobileRegex.hasMatch(cleaned)) {
-      return invalidMessage ??
-          'Please enter a valid South African mobile number (e.g. 082 123 4567 or +27 82 123 4567)';
-    }
     return null;
   }
 
-  /// Checks if a phone number is a valid South African mobile number.
+  /// Alias for general phone validation.
+  static String? validatePhone(
+    String? phone, {
+    bool isRequired = true,
+    String? requiredMessage,
+  }) {
+    return validateSouthAfricanMobile(
+      phone,
+      isRequired: isRequired,
+      requiredMessage: requiredMessage,
+    );
+  }
+
+  /// Checks if a phone number is valid (non-empty when required).
   static bool isValidSouthAfricanMobile(
     String? phone, {
     bool isRequired = true,
   }) {
     return validateSouthAfricanMobile(phone, isRequired: isRequired) == null;
+  }
+
+  /// Checks if a phone number is valid (non-empty when required).
+  static bool isValidPhone(
+    String? phone, {
+    bool isRequired = true,
+  }) {
+    return isValidSouthAfricanMobile(phone, isRequired: isRequired);
   }
 
   /// Normalizes a valid South African mobile number.

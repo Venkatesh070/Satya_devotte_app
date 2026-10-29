@@ -2079,8 +2079,7 @@ class _ReceiverCard extends StatelessWidget {
             label: 'Phone number',
             child: _AddressInput(
               controller: phoneCtrl,
-              hint:
-                  'Enter receiver phone number (e.g. 082 123 4567 or +27 82 123 4567)',
+              hint: 'Enter receiver phone number',
               keyboardType: TextInputType.phone,
               errorText: phoneError,
             ),

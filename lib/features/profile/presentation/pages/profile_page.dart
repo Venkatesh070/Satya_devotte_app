@@ -17,6 +17,7 @@ import 'package:satya_devotte_app/features/profile/presentation/pages/profile_sp
 import 'package:satya_devotte_app/features/profile/presentation/widgets/profile_ui.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 
+import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 
@@ -46,9 +47,14 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final profileController = Get.find<ProfileController>();
     final authController = Get.find<AuthController>();
+    final authSessionService = Get.isRegistered<AuthSessionService>()
+        ? Get.find<AuthSessionService>()
+        : null;
 
     return Obx(() {
-      if (authController.isGuest) {
+      final token = authSessionService?.accessToken?.trim();
+      final hasNoBackendSession = token == null || token.isEmpty;
+      if (authController.isGuest || hasNoBackendSession) {
         return Scaffold(
           backgroundColor: AppColors.appBgColor,
           body: SingleChildScrollView(

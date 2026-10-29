@@ -8,7 +8,7 @@ class ScreenProtectionService extends GetxService {
   /// 🛡️ TOGGLE SCREEN PROTECTION HERE
   /// Set to [false] for screen recording, demo videos, and internal testing.
   /// Set to [true] for production release.
-  static const bool isProtectionEnabled = false;
+  static const bool isProtectionEnabled = true;
 
   bool _isProtected = false;
   DateTime? _lastWarningTime;

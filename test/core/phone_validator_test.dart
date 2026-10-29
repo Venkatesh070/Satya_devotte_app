@@ -36,28 +36,28 @@ void main() {
       expect(PhoneValidator.isValidSouthAfricanMobile('601234567'), isTrue);
     });
 
-    test('Invalid numbers rejected', () {
-      // Landline or invalid prefix
-      expect(PhoneValidator.isValidSouthAfricanMobile('0111234567'), isFalse);
-      expect(PhoneValidator.isValidSouthAfricanMobile('0211234567'), isFalse);
-      expect(PhoneValidator.isValidSouthAfricanMobile('0511234567'), isFalse);
-
-      // Foreign numbers
-      expect(PhoneValidator.isValidSouthAfricanMobile('+919876543210'), isFalse);
-      expect(PhoneValidator.isValidSouthAfricanMobile('+12025550123'), isFalse);
-
-      // Too short / too long
-      expect(PhoneValidator.isValidSouthAfricanMobile('08212345'), isFalse);
-      expect(PhoneValidator.isValidSouthAfricanMobile('082123456789'), isFalse);
-
-      // Random text
-      expect(PhoneValidator.isValidSouthAfricanMobile('abcdefghij'), isFalse);
+    test('Accepts sequences and any non-empty number', () {
+      expect(PhoneValidator.isValidSouthAfricanMobile('123456789'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('9876543210'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('+919876543210'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('+12025550123'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('0111234567'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('08212345'), isTrue);
+      expect(PhoneValidator.isValidSouthAfricanMobile('082123456789'), isTrue);
     });
 
-    test('Optional validation handling', () {
-      expect(PhoneValidator.validateSouthAfricanMobile('', isRequired: false), isNull);
-      expect(PhoneValidator.validateSouthAfricanMobile(null, isRequired: false), isNull);
+    test('Empty numbers rejected when required, accepted when optional', () {
+      expect(PhoneValidator.isValidSouthAfricanMobile('', isRequired: true), isFalse);
+      expect(PhoneValidator.isValidSouthAfricanMobile('   ', isRequired: true), isFalse);
+      expect(PhoneValidator.isValidSouthAfricanMobile(null, isRequired: true), isFalse);
+
       expect(PhoneValidator.validateSouthAfricanMobile('', isRequired: true), isNotNull);
+      expect(PhoneValidator.validateSouthAfricanMobile('   ', isRequired: true), isNotNull);
+      expect(PhoneValidator.validateSouthAfricanMobile(null, isRequired: true), isNotNull);
+
+      expect(PhoneValidator.validateSouthAfricanMobile('', isRequired: false), isNull);
+      expect(PhoneValidator.validateSouthAfricanMobile('   ', isRequired: false), isNull);
+      expect(PhoneValidator.validateSouthAfricanMobile(null, isRequired: false), isNull);
     });
 
     test('Normalization', () {

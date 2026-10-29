@@ -59,17 +59,11 @@
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>This app needs access to reminders for calendar events</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Required to take profile photos</string>
+	<string>Sathya requires camera access to take and update your profile photo.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Sathya uses your location to automatically detect and fill your delivery address for Pooja Kits.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Required to pick images</string>
-	<key>NSContactsUsageDescription</key>
-	<string>This app needs access to contacts for calendar location support</string>
+	<string>Sathya requires access to your photo library to select and upload your profile photo.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>maps</string>

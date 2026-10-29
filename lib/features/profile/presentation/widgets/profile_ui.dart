@@ -288,16 +288,6 @@ class _DeleteAccountSheet extends StatefulWidget {
 
 class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
   final _ctrl = TextEditingController();
-  bool _canDelete = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl.addListener(() {
-      final ok = _ctrl.text.trim().isNotEmpty;
-      if (ok != _canDelete) setState(() => _canDelete = ok);
-    });
-  }
 
   @override
   void dispose() {
@@ -358,7 +348,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                     color: DonationUi.textPrimary,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Enter your reason for deletion',
+                    hintText: 'Enter your reason for deletion (optional)',
                     hintStyle: AppTypography.inter(
                       fontSize: 14,
                       color: DonationUi.textMuted.withValues(alpha: 0.5),
@@ -392,14 +382,14 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 CustomButton(
                   label: 'Delete Account',
                   textColor: Color(0xFFFCF7EF),
-                  gradientColors: _canDelete
-                      ? const [Color(0xFFB10F1A), Color(0xFFED5A00)]
-                      : [Colors.grey.shade400, Colors.grey.shade400],
+                  gradientColors: const [Color(0xFFB10F1A), Color(0xFFED5A00)],
                   borderRadius: 14,
-                  enabled: _canDelete,
+                  enabled: true,
                   onTap: () async {
-                    final comment = _ctrl.text.trim();
-                    if (comment.isEmpty) return;
+                    final entered = _ctrl.text.trim();
+                    final comment = entered.isEmpty
+                        ? 'User requested account deletion'
+                        : entered;
 
                     final confirmed = await showDialog<bool>(
                       context: context,

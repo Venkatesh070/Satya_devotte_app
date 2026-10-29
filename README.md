@@ -128,7 +128,7 @@ shorebird release ios
 shorebird patch ios
 
 # Or pin version:
-shorebird patch --platforms=ios --release-version=1.0.0+17
+shorebird patch --platforms=ios --release-version=1.0.0+29
 ```
 
 Upload the IPA / archive through Xcode or Transporter / App Store Connect as you normally would.

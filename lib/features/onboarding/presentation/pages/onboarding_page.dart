@@ -6,6 +6,7 @@ import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/shared/widgets/onboarding_style_background.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/custom_button.dart';
@@ -56,6 +57,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   Future<void> _goToLogin() async {
     if (Get.isRegistered<AuthController>()) {
       await Get.find<AuthController>().signOutSilently();
+    }
+    if (Get.isRegistered<AuthSessionService>()) {
+      await Get.find<AuthSessionService>().setHasSeenOnboarding(true);
     }
     Get.offAllNamed(AppRoutes.login);
   }
