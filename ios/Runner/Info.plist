@@ -53,8 +53,12 @@
 	<string>Sathya needs calendar access so you can save pooja, festival, and ritual dates to your device calendar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Sathya requires camera access to take and update your profile photo.</string>
+	<!-- Location: only when the user taps “Use current location” on Pooja Kit checkout (foreground). -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Sathya uses your location only while you use the app, to help fill your delivery address for Pooja Kit orders.</string>
+	<string>When you tap Use current location during Pooja Kit checkout, Sathya briefly uses your location while the app is open to place the delivery pin on the map. Location is not used elsewhere in the app and is not accessed in the background.</string>
+	<!-- Required by ITMS-90683 because geolocator links Always APIs in the binary. The app does not request Always authorization or background location — only When In Use on that button tap. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>When you tap Use current location during Pooja Kit checkout, Sathya briefly uses your location while the app is open to place the delivery pin. Sathya does not request always-on or background location access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sathya requires access to your photo library to select and upload your profile photo.</string>
 	<key>LSApplicationQueriesSchemes</key>

@@ -12,6 +12,10 @@ We do not claim Benevity/Candid nonprofit approval or tax deductibility in the a
 
 This external flow is intended to address Guideline 3.2.2(iv). We welcome clarification from Apple if further adjustments are required for our recipient arrangement.
 
+Location: The app requests location only when the user taps “Use current location” during Pooja Kit (physical goods) checkout to place a delivery pin. Location is when-in-use / foreground only — not used elsewhere in the app and not collected in the background.
+
+In-app PayFast WebView is used only for physical Puja Kit orders with delivery. Voluntary donations are completed on the website in Safari, not in that WebView.
+
 ---
 
 **Internal:** This note does not guarantee approval. Confirm recipient legal/trading name and PayFast merchant ownership before relying on this response.
