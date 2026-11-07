@@ -42,6 +42,7 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   late final PoojaKitCheckoutController _checkoutCtrl;
   Timer? _searchDebounce;
   int _suggestionRequestId = 0;
+
   /// `method` → (pickup: contact | delivery: map → address → rates)
   String _step = 'method';
   bool _isLocating = false;
@@ -61,7 +62,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
   List<_LocationSuggestion> _suggestions = const [];
   double _mapCenterLat = -26.2041;
   double _mapCenterLng = 28.0473;
-  static const int _mapZoom = 16;
+  int _mapZoom = 16;
+  static const int _minMapZoom = 12;
+  static const int _maxMapZoom = 19;
 
   String get _locationPreview {
     final picked = _pickedLocation;
@@ -532,6 +535,16 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     });
   }
 
+  void _setMapZoom(int zoom) {
+    final next = zoom.clamp(_minMapZoom, _maxMapZoom);
+    if (next == _mapZoom) return;
+    setState(() => _mapZoom = next);
+  }
+
+  void _zoomIn() => _setMapZoom(_mapZoom + 1);
+
+  void _zoomOut() => _setMapZoom(_mapZoom - 1);
+
   Future<void> _resolveMovedPin() async {
     final worldPixels = 256 * math.pow(2, _mapZoom).toDouble();
     final lngPerPixel = 360 / worldPixels;
@@ -722,14 +735,15 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
     setState(() {
       _nameError = name.isEmpty ? 'Please enter receiver name' : null;
       _phoneError = _validateSouthAfricanPhone(phone);
-      _houseError =
-          house.isEmpty ? 'Please enter house / flat / floor & building' : null;
+      _houseError = house.isEmpty
+          ? 'Please enter house / flat / floor & building'
+          : null;
       _streetError = street.isEmpty ? 'Please enter street' : null;
-      _provinceError =
-          province.isEmpty ? 'Please select or enter province' : null;
+      _provinceError = province.isEmpty
+          ? 'Please select or enter province'
+          : null;
       _cityError = city.isEmpty ? 'Please enter city' : null;
-      _postalCodeError =
-          postalCode.isEmpty ? 'Please enter postal code' : null;
+      _postalCodeError = postalCode.isEmpty ? 'Please enter postal code' : null;
       _countryError = country.isEmpty ? 'Please enter country' : null;
 
       if (_nameError != null ||
@@ -837,16 +851,14 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                   title: 'Pickup',
                   subtitle: 'Collect in store · R0 delivery',
                   icon: Icons.storefront_outlined,
-                  onTap: () =>
-                      _onMethodSelected(FulfillmentMethod.pickup),
+                  onTap: () => _onMethodSelected(FulfillmentMethod.pickup),
                 ),
                 const SizedBox(height: 12),
                 _CheckoutMethodCard(
                   title: 'Delivery',
                   subtitle: 'The Courier Guy door-to-door',
                   icon: Icons.local_shipping_outlined,
-                  onTap: () =>
-                      _onMethodSelected(FulfillmentMethod.delivery),
+                  onTap: () => _onMethodSelected(FulfillmentMethod.delivery),
                 ),
               ],
             ),
@@ -865,6 +877,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         centerLat: _mapCenterLat,
         centerLng: _mapCenterLng,
         zoom: _mapZoom,
+        minZoom: _minMapZoom,
+        maxZoom: _maxMapZoom,
         isLocating: _isLocating,
         isSearching: _isSearching,
         isLoadingSuggestions: _isLoadingSuggestions,
@@ -883,6 +897,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
         onCurrentLocationTap: _fetchCurrentLocation,
         onMovePin: _movePin,
         onResolvePin: _resolveMovedPin,
+        onZoomChanged: _setMapZoom,
+        onZoomIn: _zoomIn,
+        onZoomOut: _zoomOut,
         onConfirm: _confirmMapLocation,
       );
     }
@@ -1024,8 +1041,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                 label: loading
                     ? 'Please wait...'
                     : (_isCartCheckout
-                        ? 'Save delivery address'
-                        : 'Continue to shipping rates'),
+                          ? 'Save delivery address'
+                          : 'Continue to shipping rates'),
                 onTap: loading ? null : _saveAddress,
               );
             }),
@@ -1123,7 +1140,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              loc.company.isEmpty ? 'Pickup warehouse' : loc.company,
+                              loc.company.isEmpty
+                                  ? 'Pickup warehouse'
+                                  : loc.company,
                               style: AppTypography.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
@@ -1271,8 +1290,8 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                                 if (addr != null) {
                                   _checkoutCtrl.fetchShippingQuote(
                                     addr,
-                                    declaredValue:
-                                        _product?.effectivePrice.toDouble(),
+                                    declaredValue: _product?.effectivePrice
+                                        .toDouble(),
                                     items: _product == null
                                         ? null
                                         : [
@@ -1349,8 +1368,9 @@ class _ProductCheckoutPageState extends State<ProductCheckoutPage> {
                                                 rate.description,
                                                 style: AppTypography.inter(
                                                   fontSize: 10,
-                                                  color:
-                                                      const Color(0xFF6C5B46),
+                                                  color: const Color(
+                                                    0xFF6C5B46,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -1469,7 +1489,7 @@ class _CheckoutMethodCard extends StatelessWidget {
   }
 }
 
-class _LocationPickerView extends StatelessWidget {
+class _LocationPickerView extends StatefulWidget {
   const _LocationPickerView({
     required this.searchCtrl,
     required this.locationText,
@@ -1477,6 +1497,8 @@ class _LocationPickerView extends StatelessWidget {
     required this.centerLat,
     required this.centerLng,
     required this.zoom,
+    required this.minZoom,
+    required this.maxZoom,
     required this.isLocating,
     required this.isSearching,
     required this.isLoadingSuggestions,
@@ -1489,6 +1511,9 @@ class _LocationPickerView extends StatelessWidget {
     required this.onCurrentLocationTap,
     required this.onMovePin,
     required this.onResolvePin,
+    required this.onZoomChanged,
+    required this.onZoomIn,
+    required this.onZoomOut,
     required this.onConfirm,
   });
 
@@ -1498,6 +1523,8 @@ class _LocationPickerView extends StatelessWidget {
   final double centerLat;
   final double centerLng;
   final int zoom;
+  final int minZoom;
+  final int maxZoom;
   final bool isLocating;
   final bool isSearching;
   final bool isLoadingSuggestions;
@@ -1510,10 +1537,41 @@ class _LocationPickerView extends StatelessWidget {
   final VoidCallback onCurrentLocationTap;
   final void Function(Offset localPosition, Size size) onMovePin;
   final VoidCallback onResolvePin;
+  final ValueChanged<int> onZoomChanged;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
   final VoidCallback onConfirm;
 
   @override
+  State<_LocationPickerView> createState() => _LocationPickerViewState();
+}
+
+class _LocationPickerViewState extends State<_LocationPickerView> {
+  double _pinchStartZoom = 16;
+  bool _pinching = false;
+
+  @override
   Widget build(BuildContext context) {
+    final searchCtrl = widget.searchCtrl;
+    final locationText = widget.locationText;
+    final pinAlignment = widget.pinAlignment;
+    final centerLat = widget.centerLat;
+    final centerLng = widget.centerLng;
+    final zoom = widget.zoom;
+    final isLocating = widget.isLocating;
+    final isSearching = widget.isSearching;
+    final isLoadingSuggestions = widget.isLoadingSuggestions;
+    final isResolvingPin = widget.isResolvingPin;
+    final isConfirmEnabled = widget.isConfirmEnabled;
+    final suggestions = widget.suggestions;
+    final onBack = widget.onBack;
+    final onSearch = widget.onSearch;
+    final onSuggestionTap = widget.onSuggestionTap;
+    final onCurrentLocationTap = widget.onCurrentLocationTap;
+    final onMovePin = widget.onMovePin;
+    final onResolvePin = widget.onResolvePin;
+    final onConfirm = widget.onConfirm;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
@@ -1527,12 +1585,33 @@ class _LocationPickerView extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (details) {
+                      if (_pinching) return;
                       onMovePin(details.localPosition, mapSize);
                       onResolvePin();
                     },
-                    onPanUpdate: (details) =>
-                        onMovePin(details.localPosition, mapSize),
-                    onPanEnd: (_) => onResolvePin(),
+                    onScaleStart: (details) {
+                      _pinchStartZoom = zoom.toDouble();
+                      _pinching = details.pointerCount >= 2;
+                    },
+                    onScaleUpdate: (details) {
+                      if (details.pointerCount >= 2) {
+                        _pinching = true;
+                        final next =
+                            (_pinchStartZoom +
+                                    (math.log(details.scale.clamp(0.25, 4.0)) /
+                                        math.ln2))
+                                .round()
+                                .clamp(widget.minZoom, widget.maxZoom);
+                        widget.onZoomChanged(next);
+                        return;
+                      }
+                      if (_pinching) return;
+                      onMovePin(details.localFocalPoint, mapSize);
+                    },
+                    onScaleEnd: (_) {
+                      if (!_pinching) onResolvePin();
+                      _pinching = false;
+                    },
                     child: _TileMapBackground(
                       centerLat: centerLat,
                       centerLng: centerLng,
@@ -1565,6 +1644,16 @@ class _LocationPickerView extends StatelessWidget {
                   child: _CircleIconButton(
                     icon: Icons.arrow_back,
                     onTap: onBack,
+                  ),
+                ),
+                Positioned(
+                  right: 14,
+                  top: 12,
+                  child: _MapZoomControls(
+                    canZoomIn: zoom < widget.maxZoom,
+                    canZoomOut: zoom > widget.minZoom,
+                    onZoomIn: widget.onZoomIn,
+                    onZoomOut: widget.onZoomOut,
                   ),
                 ),
                 Positioned(
@@ -1855,6 +1944,71 @@ class _MapBottomSheet extends StatelessWidget {
   }
 }
 
+class _MapZoomControls extends StatelessWidget {
+  const _MapZoomControls({
+    required this.canZoomIn,
+    required this.canZoomOut,
+    required this.onZoomIn,
+    required this.onZoomOut,
+  });
+
+  final bool canZoomIn;
+  final bool canZoomOut;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFCF7EF),
+      borderRadius: BorderRadius.circular(12),
+      elevation: 5,
+      shadowColor: const Color(0x22000000),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: canZoomIn ? onZoomIn : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(
+                Icons.add,
+                size: 20,
+                color: canZoomIn
+                    ? const Color(0xFF1C1C1C)
+                    : const Color(0xFFB0B0B0),
+              ),
+            ),
+          ),
+          const SizedBox(
+            width: 28,
+            child: Divider(height: 1, thickness: 1, color: Color(0x22000000)),
+          ),
+          InkWell(
+            onTap: canZoomOut ? onZoomOut : null,
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(12),
+            ),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(
+                Icons.remove,
+                size: 20,
+                color: canZoomOut
+                    ? const Color(0xFF1C1C1C)
+                    : const Color(0xFFB0B0B0),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CircleIconButton extends StatelessWidget {
   const _CircleIconButton({required this.icon, required this.onTap});
 
@@ -1924,10 +2078,18 @@ class _TileMapBackground extends StatelessWidget {
                 top: top,
                 width: 256,
                 height: 256,
+                // Esri World Street Map — no API key. (OSM.org blocks apps;
+                // Carto now returns "API KEY REQUIRED" tiles.)
+                // Esri tile path is z/y/x (not z/x/y).
                 child: Image.network(
-                  'https://tile.openstreetmap.org/$zoom/$wrappedX/$y.png',
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/'
+                  'World_Street_Map/MapServer/tile/$zoom/$y/$wrappedX',
                   fit: BoxFit.cover,
                   filterQuality: FilterQuality.low,
+                  headers: const {
+                    'User-Agent': 'SathyaApp/1.0 (+https://www.sathya.co.za)',
+                    'Referer': 'https://www.sathya.co.za/',
+                  },
                   errorBuilder: (_, _, _) => const _MapTileFallback(),
                 ),
               ),
@@ -1945,7 +2107,7 @@ class _TileMapBackground extends StatelessWidget {
                 right: 8,
                 bottom: 6,
                 child: Text(
-                  'OpenStreetMap',
+                  '© Esri',
                   style: TextStyle(
                     fontSize: 8,
                     color: Color(0x994A4A4A),
