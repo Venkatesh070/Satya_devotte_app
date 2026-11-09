@@ -91,7 +91,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!kIsWeb && Platform.isIOS) {
-        AppUpdateService.checkAndPromptIfAvailable(context, isMandatory: true);
+        AppUpdateService.checkAndPromptIfAvailable(
+          context,
+          isMandatory: true,
+          forceCheck: true,
+        );
       }
     });
   }
@@ -102,7 +106,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!kIsWeb && Platform.isIOS) {
-          AppUpdateService.checkAndPromptIfAvailable(context, isMandatory: true);
+          AppUpdateService.checkAndPromptIfAvailable(
+            context,
+            isMandatory: true,
+            forceCheck: true,
+          );
         }
       });
     }
@@ -813,7 +821,8 @@ class _HomeBodySections extends StatelessWidget {
           ),
         ),
         Obx(() {
-          final isGuest = Get.isRegistered<AuthController>() &&
+          final isGuest =
+              Get.isRegistered<AuthController>() &&
               Get.find<AuthController>().isGuest;
           if (isGuest) {
             return const SizedBox.shrink();
@@ -870,7 +879,10 @@ class _AchievementsSection extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _AchievementCard(value: dayStreak, label: 'Day Streak 🔥'),
+                child: _AchievementCard(
+                  value: dayStreak,
+                  label: 'Day Streak 🔥',
+                ),
               ),
             ],
           ),
@@ -1023,13 +1035,10 @@ class _BottomNavBarState extends State<_BottomNavBar>
       vsync: this,
       duration: const Duration(milliseconds: 280),
     );
-    _humpAnimation = Tween<double>(
-      begin: _currentProgress,
-      end: _currentProgress,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _humpAnimation =
+        Tween<double>(begin: _currentProgress, end: _currentProgress).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
   }
 
   @override
@@ -1042,13 +1051,10 @@ class _BottomNavBarState extends State<_BottomNavBar>
 
   void _animateTo(double target) {
     _animController.stop();
-    _humpAnimation = Tween<double>(
-      begin: _currentProgress,
-      end: target,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _humpAnimation = Tween<double>(begin: _currentProgress, end: target)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward(from: 0.0).then((_) {
       if (mounted && !_isDragging) {
         setState(() {
@@ -1114,8 +1120,9 @@ class _BottomNavBarState extends State<_BottomNavBar>
         return AnimatedBuilder(
           animation: _animController,
           builder: (context, _) {
-            final activeProgress =
-                _isDragging ? _currentProgress : _humpAnimation.value;
+            final activeProgress = _isDragging
+                ? _currentProgress
+                : _humpAnimation.value;
 
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -1124,8 +1131,9 @@ class _BottomNavBarState extends State<_BottomNavBar>
               onHorizontalDragEnd: (d) => _handleDragEnd(d, slotWidth),
               onHorizontalDragCancel: _handleDragCancel,
               onTapUp: (details) {
-                final clickedIndex =
-                    (details.localPosition.dx / slotWidth).floor().clamp(0, 5);
+                final clickedIndex = (details.localPosition.dx / slotWidth)
+                    .floor()
+                    .clamp(0, 5);
                 HapticFeedback.selectionClick();
                 _animateTo(clickedIndex.toDouble());
                 widget.onTap(clickedIndex);

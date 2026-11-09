@@ -1,5 +1,6 @@
 // lib/core/services/app_update_service.dart
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -47,6 +48,21 @@ class AppUpdateService {
   static const String iosBundleId = 'com.sathya.app';
   static const String androidPackageName = 'com.satya_devotte_app';
 
+  /// App Store Connect track id (used when bundleId lookup is storefront-empty).
+  static const String iosAppStoreId = '6815970877';
+
+  /// Storefronts where Sathya may be published. Default iTunes lookup (US) often
+  /// returns `resultCount: 0` for region-limited apps — then no update popup.
+  static const List<String> _iosLookupCountries = [
+    'za',
+    'in',
+    'us',
+    'gb',
+    'ae',
+    'au',
+    'ca',
+  ];
+
   /// Throttling cache to avoid hammering store APIs on every frame/resume.
   static DateTime? _lastCheckTime;
   static bool _isDialogShowing = false;
@@ -75,11 +91,17 @@ class AppUpdateService {
 
       final currentParts = cleanCurrent
           .split('.')
-          .map((e) => int.tryParse(RegExp(r'\d+').firstMatch(e)?.group(0) ?? '') ?? 0)
+          .map(
+            (e) =>
+                int.tryParse(RegExp(r'\d+').firstMatch(e)?.group(0) ?? '') ?? 0,
+          )
           .toList();
       final storeParts = cleanStore
           .split('.')
-          .map((e) => int.tryParse(RegExp(r'\d+').firstMatch(e)?.group(0) ?? '') ?? 0)
+          .map(
+            (e) =>
+                int.tryParse(RegExp(r'\d+').firstMatch(e)?.group(0) ?? '') ?? 0,
+          )
           .toList();
 
       final length = math.max(currentParts.length, storeParts.length);
@@ -96,7 +118,9 @@ class AppUpdateService {
 
       return false;
     } catch (e) {
-      debugPrint('[AppUpdateService] Error comparing versions ($currentVersion vs $storeVersion): $e');
+      debugPrint(
+        '[AppUpdateService] Error comparing versions ($currentVersion vs $storeVersion): $e',
+      );
       return false;
     }
   }
@@ -139,28 +163,23 @@ class AppUpdateService {
         ),
       );
 
-      final url = 'https://itunes.apple.com/lookup?bundleId=$bundleId';
-      final response = await dio.get<dynamic>(url);
-
-      if (response.statusCode != 200 || response.data == null) {
-        debugPrint('[AppUpdateService] iTunes lookup returned status ${response.statusCode}');
+      final storeData = await _lookupIosStoreListing(
+        dio: dio,
+        bundleId: bundleId,
+      );
+      if (storeData == null) {
+        debugPrint(
+          '[AppUpdateService] No published App Store listing found for $bundleId '
+          '(tried device locale + ${_iosLookupCountries.join(", ")}).',
+        );
         return null;
       }
 
-      final dynamic data = response.data;
-      if (data is! Map) return null;
-
-      final results = data['results'] as List?;
-      if (results == null || results.isEmpty) {
-        debugPrint('[AppUpdateService] No published App Store listing found yet for $bundleId.');
-        return null;
-      }
-
-      final storeData = results.first as Map;
       final storeVersion = storeData['version']?.toString() ?? '';
       final releaseNotes = storeData['releaseNotes']?.toString() ?? '';
-      final trackViewUrl = storeData['trackViewUrl']?.toString() ??
-          'https://apps.apple.com/app/sathya/id${storeData["trackId"]}';
+      final trackViewUrl =
+          storeData['trackViewUrl']?.toString() ??
+          'https://apps.apple.com/app/sathya/id${storeData["trackId"] ?? iosAppStoreId}';
 
       final isNewer = isVersionNewer(currentVersion, storeVersion);
       debugPrint(
@@ -179,6 +198,81 @@ class AppUpdateService {
       debugPrint('[AppUpdateService] Error checking iOS App Store update: $e');
       return null;
     }
+  }
+
+  /// iTunes Lookup is storefront-scoped. Apps only listed in ZA/IN/etc. return
+  /// empty `results` on the default (US) endpoint — so we try several countries.
+  static Future<Map?> _lookupIosStoreListing({
+    required Dio dio,
+    required String bundleId,
+  }) async {
+    final countries = <String>{};
+
+    final localeCountry =
+        WidgetsBinding.instance.platformDispatcher.locale.countryCode;
+    if (localeCountry != null && localeCountry.trim().length == 2) {
+      countries.add(localeCountry.trim().toLowerCase());
+    }
+    countries.addAll(_iosLookupCountries);
+
+    for (final country in countries) {
+      final byBundle = await _itunesGet(
+        dio,
+        'https://itunes.apple.com/$country/lookup?bundleId=$bundleId',
+      );
+      if (byBundle != null) return byBundle;
+
+      final byId = await _itunesGet(
+        dio,
+        'https://itunes.apple.com/$country/lookup?id=$iosAppStoreId',
+      );
+      if (byId != null) return byId;
+    }
+
+    // Last resort: country-less lookup (US index).
+    return _itunesGet(
+      dio,
+      'https://itunes.apple.com/lookup?bundleId=$bundleId',
+    );
+  }
+
+  static Future<Map?> _itunesGet(Dio dio, String url) async {
+    try {
+      final response = await dio.get<dynamic>(url);
+      if (response.statusCode != 200 || response.data == null) return null;
+
+      // iTunes serves `Content-Type: text/javascript`, so Dio often returns a
+      // String body — not a decoded Map. Parse JSON explicitly.
+      final payload = _asJsonMap(response.data);
+      if (payload == null) return null;
+
+      final results = payload['results'];
+      if (results is! List || results.isEmpty) return null;
+      final first = results.first;
+      if (first is Map<String, dynamic>) return first;
+      if (first is Map) return Map<String, dynamic>.from(first);
+      return null;
+    } catch (e) {
+      debugPrint('[AppUpdateService] iTunes lookup failed ($url): $e');
+      return null;
+    }
+  }
+
+  static Map<String, dynamic>? _asJsonMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is String) {
+      final trimmed = data.trim();
+      if (trimmed.isEmpty) return null;
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   /// Automatically checks for updates and displays the update dialog if a newer
@@ -206,11 +300,15 @@ class AppUpdateService {
       }
     }
 
-    _lastCheckTime = DateTime.now();
-
     final updateInfo = await checkIosUpdate(
       simulatedStoreVersion: simulatedStoreVersion,
     );
+
+    // Only throttle after a successful store lookup. Empty storefront results
+    // must not block retries for 2 hours.
+    if (updateInfo != null) {
+      _lastCheckTime = DateTime.now();
+    }
 
     if (updateInfo == null || !updateInfo.isUpdateAvailable) {
       return;
