@@ -39,33 +39,103 @@ class AppUpdateInfo {
 /// - On Android: Native Google Play Core (`UpdateManager.kt`) manages in-app
 ///   flexible/immediate updates via Play Store services.
 /// - On iOS: Apple does not provide a native in-app update API. This service
-///   queries the Apple iTunes Lookup API (`itunes.apple.com/lookup?bundleId=...`),
-///   performs numerical version comparison, and prompts the user to update via
-///   the App Store when a newer version is published.
+///   queries the Apple iTunes Lookup API, performs numerical version comparison,
+///   and prompts the user to update via the App Store when a newer version is
+///   published.
+///
+/// iTunes Lookup is **storefront-scoped**. Apps not listed in the US return
+/// `resultCount: 0` on the default endpoint. We therefore probe the device
+/// locale plus known available storefronts (and a broad fallback list) until
+/// one listing is found. The marketing version is the same across storefronts;
+/// the Update button opens a **country-neutral** App Store URL so Apple routes
+/// the user to their local store.
 class AppUpdateService {
   AppUpdateService._();
 
   static const String iosBundleId = 'com.sathya.app';
   static const String androidPackageName = 'com.satya_devotte_app';
 
-  /// App Store Connect track id (used when bundleId lookup is storefront-empty).
+  /// App Store Connect track id.
   static const String iosAppStoreId = '6815970877';
 
-  /// Storefronts where Sathya may be published. Default iTunes lookup (US) often
-  /// returns `resultCount: 0` for region-limited apps — then no update popup.
-  static const List<String> _iosLookupCountries = [
+  /// Country-neutral listing URL — Apple redirects to the user's storefront.
+  static const String iosStoreUrl = 'https://apps.apple.com/app/id$iosAppStoreId';
+
+  /// Storefronts where Sathya is known to be available. Always tried early so
+  /// devices in US/GB/etc. still discover the live version.
+  static const List<String> _priorityLookupCountries = [
     'za',
     'in',
+    'ae',
+  ];
+
+  /// Broader fallback storefronts (ISO 3166-1 alpha-2). First successful hit wins.
+  static const List<String> _fallbackLookupCountries = [
     'us',
     'gb',
-    'ae',
     'au',
     'ca',
+    'nz',
+    'ie',
+    'sg',
+    'my',
+    'ph',
+    'id',
+    'th',
+    'vn',
+    'hk',
+    'jp',
+    'kr',
+    'cn',
+    'tw',
+    'sa',
+    'qa',
+    'kw',
+    'bh',
+    'om',
+    'eg',
+    'ng',
+    'ke',
+    'gh',
+    'tz',
+    'ug',
+    'mu',
+    'de',
+    'fr',
+    'nl',
+    'be',
+    'ch',
+    'at',
+    'it',
+    'es',
+    'pt',
+    'se',
+    'no',
+    'dk',
+    'fi',
+    'pl',
+    'cz',
+    'ro',
+    'hu',
+    'gr',
+    'tr',
+    'il',
+    'br',
+    'mx',
+    'ar',
+    'cl',
+    'co',
+    'pe',
   ];
+
+  static const int _lookupBatchSize = 6;
 
   /// Throttling cache to avoid hammering store APIs on every frame/resume.
   static DateTime? _lastCheckTime;
   static bool _isDialogShowing = false;
+
+  /// Last storefront that returned a listing — reused first on the next check.
+  static String? _lastSuccessfulCountry;
 
   /// Checks if [storeVersion] is strictly newer than [currentVersion].
   ///
@@ -73,13 +143,6 @@ class AppUpdateService {
   /// (`CFBundleShortVersionString`, e.g. `1.0.1`). Compare those segments
   /// numerically. Build numbers (`+23`) are ignored here — Apple does not
   /// publish CFBundleVersion via the Lookup API.
-  ///
-  /// Examples:
-  /// - `1.0.1` > `1.0.0` -> true
-  /// - `1.1.0` > `1.0.9` -> true
-  /// - `2.0.0` > `1.9.9` -> true
-  /// - `1.0.0` == `1.0.0` -> false
-  /// - `1.2` vs `1.2.1` -> true
   static bool isVersionNewer(String currentVersion, String storeVersion) {
     if (storeVersion.trim().isEmpty) return false;
     if (currentVersion.trim().isEmpty) return true;
@@ -127,10 +190,6 @@ class AppUpdateService {
 
   /// Queries the Apple iTunes Lookup API for the latest approved App Store version.
   ///
-  /// Compares installed marketing / sub-version (`packageInfo.version`) against
-  /// `results[0].version`. Build number is logged only; it is not part of the
-  /// App Store update decision.
-  ///
   /// Set [simulatedStoreVersion] for debugging/testing the update prompt.
   static Future<AppUpdateInfo?> checkIosUpdate({
     String bundleId = iosBundleId,
@@ -152,7 +211,7 @@ class AppUpdateService {
           storeVersion: simulatedStoreVersion,
           releaseNotes:
               'New features, performance enhancements, and bug fixes for the best experience.',
-          storeUrl: 'https://apps.apple.com/app/id6815970877',
+          storeUrl: iosStoreUrl,
         );
       }
 
@@ -160,6 +219,14 @@ class AppUpdateService {
         BaseOptions(
           connectTimeout: const Duration(seconds: 8),
           receiveTimeout: const Duration(seconds: 8),
+          // iTunes serves `text/javascript`; force plain so we always jsonDecode.
+          responseType: ResponseType.plain,
+          headers: const {
+            'Accept': 'application/json,text/javascript,*/*',
+            // iTunes CDN often serves a stale version right after a release.
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
         ),
       );
 
@@ -170,21 +237,21 @@ class AppUpdateService {
       if (storeData == null) {
         debugPrint(
           '[AppUpdateService] No published App Store listing found for $bundleId '
-          '(tried device locale + ${_iosLookupCountries.join(", ")}).',
+          '(tried device locale, priority + fallback storefronts).',
         );
         return null;
       }
 
       final storeVersion = storeData['version']?.toString() ?? '';
       final releaseNotes = storeData['releaseNotes']?.toString() ?? '';
-      final trackViewUrl =
-          storeData['trackViewUrl']?.toString() ??
-          'https://apps.apple.com/app/sathya/id${storeData["trackId"] ?? iosAppStoreId}';
+      // Prefer country-neutral URL so Update works in every App Store region.
+      final trackViewUrl = iosStoreUrl;
 
       final isNewer = isVersionNewer(currentVersion, storeVersion);
       debugPrint(
         '[AppUpdateService] iOS Check: Installed=$currentVersion (build $buildNumber), '
-        'AppStore=$storeVersion, UpdateAvailable=$isNewer',
+        'AppStore=$storeVersion, UpdateAvailable=$isNewer, '
+        'storefront=${_lastSuccessfulCountry ?? "unknown"}',
       );
 
       return AppUpdateInfo(
@@ -200,49 +267,120 @@ class AppUpdateService {
     }
   }
 
-  /// iTunes Lookup is storefront-scoped. Apps only listed in ZA/IN/etc. return
-  /// empty `results` on the default (US) endpoint — so we try several countries.
+  /// Builds an ordered unique country list and probes storefronts in parallel
+  /// batches until a listing is found.
   static Future<Map?> _lookupIosStoreListing({
     required Dio dio,
     required String bundleId,
   }) async {
-    final countries = <String>{};
+    final countries = <String>[];
 
+    void addCountry(String? code) {
+      if (code == null) return;
+      final normalized = code.trim().toLowerCase();
+      if (normalized.length != 2) return;
+      if (countries.contains(normalized)) return;
+      countries.add(normalized);
+    }
+
+    // 1) Last successful storefront (fast path after first hit).
+    addCountry(_lastSuccessfulCountry);
+
+    // 2) Known available markets — critical for users whose locale is US/GB.
+    for (final c in _priorityLookupCountries) {
+      addCountry(c);
+    }
+
+    // 3) Device locale.
     final localeCountry =
         WidgetsBinding.instance.platformDispatcher.locale.countryCode;
-    if (localeCountry != null && localeCountry.trim().length == 2) {
-      countries.add(localeCountry.trim().toLowerCase());
+    addCountry(localeCountry);
+
+    // 4) Broad fallbacks for any other published territory.
+    for (final c in _fallbackLookupCountries) {
+      addCountry(c);
     }
-    countries.addAll(_iosLookupCountries);
 
-    for (final country in countries) {
-      final byBundle = await _itunesGet(
-        dio,
-        'https://itunes.apple.com/$country/lookup?bundleId=$bundleId',
+    for (var i = 0; i < countries.length; i += _lookupBatchSize) {
+      final end = math.min(i + _lookupBatchSize, countries.length);
+      final batch = countries.sublist(i, end);
+      final hit = await _lookupCountryBatch(
+        dio: dio,
+        bundleId: bundleId,
+        countries: batch,
       );
-      if (byBundle != null) return byBundle;
+      if (hit != null) return hit;
+    }
 
+    // Last resort: country-less lookup (US index) by bundle + id.
+    final byBundle = await _itunesGet(
+      dio,
+      'https://itunes.apple.com/lookup?bundleId=$bundleId',
+    );
+    if (byBundle != null) return byBundle;
+
+    return _itunesGet(
+      dio,
+      'https://itunes.apple.com/lookup?id=$iosAppStoreId',
+    );
+  }
+
+  /// Runs lookups for a batch of countries in parallel; returns the first hit
+  /// in batch order (priority preserved).
+  static Future<Map?> _lookupCountryBatch({
+    required Dio dio,
+    required String bundleId,
+    required List<String> countries,
+  }) async {
+    final futures = countries.map((country) async {
+      // Prefer track id — more stable than bundleId across storefronts.
       final byId = await _itunesGet(
         dio,
         'https://itunes.apple.com/$country/lookup?id=$iosAppStoreId',
       );
-      if (byId != null) return byId;
-    }
+      if (byId != null) return MapEntry(country, byId);
 
-    // Last resort: country-less lookup (US index).
-    return _itunesGet(
-      dio,
-      'https://itunes.apple.com/lookup?bundleId=$bundleId',
-    );
+      final byBundle = await _itunesGet(
+        dio,
+        'https://itunes.apple.com/$country/lookup?bundleId=$bundleId',
+      );
+      if (byBundle != null) return MapEntry(country, byBundle);
+
+      return null;
+    });
+
+    final results = await Future.wait(futures);
+    for (final entry in results) {
+      if (entry == null) continue;
+      _lastSuccessfulCountry = entry.key;
+      debugPrint(
+        '[AppUpdateService] App Store listing found via storefront=${entry.key}',
+      );
+      return entry.value;
+    }
+    return null;
   }
 
   static Future<Map?> _itunesGet(Dio dio, String url) async {
     try {
-      final response = await dio.get<dynamic>(url);
+      // Cache-bust: Apple's lookup CDN can keep serving the previous version
+      // for a while after a new App Store release (we saw 1.0.0 while ZA had
+      // 1.0.1 live). A unique query param forces a fresh edge response.
+      final separator = url.contains('?') ? '&' : '?';
+      final bustedUrl =
+          '$url${separator}_=${DateTime.now().millisecondsSinceEpoch}';
+
+      final response = await dio.get<dynamic>(
+        bustedUrl,
+        options: Options(
+          headers: const {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+        ),
+      );
       if (response.statusCode != 200 || response.data == null) return null;
 
-      // iTunes serves `Content-Type: text/javascript`, so Dio often returns a
-      // String body — not a decoded Map. Parse JSON explicitly.
       final payload = _asJsonMap(response.data);
       if (payload == null) return null;
 
@@ -288,6 +426,12 @@ class AppUpdateService {
   }) async {
     if (kIsWeb) return;
 
+    // Skip App Store update prompt while developing (flutter run / debug).
+    if (kDebugMode && simulatedStoreVersion == null) {
+      debugPrint('[AppUpdateService] Skipped in debug mode');
+      return;
+    }
+
     // Android has native In-App Updates in MainActivity.kt
     if (!Platform.isIOS && simulatedStoreVersion == null) {
       return;
@@ -322,7 +466,7 @@ class AppUpdateService {
         context,
         appName: 'Sathya',
         releaseNotes: updateInfo.releaseNotes,
-        storeUrl: updateInfo.storeUrl,
+        storeUrl: updateInfo.storeUrl ?? iosStoreUrl,
         isMandatory: isMandatory,
       );
     } finally {

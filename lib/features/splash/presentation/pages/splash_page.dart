@@ -12,6 +12,7 @@ import 'package:satya_devotte_app/core/notifications/admin_notification_router.d
 import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
+import 'package:satya_devotte_app/core/services/shorebird_patch_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -40,6 +41,8 @@ class _SplashPageState extends State<SplashPage>
       ]);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.find<AppMusicService>().start();
+        // Download Shorebird patch (if any) and exit so the next open applies it.
+        unawaited(ShorebirdPatchService.checkDownloadAndRestartIfNeeded());
       });
     }
     _navigate();

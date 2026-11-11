@@ -78,6 +78,8 @@ dependencies:
   in_app_review: ^2.0.12
   screen_protector: ^1.5.3
   dropdown_button2: ^2.3.9
+  # Pure Dart + FFI into the Shorebird engine already in store builds — patch-safe.
+  shorebird_code_push: ^2.0.7
 
 dev_dependencies:
   flutter_test:
