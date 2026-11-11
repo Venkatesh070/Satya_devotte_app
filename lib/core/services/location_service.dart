@@ -4,11 +4,13 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 
-/// One-shot location for Pooja Kit checkout only.
+/// One-shot foreground location (When In Use only).
 ///
-/// Called when the user taps **Use current location** on the delivery map.
-/// Requests **when-in-use** permission only — never background / always-on
-/// tracking, and never used outside that ecommerce flow.
+/// Used for:
+/// - Pooja Kit checkout **Use current location**
+/// - Shop region check (South Africa GPS gate)
+///
+/// Never background / always-on tracking; never starts a position stream.
 class LocationService {
   Future<Position> getCurrentPosition() async {
     final enabled = await Geolocator.isLocationServiceEnabled();

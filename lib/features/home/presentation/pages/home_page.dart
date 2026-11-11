@@ -37,6 +37,7 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 import 'package:satya_devotte_app/core/services/app_update_service.dart';
 import 'package:satya_devotte_app/core/services/shorebird_patch_service.dart';
+import 'package:satya_devotte_app/core/utils/shop_region_access.dart';
 
 class _HomeTabs {
   static const home = 0;
@@ -91,6 +92,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ShopRegionAccess.ensureRegistered().resolve());
       if (!kIsWeb) {
         unawaited(ShorebirdPatchService.checkDownloadAndRestartIfNeeded());
       }
@@ -109,6 +111,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(ShopRegionAccess.ensureRegistered().resolve());
         if (!kIsWeb) {
           unawaited(ShorebirdPatchService.checkDownloadAndRestartIfNeeded());
         }
@@ -659,13 +662,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ),
               if (_currentIndex == _HomeTabs.home)
-                Positioned(
-                  left: 0,
-                  bottom: navHeight + 6,
-                  child: _StickyShopButton(
-                    onTap: () => Get.to(() => const PoojaKitPage()),
-                  ),
-                ),
+                Obx(() {
+                  final showShop = ShopRegionAccess.ensureRegistered()
+                      .isShopAvailable
+                      .value;
+                  if (!showShop) return const SizedBox.shrink();
+                  return Positioned(
+                    left: 0,
+                    bottom: navHeight + 6,
+                    child: _StickyShopButton(
+                      onTap: () {
+                        if (!ShopRegionAccess.available) return;
+                        Get.to(() => const PoojaKitPage());
+                      },
+                    ),
+                  );
+                }),
             ],
           ),
         ),
@@ -1587,58 +1599,68 @@ class _HomeHeader extends StatelessWidget {
                             ),
                           );
                         }),
-                        const SizedBox(width: 12),
-                        // Cart icon (with count badge) for Pooja Kit.
                         Obx(() {
+                          final showShop = ShopRegionAccess.ensureRegistered()
+                              .isShopAvailable
+                              .value;
+                          if (!showShop) return const SizedBox.shrink();
                           final cartCtrl = Get.find<CartController>();
                           final count = cartCtrl.itemCount;
-                          return GestureDetector(
-                            onTap: () => Get.toNamed(AppRoutes.poojaKitCart),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFCF7EF),
-                                    shape: BoxShape.circle,
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (!ShopRegionAccess.available) return;
+                                Get.toNamed(AppRoutes.poojaKitCart);
+                              },
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFFCF7EF),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.shopping_cart_outlined,
+                                      size: 22,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.shopping_cart_outlined,
-                                    size: 22,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                if (count > 0)
-                                  Positioned(
-                                    right: 2,
-                                    top: 2,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE44D4D),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: Color(0xFFFCF7EF),
-                                          width: 1.2,
+                                  if (count > 0)
+                                    Positioned(
+                                      right: 2,
+                                      top: 2,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 2,
                                         ),
-                                      ),
-                                      child: Text(
-                                        count > 99 ? '99+' : '$count',
-                                        style: AppTypography.inter(
-                                          color: Color(0xFFFCF7EF),
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.0,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE44D4D),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: Color(0xFFFCF7EF),
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          count > 99 ? '99+' : '$count',
+                                          style: AppTypography.inter(
+                                            color: Color(0xFFFCF7EF),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.0,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           );
                         }),

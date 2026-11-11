@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/api_loading_service.dart';
@@ -7,6 +9,7 @@ import 'package:satya_devotte_app/core/services/app_music_service.dart';
 import 'package:satya_devotte_app/core/services/auth_session_service.dart';
 import 'package:satya_devotte_app/core/services/firebase_service.dart';
 import 'package:satya_devotte_app/core/services/location_service.dart';
+import 'package:satya_devotte_app/core/utils/shop_region_access.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/services/notification_service.dart';
 import 'package:satya_devotte_app/core/services/screen_protection_service.dart';
@@ -99,6 +102,9 @@ class InitialBinding extends Bindings {
     Get.put<ScreenProtectionService>(ScreenProtectionService(), permanent: true);
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<LocationService>(LocationService(), permanent: true);
+    Get.put<ShopRegionAccess>(ShopRegionAccess(), permanent: true);
+    // Resolve Shop visibility from GPS (non-blocking; Shop hidden until ZA).
+    unawaited(Get.find<ShopRegionAccess>().resolve());
     Get.put<SyncService>(SyncService(), permanent: true);
     Get.put<OfflineService>(OfflineService(), permanent: true);
     Get.put<AuthController>(
