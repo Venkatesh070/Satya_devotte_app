@@ -8,6 +8,7 @@ import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/core/utils/app_review_util.dart';
+import 'package:satya_devotte_app/core/utils/shop_region_access.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/donations/presentation/widgets/donation_ui.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/profile_controller.dart';
@@ -171,18 +172,30 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           const SizedBox(height: 50),
                           const ProfileSectionHeading(''),
-                          ProfileLinkTile(
-                            icon: Icons.inventory_2_outlined,
-                            label: 'My Orders',
-                            onTap: () {
-                              if (!Get.find<OfflineService>()
-                                  .checkAndShowDialog()) {
-                                return;
-                              }
-                              Get.toNamed(AppRoutes.userOrders);
-                            },
-                          ),
-                          const SizedBox(height: 8),
+                          Obx(() {
+                            final showShop = ShopRegionAccess.ensureRegistered()
+                                .isShopAvailable
+                                .value;
+                            if (!showShop) return const SizedBox.shrink();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                ProfileLinkTile(
+                                  icon: Icons.inventory_2_outlined,
+                                  label: 'My Orders',
+                                  onTap: () {
+                                    if (!ShopRegionAccess.available) return;
+                                    if (!Get.find<OfflineService>()
+                                        .checkAndShowDialog()) {
+                                      return;
+                                    }
+                                    Get.toNamed(AppRoutes.userOrders);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            );
+                          }),
                           _InfoCard(
                             phone: phone,
                             email: email,

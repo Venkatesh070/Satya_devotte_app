@@ -1,7 +1,19 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
+import 'package:satya_devotte_app/core/utils/shop_region_access.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
+
+/// Blocks Shop / Pooja Kit ecommerce when GPS is not in South Africa.
+class ShopRegionGuard extends GetMiddleware {
+  @override
+  RouteSettings? redirect(String? route) {
+    if (!ShopRegionAccess.available) {
+      return const RouteSettings(name: AppRoutes.home);
+    }
+    return null;
+  }
+}
 
 /// Blocks unauthenticated users — redirects to login.
 class AuthGuard extends GetMiddleware {

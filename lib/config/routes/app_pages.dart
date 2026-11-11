@@ -36,13 +36,13 @@ class AppPages {
       name: AppRoutes.userOrders,
       page: () => const UserOrdersScreen(),
       binding: UserOrdersBinding(),
-      middlewares: [AuthGuard()],
+      middlewares: [ShopRegionGuard(), AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.userOrderDetail,
       page: () => const UserOrderDetailScreen(),
       binding: UserOrdersBinding(),
-      middlewares: [AuthGuard()],
+      middlewares: [ShopRegionGuard(), AuthGuard()],
     ),
     // ─── App flow ───────────────────────────────────────────────
     GetPage(name: AppRoutes.splash, page: SplashPage.new),
@@ -123,29 +123,31 @@ class AppPages {
       middlewares: [AuthGuard()],
     ),
 
-    // ─── Pooja Kit flow ────────────────────────────────────────
+    // ─── Pooja Kit flow (South Africa locale only) ─────────────
     GetPage(
       name: AppRoutes.poojaKitDetails,
       page: ProductDetailsPage.new,
+      middlewares: [ShopRegionGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitCheckout,
       page: ProductCheckoutPage.new,
-      middlewares: [AuthGuard()],
+      middlewares: [ShopRegionGuard(), AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitCart,
       page: () => const CartScreen(),
+      middlewares: [ShopRegionGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitPayment,
       page: ProductPaymentWebViewScreen.new,
-      middlewares: [AuthGuard()],
+      middlewares: [ShopRegionGuard(), AuthGuard()],
     ),
     GetPage(
       name: AppRoutes.poojaKitOrderSuccess,
       page: OrderSuccessScreen.new,
-      middlewares: [AuthGuard()],
+      middlewares: [ShopRegionGuard(), AuthGuard()],
     ),
 
     // ─── CMS (admin + superadmin) ───────────────────────────────
