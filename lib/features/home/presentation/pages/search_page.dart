@@ -12,6 +12,9 @@ import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/features/cms/models/ritual_model.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
@@ -82,9 +85,19 @@ class GlobalSearchResult {
 
     final img = extractImage();
 
+    String extractType() {
+      final t = valueOf(['type', 'itemType', 'kind']);
+      if (t.isNotEmpty) return t.toLowerCase();
+      final c = valueOf(['category', 'categoryName']);
+      if (c.toLowerCase() == 'ritual' || c.toLowerCase() == 'rituals') {
+        return 'ritual';
+      }
+      return '';
+    }
+
     return GlobalSearchResult(
       id: valueOf(['id', '_id']),
-      type: valueOf(['type']).toLowerCase(),
+      type: extractType(),
       title: valueOf(['title', 'name']),
       description: valueOf(['description', 'about']),
       imageUrl: img.isEmpty ? null : img,
@@ -100,33 +113,48 @@ class GlobalSearchResult {
   final Map<String, dynamic> raw;
 
   String get typeLabel {
-    if (type.isEmpty) return 'result';
     final t = type.toLowerCase();
+    final c = (raw['category'] ?? '').toString().toLowerCase().trim();
+    if (t == 'ritual' || t == 'rituals' || c == 'ritual' || c == 'rituals') {
+      return 'Ritual';
+    }
     if (t == 'pooja' ||
         t == 'puja' ||
         t == 'pujas' ||
         t == 'poojas' ||
-        t == 'ritual' ||
-        t == 'rituals') {
+        c == 'pooja' ||
+        c == 'puja' ||
+        c == 'pujas' ||
+        c == 'poojas') {
       return 'Puja';
     }
+    if (type.isEmpty) return 'Result';
     return type[0].toUpperCase() + type.substring(1);
   }
 
   IconData get icon {
-    switch (type.toLowerCase()) {
+    final t = type.toLowerCase();
+    final c = (raw['category'] ?? '').toString().toLowerCase().trim();
+    switch (t) {
       case 'festival':
         return Icons.event_available_outlined;
       case 'ritual':
       case 'rituals':
         return Icons.local_fire_department_outlined;
       case 'deity':
+      case 'deities':
         return Icons.temple_hindu_outlined;
+      case 'donation':
+        return Icons.volunteer_activism_outlined;
       case 'pooja':
       case 'puja':
       case 'pujas':
       case 'poojas':
+        return Icons.spa_outlined;
       default:
+        if (c == 'ritual' || c == 'rituals') {
+          return Icons.local_fire_department_outlined;
+        }
         return Icons.spa_outlined;
     }
   }
@@ -304,6 +332,7 @@ class _SearchPageState extends State<SearchPage> {
     FocusScope.of(context).unfocus();
     final type = result.type.toLowerCase().trim();
     final raw = result.raw;
+    final category = (raw['category'] ?? '').toString().toLowerCase().trim();
 
     // 1. Deity: Navigate directly to the Deity Detail screen (AppRoutes.ritualDetail with type: 'deity')
     if (type == 'deity' || type == 'deities') {
@@ -316,13 +345,38 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
 
-    // 2. Pooja / Puja / Ritual: Open Puja preview sheet
+    // 2. Ritual: Open UserRitualDetailPage (same as how Rituals tab handles it)
+    final isRitual = type == 'ritual' ||
+        type == 'rituals' ||
+        category == 'ritual' ||
+        category == 'rituals';
+
+    if (isRitual) {
+      if (result.id.isEmpty) return;
+      RitualModel? initialRitual;
+      try {
+        if (raw.containsKey('days') || raw.containsKey('sections')) {
+          initialRitual = RitualModel.fromJson(raw);
+        }
+      } catch (_) {}
+
+      await Get.to<void>(
+        () => UserRitualDetailPage(
+          ritualId: result.id,
+          initialRitual: initialRitual,
+        ),
+      );
+      if (Get.isRegistered<RitualHistoryController>()) {
+        Get.find<RitualHistoryController>().fetchHistory(skipLoader: true);
+      }
+      return;
+    }
+
+    // 3. Pooja / Puja: Open Puja preview sheet
     final isExplicitPoojaType = type == 'pooja' ||
         type == 'puja' ||
         type == 'pujas' ||
-        type == 'poojas' ||
-        type == 'ritual' ||
-        type == 'rituals';
+        type == 'poojas';
 
     final hasPoojaFields = raw.containsKey('steps') ||
         raw.containsKey('schedules') ||
