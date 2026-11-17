@@ -16,7 +16,9 @@ import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
 import 'package:satya_devotte_app/core/utils/date_formatters.dart';
+import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
+import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
@@ -62,14 +64,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isAnimatingToTab = false;
   bool _isFetchingHome = false;
+  bool _isLoading = true;
   String _todayDateAndTithi = HomeConstants.dateAndTithi;
   String _dailySloka = HomeConstants.quote;
   String _slokaAuthor = '- Bhagavad Gita';
   String _slokaMeaning = '';
   String _slokaContemplation = '';
   String _slokaPrayer = '';
-  List<HomeCircleItem> _poojas = HomeConstants.upcomingPooja;
-  List<HomeCircleItem> _festivals = HomeConstants.upcomingFestivals;
+  List<HomeCircleItem> _poojas = const [];
+  List<HomeCircleItem> _festivals = const [];
   List<ProductModel> _featuredProducts = [];
   int _poojasCompleted = 0;
   int _ritualsCompleted = 0;
@@ -246,7 +249,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _onPujaItemTap(HomeCircleItem item) async {
-    final id = item.id?.trim() ?? '';
+    String id = item.id?.trim() ?? '';
+    final raw = item.raw ?? <String, dynamic>{};
+    if (id.isEmpty) {
+      final inner = raw['pooja'] is Map ? (raw['pooja'] as Map) : null;
+      id =
+          (raw['_id'] ??
+                  raw['id'] ??
+                  raw['poojaId'] ??
+                  raw['pooja_id'] ??
+                  inner?['_id'] ??
+                  inner?['id'] ??
+                  inner?['poojaId'] ??
+                  '')
+              .toString()
+              .trim();
+    }
+
     final args = <String, dynamic>{
       if (item.raw != null) ...item.raw!,
       if (id.isNotEmpty) ...{'_id': id, 'id': id},
@@ -256,48 +275,165 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (item.imagePath.startsWith('http')) 'imageUrl': item.imagePath,
     };
 
-    if (id.isEmpty && (item.raw == null || item.raw!.isEmpty)) {
-      await _openPoojasTabFromViewMore();
-      return;
+    // If ID is still empty, look up in cached all_poojas by title
+    if (id.isEmpty && item.title.trim().isNotEmpty) {
+      try {
+        final offlineService = Get.find<OfflineService>();
+        final cachedAll = offlineService.getCachedData('all_poojas');
+        List<dynamic> list = [];
+        if (cachedAll is Map && cachedAll['data'] is Map) {
+          list =
+              cachedAll['data']['poojas'] ?? cachedAll['data']['results'] ?? [];
+        } else if (cachedAll is List) {
+          list = cachedAll;
+        }
+        final cleanTitle = item.title
+            .replaceAll('\n', ' ')
+            .trim()
+            .toLowerCase();
+        for (final p in list) {
+          if (p is Map) {
+            final pTitle = (p['title'] ?? p['name'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
+            if (pTitle.isNotEmpty &&
+                (pTitle == cleanTitle ||
+                    cleanTitle.contains(pTitle) ||
+                    pTitle.contains(cleanTitle))) {
+              id = (p['_id'] ?? p['id'] ?? '').toString().trim();
+              if (id.isNotEmpty) {
+                args.addAll(Map<String, dynamic>.from(p));
+                break;
+              }
+            }
+          }
+        }
+      } catch (_) {}
     }
+
     await openPujaPreview(context, id: id, initialData: args);
   }
 
   Future<void> _onFestivalItemTap(HomeCircleItem item) async {
-    final controller = Get.isRegistered<CalendarController>()
-        ? Get.find<CalendarController>()
-        : Get.put(CalendarController());
-    controller.setActiveTab(CalendarFilterTab.festivals);
+    if (!Get.isRegistered<CalendarController>()) {
+      Get.put(CalendarController());
+    }
+    final rawMap = item.raw != null
+        ? Map<String, dynamic>.from(item.raw!)
+        : <String, dynamic>{};
+    final dateStr =
+        item.date ??
+        _extractScheduleDateString(rawMap) ??
+        rawMap['date']?.toString() ??
+        rawMap['startDate']?.toString() ??
+        rawMap['festivalDate']?.toString() ??
+        '';
 
-    final date = _parseHomeItemDate(item);
-    if (date != null) {
-      final normalized = DateTime(date.year, date.month, date.day);
-      controller.selectedDate.value = normalized;
-      controller.focusedDate.value = DateTime(date.year, date.month);
+    final festMap = <String, dynamic>{
+      ...rawMap,
+      if ((item.id ?? '').isNotEmpty) 'id': item.id,
+      'title': item.title.replaceAll('\n', ' ').trim(),
+      if ((item.description ?? '').trim().isNotEmpty)
+        'description': item.description!.trim(),
+      if (dateStr.isNotEmpty) 'date': dateStr,
+      if (item.imagePath.startsWith('http')) 'imageUrl': item.imagePath,
+      'status': rawMap['status'] ?? 'Approved',
+    };
+
+    final festival = FestivalModel.fromJson(festMap);
+    await CalendarEventDetailPage.show(context, event: festival);
+  }
+
+  static String? _extractScheduleDateString(Map<String, dynamic> item) {
+    for (final key in [
+      'date',
+      'startDate',
+      'scheduleDate',
+      'scheduledDate',
+      'poojaDate',
+      'festivalDate',
+    ]) {
+      final val = item[key]?.toString().trim();
+      if (val != null && val.isNotEmpty) {
+        return val;
+      }
     }
 
-    await _onTabSelected(_HomeTabs.calendar);
+    final schedules = item['schedules'];
+    if (schedules is List && schedules.isNotEmpty) {
+      for (final s in schedules) {
+        if (s is Map) {
+          final dateVal = s['date']?.toString().trim() ?? '';
+          final timeVal = s['time']?.toString().trim() ?? '';
+          if (dateVal.isNotEmpty) {
+            return timeVal.isNotEmpty ? '$dateVal $timeVal' : dateVal;
+          }
+        } else if (s is String && s.trim().isNotEmpty) {
+          return s.trim();
+        }
+      }
+    }
+
+    final listDates = item['scheduleDates'] ?? item['dates'];
+    if (listDates is List && listDates.isNotEmpty) {
+      for (final d in listDates) {
+        final val = d?.toString().trim();
+        if (val != null && val.isNotEmpty) {
+          return val;
+        }
+      }
+    }
+
+    return null;
   }
 
   DateTime? _parseHomeItemDate(HomeCircleItem item) {
+    final rawMap = item.raw ?? const <String, dynamic>{};
     final candidates = <String?>[
       item.date,
-      item.raw?['date']?.toString(),
-      item.raw?['startDate']?.toString(),
-      item.raw?['festivalDate']?.toString(),
+      _extractScheduleDateString(rawMap),
+      rawMap['date']?.toString(),
+      rawMap['startDate']?.toString(),
+      rawMap['scheduleDate']?.toString(),
+      rawMap['scheduledDate']?.toString(),
+      rawMap['poojaDate']?.toString(),
+      rawMap['festivalDate']?.toString(),
     ];
     for (final value in candidates) {
       final text = value?.trim();
       if (text == null || text.isEmpty) continue;
       final parsed = DateTime.tryParse(text);
       if (parsed != null) return parsed;
-      final parts = text.split('-');
-      if (parts.length == 3) {
-        final day = int.tryParse(parts[0]);
-        final month = int.tryParse(parts[1]);
-        final year = int.tryParse(parts[2]);
+
+      final parts = text.split(' ');
+      final datePart = parts.first.trim();
+      int hour = 0;
+      int minute = 0;
+      if (parts.length > 1) {
+        final timeParts = parts[1].trim().split(':');
+        if (timeParts.isNotEmpty) hour = int.tryParse(timeParts[0]) ?? 0;
+        if (timeParts.length > 1) minute = int.tryParse(timeParts[1]) ?? 0;
+      }
+
+      final dateParsed = DateTime.tryParse(datePart);
+      if (dateParsed != null) {
+        return DateTime(
+          dateParsed.year,
+          dateParsed.month,
+          dateParsed.day,
+          hour,
+          minute,
+        );
+      }
+
+      final hyphenParts = datePart.split('-');
+      if (hyphenParts.length == 3) {
+        final day = int.tryParse(hyphenParts[0]);
+        final month = int.tryParse(hyphenParts[1]);
+        final year = int.tryParse(hyphenParts[2]);
         if (day != null && month != null && year != null) {
-          return DateTime(year, month, day);
+          return DateTime(year, month, day, hour, minute);
         }
       }
     }
@@ -335,6 +471,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
       if (cachedPayload is Map && mounted) {
         _updateUIWithData(cachedPayload, cachedProducts);
+        _isLoading = false;
       }
     } catch (error) {
       debugPrint('Error loading cached home data: $error');
@@ -342,7 +479,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     // If offline, we're done after showing cache
     if (!offlineService.isOnline.value) {
-      _isFetchingHome = false;
+      if (mounted) {
+        setState(() {
+          _isFetchingHome = false;
+          _isLoading = false;
+        });
+      } else {
+        _isFetchingHome = false;
+        _isLoading = false;
+      }
       return;
     }
 
@@ -379,7 +524,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } catch (error) {
       debugPrint('Home API failed: $error');
     } finally {
-      _isFetchingHome = false;
+      if (mounted) {
+        setState(() {
+          _isFetchingHome = false;
+          _isLoading = false;
+        });
+      } else {
+        _isFetchingHome = false;
+        _isLoading = false;
+      }
     }
   }
 
@@ -472,12 +625,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _slokaMeaning = parsedMeaning ?? '';
       _slokaContemplation = parsedContemplation ?? '';
       _slokaPrayer = parsedPrayer ?? '';
-      if (parsedPoojas.isNotEmpty) {
-        _poojas = parsedPoojas;
-      }
-      if (parsedFestivals.isNotEmpty) {
-        _festivals = parsedFestivals;
-      }
+      _poojas = parsedPoojas;
+      _festivals = parsedFestivals;
     });
   }
 
@@ -545,13 +694,40 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final image =
           clean(item['imageUrl']) ?? clean(item['image']) ?? clean(mediaImage);
 
-      final id = _extractString(item['_id'] ?? item['id']);
+      String extractEntityId(Map map) {
+        final inner = (map['pooja'] is Map)
+            ? (map['pooja'] as Map)
+            : (map['festival'] is Map)
+            ? (map['festival'] as Map)
+            : null;
+        final direct =
+            map['_id'] ??
+            map['id'] ??
+            map['poojaId'] ??
+            map['pooja_id'] ??
+            map['festivalId'] ??
+            inner?['_id'] ??
+            inner?['id'] ??
+            inner?['poojaId'] ??
+            inner?['festivalId'];
+        if (direct == null) return '';
+        if (direct is String) return direct.trim();
+        if (direct is Map) {
+          final nested = direct[r'$oid'] ?? direct['_id'] ?? direct['id'];
+          if (nested != null) return nested.toString().trim();
+        }
+        return direct.toString().trim();
+      }
+
+      final id = extractEntityId(item);
       final description = _extractString(
         item['description'] ?? item['purpose'] ?? item['about'],
       );
-      final date = _extractString(
-        item['date'] ?? item['startDate'] ?? item['festivalDate'],
-      );
+      final date =
+          _extractScheduleDateString(item) ??
+          _extractString(
+            item['date'] ?? item['startDate'] ?? item['festivalDate'],
+          );
       final resolvedImagePath = (image != null && image.isNotEmpty)
           ? image
           : fallbackImage;
@@ -636,6 +812,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               onFestivalsViewMore: _openFestivalsCalendarTab,
               onPujaTap: _onPujaItemTap,
               onFestivalTap: _onFestivalItemTap,
+              isLoading: _isLoading,
             ),
             const UserPujasTabPage(),
             const UserRitualsTabPage(),
@@ -663,9 +840,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
               if (_currentIndex == _HomeTabs.home)
                 Obx(() {
-                  final showShop = ShopRegionAccess.ensureRegistered()
-                      .isShopAvailable
-                      .value;
+                  final showShop =
+                      ShopRegionAccess.ensureRegistered().isShopAvailable.value;
                   if (!showShop) return const SizedBox.shrink();
                   return Positioned(
                     left: 0,
@@ -706,6 +882,7 @@ class _HomeTabContent extends StatefulWidget {
     required this.onFestivalsViewMore,
     required this.onPujaTap,
     required this.onFestivalTap,
+    this.isLoading = false,
   });
 
   final Future<void> Function() onRefresh;
@@ -726,6 +903,7 @@ class _HomeTabContent extends StatefulWidget {
   final Future<void> Function() onFestivalsViewMore;
   final Future<void> Function(HomeCircleItem item) onPujaTap;
   final Future<void> Function(HomeCircleItem item) onFestivalTap;
+  final bool isLoading;
 
   @override
   State<_HomeTabContent> createState() => _HomeTabContentState();
@@ -769,6 +947,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                 onFestivalsViewMore: widget.onFestivalsViewMore,
                 onPujaTap: widget.onPujaTap,
                 onFestivalTap: widget.onFestivalTap,
+                isLoading: widget.isLoading,
               ),
             ),
             const SizedBox(height: 16),
@@ -793,6 +972,7 @@ class _HomeBodySections extends StatelessWidget {
     required this.onFestivalsViewMore,
     required this.onPujaTap,
     required this.onFestivalTap,
+    this.isLoading = false,
   });
 
   final List<HomeCircleItem> poojas;
@@ -805,6 +985,7 @@ class _HomeBodySections extends StatelessWidget {
   final Future<void> Function() onFestivalsViewMore;
   final Future<void> Function(HomeCircleItem item) onPujaTap;
   final Future<void> Function(HomeCircleItem item) onFestivalTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -820,6 +1001,8 @@ class _HomeBodySections extends StatelessWidget {
             moreImagePath: 'assets/images/home/morePoojas.png',
             onItemTap: (item) => onPujaTap(item),
             onViewMoreTap: onPoojasViewMore,
+            emptyMessage: 'No Upcoming Pujas',
+            isLoading: isLoading,
           ),
         ),
         // if (featuredProducts.isNotEmpty) ...[
@@ -837,6 +1020,8 @@ class _HomeBodySections extends StatelessWidget {
             moreImagePath: 'assets/images/home/more_festivals.png',
             onItemTap: (item) => onFestivalTap(item),
             onViewMoreTap: onFestivalsViewMore,
+            emptyMessage: 'No Upcoming Festivals',
+            isLoading: isLoading,
           ),
         ),
         Obx(() {
@@ -978,6 +1163,9 @@ class _HomeCircleSection extends StatelessWidget {
     this.moreImagePath = 'assets/images/home/more_festivals.png',
     this.onViewMoreTap,
     this.onItemTap,
+    this.emptyMessage,
+    this.isLoading = false,
+    this.maxItems = 3,
   });
 
   final String title;
@@ -989,31 +1177,100 @@ class _HomeCircleSection extends StatelessWidget {
 
   /// Optional per-item tap handler.
   final void Function(HomeCircleItem item)? onItemTap;
+  final String? emptyMessage;
+  final bool isLoading;
+  final int maxItems;
 
   @override
   Widget build(BuildContext context) {
+    final actualItems = items.where((item) {
+      final normalized = item.title.trim().toLowerCase().replaceAll('\n', ' ');
+      return normalized != 'view more' && normalized != 'more';
+    }).toList();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionTitle(title: title),
-          useWrap
-              ? _CircleWrap(
-                  items: items,
-                  onItemTap: onItemTap,
-                  onMoreTap: onViewMoreTap == null
-                      ? null
-                      : () => onViewMoreTap!(),
-                )
-              : _CircleRow(
-                  items: items,
-                  useFestivalStyle: useFestivalStyle,
-                  moreImagePath: moreImagePath,
-                  onItemTap: onItemTap,
-                  onViewMoreTap: onViewMoreTap,
-                ),
+          if (isLoading && actualItems.isEmpty)
+            _buildLoadingState()
+          else if (actualItems.isEmpty)
+            _EmptyHomeSection(message: emptyMessage ?? 'No data available')
+          else if (useWrap)
+            _CircleWrap(
+              items: actualItems,
+              onItemTap: onItemTap,
+              onMoreTap: onViewMoreTap == null ? null : () => onViewMoreTap!(),
+            )
+          else
+            _CircleRow(
+              items: actualItems,
+              useFestivalStyle: useFestivalStyle,
+              moreImagePath: moreImagePath,
+              onItemTap: onItemTap,
+              onViewMoreTap: onViewMoreTap,
+              maxItems: maxItems,
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      width: double.infinity,
+      height: 64,
+      margin: const EdgeInsets.fromLTRB(0, 10, 14, 0),
+      decoration: BoxDecoration(
+        color: const Color(0xF8FCF7EF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyHomeSection extends StatelessWidget {
+  const _EmptyHomeSection({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(0, 10, 14, 0),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xF8FCF7EF),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x16000000),
+            blurRadius: 18,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          message,
+          style: AppTypography.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF7A746D),
+          ),
+        ),
       ),
     );
   }
@@ -2114,12 +2371,14 @@ class _CircleRow extends StatelessWidget {
     this.moreImagePath = 'assets/images/home/more_festivals.png',
     this.onViewMoreTap,
     this.onItemTap,
+    this.maxItems = 3,
   });
   final List<HomeCircleItem> items;
   final bool useFestivalStyle;
   final String moreImagePath;
   final Future<void> Function()? onViewMoreTap;
   final void Function(HomeCircleItem item)? onItemTap;
+  final int maxItems;
 
   bool _isMoreTitle(String title) {
     final normalized = title.trim().toLowerCase().replaceAll('\n', ' ');
@@ -2129,14 +2388,23 @@ class _CircleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseItems = items.where((item) => !_isMoreTitle(item.title)).toList();
+    final hasMore = baseItems.length > maxItems;
+    final visibleItems = hasMore
+        ? baseItems.take(maxItems).toList()
+        : baseItems;
     final staticViewMoreItem = HomeCircleItem(
       title: 'View\nMore',
       imagePath: moreImagePath,
     );
+    final displayItems = [
+      ...visibleItems,
+      if (hasMore && onViewMoreTap != null) staticViewMoreItem,
+    ];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: [...baseItems, staticViewMoreItem]
+        children: displayItems
             .map(
               (item) => Padding(
                 padding: const EdgeInsets.only(right: 10),
