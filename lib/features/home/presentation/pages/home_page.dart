@@ -1165,7 +1165,7 @@ class _HomeCircleSection extends StatelessWidget {
     this.onItemTap,
     this.emptyMessage,
     this.isLoading = false,
-    this.maxItems = 3,
+    this.maxItems = 5,
   });
 
   final String title;
@@ -2371,7 +2371,7 @@ class _CircleRow extends StatelessWidget {
     this.moreImagePath = 'assets/images/home/more_festivals.png',
     this.onViewMoreTap,
     this.onItemTap,
-    this.maxItems = 3,
+    this.maxItems = 5,
   });
   final List<HomeCircleItem> items;
   final bool useFestivalStyle;
@@ -2388,7 +2388,7 @@ class _CircleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseItems = items.where((item) => !_isMoreTitle(item.title)).toList();
-    final hasMore = baseItems.length > maxItems;
+    final hasMore = baseItems.length >= maxItems;
     final visibleItems = hasMore
         ? baseItems.take(maxItems).toList()
         : baseItems;
