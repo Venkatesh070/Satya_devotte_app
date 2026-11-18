@@ -176,7 +176,9 @@ class _RitualListPageState extends State<RitualListPage> {
         totalPages =
             int.tryParse(payload['totalPages']?.toString() ?? '') ??
             int.tryParse(payload['pages']?.toString() ?? '') ??
-            int.tryParse(payload['pagination']?['totalPages']?.toString() ?? '');
+            int.tryParse(
+              payload['pagination']?['totalPages']?.toString() ?? '',
+            );
         if (totalPages == null) {
           final total =
               int.tryParse(payload['total']?.toString() ?? '') ??
@@ -188,11 +190,10 @@ class _RitualListPageState extends State<RitualListPage> {
         }
       }
 
-      final newItems =
-          list
-              .whereType<Map>()
-              .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
-              .toList();
+      final newItems = list
+          .whereType<Map>()
+          .map((e) => DeityListItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
 
       int effectiveTotalPages = totalPages ?? 1;
       if (newItems.length >= _pageSize && effectiveTotalPages <= targetPage) {
@@ -211,8 +212,9 @@ class _RitualListPageState extends State<RitualListPage> {
           _items = newItems;
         } else {
           final existingIds = _items.map((e) => e.id).toSet();
-          final filteredNew =
-              newItems.where((e) => !existingIds.contains(e.id)).toList();
+          final filteredNew = newItems
+              .where((e) => !existingIds.contains(e.id))
+              .toList();
           _items.addAll(filteredNew);
         }
       });
@@ -629,7 +631,7 @@ class _RitualListPageState extends State<RitualListPage> {
               ),
               decoration: InputDecoration(
                 isCollapsed: true,
-                hintText: 'Search god name...',
+                hintText: 'Search Deity Name',
                 hintStyle: AppTypography.inter(
                   fontSize: 14,
                   color: Color(0xFFFCF7EF).withValues(alpha: 0.65),

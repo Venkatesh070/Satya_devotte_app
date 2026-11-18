@@ -34,33 +34,8 @@ class HomeConstants {
   static const String quote = 'योग: कर्मसु कौशलम्';
   static const String quoteSubtext = 'Yoga is skill in action';
 
-  static const List<HomeCircleItem> upcomingPooja = [
-    HomeCircleItem(
-      title: 'Ganesh\nPooja',
-      imagePath: 'assets/images/home/ganesh.png',
-    ),
-    HomeCircleItem(
-      title: 'Lakshmi\nPooja',
-      imagePath: 'assets/images/home/lakshmi.png',
-    ),
-    HomeCircleItem(
-      title: 'Shiva\nAbhishekam',
-      imagePath: 'assets/images/home/shiva.png',
-    ),
-  ];
-
-  static const List<HomeCircleItem> upcomingFestivals = [
-    HomeCircleItem(
-      title: 'Ganesh\nChaturthi',
-      imagePath: '',
-      placeholderText: '29th\nSep',
-    ),
-    HomeCircleItem(
-      title: 'Diwali',
-      imagePath: '',
-      placeholderText: '29th\nSep',
-    ),
-  ];
+  static const List<HomeCircleItem> upcomingPooja = [];
+  static const List<HomeCircleItem> upcomingFestivals = [];
 
   static const List<HomeCircleItem> donations = [
     HomeCircleItem(

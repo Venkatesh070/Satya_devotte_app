@@ -25,6 +25,9 @@ class CalendarEventDetailPage extends StatefulWidget {
   final dynamic event;
 
   static Future<void> show(BuildContext context, {required dynamic event}) {
+    if (!Get.isRegistered<CalendarController>()) {
+      Get.put(CalendarController());
+    }
     final authCtrl = Get.find<AuthController>();
     final isPublicGuidance =
         event is FestivalModel || event is MoonPhaseModel;
@@ -41,11 +44,15 @@ class CalendarEventDetailPage extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
+        final screenHeight = MediaQuery.sizeOf(sheetContext).height;
         return Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.sizeOf(sheetContext).height * 0.08,
+            top: screenHeight * 0.08,
           ),
-          child: CalendarEventDetailPage(event: event),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: screenHeight * 0.92),
+            child: CalendarEventDetailPage(event: event),
+          ),
         );
       },
     );
@@ -117,13 +124,16 @@ class _CalendarEventDetailPageState extends State<CalendarEventDetailPage> {
             : DateFormat('EEEE, MMMM dd').format(date))
         : '';
 
-    return Material(
-      color: CalendarUi.background,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.90),
+      child: Material(
+        color: CalendarUi.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
             child: Stack(
@@ -219,7 +229,8 @@ class _CalendarEventDetailPageState extends State<CalendarEventDetailPage> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   static String _title(dynamic e) {
@@ -283,7 +294,9 @@ class _EventDetailActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<CalendarController>();
+    final controller = Get.isRegistered<CalendarController>()
+        ? Get.find<CalendarController>()
+        : Get.put(CalendarController());
 
     return Obx(() {
       controller.addedToCalendarIds.length;
