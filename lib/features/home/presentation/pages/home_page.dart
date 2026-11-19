@@ -38,7 +38,6 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/shared/widgets/guest_auth_prompt_card.dart';
 import 'package:satya_devotte_app/core/services/app_update_service.dart';
-import 'package:satya_devotte_app/core/services/shorebird_patch_service.dart';
 import 'package:satya_devotte_app/core/utils/shop_region_access.dart';
 
 class _HomeTabs {
@@ -96,9 +95,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(ShopRegionAccess.ensureRegistered().resolve());
-      if (!kIsWeb) {
-        unawaited(ShorebirdPatchService.checkDownloadAndRestartIfNeeded());
-      }
       if (!kIsWeb && Platform.isIOS) {
         AppUpdateService.checkAndPromptIfAvailable(
           context,
@@ -115,9 +111,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(ShopRegionAccess.ensureRegistered().resolve());
-        if (!kIsWeb) {
-          unawaited(ShorebirdPatchService.checkDownloadAndRestartIfNeeded());
-        }
         if (!kIsWeb && Platform.isIOS) {
           AppUpdateService.checkAndPromptIfAvailable(
             context,

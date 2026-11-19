@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 
@@ -85,25 +86,25 @@ class PoojaKitController extends GetxController {
       final result = await _dataSource.getPublicProducts(
         page: _page.value,
         limit: _pageSize.value,
+        search: _searchQuery.value.trim().isEmpty
+            ? null
+            : _searchQuery.value.trim(),
       );
 
-      final items = result.items.where((p) {
-        // Filter out products where orders are closed (past dates or within 7 days)
-        if (p.isOrderClosed) return false;
-
-        // Apply search query if present
-        if (_searchQuery.value.isNotEmpty) {
-          return p.title.toLowerCase().contains(
-                _searchQuery.value.toLowerCase(),
-              );
-        }
-        return true;
-      }).toList();
+      var items = result.items.where((p) => !p.isOrderClosed);
+      if (_searchQuery.value.trim().isNotEmpty) {
+        items = filterBySearchPhraseThenKeywords(
+          items,
+          _searchQuery.value,
+          (p) => [p.title, p.slug, p.category],
+        );
+      }
+      final list = items.toList();
 
       if (refresh) {
-        _products.assignAll(items);
+        _products.assignAll(list);
       } else {
-        _products.addAll(items);
+        _products.addAll(list);
       }
 
       _totalRows.value = result.total;

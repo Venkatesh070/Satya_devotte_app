@@ -10,6 +10,7 @@ import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/network/interceptors.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
@@ -415,29 +416,20 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   List<DeityListItem> get _filteredItems {
-    final q = _searchQuery.trim().toLowerCase();
-    final list = _items.where((item) {
-      final selectedCategory = _selectedCategory.trim().toLowerCase();
-      if (selectedCategory != 'all deities') {
-        final itemName = item.name.toLowerCase();
-        final itemTitle = item.title.toLowerCase();
-        if (!itemName.contains(selectedCategory) &&
-            !itemTitle.contains(selectedCategory)) {
-          return false;
-        }
-      }
+    final selectedCategory = _selectedCategory.trim().toLowerCase();
+    final categoryFiltered = _items.where((item) {
+      if (selectedCategory == 'all deities') return true;
+      final itemName = item.name.toLowerCase();
+      final itemTitle = item.title.toLowerCase();
+      return itemName.contains(selectedCategory) ||
+          itemTitle.contains(selectedCategory);
+    });
 
-      if (q.isNotEmpty) {
-        final textMatch =
-            item.name.toLowerCase().contains(q) ||
-            item.title.toLowerCase().contains(q) ||
-            item.description.toLowerCase().contains(q);
-        if (!textMatch) return false;
-      }
-
-      return true;
-    }).toList();
-    return list;
+    return filterBySearchPhraseThenKeywords(
+      categoryFiltered,
+      _searchQuery,
+      (item) => [item.name, item.title, item.description],
+    );
   }
 
   // List<String> get _categoryTabs {

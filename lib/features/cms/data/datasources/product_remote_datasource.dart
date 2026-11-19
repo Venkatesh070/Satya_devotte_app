@@ -75,10 +75,14 @@ class ProductRemoteDataSource {
 
   /// GET `/api/v1/products?page=&limit=` — paged product list (public).
   Future<({List<ProductModel> items, int total, int totalPages})>
-  getPublicProducts({int page = 1, int limit = 10}) async {
+  getPublicProducts({int page = 1, int limit = 10, String? search}) async {
     final res = await _apiClient.dio.get(
       ApiEndpoints.products,
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
     );
     final body = res.data;
     if (body is! Map<String, dynamic>) {

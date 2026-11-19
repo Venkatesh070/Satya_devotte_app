@@ -1,13 +1,20 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:satya_devotte_app/config/routes/app_routes.dart';
-import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 
 /// Loops [assetPath] across the mobile app and web CMS admin.
+///
+/// Mobile loudness is baked into [assetPath] at **20%** amplitude so physical
+/// devices stay quiet at 100% system volume. AVPlayer `setVolume` is unreliable
+/// on physical iOS, so we do not rely on it for attenuation.
+/// Requires a full rebuild/reinstall (assets are not updated by hot reload or
+/// Shorebird patches).
 class AppMusicService extends GetxService with WidgetsBindingObserver {
   static const String assetPath = 'assets/audios/SatyaAppMusic.mp3';
 
@@ -16,10 +23,7 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   Future<void>? _prepareFuture;
   bool _userPaused = false;
   bool _cmsMusicSuppressed = false;
-
-  bool get _isUserAuthenticated =>
-      Get.isRegistered<AuthController>() &&
-      Get.find<AuthController>().isAuthenticated;
+  bool _audioSessionConfigured = false;
 
   final RxBool isPlaying = false.obs;
   final RxBool showFab = false.obs;
@@ -50,6 +54,12 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
   static bool isCmsRoute(String route) =>
       route == AppRoutes.cms || route.startsWith('${AppRoutes.cms}/');
 
+  bool _isSilentRoute(String route) =>
+      route == AppRoutes.login ||
+      route == AppRoutes.onboarding ||
+      route == AppRoutes.createAccount ||
+      _isCreateAccountRoute(route);
+
   /// Updates mobile FAB visibility and web CMS auto-play/stop by route.
   void syncControlsVisibility([String? route]) {
     final current = route ?? Get.currentRoute;
@@ -63,6 +73,11 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
       unawaited(start());
     } else if (kIsWeb) {
       unawaited(pause());
+    } else if (_isSilentRoute(current)) {
+      unawaited(pause());
+    } else if (current != AppRoutes.splash) {
+      // Auto-play when entering the main app (home and other screens).
+      unawaited(start());
     }
   }
 
@@ -81,18 +96,29 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     if (_userPaused) return;
 
     if (state == AppLifecycleState.resumed) {
-      final route = Get.currentRoute;
-      final isCms = isCmsRoute(route);
-      if ((!kIsWeb || (isCms && !_cmsMusicSuppressed))) {
-        // Only start if user is authenticated OR it's CMS
-        if (isCms || _isUserAuthenticated) {
-          unawaited(start());
-        }
-      }
+      unawaited(start());
     } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       unawaited(pause());
+    }
+  }
+
+  Future<void> _configureAudioSession() async {
+    if (kIsWeb || _audioSessionConfigured) return;
+    if (!Platform.isIOS && !Platform.isAndroid) return;
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(
+        AudioSessionConfiguration.music().copyWith(
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.mixWithOthers,
+        ),
+      );
+      await session.setActive(true);
+      _audioSessionConfigured = true;
+    } catch (e) {
+      debugPrint('[AppMusicService] audio session configure failed: $e');
     }
   }
 
@@ -106,8 +132,12 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
   Future<void> _doPrepare() async {
     try {
+      await _configureAudioSession();
+      // Loudness is baked into the asset at ~20%; keep player gain at full.
+      await _player.setVolume(0.01);
       await _player.setAsset(assetPath);
       await _player.setLoopMode(LoopMode.one);
+      await _player.setVolume(0.01);
       _prepared = true;
     } catch (e) {
       _prepared = false;
@@ -122,8 +152,15 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
     if (_userPaused) return;
     final route = Get.currentRoute;
     final isCms = isCmsRoute(route);
-    // Only start if user is authenticated OR it's CMS
-    if (!isCms && !_isUserAuthenticated) return;
+
+    if (kIsWeb) {
+      // Web: CMS only.
+      if (!isCms || _cmsMusicSuppressed) return;
+    } else {
+      // Mobile: auto-play in-app; stay silent on login/onboarding.
+      if (_isSilentRoute(route)) return;
+    }
+
     try {
       await _prepare();
       if (!_player.playing) {

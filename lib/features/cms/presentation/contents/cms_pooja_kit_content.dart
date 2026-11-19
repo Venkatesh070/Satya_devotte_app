@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/data/models/inventory_models.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
@@ -3396,12 +3397,11 @@ class _InventoryPickerDialogState extends State<_InventoryPickerDialog> {
   List<InventoryItem> get _filtered {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return widget.items;
-    return widget.items.where((i) {
-      return i.name.toLowerCase().contains(q) ||
-          i.category.toLowerCase().contains(q) ||
-          i.slug.toLowerCase().contains(q) ||
-          i.unit.toLowerCase().contains(q);
-    }).toList();
+    return filterBySearchPhraseThenKeywords(
+      widget.items,
+      q,
+      (i) => [i.name, i.category, i.slug, i.unit],
+    );
   }
 
   @override

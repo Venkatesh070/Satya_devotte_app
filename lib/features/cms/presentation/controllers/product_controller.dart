@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/controllers/product_controller.dart
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -113,11 +114,10 @@ class ProductController extends GetxController {
       }
     }
     if (q.isNotEmpty) {
-      out = out.where(
-        (p) =>
-            p.title.toLowerCase().contains(q) ||
-            p.slug.toLowerCase().contains(q) ||
-            p.category.toLowerCase().contains(q),
+      return filterBySearchPhraseThenKeywords(
+        out,
+        q,
+        (p) => [p.title, p.slug, p.category],
       );
     }
     return out.toList();
