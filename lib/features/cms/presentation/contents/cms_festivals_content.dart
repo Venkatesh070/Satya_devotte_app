@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/pooja_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/festival_controller.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_upload_box.dart';
@@ -223,6 +224,7 @@ class _FestivalListState extends State<_FestivalList> {
                 child: CmsSearchBar(
                   hint: 'Search festivals...',
                   controller: _searchController,
+                  initialText: ctrl.search,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
@@ -1660,18 +1662,18 @@ class _PoojaPickerField extends StatelessWidget {
 
             return StatefulBuilder(
               builder: (context, setModalState) {
-                final available = approvedPoojas.where((p) {
+                final unselected = approvedPoojas.where((p) {
                   final alreadySelected = selectedIds.contains(p.id) ||
                       selectedNames.contains(p.title);
-                  if (alreadySelected) return false;
-                  if (searchQuery.isNotEmpty) {
-                    final q = searchQuery.toLowerCase();
-                    return p.title.toLowerCase().contains(q) ||
-                        p.deity.toLowerCase().contains(q) ||
-                        p.category.toLowerCase().contains(q);
-                  }
-                  return true;
-                }).toList();
+                  return !alreadySelected;
+                });
+                final available = searchQuery.isEmpty
+                    ? unselected.toList()
+                    : filterBySearchPhraseThenKeywords(
+                        unselected,
+                        searchQuery,
+                        (p) => [p.title, p.deity, p.category],
+                      );
 
                 return Container(
                   constraints: BoxConstraints(

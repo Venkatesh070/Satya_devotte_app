@@ -56,6 +56,7 @@ class CmsDonationsContent extends StatefulWidget {
 
 class _CmsDonationsContentState extends State<CmsDonationsContent> {
   late final DonationController _ctrl;
+  final _searchController = TextEditingController();
   bool _showForm = false;
   DonationModel? _editing;
 
@@ -69,6 +70,12 @@ class _CmsDonationsContentState extends State<CmsDonationsContent> {
       if (!mounted) return;
       _ctrl.loadDonations();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -92,6 +99,7 @@ class _CmsDonationsContentState extends State<CmsDonationsContent> {
     }
     return _DonationList(
       ctrl: _ctrl,
+      searchController: _searchController,
       onAdd: () => setState(() {
         _editing = null;
         _showForm = true;
@@ -110,10 +118,12 @@ class _CmsDonationsContentState extends State<CmsDonationsContent> {
 class _DonationList extends StatelessWidget {
   const _DonationList({
     required this.ctrl,
+    required this.searchController,
     required this.onAdd,
     required this.onEdit,
   });
   final DonationController ctrl;
+  final TextEditingController searchController;
   final VoidCallback onAdd;
   final ValueChanged<DonationModel> onEdit;
 
@@ -178,6 +188,7 @@ class _DonationList extends StatelessWidget {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search donations...',
+                  controller: searchController,
                   onChanged: (_) {},
                 ),
               ),
@@ -1200,6 +1211,7 @@ class _AllDonationsFilterBar extends StatelessWidget {
                 child: CmsSearchBar(
                   hint:
                       'Search by contribution id, payment id, reference, name or email…',
+                  initialText: ctrl.search,
                   onChanged: ctrl.setSearch,
                 ),
               ),

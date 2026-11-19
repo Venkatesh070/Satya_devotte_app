@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/utils/cms_search_scheduler.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:satya_devotte_app/features/cms/models/deity_model.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
@@ -201,6 +202,7 @@ class _CmsDeitiesContentState extends State<CmsDeitiesContent> {
                   child: CmsSearchBar(
                     hint: 'Search deities...',
                     controller: _searchController,
+                    initialText: _controller.search,
                     onChanged: _searchScheduler.onQueryChanged,
                   ),
                 ),
@@ -2356,12 +2358,14 @@ class _AssociatePujaModalState extends State<_AssociatePujaModal> {
 
   @override
   Widget build(BuildContext context) {
-    final query = _searchCtrl.text.trim().toLowerCase();
+    final query = _searchCtrl.text.trim();
     final filtered = query.isEmpty
         ? widget.options
-        : widget.options
-            .where((o) => o.label.toLowerCase().contains(query))
-            .toList();
+        : filterBySearchPhraseThenKeywords(
+            widget.options,
+            query,
+            (o) => [o.label],
+          );
 
     return Dialog(
       backgroundColor: CmsColors.white,

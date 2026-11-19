@@ -9,6 +9,7 @@ import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
 import 'package:satya_devotte_app/core/theme/app_colors.dart';
 import 'package:satya_devotte_app/core/theme/app_typography.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/core/utils/toast_util.dart';
 import 'package:satya_devotte_app/features/profile/presentation/controllers/pooja_history_controller.dart';
 import 'package:satya_devotte_app/features/pujas/data/datasources/favorite_deities_remote_data_source.dart';
@@ -30,6 +31,8 @@ class _RitualListPageState extends State<RitualListPage> {
   late final PoojaHistoryController _poojaHistoryController;
 
   final TextEditingController _searchController = TextEditingController();
+  Animation<double>? _coverAnimation;
+  String _searchFieldText = '';
 
   bool _isLoading = false;
   String? _error;
@@ -54,9 +57,37 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = ModalRoute.of(context)?.secondaryAnimation;
+    if (identical(next, _coverAnimation)) return;
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
+    _coverAnimation = next;
+    _coverAnimation?.addStatusListener(_onCoverStatus);
+  }
+
+  @override
   void dispose() {
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onCoverStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed) {
+      _restoreSearchField();
+    }
+  }
+
+  void _restoreSearchField() {
+    final text = _searchFieldText;
+    if (!mounted || text.isEmpty) return;
+    _searchController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
+    );
+    setState(() {});
   }
 
   Future<void> _loadDeities() async {
@@ -309,28 +340,20 @@ class _RitualListPageState extends State<RitualListPage> {
   }
 
   List<DeityListItem> get _filteredItems {
-    final q = _searchQuery.trim().toLowerCase();
-    final list = _items.where((item) {
-      final selectedCategory = _selectedCategory.trim().toLowerCase();
-      if (selectedCategory != 'all deities') {
-        final itemName = item.name.toLowerCase();
-        final itemTitle = item.title.toLowerCase();
-        if (!itemName.contains(selectedCategory) &&
-            !itemTitle.contains(selectedCategory)) {
-          return false;
-        }
-      }
+    final selectedCategory = _selectedCategory.trim().toLowerCase();
+    final categoryFiltered = _items.where((item) {
+      if (selectedCategory == 'all deities') return true;
+      final itemName = item.name.toLowerCase();
+      final itemTitle = item.title.toLowerCase();
+      return itemName.contains(selectedCategory) ||
+          itemTitle.contains(selectedCategory);
+    });
 
-      if (q.isNotEmpty) {
-        final textMatch =
-            item.name.toLowerCase().contains(q) ||
-            item.title.toLowerCase().contains(q) ||
-            item.description.toLowerCase().contains(q);
-        if (!textMatch) return false;
-      }
-
-      return true;
-    }).toList();
+    final list = filterBySearchPhraseThenKeywords(
+      categoryFiltered,
+      _searchQuery,
+      (item) => [item.name, item.title, item.description],
+    );
 
     // Sort alphabetically by name, then title (trimmed, case-insensitive)
     list.sort((a, b) {
@@ -515,7 +538,10 @@ class _RitualListPageState extends State<RitualListPage> {
           Expanded(
             child: TextField(
               controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
+              onChanged: (v) => setState(() {
+                _searchFieldText = v;
+                _searchQuery = v;
+              }),
               cursorColor: Color(0xFFFCF7EF),
               style: AppTypography.inter(
                 fontSize: 14,
@@ -543,7 +569,10 @@ class _RitualListPageState extends State<RitualListPage> {
             GestureDetector(
               onTap: () {
                 _searchController.clear();
-                setState(() => _searchQuery = '');
+                setState(() {
+                  _searchFieldText = '';
+                  _searchQuery = '';
+                });
               },
               child: Container(
                 padding: const EdgeInsets.all(6),

@@ -12,6 +12,8 @@ import 'package:satya_devotte_app/core/models/festival_model.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:satya_devotte_app/features/calendar/presentation/pages/calendar_event_detail_page.dart';
 import 'package:satya_devotte_app/features/donations/data/models/donation.dart';
+import 'package:satya_devotte_app/features/profile/presentation/controllers/ritual_history_controller.dart';
+import 'package:satya_devotte_app/features/pujas/presentation/pages/user_ritual_detail_page.dart';
 import 'package:satya_devotte_app/features/pujas/presentation/widgets/puja_shared_widgets.dart';
 import 'package:satya_devotte_app/shared/pages/chakra_loader_page.dart';
 import 'package:satya_devotte_app/shared/widgets/app_background.dart';
@@ -28,18 +30,18 @@ class GlobalSearchResult {
   });
 
   factory GlobalSearchResult.fromJson(Map<String, dynamic> json) {
-    String _extractString(dynamic v) {
+    String extractString(dynamic v) {
       if (v == null) return '';
       if (v is String) return v.trim();
       if (v is List) {
         return v
-            .map((e) => _extractString(e))
+            .map((e) => extractString(e))
             .where((s) => s.isNotEmpty)
             .join(', ');
       }
       if (v is Map) {
         final name = v['name'] ?? v['title'] ?? '';
-        return _extractString(name);
+        return extractString(name);
       }
       return v.toString().trim();
     }
@@ -47,20 +49,57 @@ class GlobalSearchResult {
     String valueOf(List<String> keys) {
       for (final key in keys) {
         final value = json[key];
-        final text = _extractString(value);
+        final text = extractString(value);
         if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    String extractImage() {
+      for (final key in ['imageUrl', 'image', 'avatar', 'photo', 'thumbnail']) {
+        final text = extractString(json[key]);
+        if (text.isNotEmpty) return text;
+      }
+      final media = json['media'];
+      if (media is Map) {
+        final images = media['images'];
+        if (images is List && images.isNotEmpty) {
+          final first = images.first;
+          if (first is String && first.trim().isNotEmpty) return first.trim();
+        }
+      } else if (media is List && media.isNotEmpty) {
+        final first = media.first;
+        if (first is String && first.trim().isNotEmpty) return first.trim();
+        if (first is Map && first['url'] != null) {
+          return first['url'].toString().trim();
+        }
+      }
+      final images = json['images'];
+      if (images is List && images.isNotEmpty) {
+        final first = images.first;
+        if (first is String && first.trim().isNotEmpty) return first.trim();
+      }
+      return '';
+    }
+
+    final img = extractImage();
+
+    String extractType() {
+      final t = valueOf(['type', 'itemType', 'kind']);
+      if (t.isNotEmpty) return t.toLowerCase();
+      final c = valueOf(['category', 'categoryName']);
+      if (c.toLowerCase() == 'ritual' || c.toLowerCase() == 'rituals') {
+        return 'ritual';
       }
       return '';
     }
 
     return GlobalSearchResult(
       id: valueOf(['id', '_id']),
-      type: valueOf(['type']).toLowerCase(),
+      type: extractType(),
       title: valueOf(['title', 'name']),
       description: valueOf(['description', 'about']),
-      imageUrl: valueOf(['imageUrl', 'image']).isEmpty
-          ? null
-          : valueOf(['imageUrl', 'image']),
+      imageUrl: img.isEmpty ? null : img,
       raw: Map<String, dynamic>.from(json),
     );
   }
@@ -73,33 +112,48 @@ class GlobalSearchResult {
   final Map<String, dynamic> raw;
 
   String get typeLabel {
-    if (type.isEmpty) return 'result';
     final t = type.toLowerCase();
+    final c = (raw['category'] ?? '').toString().toLowerCase().trim();
+    if (t == 'ritual' || t == 'rituals' || c == 'ritual' || c == 'rituals') {
+      return 'Ritual';
+    }
     if (t == 'pooja' ||
         t == 'puja' ||
         t == 'pujas' ||
         t == 'poojas' ||
-        t == 'ritual' ||
-        t == 'rituals') {
+        c == 'pooja' ||
+        c == 'puja' ||
+        c == 'pujas' ||
+        c == 'poojas') {
       return 'Puja';
     }
+    if (type.isEmpty) return 'Result';
     return type[0].toUpperCase() + type.substring(1);
   }
 
   IconData get icon {
-    switch (type.toLowerCase()) {
+    final t = type.toLowerCase();
+    final c = (raw['category'] ?? '').toString().toLowerCase().trim();
+    switch (t) {
       case 'festival':
         return Icons.event_available_outlined;
       case 'ritual':
       case 'rituals':
         return Icons.local_fire_department_outlined;
       case 'deity':
+      case 'deities':
         return Icons.temple_hindu_outlined;
+      case 'donation':
+        return Icons.volunteer_activism_outlined;
       case 'pooja':
       case 'puja':
       case 'pujas':
       case 'poojas':
+        return Icons.spa_outlined;
       default:
+        if (c == 'ritual' || c == 'rituals') {
+          return Icons.local_fire_department_outlined;
+        }
         return Icons.spa_outlined;
     }
   }
@@ -113,15 +167,24 @@ class GlobalSearchResult {
         if (imageUrl != null) 'imageUrl': imageUrl,
       };
 
-  Map<String, dynamic> toDeityArgs() => {
-        'type': 'deity',
-        ...toDetailArgs(),
-        'name': title,
-        if (imageUrl != null)
-          'media': {
-            'images': [imageUrl],
-          },
-      };
+  Map<String, dynamic> toDeityArgs() {
+    final media = <String, dynamic>{
+      if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        'images': <String>[imageUrl!.trim()],
+    };
+    return {
+      ...raw,
+      'type': 'deity',
+      '_id': id,
+      'id': id,
+      'title': title,
+      'name': title,
+      'description': description,
+      if (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        'imageUrl': imageUrl!.trim(),
+      if (media.isNotEmpty && !raw.containsKey('media')) 'media': media,
+    };
+  }
 }
 
 class SearchPage extends StatefulWidget {
@@ -139,6 +202,8 @@ class _SearchPageState extends State<SearchPage> {
   String? _searchError;
   List<GlobalSearchResult> _searchResults = const [];
   Timer? _debounceTimer;
+  Animation<double>? _coverAnimation;
+  String _searchFieldText = '';
 
   @override
   void initState() {
@@ -149,14 +214,43 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = ModalRoute.of(context)?.secondaryAnimation;
+    if (identical(next, _coverAnimation)) return;
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
+    _coverAnimation = next;
+    _coverAnimation?.addStatusListener(_onCoverStatus);
+  }
+
+  @override
   void dispose() {
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
     _debounceTimer?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
   }
 
+  void _onCoverStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed) {
+      _restoreSearchField();
+    }
+  }
+
+  void _restoreSearchField() {
+    final text = _searchFieldText;
+    if (!mounted || text.isEmpty) return;
+    _searchController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
+    );
+    setState(() {});
+  }
+
   void _onSearchChanged(String value) {
+    _searchFieldText = value;
     _debounceTimer?.cancel();
     final q = value.trim();
     if (q.isEmpty) {
@@ -255,6 +349,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _clearSearch() {
+    _searchFieldText = '';
     _searchController.clear();
     _searchFocus.requestFocus();
     setState(() {
@@ -268,13 +363,37 @@ class _SearchPageState extends State<SearchPage> {
     FocusScope.of(context).unfocus();
     final type = result.type.toLowerCase().trim();
     final raw = result.raw;
+    final category = (raw['category'] ?? '').toString().toLowerCase().trim();
+
+    if (type == 'deity' || type == 'deities') {
+      if (result.id.isEmpty) return;
+      await Get.toNamed<dynamic>(
+        AppRoutes.ritualDetail,
+        arguments: result.toDeityArgs(),
+      );
+      return;
+    }
+
+    final isRitual = type == 'ritual' ||
+        type == 'rituals' ||
+        category == 'ritual' ||
+        category == 'rituals';
+
+    if (isRitual) {
+      if (result.id.isEmpty) return;
+      await Get.to<void>(
+        () => UserRitualDetailPage(ritualId: result.id),
+      );
+      if (Get.isRegistered<RitualHistoryController>()) {
+        Get.find<RitualHistoryController>().fetchHistory();
+      }
+      return;
+    }
 
     final isExplicitPoojaType = type == 'pooja' ||
         type == 'puja' ||
         type == 'pujas' ||
-        type == 'poojas' ||
-        type == 'ritual' ||
-        type == 'rituals';
+        type == 'poojas';
 
     final hasPoojaFields = raw.containsKey('steps') ||
         raw.containsKey('schedules') ||
@@ -293,25 +412,6 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     switch (type) {
-      case 'deity':
-        if (result.id.isEmpty) return;
-        final hasDeityInfo = raw.containsKey('about') ||
-            raw.containsKey('stories') ||
-            raw.containsKey('media') ||
-            raw.containsKey('rituals');
-        if (!hasDeityInfo) {
-          await openPujaPreview(
-            context,
-            id: result.id,
-            initialData: result.toDetailArgs(),
-          );
-          return;
-        }
-        await Get.toNamed<dynamic>(
-          AppRoutes.ritualDetail,
-          arguments: result.toDeityArgs(),
-        );
-        return;
       case 'donation':
         if (result.id.isEmpty) return;
         await Get.toNamed<dynamic>(
@@ -329,10 +429,6 @@ class _SearchPageState extends State<SearchPage> {
             ? Get.find<CalendarController>()
             : Get.put(CalendarController());
 
-        if (controller.festivals.isEmpty && !controller.isLoading.value) {
-          await controller.fetchData();
-        }
-
         final match = controller.festivals.firstWhereOrNull(
           (f) =>
               (f.id.isNotEmpty && f.id == result.id) ||
@@ -341,7 +437,8 @@ class _SearchPageState extends State<SearchPage> {
         );
 
         FestivalModel festival;
-        if (match != null) {
+        if (match != null &&
+            match.description.length >= result.description.length) {
           festival = match;
         } else {
           var dateStr = result.raw['date']?.toString() ??
@@ -356,7 +453,11 @@ class _SearchPageState extends State<SearchPage> {
           }
           final fullDesc = (result.raw['description'] ??
                   result.raw['about'] ??
+                  result.raw['details'] ??
                   result.raw['summary'] ??
+                  result.raw['significance'] ??
+                  result.raw['desc'] ??
+                  result.raw['festivalDescription'] ??
                   result.description)
               ?.toString()
               .trim() ??
@@ -638,6 +739,7 @@ class _SearchResultsSection extends StatelessWidget {
           ),
           Expanded(
             child: ListView.separated(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.zero,
               itemCount: results.length,
               separatorBuilder: (context, index) => const SizedBox(height: 6),

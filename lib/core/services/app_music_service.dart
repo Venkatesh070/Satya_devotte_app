@@ -11,6 +11,10 @@ import 'package:satya_devotte_app/features/auth/presentation/controllers/auth_co
 class AppMusicService extends GetxService with WidgetsBindingObserver {
   static const String assetPath = 'assets/audios/SatyaAppMusic.mp3';
 
+  /// Same player gain as iOS (`setVolume(0.01)`). Web otherwise plays the
+  /// asset at full loudness.
+  static const double _webVolume = 0.05;
+
   final AudioPlayer _player = AudioPlayer();
   bool _prepared = false;
   Future<void>? _prepareFuture;
@@ -106,8 +110,14 @@ class AppMusicService extends GetxService with WidgetsBindingObserver {
 
   Future<void> _doPrepare() async {
     try {
+      if (kIsWeb) {
+        await _player.setVolume(_webVolume);
+      }
       await _player.setAsset(assetPath);
       await _player.setLoopMode(LoopMode.one);
+      if (kIsWeb) {
+        await _player.setVolume(_webVolume);
+      }
       _prepared = true;
     } catch (e) {
       _prepared = false;

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/data/models/inventory_models.dart';
 import 'package:satya_devotte_app/features/cms/presentation/controllers/inventory_controller.dart';
 import 'package:satya_devotte_app/features/cms/presentation/pages/cms_shell_page.dart';
@@ -163,6 +164,7 @@ class _InventoryListView extends StatelessWidget {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search name or description…',
+                  initialText: ctrl.search,
                   onChanged: ctrl.setSearch,
                 ),
               ),
@@ -492,12 +494,13 @@ class _CategoryFilterDialogState extends State<_CategoryFilterDialog> {
   }
 
   List<InventoryCategory> get _filteredCategories {
-    final q = _query.trim().toLowerCase();
+    final q = _query.trim();
     if (q.isEmpty) return widget.categories;
-    return widget.categories.where((c) {
-      return c.label.toLowerCase().contains(q) ||
-          c.code.toLowerCase().contains(q);
-    }).toList();
+    return filterBySearchPhraseThenKeywords(
+      widget.categories,
+      q,
+      (c) => [c.label, c.code],
+    );
   }
 
   int get _listItemCount {
@@ -2223,12 +2226,13 @@ class _CategoryPickerDialogState extends State<_CategoryPickerDialog> {
   }
 
   List<InventoryCategory> get _filtered {
-    final q = _query.trim().toLowerCase();
+    final q = _query.trim();
     if (q.isEmpty) return widget.categories;
-    return widget.categories.where((c) {
-      return c.label.toLowerCase().contains(q) ||
-          c.code.toLowerCase().contains(q);
-    }).toList();
+    return filterBySearchPhraseThenKeywords(
+      widget.categories,
+      q,
+      (c) => [c.label, c.code],
+    );
   }
 
   @override

@@ -7,6 +7,7 @@ import 'package:satya_devotte_app/core/services/offline_service.dart';
 import 'package:satya_devotte_app/core/network/api_client.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
 import 'package:satya_devotte_app/core/network/api_endpoints.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/models/pooja_model.dart';
 import 'package:satya_devotte_app/features/cms/data/models/cms_paged_result.dart';
 
@@ -137,8 +138,11 @@ class PoojaRemoteDataSource {
       totalPages = pagination.totalPages < 1 ? 1 : pagination.totalPages;
     } else {
       if (search != null && search.isNotEmpty) {
-        final q = search.toLowerCase();
-        items = items.where((p) => p.title.toLowerCase().contains(q) || p.description.toLowerCase().contains(q)).toList();
+        items = filterBySearchPhraseThenKeywords(
+          items,
+          search,
+          (p) => [p.title, p.description],
+        );
       }
 
       total = items.length;

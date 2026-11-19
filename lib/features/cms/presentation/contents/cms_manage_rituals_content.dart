@@ -211,6 +211,7 @@ class _RitualListState extends State<_RitualList> {
                 child: CmsSearchBar(
                   hint: 'Search rituals...',
                   controller: _searchController,
+                  initialText: controller.search,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),

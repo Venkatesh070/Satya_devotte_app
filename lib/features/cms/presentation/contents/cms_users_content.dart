@@ -72,6 +72,7 @@ class _CmsUsersContentState extends State<CmsUsersContent> {
               Expanded(
                 child: CmsSearchBar(
                   hint: 'Search users...',
+                  initialText: _ctrl.regularUsersSearch,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),

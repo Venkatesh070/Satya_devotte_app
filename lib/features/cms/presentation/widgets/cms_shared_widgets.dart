@@ -861,16 +861,49 @@ class CmsMediaUploadBox extends StatelessWidget {
 }
 
 // ── Search bar ────────────────────────────────────────────────────
-class CmsSearchBar extends StatelessWidget {
+class CmsSearchBar extends StatefulWidget {
   const CmsSearchBar({
     super.key,
     required this.hint,
     this.onChanged,
     this.controller,
+    this.initialText = '',
   });
   final String hint;
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
+
+  /// Query to show when this bar is created again after leaving a detail
+  /// screen. Applied once, so typing is not overwritten on later rebuilds.
+  final String initialText;
+
+  @override
+  State<CmsSearchBar> createState() => _CmsSearchBarState();
+}
+
+class _CmsSearchBarState extends State<CmsSearchBar> {
+  TextEditingController? _owned;
+
+  TextEditingController get _effective => widget.controller ?? _owned!;
+
+  @override
+  void initState() {
+    super.initState();
+    final restored = widget.initialText;
+    if (widget.controller == null) {
+      _owned = TextEditingController(text: restored);
+      return;
+    }
+    if (widget.controller!.text.isEmpty && restored.trim().isNotEmpty) {
+      widget.controller!.text = restored;
+    }
+  }
+
+  @override
+  void dispose() {
+    _owned?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -882,11 +915,11 @@ class CmsSearchBar extends StatelessWidget {
         border: Border.all(color: CmsColors.border),
       ),
       child: TextField(
-        controller: controller,
-        onChanged: onChanged,
+        controller: _effective,
+        onChanged: widget.onChanged,
         style: const TextStyle(fontSize: 13, color: CmsThemeColors.inputText),
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: widget.hint,
           hintStyle: const TextStyle(
             color: CmsThemeColors.inputHint,
             fontSize: 13,

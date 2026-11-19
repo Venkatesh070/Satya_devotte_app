@@ -77,6 +77,8 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
   final _scrollController = ScrollController();
   Timer? _searchDebounce;
   Worker? _onlineWorker;
+  Animation<double>? _coverAnimation;
+  String _searchFieldText = '';
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -112,12 +114,40 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = ModalRoute.of(context)?.secondaryAnimation;
+    if (identical(next, _coverAnimation)) return;
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
+    _coverAnimation = next;
+    _coverAnimation?.addStatusListener(_onCoverStatus);
+  }
+
+  @override
   void dispose() {
+    _coverAnimation?.removeStatusListener(_onCoverStatus);
     _onlineWorker?.dispose();
     _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onCoverStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed) {
+      _restoreSearchField();
+    }
+  }
+
+  void _restoreSearchField() {
+    final text = _searchFieldText;
+    if (!mounted || text.isEmpty) return;
+    _searchController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
+    );
+    setState(() {});
   }
 
   void _onScroll() {
@@ -130,6 +160,7 @@ class _UserCatalogTabPageState extends State<UserCatalogTabPage> {
   }
 
   void _onSearchChanged(String value) {
+    _searchFieldText = value;
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;

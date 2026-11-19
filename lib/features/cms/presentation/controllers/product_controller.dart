@@ -1,6 +1,7 @@
 // lib/features/cms/presentation/controllers/product_controller.dart
 import 'package:get/get.dart';
 import 'package:satya_devotte_app/core/services/media_upload_service.dart';
+import 'package:satya_devotte_app/core/utils/keyword_search.dart';
 import 'package:satya_devotte_app/features/cms/data/datasources/product_remote_datasource.dart';
 import 'package:satya_devotte_app/features/cms/models/product_model.dart';
 import 'package:satya_devotte_app/features/cms/presentation/widgets/cms_shared_widgets.dart';
@@ -140,7 +141,17 @@ class ProductController extends GetxController {
   static const _lifecycleFilters = {'ACTIVE', 'INACTIVE'};
 
   /// Server already applies search / category / status via `/products/all`.
-  List<ProductModel> get filteredProducts => _products.toList();
+  /// Phrase-then-keyword narrows the loaded page the same way as the release
+  /// search: full phrase hits win, otherwise any keyword matches.
+  List<ProductModel> get filteredProducts {
+    final q = _search.value.trim();
+    if (q.isEmpty) return _products.toList();
+    return filterBySearchPhraseThenKeywords(
+      _products,
+      q,
+      (p) => [p.title, p.slug, p.category],
+    );
+  }
 
   /// Count of currently-loaded products matching the given chip label.
   int countFor(String label) {

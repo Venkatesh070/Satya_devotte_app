@@ -150,6 +150,10 @@ class _PoojaListState extends State<_PoojaList> {
   @override
   void initState() {
     super.initState();
+    final existing = widget.controller.search.trim();
+    if (existing.isNotEmpty) {
+      _searchController.text = existing;
+    }
     _searchScheduler = CmsSearchScheduler(onSearch: widget.controller.setSearch);
   }
 
@@ -238,6 +242,7 @@ class _PoojaListState extends State<_PoojaList> {
                 child: CmsSearchBar(
                   hint: 'Search pujas...',
                   controller: _searchController,
+                  initialText: controller.search,
                   onChanged: _searchScheduler.onQueryChanged,
                 ),
               ),
